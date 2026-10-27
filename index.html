@@ -227,6 +227,25 @@ input[type="range"]{width:150px;accent-color:var(--accent)}
 .cal-cell .segs i{display:block;height:100%}
 .cal-cell:hover{border-color:var(--muted)}
 .cal-cell.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.cal-top{display:flex;justify-content:flex-end;margin-top:14px}
+.cal-top + .cal-head{margin-top:8px}
+.cal-week{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.wk-row{display:grid;grid-template-columns:3.4em minmax(0,1fr) 4.6em;gap:12px;align-items:center;border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);background:var(--surface);padding:8px 10px;text-align:left;color:var(--ink)}
+.wk-row:hover{border-color:var(--muted)}
+.wk-row.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.wk-row.future{opacity:.5}
+.wk-row .wd{display:flex;flex-direction:column;line-height:1.1}
+.wk-row .wd b{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.wk-row .dn{font-family:var(--f-display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums}
+.wk-row.today .dn{color:var(--accent)}
+.wk-row.today .wd b{color:var(--accent)}
+.wk-bar{height:14px;background:var(--soft);border-radius:4px;overflow:hidden;display:block}
+.wk-bar .fill{display:flex;gap:2px;height:100%;border-radius:4px;overflow:hidden;min-width:4px}
+.wk-bar .fill i{display:block;height:100%;min-width:2px}
+.wk-m{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.wk-row:not(.has) .wk-m{color:var(--muted);font-weight:500}
+body:not(.m-off) .wk-bar .fill{animation:wkGrow .5s cubic-bezier(.2,.8,.2,1) both;transform-origin:left}
+@keyframes wkGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .cal-month{font-size:13px;color:var(--muted);margin:10px 0 0}
 .cal-total{margin:8px 0 4px;font-size:14px;color:var(--muted)}
 .cal-total b{color:var(--ink);font-size:18px;font-family:var(--f-display);font-weight:800;letter-spacing:.02em}
@@ -486,6 +505,7 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
       </div>
 
       <div class="pane" id="pane-cal" hidden>
+        <div class="cal-top"><div class="seg" id="calMode" role="group" aria-label="Calendar view"></div></div>
         <div class="cal-head">
           <button class="small-btn" id="calPrev" aria-label="Previous month">‹</button>
           <b id="calTitle"></b>
@@ -494,6 +514,7 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
         </div>
         <div class="cal-dow" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
         <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-week" id="calWeek"></div>
         <p class="cal-month" id="calMonthSum"></p>
         <div class="h" id="calDayTitle">Today</div>
         <div id="calDayBreak"></div>
@@ -599,7 +620,7 @@ const DEFAULTS = {
   modes:{ pomodoro:{focus:25,short:5,long:15,rounds:4}, fifty:{focus:52,short:17}, custom:{focus:45,short:10,long:20,rounds:3}, timebox:{focus:60}, flow:{ratio:5,minBreak:3} },
   autoBreak:true, autoFocus:false, goal:6,
   chime:'bell', volume:.7, tick:false, ambient:'off', thunder:'some', ambVol:.35, ambFocusOnly:true,
-  accent:'cobalt', customAccent:'#e0457b', breakColor:'auto', theme:'auto', style:'ring', digits:'condensed', weight:'bold', uiFont:'figtree', timerSize:1, ring:'medium', ticks:true, radius:'soft', texture:'none', showSeconds:true, mini:'m', motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full',
+  accent:'cobalt', customAccent:'#e0457b', breakColor:'auto', theme:'auto', style:'ring', digits:'condensed', weight:'bold', uiFont:'figtree', timerSize:1, ring:'medium', ticks:true, radius:'soft', texture:'none', showSeconds:true, mini:'m', calView:'week', motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full',
   tags:['Homework','Reading','Project','Exam prep'], tag:'Homework', task:'',
   music:{list:[], current:null, autoStart:true, pauseBreak:true, pauseTimer:true, size:'normal'}
 };
@@ -1122,34 +1143,62 @@ function renderSessions(){
 }
 $('#sessDay').onchange = e => { sessView = e.target.value; logList.reset(); logList.render(); };
 
-/* ---------- calendar ---------- */
-let calMonth = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+/* ---------- calendar (week by default, month on request) ---------- */
+const startOfWeek = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - x.getDay()); return x; };
 let calDay = dayKey(Date.now());
+let calMonth = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+let calWeek = startOfWeek(new Date());
 const calList = SessionList($('#calSessions'), {
   items: () => LOG.map((s, i) => ({s, i})).filter(({s}) => dayKey(s.t) === calDay),
   showDate: () => false,
   empty: () => 'Nothing logged on this day.'
 });
-function renderCalendar(){
-  if (!$('#calGrid')) return;
-  const y = calMonth.getFullYear(), m = calMonth.getMonth(), today = dayKey(Date.now());
-  $('#calTitle').textContent = calMonth.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+function dayTotals(){
   const byDay = {};
   LOG.forEach(s => { const k = dayKey(s.t), d = byDay[k] || (byDay[k] = {min:0, by:{}, n:0}); d.min += s.min; d.n++; const t = s.tag || 'General'; d.by[t] = (d.by[t] || 0) + s.min; });
-  const first = new Date(y, m, 1), lead = first.getDay(), daysIn = new Date(y, m + 1, 0).getDate();
-  let maxMin = 0, monthMin = 0, monthDays = 0;
-  for (let d = 1; d <= daysIn; d++){ const r = byDay[dayKey(new Date(y, m, d, 12))]; if (r){ maxMin = Math.max(maxMin, r.min); monthMin += r.min; monthDays++; } }
-  let h = '';
-  for (let i = 0; i < lead; i++) h += '<span class="cal-cell pad" aria-hidden="true"></span>';
-  for (let d = 1; d <= daysIn; d++){
-    const k = dayKey(new Date(y, m, d, 12)), r = byDay[k], heat = r ? .25 + .75 * r.min / maxMin : 0;
-    const segs = r ? Object.entries(r.by).sort((a,b) => b[1] - a[1]).map(([t, mm]) => `<i style="flex:${mm};background:${actColor(t)}"></i>`).join('') : '';
-    const lab = new Date(y, m, d).toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'}) + (r ? `, ${fmtMin(r.min)} studied` : ', nothing logged');
-    h += `<button class="cal-cell${r ? ' has' : ''}${k === today ? ' today' : ''}${k === calDay ? ' on' : ''}${k > today ? ' future' : ''}" data-k="${k}" style="--heat:${heat}" aria-label="${lab}" aria-pressed="${k === calDay}"><span class="n">${d}</span>${r ? `<span class="m">${fmtMin(r.min)}</span><span class="segs">${segs}</span>` : ''}</button>`;
+  return byDay;
+}
+const segsFor = r => Object.entries(r.by).sort((a,b) => b[1] - a[1]).map(([t, mm]) => `<i style="flex:${mm};background:${actColor(t)}"></i>`).join('');
+function renderCalendar(){
+  if (!$('#calGrid')) return;
+  const week = P.calView !== 'month', today = dayKey(Date.now()), byDay = dayTotals();
+  $('#calGrid').hidden = $('.cal-dow').hidden = week; $('#calWeek').hidden = !week;
+  $('#calPrev').setAttribute('aria-label', week ? 'Previous week' : 'Previous month');
+  $('#calNext').setAttribute('aria-label', week ? 'Next week' : 'Next month');
+  if (week){
+    const days = [...Array(7)].map((_, i) => { const d = new Date(calWeek); d.setDate(d.getDate() + i); return d; });
+    const a = days[0], b = days[6], sameM = a.getMonth() === b.getMonth();
+    $('#calTitle').textContent = `${a.toLocaleDateString(undefined, {month:'short', day:'numeric'})} – ${b.toLocaleDateString(undefined, sameM ? {day:'numeric'} : {month:'short', day:'numeric'})}, ${b.getFullYear()}`;
+    const rs = days.map(d => byDay[dayKey(d)]), maxMin = Math.max(60, ...rs.map(r => r ? r.min : 0));
+    $('#calWeek').innerHTML = days.map((d, i) => {
+      const k = dayKey(d), r = rs[i];
+      const lab = d.toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'}) + (r ? `, ${fmtMin(r.min)} studied` : ', nothing logged');
+      return `<button class="wk-row${r ? ' has' : ''}${k === today ? ' today' : ''}${k === calDay ? ' on' : ''}${k > today ? ' future' : ''}" data-k="${k}" aria-label="${lab}" aria-pressed="${k === calDay}">
+        <span class="wd"><b>${d.toLocaleDateString(undefined, {weekday:'short'})}</b><span class="dn">${d.getDate()}</span></span>
+        <span class="wk-bar">${r ? `<span class="fill" style="width:${r.min / maxMin * 100}%">${segsFor(r)}</span>` : ''}</span>
+        <span class="wk-m">${r ? fmtMin(r.min) : '–'}</span></button>`;
+    }).join('');
+    const tot = rs.reduce((n, r) => n + (r ? r.min : 0), 0), nDays = rs.filter(Boolean).length;
+    const prev = [...Array(7)].reduce((n, _, i) => { const d = new Date(calWeek); d.setDate(d.getDate() - 7 + i); const r = byDay[dayKey(d)]; return n + (r ? r.min : 0); }, 0);
+    const diff = tot - prev, cmp = prev || tot ? (diff === 0 ? ' · same as the week before' : ` · ${diff > 0 ? '+' : '−'}${fmtMin(Math.abs(diff))} vs the week before`) : '';
+    $('#calMonthSum').textContent = tot ? `${fmtMin(tot)} studied on ${nDays} day${nDays===1?'':'s'} this week${cmp}` : `Nothing logged this week yet${cmp}.`;
+  } else {
+    const y = calMonth.getFullYear(), m = calMonth.getMonth();
+    $('#calTitle').textContent = calMonth.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+    const lead = new Date(y, m, 1).getDay(), daysIn = new Date(y, m + 1, 0).getDate();
+    let maxMin = 0, monthMin = 0, monthDays = 0;
+    for (let d = 1; d <= daysIn; d++){ const r = byDay[dayKey(new Date(y, m, d, 12))]; if (r){ maxMin = Math.max(maxMin, r.min); monthMin += r.min; monthDays++; } }
+    let h = '';
+    for (let i = 0; i < lead; i++) h += '<span class="cal-cell pad" aria-hidden="true"></span>';
+    for (let d = 1; d <= daysIn; d++){
+      const k = dayKey(new Date(y, m, d, 12)), r = byDay[k], heat = r ? .25 + .75 * r.min / maxMin : 0;
+      const lab = new Date(y, m, d).toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'}) + (r ? `, ${fmtMin(r.min)} studied` : ', nothing logged');
+      h += `<button class="cal-cell${r ? ' has' : ''}${k === today ? ' today' : ''}${k === calDay ? ' on' : ''}${k > today ? ' future' : ''}" data-k="${k}" style="--heat:${heat}" aria-label="${lab}" aria-pressed="${k === calDay}"><span class="n">${d}</span>${r ? `<span class="m">${fmtMin(r.min)}</span><span class="segs">${segsFor(r)}</span>` : ''}</button>`;
+    }
+    $('#calGrid').innerHTML = h;
+    $('#calMonthSum').textContent = monthMin ? `${fmtMin(monthMin)} studied on ${monthDays} day${monthDays===1?'':'s'} this month` : 'Nothing logged this month yet.';
   }
-  $('#calGrid').innerHTML = h;
-  $('#calMonthSum').textContent = monthMin ? `${fmtMin(monthMin)} studied on ${monthDays} day${monthDays===1?'':'s'} this month` : 'Nothing logged this month yet.';
-  // selected day
+  // the selected day
   const r = byDay[calDay];
   $('#calDayTitle').textContent = calDay === today ? 'Today' : new Date(calDay + 'T12:00').toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
   if (r){
@@ -1158,10 +1207,27 @@ function renderCalendar(){
   } else $('#calDayBreak').innerHTML = '';
   calList.render();
 }
-$('#calGrid').onclick = e => { const c = e.target.closest('[data-k]'); if (!c) return; calDay = c.dataset.k; calList.reset(); renderCalendar(); };
-$('#calPrev').onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); renderCalendar(); };
-$('#calNext').onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); renderCalendar(); };
-$('#calToday').onclick = () => { const d = new Date(); calMonth = new Date(d.getFullYear(), d.getMonth(), 1); calDay = dayKey(d); calList.reset(); renderCalendar(); };
+function pickDay(e){ const c = e.target.closest('[data-k]'); if (!c) return; calDay = c.dataset.k; calList.reset(); renderCalendar(); }
+$('#calGrid').onclick = pickDay; $('#calWeek').onclick = pickDay;
+function calShift(n){
+  if (P.calView === 'month') calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1);
+  else { calWeek = new Date(calWeek); calWeek.setDate(calWeek.getDate() + 7 * n); }
+  renderCalendar();
+}
+$('#calPrev').onclick = () => calShift(-1);
+$('#calNext').onclick = () => calShift(1);
+$('#calToday').onclick = () => { const d = new Date(); calMonth = new Date(d.getFullYear(), d.getMonth(), 1); calWeek = startOfWeek(d); calDay = dayKey(d); calList.reset(); renderCalendar(); };
+function renderCalMode(){
+  $('#calMode').innerHTML = [['week','Week'],['month','Month']].map(([v,l]) => `<button data-v="${v}" aria-pressed="${(P.calView || 'week') === v}">${l}</button>`).join('');
+}
+$('#calMode').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  P.calView = b.dataset.v; saveP();
+  // open the new view on the week or month that holds the selected day
+  const d = new Date(calDay + 'T12:00'); calMonth = new Date(d.getFullYear(), d.getMonth(), 1); calWeek = startOfWeek(d);
+  renderCalMode(); renderCalendar();
+};
+renderCalMode();
 
 /* ---------- Spotify ---------- */
 // Spotify's embedded player, driven by Spotify's iFrame API. The published page runs inside
