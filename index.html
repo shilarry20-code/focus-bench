@@ -89,6 +89,8 @@ body[data-style="digits"] .time{font-size:calc(clamp(80px,26vw,170px) * var(--ds
 .controls{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
 .primary{background:var(--cur);color:var(--on-cur);border:0;border-radius:var(--r-pill);padding:14px 30px;min-width:160px;font-weight:700;font-size:17px;letter-spacing:.01em}
 .primary:hover{filter:brightness(1.07)}
+.primary,.ghost,.chip,.outline,.small-btn,.seg button,.theme-btn{transition:transform .12s ease,background-color .2s,border-color .2s,color .2s,box-shadow .2s}
+body:not(.m-off) .primary:active,body:not(.m-off) .ghost:active,body:not(.m-off) .chip:active,body:not(.m-off) .outline:active,body:not(.m-off) .small-btn:active,body:not(.m-off) .seg button:active,body:not(.m-off) .theme-btn:active{transform:scale(.96)}
 .ghost{background:transparent;border:1px solid var(--line);border-radius:var(--r-pill);padding:11px 18px;font-weight:600}
 .ghost:hover{border-color:var(--muted)}
 .outline{display:inline-flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-ctl);padding:9px 14px;font-weight:600;font-size:14px}
@@ -233,10 +235,44 @@ input[type="color"]{width:44px;height:30px;padding:2px;border:1px solid var(--li
 .splist a{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap}
 .splist .del{border:0;background:none;color:var(--muted);width:26px;height:26px;border-radius:6px}
 .splist .del:hover{background:var(--soft)}
+/* motion */
+.app{position:relative;z-index:1}
+.fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.fx.front{z-index:25}
+.time .dg{display:inline-block}
+.time .roll-dn{animation:rollDn .34s cubic-bezier(.2,.8,.25,1)}
+.time .roll-up{animation:rollUp .34s cubic-bezier(.2,.8,.25,1)}
+@keyframes rollDn{from{transform:translateY(-.3em);opacity:0}to{transform:none;opacity:1}}
+@keyframes rollUp{from{transform:translateY(.3em);opacity:0}to{transform:none;opacity:1}}
+.knob{fill:var(--surface);stroke:var(--cur);stroke-width:4}
+body.m-full .knob{filter:drop-shadow(0 0 6px var(--cur))}
+body.m-full[data-run="on"] .arc{filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cur) 50%,transparent))}
+body.m-full[data-run="on"][data-phase="break"] .dial-wrap{animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+.dial-wrap.pop,body.m-full[data-run="on"][data-phase="break"] .dial-wrap.pop{animation:pop .55s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.06)}100%{transform:scale(1)}}
+body:not(.m-off) .phase,body:not(.m-off) .arc,body:not(.m-off) .primary,body:not(.m-off) .bar div{transition-property:color,stroke,background-color,stroke-dashoffset,width,filter;transition-duration:.6s}
+.tabs{position:relative}
+.tab-ink{position:absolute;left:0;bottom:-1px;height:2px;background:var(--accent);width:0;transition:transform .35s cubic-bezier(.3,.9,.3,1),width .35s cubic-bezier(.3,.9,.3,1);pointer-events:none}
+body:not(.m-off) .tab[aria-selected="true"]{border-bottom-color:transparent}
+body.m-off .tab-ink{display:none}
+body:not(.m-off) .pane.pane-in{animation:paneIn .3s ease}
+@keyframes paneIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+body:not(.m-off) .week.grow .stk{animation:grow .6s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom}
+body:not(.m-off) .week.grow .col:nth-child(2) .stk{animation-delay:.04s}
+body:not(.m-off) .week.grow .col:nth-child(3) .stk{animation-delay:.08s}
+body:not(.m-off) .week.grow .col:nth-child(4) .stk{animation-delay:.12s}
+body:not(.m-off) .week.grow .col:nth-child(5) .stk{animation-delay:.16s}
+body:not(.m-off) .week.grow .col:nth-child(6) .stk{animation-delay:.2s}
+body:not(.m-off) .week.grow .col:nth-child(7) .stk{animation-delay:.24s}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+body:not(.m-off) .tagbar .track2 i{transition:width .6s cubic-bezier(.2,.8,.2,1)}
+body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
 @media (prefers-reduced-motion: reduce){.arc,.bar div{transition:none}}
 </style>
 
-<div class="app">
+<div class="app" id="app">
   <header class="top">
     <div class="brand">
       <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M16 17V10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M12 3h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
@@ -254,6 +290,7 @@ input[type="color"]{width:44px;height:30px;padding:2px;border:1px solid var(--li
           <g class="ticks" id="ticks"></g>
           <circle class="track" cx="160" cy="160" r="128"/>
           <circle class="arc" id="arc" cx="160" cy="160" r="128"/>
+          <circle class="knob" id="knob" cx="160" cy="32" r="10" style="display:none"/>
         </svg>
         <div class="readout">
           <div class="phase" id="phaseLabel">Focus</div>
@@ -287,6 +324,7 @@ input[type="color"]{width:44px;height:30px;padding:2px;border:1px solid var(--li
 
     <aside class="panel" aria-label="Settings">
       <nav class="tabs" role="tablist">
+        <span class="tab-ink" id="tabInk" aria-hidden="true"></span>
         <button class="tab" data-tab="timer" aria-selected="true">Timer</button>
         <button class="tab" data-tab="sound" aria-selected="false">Sound</button>
         <button class="tab" data-tab="look" aria-selected="false">Look</button>
@@ -343,6 +381,9 @@ input[type="color"]{width:44px;height:30px;padding:2px;border:1px solid var(--li
         <div class="row"><label for="ticksOn">Tick marks around the ring</label><input type="checkbox" class="switch" id="ticksOn"></div>
         <div class="row"><label for="showSeconds">Show seconds<span class="sub">Off shows minutes only, less distracting</span></label><input type="checkbox" class="switch" id="showSeconds"></div>
 
+        <div class="h">Motion</div>
+        <div class="row"><span>Animations<span class="sub">Full adds rain on screen, lightning and confetti</span></span><div class="seg" id="motionSeg"></div></div>
+
         <div class="h">Layout</div>
         <div class="row"><span>Corners</span><div class="seg" id="radiusSeg"></div></div>
         <div class="row"><span>Background</span><div class="seg" id="textureSeg"></div></div>
@@ -396,6 +437,8 @@ input[type="color"]{width:44px;height:30px;padding:2px;border:1px solid var(--li
     </aside>
   </main>
 </div>
+<canvas id="fxBack" class="fx" aria-hidden="true"></canvas>
+<canvas id="fxFront" class="fx front" aria-hidden="true"></canvas>
 <div class="toast" id="toast" hidden></div>
 <div class="vtip" id="vtip" role="tooltip" hidden></div>
 
@@ -461,13 +504,13 @@ const UI_FONTS = {
 const WEIGHTS = {light:300, regular:500, bold:800};
 const RINGS = {thin:6, medium:14, thick:24};
 const RADII = {sharp:[3,3,4], boxy:[10,8,10], soft:[22,12,999], round:[32,18,999]};
-const LOOK_KEYS = ['theme','accent','customAccent','breakColor','style','digits','weight','uiFont','timerSize','ring','ticks','showSeconds','radius','texture','mini'];
+const LOOK_KEYS = ['motion','theme','accent','customAccent','breakColor','style','digits','weight','uiFont','timerSize','ring','ticks','showSeconds','radius','texture','mini'];
 const DEFAULTS = {
   mode:'pomodoro',
   modes:{ pomodoro:{focus:25,short:5,long:15,rounds:4}, fifty:{focus:52,short:17}, custom:{focus:45,short:10,long:20,rounds:3}, timebox:{focus:60}, flow:{ratio:5,minBreak:3} },
   autoBreak:true, autoFocus:false, goal:6,
   chime:'bell', volume:.7, tick:false, ambient:'off', thunder:'some', ambVol:.35, ambFocusOnly:true,
-  accent:'cobalt', customAccent:'#e0457b', breakColor:'auto', theme:'auto', style:'ring', digits:'condensed', weight:'bold', uiFont:'figtree', timerSize:1, ring:'medium', ticks:true, radius:'soft', texture:'none', showSeconds:true, mini:'m',
+  accent:'cobalt', customAccent:'#e0457b', breakColor:'auto', theme:'auto', style:'ring', digits:'condensed', weight:'bold', uiFont:'figtree', timerSize:1, ring:'medium', ticks:true, radius:'soft', texture:'none', showSeconds:true, mini:'m', motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full',
   tags:['Homework','Reading','Project','Exam prep'], tag:'Homework', task:'',
   music:{list:[], current:null, autoStart:true, pauseBreak:true, pauseTimer:true, size:'normal'}
 };
@@ -546,7 +589,8 @@ function skip(){
 function complete(){
   const ph = S.phase;
   chime(P.chime);
-  if (ph === 'focus') logFocus(durMs('focus'));
+  if (ph === 'focus'){ logFocus(durMs('focus')); fx.burst(); }
+  popDial();
   if (P.mode === 'timebox'){ toast("Time's up. Wrap up and move on."); advance(false); return; }
   toast(ph === 'focus' ? 'Focus block done. Time for a break.' : 'Break over. Back to it.');
   advance(ph === 'focus' ? P.autoBreak : P.autoFocus);
@@ -610,10 +654,9 @@ function frac(){
 function renderTime(){
   const up = countUp();
   const f = fmt(up ? flowElapsed() : remaining(), up);
-  $('#time').innerHTML = f.text + (f.unit ? `<small>${f.unit}</small>` : '');
+  setTimeText(f, up);
   const fr = frac();
-  arc.style.strokeDashoffset = C * (1 - fr);
-  $('#barFill').style.width = (fr * 100) + '%';
+  if (!(S.running && motion() !== 'off')) drawProgress(fr, false);
   document.title = S.running ? `${f.text}${f.unit ? ' min' : ''} · ${phaseName()}` : 'Focus Bench';
   updateMini(f, fr);
 }
@@ -621,6 +664,8 @@ function renderAll(){
   const b = document.body;
   b.dataset.phase = S.phase === 'focus' ? 'focus' : 'break';
   b.dataset.style = P.style; b.dataset.digits = P.digits;
+  b.dataset.run = S.running ? 'on' : 'off';
+  b.classList.remove('m-full','m-subtle','m-off'); b.classList.add('m-' + motion());
   applyLook();
 
   $('#modes').innerHTML = Object.entries(MODES).map(([k,v]) => `<button class="chip" role="tab" data-mode="${k}" aria-selected="${k===P.mode}">${v.name}</button>`).join('');
@@ -747,6 +792,7 @@ function renderLookSound(){
   $('#breakAuto').style.borderColor = P.breakColor === 'auto' ? 'var(--accent)' : '';
   $('#timerSize').value = P.timerSize; $('#ticksOn').checked = P.ticks;
   seg($('#miniSeg'), [['s','S'],['m','M'],['l','L']], 'mini');
+  seg($('#motionSeg'), [['full','Full'],['subtle','Subtle'],['off','Off']], 'motion', () => { renderAll(); moveTabInk(); });
   $('#swatches').innerHTML = Object.entries(ACCENTS).map(([k,v]) => `<button data-k="${k}" aria-label="${k}" title="${k}" aria-pressed="${P.accent===k}" style="background:${v[isDark() ? 1 : 0]}"></button>`).join('')
     + `<button data-k="custom" aria-label="custom" title="Your custom color" aria-pressed="${P.accent==='custom'}" style="background:${P.customAccent}"></button>`;
   $('#volume').value = P.volume; $('#ambVol').value = P.ambVol;
@@ -965,6 +1011,109 @@ $('#spBreak').onchange = e => { P.music.pauseBreak = e.target.checked; saveP(); 
 $('#spTimer').onchange = e => { P.music.pauseTimer = e.target.checked; saveP(); };
 $('#spSizeSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; P.music.size = b.dataset.v; saveP(); renderMusic(); };
 
+/* ---------- motion & visual effects ---------- */
+// Full: rolling digits, smooth ring with a glowing tip, breathing breaks, on-screen rain,
+// lightning, and confetti when a focus block ends. Subtle: digits, ring and pops only. Off: static.
+const motion = () => P.motion || 'full';
+let lastTime = {text:'', unit:'', mode:''};
+function setTimeText(f, up){
+  const el = $('#time'), m = motion(), prev = lastTime;
+  if (prev.text === f.text && prev.unit === f.unit && prev.mode === m) return;
+  lastTime = {text: f.text, unit: f.unit, mode: m};
+  const unit = f.unit ? `<small>${f.unit}</small>` : '';
+  if (m === 'off' || prev.text.length !== f.text.length || prev.mode !== m){ el.innerHTML = [...f.text].map(c => `<span class="dg">${c}</span>`).join('') + unit; return; }
+  el.innerHTML = [...f.text].map((c, i) => `<span class="dg${c !== prev.text[i] && /\d/.test(c) ? (up ? ' roll-up' : ' roll-dn') : ''}">${c}</span>`).join('') + unit;
+}
+function drawProgress(fr, smooth){
+  arc.style.transition = smooth ? 'none' : '';
+  arc.style.strokeDashoffset = C * (1 - fr);
+  $('#barFill').style.transition = smooth ? 'none' : '';
+  $('#barFill').style.width = (fr * 100) + '%';
+  const k = $('#knob'), show = motion() !== 'off' && fr > 0.002 && fr < 0.9995;
+  k.style.display = show ? '' : 'none';
+  if (show){ const a = fr * Math.PI * 2; k.setAttribute('cx', 160 + 128 * Math.sin(a)); k.setAttribute('cy', 160 - 128 * Math.cos(a)); k.setAttribute('r', (RINGS[P.ring] || 14) / 2 + 3); }
+}
+function cssVar(n){ return getComputedStyle(document.body).getPropertyValue(n).trim(); }
+
+const fx = (() => {
+  const back = $('#fxBack'), front = $('#fxFront'), bx = back.getContext('2d'), fxx = front.getContext('2d');
+  let W = 0, H = 0, drops = [], parts = [], flash = 0, flashes = [], last = performance.now(), dirty = false;
+  const SLANT = .16;
+  function resize(){
+    const dpr = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight;
+    for (const [c, x] of [[back, bx], [front, fxx]]){ c.width = W * dpr; c.height = H * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  }
+  addEventListener('resize', resize); resize();
+  const raining = () => motion() === 'full' && amb && (amb.type === 'rain' || amb.type === 'storm');
+  const newDrop = top => ({x: Math.random() * (W + H * SLANT), y: top ? Math.random() * H : -40 - Math.random() * 120, v: 900 + Math.random() * 600, len: 14 + Math.random() * 16, w: .7 + Math.random() * .8, a: .07 + Math.random() * .15});
+  function tick(){
+    const now = performance.now(), dt = Math.min(.05, (now - last) / 1000); last = now;
+    const wantRain = raining(), target = wantRain ? Math.round(W * H / (amb.type === 'storm' ? 4800 : 7000)) : 0;
+    flashes = flashes.filter(f => { if (now >= f.t){ flash = Math.max(flash, f.a); return false; } return true; });
+    if (!wantRain && !drops.length && !parts.length && flash <= 0){ if (dirty){ bx.clearRect(0, 0, W, H); fxx.clearRect(0, 0, W, H); dirty = false; } return; }
+    dirty = true;
+    // rain, behind the cards
+    bx.clearRect(0, 0, W, H);
+    while (drops.length < target) drops.push(newDrop(true));
+    bx.strokeStyle = cssVar('--ink'); bx.lineCap = 'round';
+    for (let i = drops.length - 1; i >= 0; i--){
+      const d = drops[i]; d.y += d.v * dt; d.x -= d.v * dt * SLANT;
+      if (d.y - d.len > H){ if (drops.length > target) drops.splice(i, 1); else Object.assign(d, newDrop(false)); continue; }
+      bx.globalAlpha = d.a * (wantRain ? 1 : .6); bx.lineWidth = d.w;
+      bx.beginPath(); bx.moveTo(d.x, d.y); bx.lineTo(d.x + d.len * SLANT, d.y - d.len); bx.stroke();
+    }
+    if (!wantRain) drops = drops.filter(d => d.y < H * .6);   // let the last drops fall away
+    // confetti and lightning, in front
+    fxx.clearRect(0, 0, W, H);
+    for (let i = parts.length - 1; i >= 0; i--){
+      const p = parts[i]; p.life -= dt;
+      if (p.life <= 0 || p.y > H + 20){ parts.splice(i, 1); continue; }
+      p.vy += 820 * dt; p.vx *= .985; p.vy *= .985; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.spin * dt;
+      fxx.globalAlpha = Math.min(1, p.life / .6); fxx.fillStyle = p.c;
+      fxx.save(); fxx.translate(p.x, p.y); fxx.rotate(p.rot); fxx.scale(1, Math.cos(p.rot * 2.3));
+      p.round ? (fxx.beginPath(), fxx.arc(0, 0, p.s * .45, 0, 7), fxx.fill()) : fxx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+      fxx.restore();
+    }
+    if (flash > 0){ fxx.globalAlpha = flash; fxx.fillStyle = isDark() ? '#dce6ff' : '#ffffff'; fxx.fillRect(0, 0, W, H); flash = Math.max(0, flash - dt * 4); }
+    fxx.globalAlpha = 1;
+  }
+  function burst(){
+    if (motion() !== 'full') return;
+    const r = $('.dial-wrap').getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const pal = [cssVar('--accent'), cssVar('--rest'), ...SERIES[isDark() ? 'dark' : 'light'].slice(0, 5)];
+    for (let i = 0; i < 140; i++){
+      const a = Math.random() * Math.PI * 2, sp = 380 + Math.random() * 620;
+      parts.push({x: cx + Math.cos(a) * r.width * .3, y: cy + Math.sin(a) * r.height * .3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 320, rot: Math.random() * 6, spin: (Math.random() - .5) * 14, s: 6 + Math.random() * 7, c: pal[i % pal.length], life: 1.6 + Math.random() * 1.2, round: Math.random() < .25});
+    }
+  }
+  function lightning(){
+    if (motion() !== 'full') return;
+    const t = performance.now(), peak = isDark() ? .32 : .5;
+    flashes.push({t, a: peak}, {t: t + 170 + Math.random() * 120, a: peak * (.5 + Math.random() * .4)});
+  }
+  return {tick, burst, lightning};
+})();
+function popDial(){
+  if (motion() === 'off') return;
+  const d = $('.dial-wrap'); d.classList.remove('pop'); void d.offsetWidth; d.classList.add('pop');
+}
+function moveTabInk(){
+  const ink = $('#tabInk'), t = document.querySelector('.tab[aria-selected="true"]');
+  if (!ink || !t) return;
+  ink.style.width = t.offsetWidth + 'px'; ink.style.transform = `translateX(${t.offsetLeft}px)`;
+}
+addEventListener('resize', moveTabInk);
+$('.dial-wrap').addEventListener('animationend', e => { if (e.animationName === 'pop') e.currentTarget.classList.remove('pop'); });
+// started on the next frame, after the whole script (including the sound engine) has loaded
+requestAnimationFrame(function frame(){
+  requestAnimationFrame(frame);
+  if (document.hidden) return;
+  try {
+    if (S.running && motion() !== 'off') drawProgress(frac(), true);
+    fx.tick();
+  } catch(e){}
+});
+
 /* ---------- notes ---------- */
 function renderNotes(){
   $('#noteList').innerHTML = NOTES.map(n => `<li class="${n.done?'done':''}"><input type="checkbox" data-id="${n.id}" ${n.done?'checked':''} aria-label="Done"><span>${esc(n.text)}</span><button data-del="${n.id}" aria-label="Delete">×</button></li>`).join('')
@@ -1159,9 +1308,11 @@ async function playThunder(){
   const [buf] = await p;
   const s = AC.createBufferSource(), g = AC.createGain();
   s.buffer = buf; g.gain.value = 1.5; s.connect(g);
+  fx.lightning();
+  const delay = motion() === 'full' ? .35 + Math.random() * 1.1 : 0;   // light arrives before sound
   if (amb){ g.connect(amb.g); amb.srcs.push(s); }
   else { const tmp = AC.createGain(); tmp.gain.value = Math.max(.15, P.ambVol) * .7; g.connect(tmp); tmp.connect(ambBus()); }
-  s.start();
+  s.start(AC.currentTime + delay);
 }
 function scheduleThunder(a, first){
   if (amb !== a || a.type !== 'storm') return;
@@ -1359,7 +1510,9 @@ $('#task').addEventListener('input', e => { P.task = e.target.value; saveP(); up
 $('#tagSel').addEventListener('change', e => { P.tag = e.target.value; saveP(); });
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t));
-  document.querySelectorAll('.pane').forEach(p => p.hidden = p.id !== 'pane-' + t.dataset.tab);
+  document.querySelectorAll('.pane').forEach(p => { const on = p.id === 'pane-' + t.dataset.tab; if (on && p.hidden){ p.classList.remove('pane-in'); void p.offsetWidth; p.classList.add('pane-in'); } p.hidden = !on; });
+  moveTabInk();
+  if (t.dataset.tab === 'log'){ const w = $('#week'); w.classList.remove('grow'); void w.offsetWidth; w.classList.add('grow'); }
 });
 $('#autoBreak').onchange = e => { P.autoBreak = e.target.checked; saveP(); };
 $('#autoFocus').onchange = e => { P.autoFocus = e.target.checked; saveP(); };
@@ -1415,6 +1568,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { re
 
 /* ---------- boot ---------- */
 applyLook(); renderTimerPane(); renderLookSound(); renderLog(); renderNotes(); renderAll(); renderMusic();
+requestAnimationFrame(moveTabInk);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveTabInk);
 prewarm();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderTime);
 })();
