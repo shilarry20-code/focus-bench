@@ -194,6 +194,12 @@ input[type="range"]{width:150px;accent-color:var(--accent)}
 .sess-bar label input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
 .sess-bar .count{color:var(--muted);margin-right:auto}
 .small-btn:disabled{opacity:.45;cursor:not-allowed}
+.bk-text{width:100%;margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--bg);font-family:var(--f-mono);font-size:11px;resize:vertical;min-height:58px}
+.bk-restore{margin-top:6px}
+.bk-check{display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px;cursor:pointer}
+.bk-check input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.bk-file{cursor:pointer;display:inline-flex;align-items:center}
+.bk-file input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .empty{color:var(--muted);font-size:14px;background:var(--bg);border-radius:12px;padding:14px;margin-top:10px}
 .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;margin-top:14px}
 .danger{color:#c0392b;border-color:currentColor}
@@ -422,6 +428,16 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
         <div class="sess-head"><div class="h">Sessions</div><select id="sessDay" aria-label="Which day's sessions to show"></select></div>
         <div id="sessionList"></div>
         <div class="sess-bar" id="sessBar"></div>
+
+        <div class="h">Back up or move your data</div>
+        <p class="lead">Each copy of Focus Bench (the downloaded file, the website, the page in Claude) keeps its own history in your browser. To move it, make a backup in the copy that has your history, then restore it in the other one.</p>
+        <div class="confirm"><button class="small-btn" id="bkCopy">Copy backup</button><button class="small-btn" id="bkDownload">Download backup file</button></div>
+        <textarea id="bkOut" class="bk-text" rows="3" readonly hidden aria-label="Your backup"></textarea>
+        <div class="bk-restore">
+          <textarea id="bkIn" class="bk-text" rows="3" placeholder="Paste a backup here to restore it" aria-label="Paste a backup"></textarea>
+          <label class="bk-check"><input type="checkbox" id="bkSettings" checked> Also bring over settings (theme, activities, timer lengths, music)</label>
+          <div class="confirm"><button class="small-btn" id="bkRestore">Restore pasted backup</button><label class="small-btn bk-file" id="bkFileLbl">Restore from a file<input type="file" id="bkFile" accept=".json,.txt,application/json,text/plain"></label></div>
+        </div>
       </div>
 
       <div class="pane" id="pane-music" hidden>
@@ -1174,6 +1190,47 @@ requestAnimationFrame(function frame(){
     fx.tick();
   } catch(e){}
 });
+
+/* ---------- backup & restore ---------- */
+function backupText(){ return JSON.stringify({app:'focus-bench', version:1, exported:new Date().toISOString(), log:LOG, notes:NOTES, settings:P}); }
+$('#bkCopy').onclick = () => {
+  const txt = backupText(), out = $('#bkOut');
+  out.value = txt; out.hidden = false;
+  const fallback = () => { out.focus(); out.select(); toast('Backup selected. Press Ctrl+C (or Cmd+C on a Mac) to copy it.'); };
+  try { navigator.clipboard.writeText(txt).then(() => toast(`Backup copied: ${LOG.length} sessions. Paste it into the other copy.`), fallback); } catch(e){ fallback(); }
+};
+$('#bkDownload').onclick = () => {
+  const d = new Date(), name = `focus-bench-backup-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
+  const url = URL.createObjectURL(new Blob([backupText()], {type:'application/json'}));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`Saved ${name}.`);
+};
+function restoreBackup(raw){
+  let data;
+  try { data = JSON.parse(String(raw).trim()); } catch(e){ toast("That isn't a Focus Bench backup. Copy the whole backup and try again."); return; }
+  if (!data || data.app !== 'focus-bench' || !Array.isArray(data.log)){ toast("That isn't a Focus Bench backup. Copy the whole backup and try again."); return; }
+  const key = s => [s.t, s.min, s.task || '', s.tag || ''].join('|'), have = new Set(LOG.map(key));
+  const fresh = data.log.filter(s => s && typeof s.t === 'number' && typeof s.min === 'number' && !have.has(key(s)));
+  LOG = LOG.concat(fresh).sort((a,b) => a.t - b.t); store.set('fb.log', LOG);
+  if (Array.isArray(data.notes)){ const ids = new Set(NOTES.map(n => n.id)); NOTES = NOTES.concat(data.notes.filter(n => n && n.id && !ids.has(n.id))); saveNotes(); }
+  if ($('#bkSettings').checked && data.settings && typeof data.settings === 'object'){
+    const curTags = P.tags, curMusic = P.music.list, curTask = P.task;
+    P = merge(clone(DEFAULTS), data.settings);
+    P.tags = [...new Set([...(P.tags || []), ...curTags])];
+    const ids = new Set(P.music.list.map(x => x.id)); P.music.list = P.music.list.concat(curMusic.filter(x => !ids.has(x.id)));
+    if (!P.music.current && P.music.list[0]) P.music.current = P.music.list[0].id;
+    P.task = curTask; saveP();
+    $('#task').value = P.task;
+  }
+  applyLook(); renderTimerPane(); renderLookSound(); renderNotes(); renderAll(); renderMusic(); renderLog();
+  $('#bkIn').value = '';
+  const skipped = data.log.length - fresh.length;
+  toast(`Restored ${fresh.length} session${fresh.length===1?'':'s'}` + (skipped ? `. ${skipped} were already here.` : '.'));
+}
+$('#bkRestore').onclick = () => { const v = $('#bkIn').value; if (!v.trim()){ toast('Paste a backup into the box first.'); return; } restoreBackup(v); };
+$('#bkFile').onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => restoreBackup(r.result); r.readAsText(f); e.target.value = ''; };
+if (window.top !== window) $('#bkDownload').hidden = true;   // Claude's viewer blocks downloads; Copy still works
 
 /* ---------- notes ---------- */
 function renderNotes(){
