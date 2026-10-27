@@ -1,0 +1,1423 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Bench</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Big+Shoulders+Display:wght@300;500;800&family=Caveat:wght@400;500;700&family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,800&family=Fredoka:wght@300;500;600;700&family=JetBrains+Mono:wght@300;500;700;800&family=Lexend:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Orbitron:wght@400;500;800&family=Playfair+Display:wght@400;500;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=VT323&display=swap">
+<style>
+/* Layout: a desk instrument. The dial sits on the left like a kitchen timer; a settings drawer with tabs sits on the right. Stacks on phones. */
+:root{
+  --acc-l:#2f54d6; --acc-d:#8ea7ff;
+  --bg:#eceff4; --surface:#fbfcfe; --ink:#151b27; --muted:#5d677a; --line:#d6dce6; --soft:#e4e8f0;
+  --accent:var(--acc-l); --rest:#b4720c; --on-accent:#ffffff;
+  --f-display:'Big Shoulders Display','Arial Narrow','Roboto Condensed',sans-serif;
+  --f-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --f-round:'Fredoka','Nunito',system-ui,sans-serif;
+  --r-card:22px; --r-ctl:12px; --r-pill:999px; --ring:14; --tscale:1; --dweight:800;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0e1219;--surface:#161b25;--ink:#e6eaf1;--muted:#8f99ab;--line:#283143;--soft:#1e2532;--accent:var(--acc-d);--rest:#f0b44c;--on-accent:#0e1219;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0e1219;--surface:#161b25;--ink:#e6eaf1;--muted:#8f99ab;--line:#283143;--soft:#1e2532;--accent:var(--acc-d);--rest:#f0b44c;--on-accent:#0e1219;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+.switch:disabled{opacity:.45;cursor:not-allowed}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  --cur:var(--accent); --on-cur:var(--on-accent); --digits:var(--f-display); --dscale:1}
+body[data-phase="break"]{--cur:var(--rest);--on-cur:var(--on-rest,#ffffff)}
+body[data-digits="mono"]{--digits:var(--f-mono);--dscale:.7}
+body[data-digits="rounded"]{--digits:var(--f-round);--dscale:.8}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--cur);outline-offset:2px}
+
+.app{max-width:1180px;margin:0 auto;padding-block:18px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:18px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:800;font-size:26px;letter-spacing:.02em;text-transform:uppercase}
+.brand svg{width:28px;height:28px}
+.today{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;flex-wrap:wrap}
+.today b{color:var(--ink);font-variant-numeric:tabular-nums}
+.dots{display:inline-flex;gap:4px;align-items:center}
+.dots i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted);display:block}
+.dots i.on{background:var(--accent);border-color:var(--accent)}
+.dots em{font-style:normal;font-size:12px;color:var(--accent);font-weight:700}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.timer-card,.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card)}
+.timer-card{padding:22px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:18px}
+
+.modes{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.chip{border:1px solid var(--line);background:transparent;padding:6px 13px;border-radius:var(--r-pill);font-weight:600;font-size:13px;color:var(--muted)}
+.chip:hover{color:var(--ink);border-color:var(--muted)}
+.chip[aria-selected="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+.dial-wrap{position:relative;width:min(100%,calc(360px * var(--tscale)));aspect-ratio:1;max-width:100%}
+#dial{width:100%;height:100%;display:block}
+.ticks line{stroke:var(--muted);stroke-width:1.5;opacity:.45}
+.ticks line.major{stroke-width:2.5;opacity:.75}
+.track{fill:none;stroke:var(--soft);stroke-width:var(--ring)}
+.arc{fill:none;stroke:var(--cur);stroke-width:var(--ring);stroke-linecap:round;transform:rotate(-90deg);transform-origin:160px 160px;transition:stroke-dashoffset .25s linear}
+.readout{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center}
+.phase{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--cur)}
+.time{font-family:var(--digits);font-weight:var(--dweight);font-size:calc(clamp(64px,19vw,104px) * var(--dscale) * var(--tscale));line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.time small{font-size:.32em;font-weight:600;margin-left:.15em;color:var(--muted);font-family:var(--f-body);letter-spacing:0}
+.rounds{display:flex;gap:6px;align-items:center;min-height:16px;font-size:12px;color:var(--muted);font-weight:600}
+.rounds i{width:8px;height:8px;border-radius:50%;background:var(--soft);display:block}
+.rounds i.done{background:var(--cur)}
+.rounds i.now{background:transparent;box-shadow:inset 0 0 0 2px var(--cur)}
+.paused-tag{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;min-height:16px}
+
+.bar{width:min(100%,420px);height:10px;border-radius:99px;background:var(--soft);overflow:hidden;display:none}
+.bar div{height:100%;background:var(--cur);width:0;transition:width .25s linear}
+body[data-style="bar"] .bar{display:block}
+body[data-style="bar"] #dial,body[data-style="digits"] #dial{display:none}
+body[data-style="bar"] .dial-wrap,body[data-style="digits"] .dial-wrap{aspect-ratio:auto;padding-block:28px 8px}
+body[data-style="bar"] .readout,body[data-style="digits"] .readout{position:static}
+body[data-style="digits"] .time{font-size:calc(clamp(80px,26vw,170px) * var(--dscale) * var(--tscale))}
+
+.task-row{display:flex;gap:8px;width:min(100%,460px);flex-wrap:wrap}
+.task-row input{flex:1 1 220px;min-width:0;padding:11px 14px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--bg)}
+.task-row select{flex:0 1 auto;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--bg);max-width:100%}
+
+.controls{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+.primary{background:var(--cur);color:var(--on-cur);border:0;border-radius:var(--r-pill);padding:14px 30px;min-width:160px;font-weight:700;font-size:17px;letter-spacing:.01em}
+.primary:hover{filter:brightness(1.07)}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:var(--r-pill);padding:11px 18px;font-weight:600}
+.ghost:hover{border-color:var(--muted)}
+.outline{display:inline-flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-ctl);padding:9px 14px;font-weight:600;font-size:14px}
+.outline:hover{border-color:var(--muted)}
+.outline svg{width:16px;height:16px}
+.outline.on{border-color:var(--cur);color:var(--cur)}
+.keys{margin:0;font-size:12px;color:var(--muted);text-align:center}
+.keys kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;background:var(--bg)}
+
+body.focus-mode .top,body.focus-mode .panel,body.focus-mode .keys,body.focus-mode .modes{display:none}
+body.focus-mode .grid{grid-template-columns:minmax(0,1fr)}
+body.focus-mode .timer-card{border-color:transparent;background:transparent;padding-top:6vh}
+body.focus-mode .dial-wrap{width:min(100%,calc(460px * var(--tscale)))}
+
+/* Panel */
+.panel{overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{flex:1 0 auto;background:none;border:0;padding:14px 14px 12px;font-weight:600;font-size:14px;color:var(--muted);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{padding:6px 20px 20px}
+.lead{color:var(--muted);font-size:14px;margin:12px 0 4px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row > label,.row > span{min-width:0}
+.row .sub{display:block;font-size:12px;color:var(--muted)}
+.h{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:18px 0 2px}
+input[type="number"]{width:84px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-variant-numeric:tabular-nums;text-align:right}
+input[type="range"]{width:150px;accent-color:var(--accent)}
+.switch{appearance:none;-webkit-appearance:none;width:42px;height:24px;border-radius:99px;background:var(--soft);border:1px solid var(--line);position:relative;flex:none;cursor:pointer;transition:background .15s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch:checked{background:var(--accent);border-color:var(--accent)}
+.switch:checked::after{transform:translateX(18px)}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+.seg button{border:1px solid var(--line);background:transparent;border-radius:calc(var(--r-ctl) * .75);padding:5px 10px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.swatches{display:flex;gap:8px}
+.swatches button{width:28px;height:28px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.swatches button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+.small-btn{border:1px solid var(--line);background:var(--bg);border-radius:calc(var(--r-ctl) * .75);padding:5px 11px;font-size:13px;font-weight:600}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.tags span{display:inline-flex;align-items:center;gap:4px;background:var(--soft);border-radius:99px;padding:3px 4px 3px 11px;font-size:13px;font-weight:600}
+.tags button{border:0;background:none;width:22px;height:22px;border-radius:50%;color:var(--muted);line-height:1}
+.tags button:hover{background:var(--line)}
+.addrow{display:flex;gap:6px}
+.addrow input{flex:1;min-width:0;padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+
+/* Log */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.stat{background:var(--bg);border-radius:var(--r-ctl);padding:10px 12px}
+.stat b{display:block;font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;height:130px;margin-top:6px;border-bottom:1px solid var(--line);position:relative}
+.week .col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px}
+.week .v{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.week .stk{width:70%;max-width:30px;display:flex;flex-direction:column-reverse;gap:2px;min-height:0}
+.week .sg{display:block;min-height:3px;background:var(--c);cursor:default;outline-offset:1px}
+.week .stk .sg:last-child{border-radius:4px 4px 0 0}
+.week .sg.dim{opacity:.35}
+.days span.today{color:var(--ink);font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:12px;color:var(--muted)}
+.legend span,.tagbar .name{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.legend i,.tagbar .name i{width:9px;height:9px;border-radius:3px;background:var(--c);flex:none;display:block}
+.tagbar .name b{font-weight:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vtip{position:fixed;z-index:30;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.18);min-width:170px;max-width:min(300px,calc(100vw - 24px))}
+.vtip .tk{display:flex;justify-content:space-between;gap:10px;padding:0 0 1px 16px;font-size:12px;color:var(--muted)}
+.vtip .tk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.vtip .tk span.none{font-style:italic}
+.vtip .tk em{font-style:normal;font-variant-numeric:tabular-nums;flex:none}
+.vtip .r + .tk{margin-top:1px}.vtip .tk + .r{margin-top:4px}
+.vtip .d{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px}
+.vtip .r{display:flex;align-items:center;gap:7px;justify-content:space-between;padding:1px 0}
+.vtip .r span{display:inline-flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vtip .r i{width:9px;height:9px;border-radius:3px;background:var(--c);flex:none;display:block}
+.vtip .r em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--muted)}
+.vtip .r.on{font-weight:700}.vtip .r.on em{color:var(--ink)}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
+.scale{font-size:11px;color:var(--muted);margin-top:4px}
+.tagbars{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.tagbar{display:grid;grid-template-columns:minmax(0,9em) minmax(0,1fr) auto;gap:8px;align-items:center;font-size:13px}
+.tagbar .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tagbar .track2{height:8px;background:var(--soft);border-radius:99px;overflow:hidden}
+.tagbar .track2 i{display:block;height:100%;background:var(--c);border-radius:99px}
+.tagbar{cursor:default}
+.tagbar .m{color:var(--muted);font-variant-numeric:tabular-nums}
+.sessions{list-style:none;margin:8px 0 0;padding:0}
+.sessions li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:baseline}
+.sessions .t{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.sessions .task{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sessions .task em{font-style:normal;color:var(--muted);font-size:12px;margin-left:6px}
+.sessions .min{font-variant-numeric:tabular-nums;font-weight:600}
+.empty{color:var(--muted);font-size:14px;background:var(--bg);border-radius:12px;padding:14px;margin-top:10px}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;margin-top:14px}
+.danger{color:#c0392b;border-color:currentColor}
+
+/* Notes */
+.notes{list-style:none;margin:10px 0 0;padding:0}
+.notes li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+.notes li input{margin-top:4px;accent-color:var(--accent)}
+.notes li span{flex:1;min-width:0;overflow-wrap:anywhere}
+.notes li.done span{text-decoration:line-through;color:var(--muted)}
+.notes li button{border:0;background:none;color:var(--muted);width:24px;height:24px;border-radius:6px}
+.notes li button:hover{background:var(--soft)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:12px;font-weight:600;font-size:14px;max-width:calc(100% - 32px);text-align:center;z-index:20;box-shadow:0 6px 24px rgba(0,0,0,.2)}
+/* backgrounds */
+body[data-texture="dots"]{background-image:radial-gradient(var(--line) 1.2px,transparent 1.4px);background-size:22px 22px}
+body[data-texture="grid"]{background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px}
+body[data-texture="lines"]{background-image:repeating-linear-gradient(180deg,transparent 0 27px,var(--line) 27px 28px)}
+body[data-texture="glow"]{background-image:radial-gradient(ellipse 90% 70% at 25% -10%,color-mix(in srgb,var(--cur) 22%,transparent),transparent 70%),radial-gradient(ellipse 70% 60% at 100% 100%,color-mix(in srgb,var(--cur) 12%,transparent),transparent 70%);background-attachment:fixed}
+body[data-ticks="off"] .ticks{display:none}
+/* look pane */
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-top:10px}
+.theme-btn{border:1px solid var(--line);border-radius:var(--r-ctl);padding:6px;background:transparent;display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--ink);text-align:left}
+.theme-btn[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.theme-btn .pv{height:38px;border-radius:calc(var(--r-ctl) * .6);display:flex;align-items:flex-end;gap:4px;padding:6px;border:1px solid rgba(127,127,127,.25)}
+.theme-btn .pv i{display:block;height:9px;border-radius:3px;flex:1}
+.theme-btn .pv b{display:block;width:9px;height:9px;border-radius:50%}
+.row.stack{flex-direction:column;align-items:stretch}
+.row.stack .seg{justify-content:flex-start}
+.swatches{flex-wrap:wrap;justify-content:flex-end}
+.row.stack .swatches{justify-content:flex-start}
+.pickrow{display:flex;gap:8px;align-items:center}
+input[type="color"]{width:44px;height:30px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--bg);cursor:pointer}
+.seg button.fontopt{font-size:15px;padding:4px 11px}
+/* music */
+.sp-wrap{width:min(100%,460px);display:flex;flex-direction:column;align-items:center;gap:8px}
+.sp-wrap #spPlayer{width:100%}
+.sp-wrap iframe{border:0;border-radius:12px;display:block;width:100%}
+.sp-open{text-decoration:none;color:var(--ink);max-width:100%}
+.sp-open span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-add{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.sp-add input{min-width:0;padding:8px 11px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--bg)}
+.sp-add button{align-self:flex-start}
+.splist{list-style:none;margin:12px 0 0;padding:0}
+.splist li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.splist .pick{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:4px 0;text-align:left}
+.splist .pick i{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted);flex:none;display:block}
+.splist .pick[aria-pressed="true"] i{border-color:var(--accent);background:radial-gradient(var(--accent) 45%,transparent 50%)}
+.splist .pick span{min-width:0;display:flex;flex-direction:column}
+.splist .pick b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.splist .pick small{font-size:12px;color:var(--muted);text-transform:capitalize}
+.splist a{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap}
+.splist .del{border:0;background:none;color:var(--muted);width:26px;height:26px;border-radius:6px}
+.splist .del:hover{background:var(--soft)}
+@media (prefers-reduced-motion: reduce){.arc,.bar div{transition:none}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M16 17V10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M12 3h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+      Focus Bench
+    </div>
+    <div class="today"><span><b id="todayMin">0m</b> focused today</span><span class="dots" id="goalDots" title="Daily goal"></span></div>
+  </header>
+
+  <main class="grid">
+    <section class="timer-card" aria-label="Timer">
+      <div class="modes" role="tablist" id="modes"></div>
+
+      <div class="dial-wrap">
+        <svg id="dial" viewBox="0 0 320 320" aria-hidden="true">
+          <g class="ticks" id="ticks"></g>
+          <circle class="track" cx="160" cy="160" r="128"/>
+          <circle class="arc" id="arc" cx="160" cy="160" r="128"/>
+        </svg>
+        <div class="readout">
+          <div class="phase" id="phaseLabel">Focus</div>
+          <div class="time" id="time" aria-live="off">25:00</div>
+          <div class="rounds" id="rounds"></div>
+          <div class="paused-tag" id="pausedTag"></div>
+        </div>
+      </div>
+      <div class="bar" id="bar"><div id="barFill"></div></div>
+
+      <div class="task-row">
+        <input id="task" type="text" placeholder="What are you working on?" autocomplete="off" maxlength="80">
+        <select id="tagSel" aria-label="Activity"></select>
+      </div>
+
+      <div class="controls">
+        <button class="ghost" id="resetBtn">Reset</button>
+        <button class="primary" id="startBtn">Start</button>
+        <button class="ghost" id="skipBtn">Skip</button>
+      </div>
+      <div class="controls">
+        <button class="outline" id="miniBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="12" width="7" height="5" rx="1" fill="currentColor"/></svg><span>Pop out mini clock</span></button>
+        <button class="outline" id="focusBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Focus mode</span></button>
+      </div>
+      <div class="sp-wrap" id="spWrap" hidden>
+        <div id="spPlayer"></div>
+        <a class="outline sp-open" id="spOpen" target="_blank" rel="noopener" hidden></a>
+      </div>
+      <p class="keys"><kbd>Space</kbd> start/pause · <kbd>R</kbd> reset · <kbd>S</kbd> skip · <kbd>M</kbd> mini clock · <kbd>F</kbd> focus mode</p>
+    </section>
+
+    <aside class="panel" aria-label="Settings">
+      <nav class="tabs" role="tablist">
+        <button class="tab" data-tab="timer" aria-selected="true">Timer</button>
+        <button class="tab" data-tab="sound" aria-selected="false">Sound</button>
+        <button class="tab" data-tab="look" aria-selected="false">Look</button>
+        <button class="tab" data-tab="log" aria-selected="false">Log</button>
+        <button class="tab" data-tab="music" aria-selected="false">Music</button>
+        <button class="tab" data-tab="notes" aria-selected="false">Notes</button>
+      </nav>
+
+      <div class="pane" id="pane-timer">
+        <p class="lead" id="modeHint"></p>
+        <div id="modeFields"></div>
+        <div class="h">Flow between blocks</div>
+        <div class="row" id="rowAutoBreak"><label for="autoBreak">Start breaks automatically</label><input type="checkbox" class="switch" id="autoBreak"></div>
+        <div class="row" id="rowAutoFocus"><label for="autoFocus">Start next focus block automatically</label><input type="checkbox" class="switch" id="autoFocus"></div>
+        <div class="row"><label for="goal">Daily goal<span class="sub">Focus blocks per day</span></label><input type="number" id="goal" min="1" max="30"></div>
+        <div class="h">Activities</div>
+        <div class="tags" id="tagList"></div>
+        <div class="addrow"><input id="newTag" placeholder="Add an activity" maxlength="30"><button class="small-btn" id="addTag">Add</button></div>
+      </div>
+
+      <div class="pane" id="pane-sound" hidden>
+        <div class="h">End-of-block chime</div>
+        <div class="row"><span>Sound</span><div class="seg" id="chimeSeg"></div></div>
+        <div class="row"><label for="volume">Volume</label><input type="range" id="volume" min="0" max="1" step="0.05"></div>
+        <div class="row"><span>Try it</span><button class="small-btn" id="testChime">Play chime</button></div>
+        <div class="row"><label for="tick">Soft tick each second while focusing</label><input type="checkbox" class="switch" id="tick"></div>
+        <div class="h">Background sound</div>
+        <div class="row"><span>Type</span><div class="seg" id="ambSeg"></div></div>
+        <div class="row" id="rowThunder" hidden><span>Thunder<span class="sub">How often it rolls in</span></span><div class="seg" id="thunderSeg"></div></div>
+        <div class="row" id="rowThunderTest" hidden><span>Hear a thunder strike</span><button class="small-btn" id="thunderNow">Play thunder</button></div>
+        <div class="row"><label for="ambVol">Volume</label><input type="range" id="ambVol" min="0" max="1" step="0.05"></div>
+        <div class="row"><label for="ambFocusOnly">Only during focus blocks<span class="sub">Goes quiet on breaks</span></label><input type="checkbox" class="switch" id="ambFocusOnly"></div>
+        <div class="row"><span>Listen without starting the timer</span><button class="small-btn" id="ambPreview">Preview</button></div>
+      </div>
+
+      <div class="pane" id="pane-look" hidden>
+        <div class="h">Theme</div>
+        <div class="themes" id="themeGrid"></div>
+
+        <div class="h">Colors</div>
+        <div class="row stack"><span>Accent</span><div class="swatches" id="swatches"></div></div>
+        <div class="row"><label for="accentPick">Custom accent<span class="sub">Pick any color you like</span></label><input type="color" id="accentPick"></div>
+        <div class="row"><label for="breakPick">Break color<span class="sub">The timer switches to this on breaks</span></label><div class="pickrow"><button class="small-btn" id="breakAuto">Match theme</button><input type="color" id="breakPick"></div></div>
+
+        <div class="h">Fonts</div>
+        <div class="row stack"><span>Timer numbers</span><div class="seg" id="fontSeg"></div></div>
+        <div class="row"><span>Number weight</span><div class="seg" id="weightSeg"></div></div>
+        <div class="row stack"><span>App text</span><div class="seg" id="uiFontSeg"></div></div>
+
+        <div class="h">Timer</div>
+        <div class="row"><span>Style</span><div class="seg" id="styleSeg"></div></div>
+        <div class="row"><label for="timerSize">Size</label><input type="range" id="timerSize" min="0.7" max="1.35" step="0.05"></div>
+        <div class="row"><span>Ring thickness</span><div class="seg" id="ringSeg"></div></div>
+        <div class="row"><label for="ticksOn">Tick marks around the ring</label><input type="checkbox" class="switch" id="ticksOn"></div>
+        <div class="row"><label for="showSeconds">Show seconds<span class="sub">Off shows minutes only, less distracting</span></label><input type="checkbox" class="switch" id="showSeconds"></div>
+
+        <div class="h">Layout</div>
+        <div class="row"><span>Corners</span><div class="seg" id="radiusSeg"></div></div>
+        <div class="row"><span>Background</span><div class="seg" id="textureSeg"></div></div>
+
+        <div class="h">Mini clock</div>
+        <div class="row"><span>Window size<span class="sub">You can also drag the corner to resize it</span></span><div class="seg" id="miniSeg"></div></div>
+        <p class="lead">The mini clock floats on top of your other windows and keeps counting while you work in other apps. It works in Chrome and Edge. Safari and Firefox don't allow it.</p>
+        <div class="confirm"><button class="small-btn" id="resetLook">Reset look to default</button></div>
+      </div>
+
+      <div class="pane" id="pane-log" hidden>
+        <div class="stats">
+          <div class="stat"><b id="stToday">0m</b><span>today</span></div>
+          <div class="stat"><b id="stBlocks">0/6</b><span>blocks vs goal</span></div>
+          <div class="stat"><b id="stStreak">0</b><span>day streak</span></div>
+        </div>
+        <div class="h">Last 7 days</div>
+        <div class="week" id="week"></div>
+        <div class="days" id="days"></div>
+        <div class="legend" id="legend"></div>
+        <div class="h">This week by activity</div>
+        <div id="tagBars"></div>
+        <div class="h">Today's sessions</div>
+        <div id="sessionList"></div>
+        <div class="confirm" id="clearWrap"><button class="small-btn" id="clearLog">Clear history</button></div>
+      </div>
+
+      <div class="pane" id="pane-music" hidden>
+        <p class="lead">Add Spotify playlists, albums or podcasts by pasting their link. In Spotify, use Share, then Copy link.</p>
+        <div class="sp-add">
+          <input id="spIn" type="url" placeholder="https://open.spotify.com/playlist/…" autocomplete="off">
+          <input id="spName" type="text" placeholder="Name (optional), e.g. Lo-fi beats" maxlength="40" autocomplete="off">
+          <button class="small-btn" id="spAdd">Add to my music</button>
+        </div>
+        <ul class="splist" id="spList"></ul>
+        <div class="h">Let the timer control the music</div>
+        <div class="row"><label for="spAuto">Play when a focus block starts</label><input type="checkbox" class="switch" id="spAuto"></div>
+        <div class="row"><label for="spBreak">Pause during breaks</label><input type="checkbox" class="switch" id="spBreak"></div>
+        <div class="row"><label for="spTimer">Pause when I pause or reset the timer</label><input type="checkbox" class="switch" id="spTimer"></div>
+        <div class="row"><span>Player size</span><div class="seg" id="spSizeSeg"></div></div>
+        <p class="lead" id="spNote"></p>
+        <div class="confirm"><button class="small-btn" id="spTry" hidden></button></div>
+      </div>
+
+      <div class="pane" id="pane-notes" hidden>
+        <p class="lead">A thought pops up mid-session? Park it here and get back to work. Deal with it on your break.</p>
+        <div class="addrow"><input id="noteIn" placeholder="Email TA about lab, buy printer paper…" maxlength="140"><button class="small-btn" id="noteAdd">Park it</button></div>
+        <ul class="notes" id="noteList"></ul>
+        <div class="confirm"><button class="small-btn" id="noteClear">Clear checked</button></div>
+      </div>
+    </aside>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div class="vtip" id="vtip" role="tooltip" hidden></div>
+
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+function merge(a, b){
+  if (!b || typeof b !== 'object') return a;
+  for (const k in b){
+    if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) && a[k] && typeof a[k] === 'object') merge(a[k], b[k]);
+    else a[k] = b[k];
+  }
+  return a;
+}
+
+const MODES = {
+  pomodoro:{name:'Pomodoro', hint:'Short focus sprints with a longer break every few rounds. Good for getting started on something you are avoiding.'},
+  fifty:{name:'52 / 17', hint:'Longer focus blocks with a real break. Good for reading and writing once you are warmed up.'},
+  flow:{name:'Flowtime', hint:'The clock counts up. Work until your focus fades, then press "Take break". Your break length scales with how long you worked.'},
+  timebox:{name:'Timebox', hint:'One countdown for one task. When time is up, you stop and move on.'},
+  custom:{name:'Custom', hint:'Set your own focus, break and round lengths.'}
+};
+const ACCENTS = {cobalt:['#2f54d6','#8ea7ff'], sky:['#0a6fae','#6cc4f5'], teal:['#0e7471','#4fd1c5'], pine:['#14705a','#56d3ad'], lime:['#4d7c0f','#a3e635'], amber:['#b45309','#fbbf24'], tomato:['#d23f2a','#ff7d66'], rose:['#be1d58','#ff7aa8'], violet:['#6d43d0','#b8a0ff'], graphite:['#1d2433','#e3e8f0']};
+const THEMES = {
+  auto:{name:'Match device'},
+  light:{name:'Light', bg:'#eceff4',surface:'#fbfcfe',ink:'#151b27',muted:'#5d677a',line:'#d6dce6',soft:'#e4e8f0',rest:'#b4720c'},
+  dark:{name:'Dark', dark:1, bg:'#0e1219',surface:'#161b25',ink:'#e6eaf1',muted:'#8f99ab',line:'#283143',soft:'#1e2532',rest:'#f0b44c'},
+  black:{name:'Pure black', dark:1, bg:'#000000',surface:'#0b0b0c',ink:'#f2f2f2',muted:'#8c8c8c',line:'#232323',soft:'#18181a',rest:'#f5b342'},
+  midnight:{name:'Midnight', dark:1, bg:'#0a0f24',surface:'#111836',ink:'#e6eaff',muted:'#8a93c2',line:'#232d5a',soft:'#1a2247',rest:'#ffb86b'},
+  ocean:{name:'Ocean', dark:1, bg:'#06171f',surface:'#0c2430',ink:'#dff2f7',muted:'#7fa5b3',line:'#1a3a47',soft:'#13303c',rest:'#ffb38a'},
+  forest:{name:'Forest', dark:1, bg:'#0d1712',surface:'#15231b',ink:'#e1eee5',muted:'#86a091',line:'#25382c',soft:'#1c2d23',rest:'#e8c15a'},
+  plum:{name:'Plum', dark:1, bg:'#170e1d',surface:'#22162b',ink:'#f1e6f6',muted:'#a58db3',line:'#382645',soft:'#2c1e37',rest:'#ffb36b'},
+  paper:{name:'Paper', bg:'#ebe5da',surface:'#f6f2ea',ink:'#2f281f',muted:'#77695a',line:'#d8ccb8',soft:'#e3dacb',rest:'#a8661a'},
+  mint:{name:'Mint', bg:'#e5f2ec',surface:'#f6fcf9',ink:'#13241d',muted:'#58736a',line:'#cbe1d7',soft:'#d9ebe3',rest:'#b06c10'},
+  blush:{name:'Blush', bg:'#f6eaee',surface:'#fff8fa',ink:'#2e1b22',muted:'#7d606a',line:'#e9d2da',soft:'#f0dee4',rest:'#b8642c'},
+  sky:{name:'Sky', bg:'#e6eff8',surface:'#f7fbff',ink:'#122033',muted:'#56687e',line:'#cddcec',soft:'#dbe7f3',rest:'#c0691a'}
+};
+const DIGIT_FONTS = {
+  condensed:['Tall',"'Big Shoulders Display','Arial Narrow',sans-serif",1],
+  mono:['Mono',"'JetBrains Mono',ui-monospace,Menlo,monospace",.7],
+  rounded:['Round',"'Fredoka','Nunito',sans-serif",.8],
+  serif:['Serif',"'Fraunces',Georgia,serif",.78],
+  elegant:['Elegant',"'Playfair Display',Georgia,serif",.8],
+  digital:['Digital',"'Orbitron',sans-serif",.6],
+  pixel:['Pixel',"'VT323',monospace",1.05],
+  hand:['Handwritten',"'Caveat',cursive",1.05],
+  heavy:['Heavy',"'Archivo Black',Impact,sans-serif",.66],
+  system:['System',"system-ui,-apple-system,'Segoe UI',sans-serif",.78]
+};
+const UI_FONTS = {
+  figtree:['Figtree',"'Figtree',system-ui,sans-serif"],
+  lexend:['Lexend',"'Lexend',system-ui,sans-serif"],
+  nunito:['Nunito',"'Nunito',system-ui,sans-serif"],
+  serif:['Serif',"'Source Serif 4',Georgia,serif"],
+  mono:['Mono',"'JetBrains Mono',ui-monospace,monospace"],
+  system:['System',"system-ui,-apple-system,'Segoe UI',sans-serif"]
+};
+const WEIGHTS = {light:300, regular:500, bold:800};
+const RINGS = {thin:6, medium:14, thick:24};
+const RADII = {sharp:[3,3,4], boxy:[10,8,10], soft:[22,12,999], round:[32,18,999]};
+const LOOK_KEYS = ['theme','accent','customAccent','breakColor','style','digits','weight','uiFont','timerSize','ring','ticks','showSeconds','radius','texture','mini'];
+const DEFAULTS = {
+  mode:'pomodoro',
+  modes:{ pomodoro:{focus:25,short:5,long:15,rounds:4}, fifty:{focus:52,short:17}, custom:{focus:45,short:10,long:20,rounds:3}, timebox:{focus:60}, flow:{ratio:5,minBreak:3} },
+  autoBreak:true, autoFocus:false, goal:6,
+  chime:'bell', volume:.7, tick:false, ambient:'off', thunder:'some', ambVol:.35, ambFocusOnly:true,
+  accent:'cobalt', customAccent:'#e0457b', breakColor:'auto', theme:'auto', style:'ring', digits:'condensed', weight:'bold', uiFont:'figtree', timerSize:1, ring:'medium', ticks:true, radius:'soft', texture:'none', showSeconds:true, mini:'m',
+  tags:['Homework','Reading','Project','Exam prep'], tag:'Homework', task:'',
+  music:{list:[], current:null, autoStart:true, pauseBreak:true, pauseTimer:true, size:'normal'}
+};
+let P = merge(clone(DEFAULTS), store.get('fb.settings', {}));
+if (JSON.stringify(P.tags) === JSON.stringify(['CNIT 17600','Design project','General'])){ P.tags = clone(DEFAULTS.tags); P.tag = DEFAULTS.tag; }
+let LOG = store.get('fb.log', []);
+let NOTES = store.get('fb.notes', []);
+const saveP = () => store.set('fb.settings', P);
+
+/* ---------- timer state ---------- */
+let S = merge({phase:'focus', round:1, remaining:null, flowAcc:0, flowBreakMin:5}, store.get('fb.state', {}));
+S.running = false;
+function durMs(phase){
+  const m = P.mode, c = P.modes[m];
+  if (m === 'timebox') return c.focus * 60000;
+  if (m === 'flow') return phase === 'focus' ? 0 : S.flowBreakMin * 60000;
+  if (m === 'fifty') return (phase === 'focus' ? c.focus : c.short) * 60000;
+  return c[phase] * 60000;
+}
+if (S.remaining == null || (P.mode !== 'flow' && S.remaining > durMs(S.phase))) S.remaining = durMs(S.phase);
+const countUp = () => P.mode === 'flow' && S.phase === 'focus';
+const remaining = () => S.running ? Math.max(0, S.endAt - Date.now()) : S.remaining;
+const flowElapsed = () => S.flowAcc + (S.running ? Date.now() - S.flowStart : 0);
+const focusElapsed = () => countUp() ? flowElapsed() : durMs('focus') - remaining();
+const saveState = () => store.set('fb.state', {phase:S.phase, round:S.round, remaining:remaining(), flowAcc:countUp()?flowElapsed():S.flowAcc, flowBreakMin:S.flowBreakMin});
+const notStarted = () => countUp() ? S.flowAcc === 0 && !S.running : !S.running && S.remaining === durMs(S.phase);
+
+function start(){
+  if (S.running) return;
+  ac();
+  if (countUp()) S.flowStart = Date.now();
+  else { if (S.remaining <= 0) S.remaining = durMs(S.phase); S.endAt = Date.now() + S.remaining; }
+  S.running = true; wake(true); changed();
+}
+function pause(){
+  if (!S.running) return;
+  if (countUp()) S.flowAcc += Date.now() - S.flowStart;
+  else S.remaining = Math.max(0, S.endAt - Date.now());
+  S.running = false; wake(false); changed();
+}
+const toggle = () => S.running ? pause() : start();
+function reset(){ S.running = false; S.flowAcc = 0; S.remaining = durMs(S.phase); wake(false); changed(); }
+function resetCycle(){ S.phase = 'focus'; S.round = 1; reset(); }
+
+function advance(autoStart){
+  S.running = false;
+  const m = P.mode;
+  if (m === 'timebox'){ S.phase = 'focus'; }
+  else if (S.phase === 'focus'){
+    const r = (m === 'fifty') ? 0 : P.modes[m].rounds || 0;
+    S.phase = (r > 0 && S.round % r === 0) ? 'long' : 'short';
+  } else {
+    S.round = S.phase === 'long' ? 1 : S.round + 1;
+    S.phase = 'focus';
+  }
+  S.flowAcc = 0;
+  S.remaining = durMs(S.phase);
+  if (autoStart) { S.running = false; start(); } else { wake(false); changed(); }
+}
+function flowBreak(){
+  const el = flowElapsed();
+  if (el < 60000){ toast('Focus for at least a minute before taking a break.'); return; }
+  logFocus(el);
+  const f = P.modes.flow;
+  S.flowBreakMin = Math.max(f.minBreak, Math.round(el / 60000 / f.ratio));
+  S.running = false; S.flowAcc = 0; S.phase = 'short'; S.remaining = durMs('short');
+  toast(`Nice. You earned a ${S.flowBreakMin} minute break.`);
+  if (P.autoBreak) start(); else { wake(false); changed(); }
+}
+function skip(){
+  if (countUp()) return flowBreak();
+  const was = S.running;
+  if (S.phase === 'focus'){ const el = focusElapsed(); if (el >= 60000) logFocus(el); }
+  advance(was);
+}
+function complete(){
+  const ph = S.phase;
+  chime(P.chime);
+  if (ph === 'focus') logFocus(durMs('focus'));
+  if (P.mode === 'timebox'){ toast("Time's up. Wrap up and move on."); advance(false); return; }
+  toast(ph === 'focus' ? 'Focus block done. Time for a break.' : 'Break over. Back to it.');
+  advance(ph === 'focus' ? P.autoBreak : P.autoFocus);
+}
+function logFocus(ms){
+  const min = Math.round(ms / 60000);
+  if (min < 1) return;
+  LOG.push({t:Date.now(), min, task:(P.task||'').trim(), tag:P.tag, mode:P.mode});
+  store.set('fb.log', LOG);
+  renderLog();
+}
+
+/* ---------- loop ---------- */
+let lastSec = -1, lastSave = 0;
+setInterval(() => {
+  if (S.running && !countUp() && Date.now() >= S.endAt){ complete(); return; }
+  if (S.running){
+    const sec = Math.floor((countUp() ? flowElapsed() : remaining()) / 1000);
+    if (sec !== lastSec){ lastSec = sec; if (P.tick && S.phase === 'focus') tickSound(); }
+    if (Date.now() - lastSave > 5000){ lastSave = Date.now(); saveState(); }
+  }
+  renderTime();
+}, 200);
+
+/* ---------- formatting ---------- */
+const pad = n => String(n).padStart(2, '0');
+function fmt(ms, up){
+  let sec = up ? Math.floor(ms / 1000) : Math.ceil(ms / 1000);
+  if (!P.showSeconds){
+    const m = up ? Math.floor(sec / 60) : Math.ceil(sec / 60);
+    return {text:String(m), unit:'min'};
+  }
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return {text: h ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`, unit:''};
+}
+function fmtMin(min){ const h = Math.floor(min / 60), m = min % 60; return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`; }
+function phaseName(){
+  if (S.phase === 'short') return P.mode === 'fifty' || P.mode === 'flow' ? 'Break' : 'Short break';
+  if (S.phase === 'long') return 'Long break';
+  if (P.mode === 'timebox') return 'Timebox';
+  if (P.mode === 'flow') return 'Flow · counting up';
+  return 'Focus';
+}
+
+/* ---------- render ---------- */
+const C = 2 * Math.PI * 128;
+const arc = $('#arc'); arc.style.strokeDasharray = C;
+(function ticks(){
+  const g = $('#ticks'); let h = '';
+  for (let i = 0; i < 60; i++){
+    const a = i / 60 * Math.PI * 2, major = i % 5 === 0, r1 = major ? 140 : 145, r2 = 152;
+    h += `<line class="${major?'major':''}" x1="${160+Math.sin(a)*r1}" y1="${160-Math.cos(a)*r1}" x2="${160+Math.sin(a)*r2}" y2="${160-Math.cos(a)*r2}"/>`;
+  }
+  g.innerHTML = h;
+})();
+
+function frac(){
+  if (countUp()) return (flowElapsed() % 3600000) / 3600000;
+  const d = durMs(S.phase); return d ? remaining() / d : 0;
+}
+function renderTime(){
+  const up = countUp();
+  const f = fmt(up ? flowElapsed() : remaining(), up);
+  $('#time').innerHTML = f.text + (f.unit ? `<small>${f.unit}</small>` : '');
+  const fr = frac();
+  arc.style.strokeDashoffset = C * (1 - fr);
+  $('#barFill').style.width = (fr * 100) + '%';
+  document.title = S.running ? `${f.text}${f.unit ? ' min' : ''} · ${phaseName()}` : 'Focus Bench';
+  updateMini(f, fr);
+}
+function renderAll(){
+  const b = document.body;
+  b.dataset.phase = S.phase === 'focus' ? 'focus' : 'break';
+  b.dataset.style = P.style; b.dataset.digits = P.digits;
+  applyLook();
+
+  $('#modes').innerHTML = Object.entries(MODES).map(([k,v]) => `<button class="chip" role="tab" data-mode="${k}" aria-selected="${k===P.mode}">${v.name}</button>`).join('');
+  $('#phaseLabel').textContent = phaseName();
+  const r = $('#rounds');
+  if ((P.mode === 'pomodoro' || P.mode === 'custom') && P.modes[P.mode].rounds > 0){
+    const n = P.modes[P.mode].rounds, cur = ((S.round - 1) % n) + 1;
+    let h = '';
+    for (let i = 1; i <= n; i++) h += `<i class="${i < cur || (i === cur && S.phase !== 'focus') ? 'done' : i === cur ? 'now' : ''}"></i>`;
+    r.innerHTML = h; r.title = `Round ${cur} of ${n}`;
+  } else if (P.mode === 'timebox') { r.textContent = P.task ? '' : ''; r.title=''; }
+  else { r.textContent = `Round ${S.round}`; r.title=''; }
+  $('#pausedTag').textContent = !S.running && !notStarted() ? 'Paused' : '';
+
+  $('#startBtn').textContent = S.running ? 'Pause' : notStarted() ? (S.phase === 'focus' ? 'Start' : 'Start break') : 'Resume';
+  $('#skipBtn').textContent = countUp() ? 'Take break' : P.mode === 'timebox' ? 'Finish' : S.phase === 'focus' ? 'Skip' : 'End break';
+  $('#miniBtn span').textContent = miniOpen() ? 'Close mini clock' : 'Pop out mini clock';
+  $('#miniBtn').classList.toggle('on', miniOpen());
+  $('#focusBtn span').textContent = b.classList.contains('focus-mode') ? 'Exit focus mode' : 'Focus mode';
+  renderTime();
+}
+function changed(){ saveState(); renderAll(); updateAmbient(); updateMedia(); musicSync(); }
+
+/* ---------- look ---------- */
+function isDark(){
+  const th = THEMES[P.theme];
+  if (th && th.bg) return !!th.dark;
+  const t = document.documentElement.dataset.theme;
+  return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+}
+function lum(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return 0;
+  const n = parseInt(m[1], 16), c = [n >> 16, n >> 8 & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); });
+  return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+}
+const onColor = hex => lum(hex) > .36 ? '#10141c' : '#ffffff';
+const accentHex = () => P.accent === 'custom' ? P.customAccent : (ACCENTS[P.accent] || ACCENTS.cobalt)[isDark() ? 1 : 0];
+function applyLook(){
+  const r = document.documentElement.style, b = document.body, th = THEMES[P.theme] || THEMES.auto, dark = isDark();
+  ['bg','surface','ink','muted','line','soft'].forEach(k => th[k] ? r.setProperty('--' + k, th[k]) : r.removeProperty('--' + k));
+  r.colorScheme = th.bg ? (th.dark ? 'dark' : 'light') : '';
+  const acc = accentHex(), rest = P.breakColor !== 'auto' ? P.breakColor : (th.rest || (dark ? '#f0b44c' : '#b4720c'));
+  r.setProperty('--accent', acc); r.setProperty('--on-accent', onColor(acc));
+  r.setProperty('--rest', rest); r.setProperty('--on-rest', onColor(rest));
+  const D = DIGIT_FONTS[P.digits] || DIGIT_FONTS.condensed;
+  b.style.setProperty('--digits', D[1]); b.style.setProperty('--dscale', D[2]);
+  b.style.setProperty('--dweight', WEIGHTS[P.weight] || 800);
+  r.setProperty('--f-body', (UI_FONTS[P.uiFont] || UI_FONTS.figtree)[1]);
+  r.setProperty('--tscale', P.timerSize); r.setProperty('--ring', RINGS[P.ring] || 14);
+  const R = RADII[P.radius] || RADII.soft;
+  r.setProperty('--r-card', R[0] + 'px'); r.setProperty('--r-ctl', R[1] + 'px'); r.setProperty('--r-pill', R[2] + 'px');
+  b.dataset.texture = P.texture; b.dataset.ticks = P.ticks ? 'on' : 'off';
+  if ($('#week')) renderLog();
+}
+
+/* ---------- settings UI ---------- */
+function numRow(id, label, sub, val, min, max){
+  return `<div class="row"><label for="${id}">${label}${sub?`<span class="sub">${sub}</span>`:''}</label><input type="number" id="${id}" min="${min}" max="${max}" value="${val}"></div>`;
+}
+function renderTimerPane(){
+  const m = P.mode, c = P.modes[m];
+  $('#modeHint').textContent = MODES[m].hint;
+  let h = '';
+  if (m === 'pomodoro' || m === 'custom'){
+    h += numRow('f-focus','Focus length','minutes',c.focus,1,240);
+    h += numRow('f-short','Short break','minutes',c.short,1,60);
+    h += numRow('f-long','Long break','minutes',c.long,1,90);
+    h += numRow('f-rounds','Long break every','rounds (0 turns it off)',c.rounds,0,12);
+  } else if (m === 'fifty'){
+    h += numRow('f-focus','Focus length','minutes',c.focus,1,240);
+    h += numRow('f-short','Break','minutes',c.short,1,60);
+  } else if (m === 'flow'){
+    h += numRow('f-ratio','Break ratio','break = focus time ÷ this number',c.ratio,2,10);
+    h += numRow('f-minBreak','Shortest break','minutes',c.minBreak,1,30);
+  } else {
+    h += numRow('f-focus','Timebox length','minutes',c.focus,1,480);
+  }
+  $('#modeFields').innerHTML = h;
+  $('#modeFields').querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => {
+    const key = inp.id.slice(2); let v = parseInt(inp.value, 10);
+    const min = +inp.min, max = +inp.max;
+    if (isNaN(v)) v = P.modes[m][key]; v = Math.min(max, Math.max(min, v)); inp.value = v;
+    P.modes[m][key] = v; saveP();
+    if (!S.running) S.remaining = durMs(S.phase);
+    changed();
+  }));
+  $('#rowAutoBreak').hidden = m === 'timebox';
+  $('#rowAutoFocus').hidden = m === 'timebox';
+  $('#autoBreak').checked = P.autoBreak; $('#autoFocus').checked = P.autoFocus; $('#goal').value = P.goal;
+  renderTags();
+}
+function renderTags(){
+  if (!P.tags.length) P.tags = ['General'];
+  if (!P.tags.includes(P.tag)) P.tag = P.tags[0];
+  $('#tagSel').innerHTML = P.tags.map(t => `<option ${t===P.tag?'selected':''}>${esc(t)}</option>`).join('');
+  $('#tagList').innerHTML = P.tags.map((t,i) => `<span>${esc(t)}<button data-i="${i}" aria-label="Remove ${esc(t)}">×</button></span>`).join('');
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function seg(el, opts, key, after){
+  el.innerHTML = opts.map(([v,l]) => `<button data-v="${v}" aria-pressed="${P[key]===v}">${l}</button>`).join('');
+  el.onclick = e => { const b = e.target.closest('button'); if (!b) return; P[key] = b.dataset.v; saveP(); seg(el, opts, key, after); after && after(); };
+}
+function renderLookSound(){
+  seg($('#chimeSeg'), [['bell','Bell'],['wood','Wood'],['digital','Digital'],['rise','Rise'],['none','None']], 'chime', () => chime(P.chime));
+  seg($('#ambSeg'), [['off','Off'],['rain','Rain'],['storm','Thunderstorm'],['white','White'],['pink','Pink'],['brown','Brown']], 'ambient', () => { ac(); prewarm(); updateAmbient(); $('#rowThunder').hidden = $('#rowThunderTest').hidden = P.ambient !== 'storm'; });
+  seg($('#thunderSeg'), [['rare','Rare'],['some','Sometimes'],['often','Often']], 'thunder', () => { if (amb) scheduleThunder(amb); });
+  $('#rowThunder').hidden = $('#rowThunderTest').hidden = P.ambient !== 'storm';
+  seg($('#styleSeg'), [['ring','Ring'],['bar','Bar'],['digits','Big digits']], 'style', renderAll);
+  seg($('#fontSeg'), Object.entries(DIGIT_FONTS).map(([k,v]) => [k, `<span style="font-family:${v[1].replace(/"/g,"'")}">${v[0]}</span>`]), 'digits', renderAll);
+  seg($('#weightSeg'), [['light','Light'],['regular','Regular'],['bold','Bold']], 'weight', renderAll);
+  seg($('#uiFontSeg'), Object.entries(UI_FONTS).map(([k,v]) => [k, `<span style="font-family:${v[1].replace(/"/g,"'")}">${v[0]}</span>`]), 'uiFont', renderAll);
+  seg($('#ringSeg'), [['thin','Thin'],['medium','Medium'],['thick','Thick']], 'ring', renderAll);
+  seg($('#radiusSeg'), [['sharp','Sharp'],['boxy','Boxy'],['soft','Soft'],['round','Round']], 'radius', renderAll);
+  seg($('#textureSeg'), [['none','Plain'],['dots','Dots'],['grid','Grid'],['lines','Notebook'],['glow','Glow']], 'texture', renderAll);
+  $('#themeGrid').innerHTML = Object.entries(THEMES).map(([k,t]) => {
+    const pv = t.bg ? `background:${t.bg}` : 'background:linear-gradient(135deg,#eceff4 0 50%,#0e1219 50% 100%)';
+    const bar = t.surface || '#8f99ab', dot = t.bg ? (ACCENTS[P.accent] ? ACCENTS[P.accent][t.dark ? 1 : 0] : P.customAccent) : 'var(--accent)';
+    return `<button class="theme-btn" data-t="${k}" aria-pressed="${P.theme===k}"><span class="pv" style="${pv}"><i style="background:${bar}"></i><b style="background:${dot}"></b></span>${t.name}</button>`;
+  }).join('');
+  $('#accentPick').value = P.customAccent;
+  $('#breakPick').value = P.breakColor !== 'auto' ? P.breakColor : getComputedStyle(document.documentElement).getPropertyValue('--rest').trim() || '#b4720c';
+  $('#breakAuto').setAttribute('aria-pressed', P.breakColor === 'auto');
+  $('#breakAuto').style.borderColor = P.breakColor === 'auto' ? 'var(--accent)' : '';
+  $('#timerSize').value = P.timerSize; $('#ticksOn').checked = P.ticks;
+  seg($('#miniSeg'), [['s','S'],['m','M'],['l','L']], 'mini');
+  $('#swatches').innerHTML = Object.entries(ACCENTS).map(([k,v]) => `<button data-k="${k}" aria-label="${k}" title="${k}" aria-pressed="${P.accent===k}" style="background:${v[isDark() ? 1 : 0]}"></button>`).join('')
+    + `<button data-k="custom" aria-label="custom" title="Your custom color" aria-pressed="${P.accent==='custom'}" style="background:${P.customAccent}"></button>`;
+  $('#volume').value = P.volume; $('#ambVol').value = P.ambVol;
+  $('#tick').checked = P.tick; $('#ambFocusOnly').checked = P.ambFocusOnly; $('#showSeconds').checked = P.showSeconds;
+}
+
+/* ---------- log ---------- */
+const dayKey = d => { d = new Date(d); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+function renderLog(){
+  const today = dayKey(Date.now());
+  const todays = LOG.filter(s => dayKey(s.t) === today);
+  const todayMin = todays.reduce((a,s) => a + s.min, 0);
+  $('#todayMin').textContent = fmtMin(todayMin);
+  $('#stToday').textContent = fmtMin(todayMin);
+  $('#stBlocks').textContent = `${todays.length}/${P.goal}`;
+  // goal dots
+  let dh = '';
+  for (let i = 0; i < Math.min(P.goal, 12); i++) dh += `<i class="${i < todays.length ? 'on' : ''}"></i>`;
+  if (todays.length > P.goal) dh += `<em>+${todays.length - P.goal}</em>`;
+  $('#goalDots').innerHTML = dh; $('#goalDots').title = `${todays.length} of ${P.goal} blocks today`;
+  // streak
+  const days = new Set(LOG.map(s => dayKey(s.t)));
+  let d = new Date(); d.setHours(12,0,0,0);
+  if (!days.has(dayKey(d))) d.setDate(d.getDate() - 1);
+  let streak = 0; while (days.has(dayKey(d))){ streak++; d.setDate(d.getDate() - 1); }
+  $('#stStreak').textContent = streak;
+  // week, stacked by activity
+  const week = [];
+  for (let i = 6; i >= 0; i--){ const x = new Date(); x.setHours(12,0,0,0); x.setDate(x.getDate() - i); week.push({k:dayKey(x), label:x.toLocaleDateString(undefined,{weekday:'short'}), full:x.toLocaleDateString(undefined,{weekday:'long', month:'short', day:'numeric'}), min:0, by:{}, tasks:{}}); }
+  LOG.forEach(s => { const w = week.find(w => w.k === dayKey(s.t)); if (!w) return; const t = s.tag || 'General'; w.min += s.min; w.by[t] = (w.by[t] || 0) + s.min; const tk = (s.task || '').trim(); const tt = (w.tasks[t] = w.tasks[t] || {}); tt[tk] = (tt[tk] || 0) + s.min; });
+  const peak = Math.max(...week.map(w => w.min));
+  const max = Math.max(60, Math.ceil(peak / 60) * 60);
+  const order = actOrder(week);
+  WEEK = week;
+  $('#week').innerHTML = week.map((w,i) => {
+    const segs = order.filter(t => w.by[t]).map(t => `<span class="sg" tabindex="0" data-d="${i}" data-a="${esc(t)}" style="--c:${actColor(t)};flex:${w.by[t]} 1 0" aria-label="${esc(t)}: ${fmtMin(w.by[t])} on ${w.full}"></span>`).join('');
+    return `<div class="col"><span class="v">${w.min ? fmtMin(w.min) : ''}</span><div class="stk" style="height:${w.min / max * 82}%">${segs}</div></div>`;
+  }).join('');
+  $('#days').innerHTML = week.map((w,i) => `<span class="${i===6?'today':''}">${i===6?'Today':w.label}</span>`).join('');
+  // tag bars this week
+  const byTag = {};
+  week.forEach(w => Object.entries(w.by).forEach(([t,m]) => byTag[t] = (byTag[t] || 0) + m));
+  const tags = order.filter(t => byTag[t]).map(t => [t, byTag[t]]).sort((a,b) => b[1] - a[1]);
+  $('#legend').innerHTML = tags.map(([t]) => `<span style="--c:${actColor(t)}"><i></i>${esc(t)}</span>`).join('');
+  const tmax = tags.length ? tags[0][1] : 1;
+  $('#tagBars').innerHTML = tags.length
+    ? `<div class="tagbars">${tags.map(([t,m]) => `<div class="tagbar" data-a="${esc(t)}" style="--c:${actColor(t)}"><span class="name"><i></i><b>${esc(t)}</b></span><span class="track2"><i style="width:${m/tmax*100}%"></i></span><span class="m">${fmtMin(m)}</span></div>`).join('')}</div>`
+    : `<div class="empty">Finish a focus block and your time per activity shows up here.</div>`;
+  $('#sessionList').innerHTML = todays.length
+    ? `<ul class="sessions">${todays.slice().reverse().map(s => { const t = new Date(s.t); return `<li><span class="t">${t.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</span><span class="task">${esc(s.task || 'Untitled session')}<em>${esc(s.tag||'')}</em></span><span class="min">${fmtMin(s.min)}</span></li>`; }).join('')}</ul>`
+    : `<div class="empty">No sessions yet today. Press Start and your first block lands here when it ends.</div>`;
+}
+
+/* ---------- activity colors & chart tooltip ---------- */
+// Colorblind-safe categorical palette, light and dark steps. Each activity keeps its color
+// (by its place in your activity list) no matter which ones show up in a given week.
+const SERIES = {light:['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6','#e34948'], dark:['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767']};
+let WEEK = [];
+function actOrder(week){
+  const seen = [...P.tags];
+  week.forEach(w => Object.keys(w.by).forEach(t => { if (!seen.includes(t)) seen.push(t); }));
+  return seen;
+}
+function actColor(t){
+  const i = P.tags.indexOf(t), pal = SERIES[isDark() ? 'dark' : 'light'];
+  return i >= 0 && i < pal.length ? pal[i] : (isDark() ? '#7d8596' : '#8a919e');
+}
+// Lists what you worked on (the "What are you working on?" text) under an activity, longest first.
+function taskLines(map, limit){
+  const rows = Object.entries(map || {}).sort((p,q) => q[1] - p[1]);
+  let h = rows.slice(0, limit).map(([k,m]) => `<div class="tk"><span class="${k?'':'none'}">${k ? esc(k) : 'No description'}</span><em>${fmtMin(m)}</em></div>`).join('');
+  if (rows.length > limit) h += `<div class="tk"><span>and ${rows.length - limit} more</span><em></em></div>`;
+  return h;
+}
+function showTip(el, x, y){
+  const tip = $('#vtip'), a = el.dataset.a;
+  let html;
+  if (el.dataset.d != null){
+    const w = WEEK[+el.dataset.d];
+    const rows = Object.entries(w.by).sort((p,q) => q[1] - p[1]);
+    html = `<div class="d">${esc(w.full)} · ${fmtMin(w.min)}</div>` + rows.map(([t,m]) => `<div class="r ${t===a?'on':''}" style="--c:${actColor(t)}"><span><i></i>${esc(t)}</span><em>${fmtMin(m)}</em></div>` + taskLines(w.tasks[t], t === a ? 6 : 3)).join('');
+    document.querySelectorAll('#week .sg').forEach(s => s.classList.toggle('dim', s.dataset.a !== a));
+  } else {
+    const keys = new Set(WEEK.map(w => w.k)), list = LOG.filter(s => keys.has(dayKey(s.t)) && (s.tag || 'General') === a);
+    const m = list.reduce((n,s) => n + s.min, 0);
+    const byTask = {}; list.forEach(s => { const k = (s.task || '').trim(); byTask[k] = (byTask[k] || 0) + s.min; });
+    html = `<div class="d">This week · ${list.length} session${list.length===1?'':'s'}</div><div class="r on" style="--c:${actColor(a)}"><span><i></i>${esc(a)}</span><em>${fmtMin(m)}</em></div>` + taskLines(byTask, 8);
+  }
+  tip.innerHTML = html; tip.hidden = false;
+  const r = tip.getBoundingClientRect(), pad = 12;
+  let left = x + 14, top = y - r.height - 12;
+  if (left + r.width > innerWidth - pad) left = x - r.width - 14;
+  if (top < pad) top = y + 18;
+  tip.style.left = Math.max(pad, left) + 'px'; tip.style.top = top + 'px';
+}
+function hideTip(){ $('#vtip').hidden = true; document.querySelectorAll('#week .sg.dim').forEach(s => s.classList.remove('dim')); }
+const tipTarget = e => e.target.closest && e.target.closest('#week .sg, #tagBars .tagbar');
+document.addEventListener('pointermove', e => { const el = tipTarget(e); el ? showTip(el, e.clientX, e.clientY) : (!$('#vtip').hidden && e.pointerType === 'mouse' && hideTip()); });
+document.addEventListener('pointerdown', e => { const el = tipTarget(e); el ? showTip(el, e.clientX, e.clientY) : hideTip(); });
+document.addEventListener('focusin', e => { const el = tipTarget(e); if (el){ const r = el.getBoundingClientRect(); showTip(el, r.left + r.width / 2, r.top); } });
+document.addEventListener('focusout', e => { if (tipTarget(e)) hideTip(); });
+document.addEventListener('scroll', hideTip, true);
+
+/* ---------- Spotify ---------- */
+// Spotify's embedded player, driven by Spotify's iFrame API. The published page runs inside
+// Claude's viewer, which blocks embedded players, so there the saved links open Spotify instead.
+const IN_VIEWER = window.top !== window, IS_FILE = location.protocol === 'file:';
+// Spotify's player won't load in a page opened straight from a file (no website address),
+// so by default a downloaded copy falls back to "Open in Spotify". The user can still try it.
+const canEmbed = () => !IN_VIEWER && (!IS_FILE || !!P.music.tryFile);
+const SP_HEIGHT = {compact:80, normal:152, large:352};
+let spApi = null, spApiState = 'idle', spCtl = null, spStarted = false, spPaused = true, spWantPlay = false, spMountedKey = '';
+function parseSpotify(str){
+  str = (str || '').trim();
+  let m = /^spotify:(playlist|album|track|episode|show|artist):([A-Za-z0-9]{10,})$/i.exec(str);
+  if (!m) m = /open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:embed\/)?(playlist|album|track|episode|show|artist)\/([A-Za-z0-9]{10,})/i.exec(str);
+  return m ? {type: m[1].toLowerCase(), id: m[2]} : null;
+}
+const spUri = it => `spotify:${it.type}:${it.id}`;
+const spUrl = it => `https://open.spotify.com/${it.type}/${it.id}`;
+const spCurrent = () => P.music.list.find(x => x.id === P.music.current) || null;
+function loadSpotifyApi(){
+  if (!canEmbed() || spApiState !== 'idle') return;
+  spApiState = 'loading';
+  window.onSpotifyIframeApiReady = api => { spApi = api; spApiState = 'ready'; spMountedKey = ''; mountPlayer(); };
+  const sc = document.createElement('script');
+  sc.src = 'https://open.spotify.com/embed/iframe-api/v1'; sc.async = true;
+  sc.onerror = () => { spApiState = 'failed'; spMountedKey = ''; mountPlayer(); };
+  document.head.appendChild(sc);
+  setTimeout(() => { if (spApiState === 'loading'){ spApiState = 'failed'; spMountedKey = ''; mountPlayer(); } }, 10000);
+}
+function mountPlayer(){
+  const it = spCurrent(), wrap = $('#spWrap'), open = $('#spOpen'), box = $('#spPlayer');
+  wrap.hidden = !it;
+  if (!it){ box.replaceChildren(); spCtl = null; spMountedKey = ''; return; }
+  if (!canEmbed()){
+    box.hidden = true; open.hidden = false; open.href = spUrl(it);
+    open.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Open ${esc(it.name)} in Spotify ↗</span>`;
+    return;
+  }
+  open.hidden = true; box.hidden = false;
+  const h = SP_HEIGHT[P.music.size] || 152, key = it.id + '|' + h + '|' + spApiState;
+  if (key === spMountedKey) return;
+  if (spApiState === 'idle' || spApiState === 'loading'){ loadSpotifyApi(); if (spApiState === 'loading') return; }
+  // same size and the controller exists: just switch what is loaded
+  if (spCtl && spMountedKey.split('|')[1] == h && spApiState === 'ready'){ spCtl.loadUri(spUri(it)); spStarted = false; spMountedKey = key; return; }
+  spMountedKey = key; spCtl = null; spStarted = false;
+  const el = document.createElement('div'); box.replaceChildren(el);
+  if (spApi){
+    try {
+      spApi.createController(el, {uri: spUri(it), width: '100%', height: h}, c => {
+        spCtl = c;
+        c.addListener('playback_update', e => { const d = e.data || {}; spPaused = !!d.isPaused; if (!d.isPaused || d.position > 0) spStarted = true; });
+        if (spWantPlay){ spWantPlay = false; spPlay(); }
+      });
+      return;
+    } catch(err){ spApiState = 'failed'; }
+  }
+  // fallback: plain embed, playable but without timer control
+  const f = document.createElement('iframe');
+  f.src = `https://open.spotify.com/embed/${it.type}/${it.id}`; f.height = h; f.loading = 'lazy';
+  f.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture'; f.title = 'Spotify player';
+  box.replaceChildren(f);
+}
+function spPlay(){
+  if (!spCtl){ spWantPlay = !!spCurrent(); return; }
+  try { spStarted ? spCtl.resume() : spCtl.play(); spStarted = true; } catch(e){}
+}
+function spPause(){ spWantPlay = false; if (spCtl) try { spCtl.pause(); } catch(e){} }
+let musicPrev = {running:false, phase:'focus'};
+function musicSync(){
+  const prev = musicPrev; musicPrev = {running: S.running, phase: S.phase};
+  if (!spCurrent() || !canEmbed()) return;
+  const M = P.music, focusNow = S.running && S.phase === 'focus', wasFocus = prev.running && prev.phase === 'focus';
+  if (focusNow && !wasFocus){ if (M.autoStart) spPlay(); }
+  else if (!focusNow && wasFocus){
+    if (S.phase !== 'focus'){ if (M.pauseBreak) spPause(); }
+    else if (M.pauseTimer) spPause();
+  }
+}
+function renderMusic(){
+  const M = P.music;
+  $('#spList').innerHTML = M.list.map(it => `<li><button class="pick" data-id="${it.id}" aria-pressed="${it.id===M.current}"><i></i><span><b>${esc(it.name)}</b><small>Spotify ${it.type}</small></span></button><a href="${spUrl(it)}" target="_blank" rel="noopener">Open ↗</a><button class="del" data-del="${it.id}" aria-label="Remove ${esc(it.name)}">×</button></li>`).join('')
+    || `<li style="border:0"><span class="lead" style="margin:0">No music added yet.</span></li>`;
+  $('#spAuto').checked = M.autoStart; $('#spBreak').checked = M.pauseBreak; $('#spTimer').checked = M.pauseTimer;
+  ['spAuto','spBreak','spTimer'].forEach(id => $('#' + id).disabled = !canEmbed());
+  const sizeSeg = $('#spSizeSeg');
+  sizeSeg.innerHTML = [['compact','Compact'],['normal','Normal'],['large','Large']].map(([v,l]) => `<button data-v="${v}" aria-pressed="${M.size===v}">${l}</button>`).join('');
+  $('#spTry').hidden = !IS_FILE || IN_VIEWER;
+  $('#spTry').textContent = P.music.tryFile ? 'Go back to the Open in Spotify button' : 'Try the built-in player anyway';
+  $('#spNote').textContent = IS_FILE && !IN_VIEWER && !P.music.tryFile
+    ? "Spotify's player doesn't load when Focus Bench is opened as a file from your computer, so your music opens in Spotify instead and the timer can't pause it. Put Focus Bench on a website to get the built-in player."
+    : canEmbed()
+    ? 'Full songs play when you are signed in to Spotify in this browser. If you are not, Spotify only plays 30-second previews. The timer controls this player, not the Spotify app on your computer or phone.'
+    : "This page runs inside Claude's viewer, which doesn't allow embedded players, so your music opens in Spotify instead and the timer can't pause it. For the built-in player and automatic pausing, put Focus Bench on a website and open it there in Chrome or Edge.";
+  mountPlayer();
+}
+function addMusic(){
+  const it = parseSpotify($('#spIn').value);
+  if (!it){ toast("That doesn't look like a Spotify link. Copy it from Share, then Copy link."); return; }
+  const fallback = {playlist:'Playlist', album:'Album', track:'Song', episode:'Podcast episode', show:'Podcast', artist:'Artist'}[it.type];
+  it.name = $('#spName').value.trim() || `${fallback} ${P.music.list.filter(x => x.type === it.type).length + 1}`;
+  P.music.list = P.music.list.filter(x => x.id !== it.id); P.music.list.push(it); P.music.current = it.id;
+  $('#spIn').value = ''; $('#spName').value = ''; saveP(); renderMusic(); toast(`Added ${it.name}.`);
+}
+$('#spAdd').onclick = addMusic;
+$('#spIn').onkeydown = $('#spName').onkeydown = e => { if (e.key === 'Enter') addMusic(); };
+$('#spList').onclick = e => {
+  const d = e.target.closest('[data-del]'), pk = e.target.closest('.pick');
+  if (d){ P.music.list = P.music.list.filter(x => x.id !== d.dataset.del); if (P.music.current === d.dataset.del) P.music.current = P.music.list[0] ? P.music.list[0].id : null; saveP(); renderMusic(); }
+  else if (pk){ P.music.current = pk.dataset.id; saveP(); renderMusic(); }
+};
+$('#spTry').onclick = () => { P.music.tryFile = !P.music.tryFile; saveP(); spMountedKey = ''; renderMusic(); };
+$('#spAuto').onchange = e => { P.music.autoStart = e.target.checked; saveP(); };
+$('#spBreak').onchange = e => { P.music.pauseBreak = e.target.checked; saveP(); };
+$('#spTimer').onchange = e => { P.music.pauseTimer = e.target.checked; saveP(); };
+$('#spSizeSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; P.music.size = b.dataset.v; saveP(); renderMusic(); };
+
+/* ---------- notes ---------- */
+function renderNotes(){
+  $('#noteList').innerHTML = NOTES.map(n => `<li class="${n.done?'done':''}"><input type="checkbox" data-id="${n.id}" ${n.done?'checked':''} aria-label="Done"><span>${esc(n.text)}</span><button data-del="${n.id}" aria-label="Delete">×</button></li>`).join('')
+    || '<li style="border:0"><span class="lead" style="margin:0">Nothing parked.</span></li>';
+}
+const saveNotes = () => store.set('fb.notes', NOTES);
+
+/* ---------- audio ---------- */
+let AC = null, master = null;
+function ac(){
+  try {
+    if (!AC){ AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.connect(AC.destination); }
+    if (AC.state === 'suspended') AC.resume();
+  } catch(e){}
+  return AC;
+}
+function tone(f, type, t0, dur, vol, f2){
+  if (vol <= 0) return;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.05);
+}
+function chime(kind){
+  if (kind === 'none' || !ac()) return;
+  const v = +P.volume, t = AC.currentTime + 0.03;
+  if (v <= 0) return;
+  if (kind === 'bell') for (let i = 0; i < 3; i++){ const s = t + i * .7; tone(880,'sine',s,1.8,.45*v); tone(1318.5,'sine',s,1.3,.18*v); tone(2637,'sine',s,.5,.05*v); }
+  if (kind === 'wood') for (let i = 0; i < 3; i++){ const s = t + i * .45; tone(1250,'triangle',s,.09,.7*v,700); tone(1250,'triangle',s+.14,.09,.7*v,700); }
+  if (kind === 'digital') for (let i = 0; i < 4; i++){ const s = t + Math.floor(i/2)*.6 + (i%2)*.16; tone(1046,'square',s,.11,.13*v); }
+  if (kind === 'rise'){ tone(392,'triangle',t,1.5,.4*v,784); tone(587,'sine',t+.35,1.5,.22*v,1174); tone(784,'sine',t+.7,1.6,.15*v,1568); }
+}
+function tickSound(){ if (!AC || P.volume <= 0) return; tone(2200,'square',AC.currentTime+.01,.018,.035*P.volume); }
+
+const bufCache = {};
+function noiseBuf(kind){
+  if (bufCache[kind]) return bufCache[kind];
+  // Generate a long stretch of noise plus a little extra, then blend the extra
+  // into the start so the loop point is seamless (no gap, no click, no dip).
+  const sr = AC.sampleRate, len = sr * 20, fade = Math.floor(sr * 0.5);
+  const raw = new Float32Array(len + fade);
+  let last = 0, b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+  for (let i = 0; i < raw.length; i++){
+    const w = Math.random() * 2 - 1;
+    if (kind === 'white') raw[i] = w * .35;
+    else if (kind === 'brown'){ last = (last + .02 * w) / 1.02; raw[i] = last * 3.5; }
+    else { b0=.99886*b0+w*.0555179; b1=.99332*b1+w*.0750759; b2=.969*b2+w*.153852; b3=.8665*b3+w*.3104856; b4=.55*b4+w*.5329522; b5=-.7616*b5-w*.016898; raw[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11; b6=w*.115926; }
+  }
+  const b = AC.createBuffer(1, len, sr), d = b.getChannelData(0);
+  d.set(raw.subarray(0, len));
+  // Equal-power crossfade: the sample after d[len-1] is raw[len], so the first
+  // samples are mostly raw[len..] and gradually hand over to the original start.
+  for (let i = 0; i < fade; i++){
+    const k = i / fade, a = Math.sin(k * Math.PI / 2), c = Math.cos(k * Math.PI / 2);
+    d[i] = raw[i] * a + raw[len + i] * c;
+  }
+  return bufCache[kind] = b;
+}
+/* ---------- rain & thunder synthesis ---------- */
+// Everything here is pure math on sample arrays so it can run in a background
+// worker; the timer never stalls while a storm is being built.
+function stormLib(){
+  const TAU = Math.PI * 2, rnd = Math.random;
+  const panG = p => [Math.cos(p * Math.PI / 2), Math.sin(p * Math.PI / 2)];
+
+  // Rain: a wide, decorrelated stereo wash, thousands of tiny impact ticks and
+  // soft patter on leaves and roofs, all noise-based so nothing sounds pitched.
+  // Rendered once as a 30 s stereo loop with a seamless crossfade.
+  function rain(sr){
+    const len = Math.floor(sr * 30), fade = Math.floor(sr * 1.5), N = len + fade;
+    const L = new Float32Array(N), R = new Float32Array(N);
+    const G = new Float32Array((N >> 7) + 2);
+    for (let k = 0; k < G.length; k++){ const t = k * 128 / sr; G[k] = 1 + .10 * Math.sin(TAU * t / 11.3) + .07 * Math.sin(TAU * t / 5.1 + 1.3) + .04 * Math.sin(TAU * t / 2.3 + .4); }
+    // 1. the wash: pink noise band-limited 350 Hz – 5.5 kHz, a little air on top, a little low body
+    const aHP = Math.exp(-TAU * 350 / sr), aLP = 1 - Math.exp(-TAU * 5500 / sr), aHS = Math.exp(-TAU * 6500 / sr), aLo = 1 - Math.exp(-TAU * 180 / sr);
+    for (const ch of [L, R]){
+      let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0, hp=0, hpx=0, l1=0, l2=0, hs=0, hsx=0, br=0, lo=0;
+      for (let i = 0; i < N; i++){
+        const w = rnd() * 2 - 1;
+        b0=.99886*b0+w*.0555179; b1=.99332*b1+w*.0750759; b2=.969*b2+w*.153852; b3=.8665*b3+w*.3104856; b4=.55*b4+w*.5329522; b5=-.7616*b5-w*.016898;
+        const p = (b0+b1+b2+b3+b4+b5+b6+w*.5362) * .11; b6 = w * .115926;
+        hp = aHP * (hp + p - hpx); hpx = p;
+        l1 += aLP * (hp - l1); l2 += aLP * (l1 - l2);
+        hs = aHS * (hs + w - hsx); hsx = w;
+        br = (br + .02 * w) / 1.02; lo += aLo * (br * 3.5 - lo);
+        ch[i] = (l2 + hs * .06 + lo * .3) * G[i >> 7];
+      }
+    }
+    // 2. impact ticks: very short bright noise bursts, most of them faint and far away
+    for (let k = 0, cnt = 30 * 650; k < cnt; k++){
+      const s = Math.floor(rnd() * N), n = Math.floor(sr * (.0006 + rnd() * .0028));
+      const amp = (.02 + .45 * Math.pow(rnd(), 5)) * G[s >> 7], [gl, gr] = panG(rnd());
+      const dm = Math.exp(-4 / n); let e = amp, prev = 0;
+      for (let j = 0; j < n && s + j < N; j++){ const w = rnd() * 2 - 1, v = (w - prev) * e; prev = w; L[s+j] += v * gl; R[s+j] += v * gr; e *= dm; }
+    }
+    // 3. patter on leaves and roofing: short, soft, darker noise bursts (no pitched tones)
+    for (let k = 0, cnt = 30 * 220; k < cnt; k++){
+      const s = Math.floor(rnd() * N), n = Math.floor(sr * (.004 + rnd() * .012));
+      const fc = 900 + rnd() * 2600, aF = 1 - Math.exp(-TAU * fc / sr);
+      const amp = (.03 + .25 * Math.pow(rnd(), 4)) * G[s >> 7], [gl, gr] = panG(rnd()), dm = Math.exp(-5 / n);
+      let e = amp, f1 = 0, f2 = 0;
+      for (let j = 0; j < n && s + j < N; j++){ const w = rnd() * 2 - 1; f1 += aF * (w - f1); f2 += aF * (f1 - f2); const v = f2 * e * Math.min(1, j / 24); L[s+j] += v * gl; R[s+j] += v * gr; e *= dm; }
+    }
+    // normalise, soften peaks, crossfade the loop seam
+    let sum = 0, cnt = 0; for (let i = 0; i < N; i += 7){ sum += L[i] * L[i] + R[i] * R[i]; cnt += 2; }
+    const scale = .2 / Math.sqrt(sum / cnt), out = [];
+    for (const ch of [L, R]){
+      const d = new Float32Array(len);
+      for (let i = 0; i < N; i++) ch[i] = Math.tanh(ch[i] * scale);
+      d.set(ch.subarray(0, len));
+      for (let i = 0; i < fade; i++){ const k = i / fade; d[i] = ch[i] * Math.sin(k * Math.PI / 2) + ch[len + i] * Math.cos(k * Math.PI / 2); }
+      out.push(d);
+    }
+    return [out];
+  }
+
+  // Thunder: each strike is new. It has a distance (near strikes crack before the
+  // boom, far ones are muffled low rumbles), several overlapping rolls, a low-pass
+  // that closes as the sound travels, and a slow random "grumble".
+  function thunder(sr){
+    const dist = rnd(), T = 8 + rnd() * 7 + dist * 3, n = Math.floor(sr * T);
+    const L = new Float32Array(n), R = new Float32Array(n);
+    const onset = .03 + dist * .5, K = 3 + Math.floor(rnd() * 5), rolls = [];
+    for (let k = 0; k < K; k++){
+      const t = k === 0 ? onset : onset + .2 + Math.pow(rnd(), 1.4) * T * .5, pan = k === 0 ? .3 + rnd() * .4 : rnd();
+      rolls.push({t, a: k === 0 ? 1 : (.3 + rnd() * .7) * Math.exp(-(t - onset) / (T * .45)), att: .04 + dist * .4 + rnd() * .2, tau: .7 + rnd() * 1.6 + dist * 1.2, gl: Math.cos(pan * Math.PI / 2), gr: Math.sin(pan * Math.PI / 2)});
+    }
+    const fStart = 1100 - dist * 800, fEnd = 130 - dist * 60, fTau = T * .22;
+    const amA = 1 - Math.exp(-TAU * 3 / sr), amNorm = .577 * Math.sqrt(amA / (2 - amA));
+    let l1=0,l2=0,r1=0,r2=0,lm=0,rm=0,am=0,a1=0,a2=0,comp=1,eL=0,eR=0,peak=0;
+    for (let i = 0; i < n; i++){
+      if ((i & 31) === 0){
+        const t = i / sr, fc = fEnd + (fStart - fEnd) * Math.exp(-t / fTau);
+        a1 = 1 - Math.exp(-TAU * fc / sr); a2 = 1 - Math.exp(-TAU * Math.min(fc * 3, 4000) / sr); comp = 1 / Math.sqrt(a1);
+        eL = 0; eR = 0;
+        for (const r of rolls){ const x = t - r.t; if (x < 0) continue; const s = x < r.att ? (x / r.att) * (x / r.att) : Math.exp(-(x - r.att) / r.tau); eL += r.a * s * r.gl; eR += r.a * s * r.gr; }
+      }
+      am += amA * ((rnd() * 2 - 1) - am);
+      const mod = Math.max(.15, 1 + .5 * am / amNorm);
+      const c = rnd() * 2 - 1, nl = .8 * c + .6 * (rnd() * 2 - 1), nr = .8 * c + .6 * (rnd() * 2 - 1);
+      l1 += a1 * (nl - l1); l2 += a1 * (l1 - l2); lm += a2 * (nl - lm);
+      r1 += a1 * (nr - r1); r2 += a1 * (r1 - r2); rm += a2 * (nr - rm);
+      L[i] = (l2 + .15 * lm) * comp * eL * mod;
+      R[i] = (r2 + .15 * rm) * comp * eR * mod;
+      const m = Math.max(Math.abs(L[i]), Math.abs(R[i])); if (m > peak) peak = m;
+    }
+    for (let i = 0; i < n; i++){ L[i] /= peak; R[i] /= peak; }
+    // the crack of a near strike: a ragged tear of bright bursts right before the boom
+    if (dist < .4){
+      const strength = 1 - dist / .4, bursts = 5 + Math.floor(rnd() * 7), aLP = 1 - Math.exp(-TAU * 6000 / sr);
+      for (let j = 0; j < bursts; j++){
+        const s = Math.floor(sr * (onset * .2 + rnd() * .35)), dur = .02 + rnd() * .12, cnt = Math.floor(sr * dur * 4);
+        const amp = strength * (.25 + rnd() * .6), [gl, gr] = panG(.3 + rnd() * .4), dm = Math.exp(-1 / (sr * dur));
+        let prev = 0, lp = 0, e = amp;
+        for (let k = 0; k < cnt && s + k < n; k++){ const w = rnd() * 2 - 1; lp += aLP * ((w - prev) - lp); prev = w; const v = lp * e; L[s+k] += v * gl; R[s+k] += v * gr; e *= dm; }
+      }
+    }
+    const level = .95 - dist * .5, tail = Math.floor(sr * 1.2);
+    for (let i = 0; i < n; i++){ const f = i > n - tail ? (n - i) / tail : 1; L[i] = Math.tanh(L[i] * level) * f; R[i] = Math.tanh(R[i] * level) * f; }
+    return [[L, R]];
+  }
+  return {rain, thunder};
+}
+
+let synthWorker = null, synthId = 0;
+const synthWaits = {};
+try {
+  const code = `const LIB=(${stormLib.toString()})();onmessage=e=>{const{id,kind,sr}=e.data;const bufs=LIB[kind](sr);postMessage({id,bufs},bufs.flat().map(a=>a.buffer));};`;
+  synthWorker = new Worker(URL.createObjectURL(new Blob([code], {type: 'text/javascript'})));
+  synthWorker.onmessage = e => { const w = synthWaits[e.data.id]; delete synthWaits[e.data.id]; w && w(e.data.bufs); };
+  synthWorker.onerror = () => { synthWorker = null; Object.keys(synthWaits).forEach(id => { const w = synthWaits[id]; delete synthWaits[id]; w(null); }); };
+} catch(e){ synthWorker = null; }
+// Returns a promise of AudioBuffers. Falls back to rendering on the page if workers are blocked.
+function synth(kind){
+  const sr = AC.sampleRate;
+  const toBuffers = bufs => bufs.map(chs => { const b = AC.createBuffer(chs.length, chs[0].length, sr); chs.forEach((c, i) => b.copyToChannel ? b.copyToChannel(c, i) : b.getChannelData(i).set(c)); return b; });
+  const local = () => toBuffers(stormLib()[kind](sr));
+  if (!synthWorker) return new Promise(res => setTimeout(() => res(local()), 30));
+  return new Promise(res => { const id = ++synthId; synthWaits[id] = bufs => res(bufs ? toBuffers(bufs) : local()); synthWorker.postMessage({id, kind, sr}); });
+}
+function cached(kind){ return bufCache[kind] || (bufCache[kind] = synth(kind)); }
+
+const THUNDER_GAP = {rare: [70, 160], some: [25, 75], often: [10, 35]};
+let nextStrike = null;
+async function playThunder(){
+  if (!ac()) return;
+  const p = nextStrike || synth('thunder');
+  nextStrike = synth('thunder');           // render the following strike ahead of time
+  const [buf] = await p;
+  const s = AC.createBufferSource(), g = AC.createGain();
+  s.buffer = buf; g.gain.value = 1.5; s.connect(g);
+  if (amb){ g.connect(amb.g); amb.srcs.push(s); }
+  else { const tmp = AC.createGain(); tmp.gain.value = Math.max(.15, P.ambVol) * .7; g.connect(tmp); tmp.connect(ambBus()); }
+  s.start();
+}
+function scheduleThunder(a, first){
+  if (amb !== a || a.type !== 'storm') return;
+  clearTimeout(a.thunder);
+  if (!nextStrike) nextStrike = synth('thunder');
+  const [lo, hi] = THUNDER_GAP[P.thunder] || THUNDER_GAP.some;
+  const wait = first ? 6 + Math.random() * 12 : lo + Math.random() * (hi - lo);
+  a.thunder = setTimeout(() => { if (amb === a){ playThunder(); scheduleThunder(a); } }, wait * 1000);
+}
+let bus = null;
+function ambBus(){
+  if (bus) return bus;
+  bus = AC.createDynamicsCompressor();
+  bus.threshold.value = -12; bus.knee.value = 8; bus.ratio.value = 4; bus.attack.value = .01; bus.release.value = .4;
+  bus.connect(master); return bus;
+}
+
+let amb = null, ambPreview = false;
+function prewarm(){ if ((P.ambient === 'rain' || P.ambient === 'storm') && ac()){ cached('rain'); } }
+function startAmb(type){
+  const g = AC.createGain(); g.gain.value = 0; g.connect(ambBus());
+  const a = {type, g, srcs: [], timers: []};
+  amb = a;
+  const loopSrc = buf => { const s = AC.createBufferSource(); s.buffer = buf; s.loop = true; s.connect(g); s.start(); a.srcs.push(s); };
+  if (type === 'rain' || type === 'storm'){
+    cached('rain').then(([rainB]) => { if (amb !== a) return; loopSrc(rainB); });
+  }
+  else loopSrc(noiseBuf(type));
+  g.gain.setTargetAtTime(P.ambVol * .7, AC.currentTime, type === 'rain' || type === 'storm' ? 1.2 : .4);
+  if (type === 'storm') scheduleThunder(a, true);
+}
+function stopAmb(){
+  if (!amb) return; const a = amb; amb = null;
+  clearTimeout(a.thunder); a.timers.forEach(clearTimeout);
+  a.g.gain.setTargetAtTime(0, AC.currentTime, .25);
+  setTimeout(() => { a.srcs.forEach(s => { try { s.stop(); } catch(e){} }); a.g.disconnect(); }, 1500);
+}
+function updateAmbient(){
+  const want = P.ambient !== 'off' && (ambPreview || (S.running && (!P.ambFocusOnly || S.phase === 'focus')));
+  $('#ambPreview').textContent = ambPreview ? 'Stop preview' : 'Preview';
+  if (!want || !AC){ stopAmb(); return; }
+  if (amb && amb.type === P.ambient){ amb.g.gain.setTargetAtTime(P.ambVol * .7, AC.currentTime, .1); return; }
+  stopAmb(); startAmb(P.ambient);
+}
+
+/* ---------- wake lock ---------- */
+let wl = null;
+async function wake(on){
+  try {
+    if (on && 'wakeLock' in navigator && !wl){ wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => wl = null); }
+    else if (!on && wl){ await wl.release(); wl = null; }
+  } catch(e){}
+}
+
+/* ---------- mini clock (floating window) ---------- */
+let pipWin = null, pipVideo = null, pipCanvas = null;
+const miniOpen = () => !!pipWin || (!!pipVideo && document.pictureInPictureElement === pipVideo);
+const SIZES = {s:[230,130], m:[300,170], l:[400,220]};
+const FONT_URL = 'https://fonts.googleapis.com/css2?family=Archivo+Black&family=Big+Shoulders+Display:wght@300;500;800&family=Caveat:wght@400;500;700&family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,800&family=Fredoka:wght@300;500;600;700&family=JetBrains+Mono:wght@300;500;700;800&family=Lexend:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Orbitron:wght@400;500;800&family=Playfair+Display:wght@400;500;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=VT323&display=swap';
+function tokens(){
+  const cs = getComputedStyle(document.body), g = n => cs.getPropertyValue(n).trim();
+  return {bg:g('--surface'), ink:g('--ink'), cur:g('--cur'), muted:g('--muted'), soft:g('--soft'), onacc:g('--on-cur'), digits:g('--digits'), weight:g('--dweight') || '800', body:g('--f-body')};
+}
+async function toggleMini(){
+  if (pipWin){ pipWin.close(); pipWin = null; renderAll(); return; }
+  if (pipVideo && document.pictureInPictureElement){ try { await document.exitPictureInPicture(); } catch(e){} return; }
+  // A floating document window is only allowed when the page runs in its own tab.
+  if (window.top === window && 'documentPictureInPicture' in window){
+    try {
+      const [w,h] = SIZES[P.mini] || SIZES.m;
+      pipWin = await documentPictureInPicture.requestWindow({width:w, height:h});
+      buildDocPip(pipWin);
+      pipWin.addEventListener('pagehide', () => { pipWin = null; renderAll(); });
+      renderAll(); return;
+    } catch(e){ pipWin = null; }
+  }
+  try { await openVideoPip(); }
+  catch(e){ toast("This browser won't let a web page float a mini clock. Chrome and Edge support it."); }
+}
+function buildDocPip(w){
+  const d = w.document;
+  d.head.innerHTML = `<meta charset="utf-8"><link rel="stylesheet" href="${FONT_URL}"><style>
+    html,body{margin:0;height:100%}
+    body{background:var(--bg);color:var(--ink);font-family:Figtree,system-ui,sans-serif;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:10px 14px;box-sizing:border-box;overflow:hidden}
+    .r{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .l{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--cur);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .t{font-family:var(--digits);font-weight:var(--dweight);font-size:min(46vh,24vw);line-height:1;font-variant-numeric:tabular-nums}
+    .t small{font-size:.35em;color:var(--muted);margin-left:.15em;font-family:Figtree,sans-serif}
+    .bar{height:6px;border-radius:9px;background:var(--soft);overflow:hidden}.bar i{display:block;height:100%;background:var(--cur)}
+    .k{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    button{border:0;border-radius:99px;background:var(--cur);color:var(--onacc);font:700 12px Figtree,sans-serif;padding:4px 10px;cursor:pointer}
+    button.g{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--soft)}
+  </style>`;
+  d.body.innerHTML = `<div class="r"><span class="l" id="pl"></span><span><button class="g" id="sk">Skip</button> <button id="pp">Start</button></span></div><div class="t" id="pt"></div><div class="bar"><i id="pb"></i></div><div class="k" id="pk"></div>`;
+  d.getElementById('pp').onclick = toggle;
+  d.getElementById('sk').onclick = skip;
+}
+async function openVideoPip(){
+  if (!document.pictureInPictureEnabled || !HTMLCanvasElement.prototype.captureStream) throw new Error('unsupported');
+  if (!pipCanvas){ pipCanvas = document.createElement('canvas'); pipCanvas.width = 480; pipCanvas.height = 270; }
+  drawPip(fmt(countUp() ? flowElapsed() : remaining(), countUp()), frac());
+  if (!pipVideo){
+    pipVideo = document.createElement('video');
+    pipVideo.muted = true; pipVideo.playsInline = true; pipVideo.setAttribute('aria-hidden','true');
+    pipVideo.style.cssText = 'position:fixed;width:2px;height:2px;opacity:0;pointer-events:none;bottom:0;left:0';
+    document.body.appendChild(pipVideo);
+    pipVideo.srcObject = pipCanvas.captureStream(10);
+    pipVideo.addEventListener('leavepictureinpicture', () => { renderAll(); });
+    pipVideo.addEventListener('enterpictureinpicture', () => { renderAll(); updateMedia(); });
+  }
+  await pipVideo.play();
+  await pipVideo.requestPictureInPicture();
+  setupMedia();
+}
+function drawPip(f, fr){
+  const c = pipCanvas, x = c.getContext('2d'), W = c.width, H = c.height, k = tokens();
+  x.fillStyle = k.bg; x.fillRect(0,0,W,H);
+  x.textBaseline = 'alphabetic';
+  x.fillStyle = k.cur; x.font = '700 22px Figtree, sans-serif';
+  x.fillText(phaseName().toUpperCase(), 28, 48);
+  if (!S.running && !notStarted()){ x.fillStyle = k.muted; x.textAlign = 'right'; x.fillText('PAUSED', W - 28, 48); x.textAlign = 'left'; }
+  const fam = k.digits || 'sans-serif';
+  x.font = `${k.weight} 120px ${fam}`;
+  let w = x.measureText(f.text).width, size = Math.min(120, 120 * (W - 56 - (f.unit ? 70 : 0)) / w);
+  x.font = `${k.weight} ${size}px ${fam}`; x.fillStyle = k.ink; x.fillText(f.text, 26, 170);
+  if (f.unit){ const tw = x.measureText(f.text).width; x.font = '600 30px Figtree, sans-serif'; x.fillStyle = k.muted; x.fillText(f.unit, 34 + tw, 170); }
+  x.fillStyle = k.soft; roundRect(x, 28, 194, W - 56, 10, 5); x.fill();
+  if (fr > 0){ x.fillStyle = k.cur; roundRect(x, 28, 194, Math.max(10, (W - 56) * fr), 10, 5); x.fill(); }
+  const label = [P.task, P.tag].filter(Boolean).join(' · ');
+  x.fillStyle = k.muted; x.font = '600 22px Figtree, sans-serif';
+  let t = label; while (t && x.measureText(t).width > W - 56) t = t.slice(0, -2);
+  x.fillText(t === label ? t : t + '…', 28, 240);
+}
+function roundRect(x, X, Y, w, h, r){ x.beginPath(); x.moveTo(X+r,Y); x.arcTo(X+w,Y,X+w,Y+h,r); x.arcTo(X+w,Y+h,X,Y+h,r); x.arcTo(X,Y+h,X,Y,r); x.arcTo(X,Y,X+w,Y,r); x.closePath(); }
+function updateMini(f, fr){
+  if (pipWin){
+    const d = pipWin.document, k = tokens(), b = d.body;
+    if (!d.getElementById('pt')) return;
+    Object.entries({'--bg':k.bg,'--ink':k.ink,'--cur':k.cur,'--muted':k.muted,'--soft':k.soft,'--onacc':k.onacc,'--digits':k.digits,'--dweight':k.weight}).forEach(([n,v]) => b.style.setProperty(n, v));
+    d.getElementById('pl').textContent = phaseName();
+    d.getElementById('pt').innerHTML = f.text + (f.unit ? `<small>${f.unit}</small>` : '');
+    d.getElementById('pb').style.width = (fr * 100) + '%';
+    d.getElementById('pk').textContent = [P.task, P.tag].filter(Boolean).join(' · ');
+    d.getElementById('pp').textContent = S.running ? 'Pause' : 'Start';
+    d.getElementById('sk').textContent = countUp() ? 'Break' : 'Skip';
+    pipWin.document.title = f.text;
+  }
+  if (pipVideo && document.pictureInPictureElement === pipVideo) drawPip(f, fr);
+}
+function setupMedia(){
+  if (!('mediaSession' in navigator)) return;
+  const ms = navigator.mediaSession;
+  try { ms.setActionHandler('play', () => { start(); pipVideo && pipVideo.play(); }); } catch(e){}
+  try { ms.setActionHandler('pause', () => { pause(); pipVideo && pipVideo.play(); }); } catch(e){}
+  try { ms.setActionHandler('nexttrack', () => skip()); } catch(e){}
+  updateMedia();
+}
+function updateMedia(){
+  if (!('mediaSession' in navigator) || !pipVideo) return;
+  try {
+    navigator.mediaSession.playbackState = S.running ? 'playing' : 'paused';
+    if ('MediaMetadata' in window) navigator.mediaSession.metadata = new MediaMetadata({title: phaseName(), artist: P.task || P.tag || 'Focus Bench'});
+  } catch(e){}
+}
+
+/* ---------- focus mode ---------- */
+function toggleFocusMode(){
+  const on = !document.body.classList.contains('focus-mode');
+  document.body.classList.toggle('focus-mode', on);
+  try {
+    if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  } catch(e){}
+  renderAll();
+}
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('focus-mode')){ document.body.classList.remove('focus-mode'); renderAll(); } });
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3800); }
+
+/* ---------- events ---------- */
+$('#startBtn').onclick = toggle;
+$('#resetBtn').onclick = reset;
+$('#skipBtn').onclick = skip;
+$('#miniBtn').onclick = toggleMini;
+$('#focusBtn').onclick = toggleFocusMode;
+$('#modes').onclick = e => {
+  const b = e.target.closest('[data-mode]'); if (!b || b.dataset.mode === P.mode) return;
+  if (S.running && S.phase === 'focus'){ const el = focusElapsed(); if (el >= 60000) logFocus(el); }
+  P.mode = b.dataset.mode; saveP(); S.flowBreakMin = 5; resetCycle(); renderTimerPane();
+};
+$('#task').value = P.task;
+$('#task').addEventListener('input', e => { P.task = e.target.value; saveP(); updateMedia(); });
+$('#tagSel').addEventListener('change', e => { P.tag = e.target.value; saveP(); });
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t));
+  document.querySelectorAll('.pane').forEach(p => p.hidden = p.id !== 'pane-' + t.dataset.tab);
+});
+$('#autoBreak').onchange = e => { P.autoBreak = e.target.checked; saveP(); };
+$('#autoFocus').onchange = e => { P.autoFocus = e.target.checked; saveP(); };
+$('#goal').onchange = e => { P.goal = Math.min(30, Math.max(1, parseInt(e.target.value,10) || 6)); e.target.value = P.goal; saveP(); renderLog(); };
+$('#tagList').onclick = e => { const b = e.target.closest('button'); if (!b) return; P.tags.splice(+b.dataset.i, 1); saveP(); renderTags(); };
+function addTag(){ const v = $('#newTag').value.trim(); if (!v) return; if (!P.tags.includes(v)) P.tags.push(v); P.tag = v; $('#newTag').value = ''; saveP(); renderTags(); }
+$('#addTag').onclick = addTag;
+$('#newTag').onkeydown = e => { if (e.key === 'Enter') addTag(); };
+$('#volume').oninput = e => { P.volume = +e.target.value; saveP(); };
+$('#testChime').onclick = () => chime(P.chime === 'none' ? 'bell' : P.chime);
+$('#tick').onchange = e => { P.tick = e.target.checked; saveP(); };
+$('#ambVol').oninput = e => { P.ambVol = +e.target.value; saveP(); updateAmbient(); };
+$('#ambFocusOnly').onchange = e => { P.ambFocusOnly = e.target.checked; saveP(); updateAmbient(); };
+$('#ambPreview').onclick = () => { ac(); if (P.ambient === 'off'){ toast('Pick a background sound first.'); return; } ambPreview = !ambPreview; updateAmbient(); };
+$('#thunderNow').onclick = () => playThunder();
+$('#showSeconds').onchange = e => { P.showSeconds = e.target.checked; saveP(); renderAll(); };
+$('#swatches').onclick = e => { const b = e.target.closest('button'); if (!b) return; P.accent = b.dataset.k; saveP(); renderAll(); renderLookSound(); };
+$('#themeGrid').onclick = e => { const b = e.target.closest('[data-t]'); if (!b) return; P.theme = b.dataset.t; saveP(); renderAll(); renderLookSound(); };
+$('#accentPick').oninput = e => { P.accent = 'custom'; P.customAccent = e.target.value; saveP(); applyLook(); renderTime(); };
+$('#accentPick').onchange = () => renderLookSound();
+$('#breakPick').oninput = e => { P.breakColor = e.target.value; saveP(); applyLook(); renderTime(); };
+$('#breakPick').onchange = () => renderLookSound();
+$('#breakAuto').onclick = () => { P.breakColor = 'auto'; saveP(); renderAll(); renderLookSound(); };
+$('#timerSize').oninput = e => { P.timerSize = +e.target.value; saveP(); applyLook(); };
+$('#ticksOn').onchange = e => { P.ticks = e.target.checked; saveP(); applyLook(); };
+$('#resetLook').onclick = () => { LOOK_KEYS.forEach(k => P[k] = clone(DEFAULTS)[k]); saveP(); renderAll(); renderLookSound(); toast('Look reset to default.'); };
+new MutationObserver(() => { renderAll(); renderLookSound(); }).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+$('#clearWrap').onclick = e => {
+  const id = e.target.id;
+  if (id === 'clearLog') $('#clearWrap').innerHTML = `<span>Delete all ${LOG.length} sessions?</span><button class="small-btn danger" id="clearYes">Delete</button><button class="small-btn" id="clearNo">Cancel</button>`;
+  else if (id === 'clearYes'){ LOG = []; store.set('fb.log', LOG); renderLog(); $('#clearWrap').innerHTML = '<button class="small-btn" id="clearLog">Clear history</button>'; toast('History cleared.'); }
+  else if (id === 'clearNo') $('#clearWrap').innerHTML = '<button class="small-btn" id="clearLog">Clear history</button>';
+};
+function addNote(){ const v = $('#noteIn').value.trim(); if (!v) return; NOTES.unshift({id:Date.now().toString(36), text:v, done:false}); $('#noteIn').value = ''; saveNotes(); renderNotes(); }
+$('#noteAdd').onclick = addNote;
+$('#noteIn').onkeydown = e => { if (e.key === 'Enter') addNote(); };
+$('#noteList').onclick = e => {
+  if (e.target.dataset.del){ NOTES = NOTES.filter(n => n.id !== e.target.dataset.del); saveNotes(); renderNotes(); }
+  else if (e.target.dataset.id){ const n = NOTES.find(n => n.id === e.target.dataset.id); if (n){ n.done = e.target.checked; saveNotes(); renderNotes(); } }
+};
+$('#noteClear').onclick = () => { NOTES = NOTES.filter(n => !n.done); saveNotes(); renderNotes(); };
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (e.metaKey || e.ctrlKey || e.altKey || t.matches('input, textarea, select')) return;
+  const k = e.key.toLowerCase();
+  if (k === ' '){ if (t.closest('button')) return; e.preventDefault(); toggle(); }
+  else if (k === 'r') reset();
+  else if (k === 's') skip();
+  else if (k === 'm') toggleMini();
+  else if (k === 'f') toggleFocusMode();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderLookSound(); });
+
+/* ---------- boot ---------- */
+applyLook(); renderTimerPane(); renderLookSound(); renderLog(); renderNotes(); renderAll(); renderMusic();
+prewarm();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderTime);
+})();
+</script>
+
+</html>
