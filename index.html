@@ -177,15 +177,60 @@ input[type="range"]{width:150px;accent-color:var(--accent)}
 .tagbar .m{color:var(--muted);font-variant-numeric:tabular-nums}
 .sessions{list-style:none;margin:8px 0 0;padding:0}
 .sessions li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:baseline}
-.sessions .t{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:8ch;white-space:nowrap}
-.sessions.all .t{min-width:15ch}
-.sessions .task{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sessions .task em{font-style:normal;color:var(--muted);font-size:12px;margin-left:6px}
+.sessions .t{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:13ch;white-space:nowrap}
+.sessions.all .t{min-width:20ch}
+@media (max-width:520px){.sessions .t{min-width:0;font-size:11px}.sessions .task em{display:none}}
+.sessions .task{display:flex;align-items:center;gap:6px;min-width:0}
+.sessions .task .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.sessions .task em,.sessions .task .badge,.sessions .task .exp{flex:none}
+.sessions .task em{font-style:normal;color:var(--muted);font-size:12px;white-space:nowrap}
 .sessions .min{font-variant-numeric:tabular-nums;font-weight:600}
 .sessions.selecting li{grid-template-columns:auto auto minmax(0,1fr) auto;cursor:pointer;align-items:center}
 .sessions.selecting li:hover{background:var(--soft)}
 .sessions li.sel{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .sessions input[type="checkbox"]{width:17px;height:17px;margin:0;accent-color:var(--accent);cursor:pointer}
+.sessions li.grp .badge{font-size:11px;font-weight:700;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:99px;padding:1px 7px;white-space:nowrap}
+.sessions .exp{border:0;background:none;color:var(--muted);width:20px;height:20px;padding:0;margin-right:4px;border-radius:5px;font-size:11px;vertical-align:1px}
+.sessions .exp:hover{background:var(--soft);color:var(--ink)}
+.sessions li{grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center}
+.sessions.selecting li{grid-template-columns:auto auto minmax(0,1fr) auto}
+.sessions li.sub{padding-left:26px;font-size:13px}
+.sessions li.sub .task{color:var(--muted)}
+.sessions .ed{border:0;background:none;color:var(--muted);width:28px;height:28px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center}
+.sessions .ed:hover{background:var(--soft);color:var(--ink)}
+.sessions li.editing{display:block;padding:10px 0}
+.sl-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-ctl);padding:12px}
+.sl-edit label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted);min-width:0}
+.sl-edit .f-task{grid-column:1/-1}
+.sl-edit input,.sl-edit select{font-size:14px;font-weight:400;color:var(--ink);padding:7px 9px;border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);background:var(--surface);min-width:0;width:100%}
+.sl-edit input[type="number"]{text-align:left}
+.sl-edit .sub{grid-column:1/-1;margin:0;font-size:12px;color:var(--muted)}
+.sl-edit-btns{grid-column:1/-1;display:flex;gap:8px}
+.sl-edit .save{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+/* calendar */
+.cal-head{display:flex;align-items:center;gap:8px;margin-top:14px}
+.cal-head b{flex:1;font-family:var(--f-display);font-weight:800;font-size:24px;letter-spacing:.02em;text-transform:uppercase;text-align:center;order:0}
+.cal-head #calPrev{order:-1}
+.cal-head button{min-width:34px;font-size:15px}
+.cal-head #calToday{font-size:13px}
+.cal-dow,.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-dow{margin-top:12px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:center}
+.cal-grid{margin-top:6px}
+.cal-cell{aspect-ratio:1/1.05;min-width:0;border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);background:color-mix(in srgb,var(--accent) calc(var(--heat) * 30%),var(--surface));display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:5px;text-align:left;overflow:hidden;color:var(--ink)}
+.cal-cell.pad{border:0;background:none}
+.cal-cell:not(.has){color:var(--muted)}
+.cal-cell.future{opacity:.5}
+.cal-cell .n{font-size:13px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.cal-cell.today .n{background:var(--accent);color:var(--on-accent);border-radius:99px;padding:2px 5px;margin:-2px}
+.cal-cell .m{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cal-cell .segs{display:flex;gap:1px;width:100%;height:4px;border-radius:2px;overflow:hidden}
+.cal-cell .segs i{display:block;height:100%}
+.cal-cell:hover{border-color:var(--muted)}
+.cal-cell.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.cal-month{font-size:13px;color:var(--muted);margin:10px 0 0}
+.cal-total{margin:8px 0 4px;font-size:14px;color:var(--muted)}
+.cal-total b{color:var(--ink);font-size:18px;font-family:var(--f-display);font-weight:800;letter-spacing:.02em}
+@media (max-width:520px){.cal-cell .m{display:none}.cal-cell{aspect-ratio:1}}
 .sess-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:18px}
 .sess-head .h{margin:0}
 .sess-head select{padding:5px 8px;border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);background:var(--bg);font-size:13px;max-width:60%}
@@ -348,6 +393,7 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
         <button class="tab" data-tab="sound" aria-selected="false">Sound</button>
         <button class="tab" data-tab="look" aria-selected="false">Look</button>
         <button class="tab" data-tab="log" aria-selected="false">Log</button>
+        <button class="tab" data-tab="cal" aria-selected="false">Calendar</button>
         <button class="tab" data-tab="music" aria-selected="false">Music</button>
         <button class="tab" data-tab="notes" aria-selected="false">Notes</button>
       </nav>
@@ -426,8 +472,7 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
         <div class="h">This week by activity</div>
         <div id="tagBars"></div>
         <div class="sess-head"><div class="h">Sessions</div><select id="sessDay" aria-label="Which day's sessions to show"></select></div>
-        <div id="sessionList"></div>
-        <div class="sess-bar" id="sessBar"></div>
+        <div class="sl" id="logSessions"><div class="sl-list"></div><div class="sl-bar sess-bar"></div></div>
 
         <div class="h">Back up or move your data</div>
         <p class="lead">Each copy of Focus Bench (the downloaded file, the website, the page in Claude) keeps its own history in your browser. To move it, make a backup in the copy that has your history, then restore it in the other one.</p>
@@ -438,6 +483,21 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
           <label class="bk-check"><input type="checkbox" id="bkSettings" checked> Also bring over settings (theme, activities, timer lengths, music)</label>
           <div class="confirm"><button class="small-btn" id="bkRestore">Restore pasted backup</button><label class="small-btn bk-file" id="bkFileLbl">Restore from a file<input type="file" id="bkFile" accept=".json,.txt,application/json,text/plain"></label></div>
         </div>
+      </div>
+
+      <div class="pane" id="pane-cal" hidden>
+        <div class="cal-head">
+          <button class="small-btn" id="calPrev" aria-label="Previous month">‹</button>
+          <b id="calTitle"></b>
+          <button class="small-btn" id="calNext" aria-label="Next month">›</button>
+          <button class="small-btn" id="calToday">Today</button>
+        </div>
+        <div class="cal-dow" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+        <p class="cal-month" id="calMonthSum"></p>
+        <div class="h" id="calDayTitle">Today</div>
+        <div id="calDayBreak"></div>
+        <div class="sl" id="calSessions"><div class="sl-list"></div><div class="sl-bar sess-bar"></div></div>
       </div>
 
       <div class="pane" id="pane-music" hidden>
@@ -873,56 +933,6 @@ function renderLog(){
   renderSessions();
 }
 
-/* ---------- session list: browse by day, select and delete ---------- */
-let sessView = 'today', sessSelect = false, sessConfirm = false, sessSel = new Set();
-function renderSessions(){
-  const today = dayKey(Date.now());
-  const days = [...new Set(LOG.map(s => dayKey(s.t)))].filter(k => k !== today).sort().reverse();
-  if (sessView !== 'today' && sessView !== 'all' && !days.includes(sessView)) sessView = 'today';
-  const label = k => new Date(k + 'T12:00').toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
-  $('#sessDay').innerHTML = [['today','Today'], ...days.map(k => [k, label(k)]), ['all','All sessions']]
-    .map(([v,l]) => `<option value="${v}" ${v===sessView?'selected':''}>${l}</option>`).join('');
-  const want = sessView === 'today' ? today : sessView;
-  const list = LOG.map((s,i) => ({s,i})).filter(({s}) => sessView === 'all' || dayKey(s.t) === want).reverse();
-  // drop selections that are no longer visible
-  const visible = new Set(list.map(x => x.i)); sessSel.forEach(i => { if (!visible.has(i)) sessSel.delete(i); });
-  const when = t => { const d = new Date(t), tm = d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); return sessView === 'all' ? d.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ', ' + tm : tm; };
-  $('#sessionList').innerHTML = list.length
-    ? `<ul class="sessions ${sessSelect?'selecting':''} ${sessView==='all'?'all':''}">${list.map(({s,i}) => `<li data-i="${i}" class="${sessSel.has(i)?'sel':''}">${sessSelect ? `<input type="checkbox" data-i="${i}" ${sessSel.has(i)?'checked':''} aria-label="Select this session">` : ''}<span class="t">${when(s.t)}</span><span class="task">${esc(s.task || 'Untitled session')}<em>${esc(s.tag||'')}</em></span><span class="min">${fmtMin(s.min)}</span></li>`).join('')}</ul>`
-    : `<div class="empty">${sessView === 'today' ? 'No sessions yet today. Press Start and your first block lands here when it ends.' : 'No sessions here.'}</div>`;
-  const bar = $('#sessBar'), n = sessSel.size;
-  if (!list.length){ bar.innerHTML = ''; sessSelect = false; return; }
-  if (sessConfirm && n){
-    bar.innerHTML = `<span class="count">Delete ${n} session${n===1?'':'s'}? This can't be undone.</span><button class="small-btn danger" id="sessYes">Delete</button><button class="small-btn" id="sessNo">Cancel</button>`;
-  } else if (sessSelect){
-    sessConfirm = false;
-    bar.innerHTML = `<label><input type="checkbox" id="sessAll" ${n && n === list.length ? 'checked' : ''}> Select all</label><span class="count">${n} selected</span><button class="small-btn danger" id="sessDel" ${n?'':'disabled'}>Delete selected</button><button class="small-btn" id="sessDone">Done</button>`;
-    const all = $('#sessAll'); if (all) all.indeterminate = n > 0 && n < list.length;
-  } else {
-    bar.innerHTML = `<button class="small-btn" id="sessStart">Select sessions to delete</button>`;
-  }
-}
-$('#sessDay').onchange = e => { sessView = e.target.value; sessSel.clear(); sessConfirm = false; renderSessions(); };
-$('#sessionList').onclick = e => {
-  if (!sessSelect) return;
-  const li = e.target.closest('li[data-i]'); if (!li) return;
-  const i = +li.dataset.i; sessSel.has(i) ? sessSel.delete(i) : sessSel.add(i); sessConfirm = false; renderSessions();
-};
-$('#sessBar').onclick = e => {
-  const id = e.target.id;
-  if (id === 'sessStart'){ sessSelect = true; sessSel.clear(); }
-  else if (id === 'sessDone'){ sessSelect = false; sessSel.clear(); }
-  else if (id === 'sessAll'){ const boxes = [...document.querySelectorAll('#sessionList li[data-i]')].map(li => +li.dataset.i); if (e.target.checked) boxes.forEach(i => sessSel.add(i)); else sessSel.clear(); }
-  else if (id === 'sessDel'){ sessConfirm = true; }
-  else if (id === 'sessNo'){ sessConfirm = false; }
-  else if (id === 'sessYes'){
-    const n = sessSel.size; LOG = LOG.filter((_, i) => !sessSel.has(i)); store.set('fb.log', LOG);
-    sessSel.clear(); sessConfirm = false; sessSelect = false; renderLog(); toast(`Deleted ${n} session${n===1?'':'s'}.`); return;
-  }
-  else return;
-  renderSessions();
-};
-
 /* ---------- activity colors & chart tooltip ---------- */
 // Colorblind-safe categorical palette, light and dark steps. Each activity keeps its color
 // (by its place in your activity list) no matter which ones show up in a given week.
@@ -972,6 +982,186 @@ document.addEventListener('pointerdown', e => { const el = tipTarget(e); el ? sh
 document.addEventListener('focusin', e => { const el = tipTarget(e); if (el){ const r = el.getBoundingClientRect(); showTip(el, r.left + r.width / 2, r.top); } });
 document.addEventListener('focusout', e => { if (tipTarget(e)) hideTip(); });
 document.addEventListener('scroll', hideTip, true);
+
+/* ---------- session lists: grouping, editing, selecting and deleting ---------- */
+// Back-to-back blocks (same task and activity, next one starting within 30 minutes of the
+// previous one ending) are shown as one group you can expand. The same list component is
+// used in the Log tab and under the calendar.
+const GROUP_GAP = 30 * 60000;
+const sStart = s => s.t - s.min * 60000;
+const sameWork = (a, b) => (a.task || '').trim().toLowerCase() === (b.task || '').trim().toLowerCase() && (a.tag || 'General') === (b.tag || 'General');
+function groupSessions(items){            // items: [{s, i}] oldest first
+  const groups = [];
+  for (const it of items){
+    const g = groups[groups.length - 1], st = sStart(it.s);
+    if (g && sameWork(g.items[g.items.length - 1].s, it.s) && st - g.end <= GROUP_GAP && st >= g.start && dayKey(st) === dayKey(g.start)){
+      g.items.push(it); g.end = Math.max(g.end, it.s.t); g.min += it.s.min;
+    } else groups.push({items: [it], start: st, end: it.s.t, min: it.s.min, key: String(it.s.t)});
+  }
+  return groups;
+}
+const hm = t => new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+function hmRange(a, b){
+  const x = hm(a), y = hm(b), sx = x.split(' '), sy = y.split(' ');
+  if (sx.length > 1 && sy.length > 1 && sx[sx.length-1] === sy[sy.length-1] && /\D/.test(sx[sx.length-1])) return sx.slice(0, -1).join(' ') + '–' + y;
+  return x + '–' + y;
+}
+function toLocalInput(t){ const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+const PENCIL = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';
+
+function SessionList(root, opts){
+  const st = {select: false, confirm: false, sel: new Set(), open: new Set(), edit: null};
+  const listEl = root.querySelector('.sl-list'), barEl = root.querySelector('.sl-bar');
+  function tagOptions(cur){ const tags = P.tags.includes(cur) ? P.tags : [...P.tags, cur]; return tags.map(t => `<option ${t===cur?'selected':''}>${esc(t)}</option>`).join(''); }
+  function editForm(key, g){
+    const s = g.items[0].s, multi = g.items.length > 1 && key.startsWith('g:');
+    return `<li class="editing"><form class="sl-edit" data-key="${key}">
+      <label class="f-task">What you worked on<input name="task" value="${esc(s.task || '')}" maxlength="80" placeholder="Untitled session"></label>
+      <label>Activity<select name="tag">${tagOptions(s.tag || 'General')}</select></label>
+      ${multi ? `<p class="sub">Changes all ${g.items.length} blocks in this group. Expand the group to change one block's time or length.</p>` :
+        `<label>Started<input type="datetime-local" name="start" value="${toLocalInput(sStart(s))}" required></label>
+         <label>Minutes<input type="number" name="min" min="1" max="600" value="${s.min}" required></label>`}
+      <div class="sl-edit-btns"><button type="submit" class="small-btn save">Save</button><button type="button" class="small-btn" data-act="cancel-edit">Cancel</button></div>
+    </form></li>`;
+  }
+  function row(it, cls, label, timeTxt, extra){
+    const {s, i} = it;
+    return `<li class="${cls}${st.sel.has(i) ? ' sel' : ''}" data-i="${i}">${st.select ? `<input type="checkbox" data-i="${i}" ${st.sel.has(i)?'checked':''} aria-label="Select this block">` : ''}<span class="t">${timeTxt}</span><span class="task"><span class="nm">${label}</span><em>${esc(s.tag || '')}</em></span><span class="min">${fmtMin(s.min)}</span>${st.select ? '' : `<button class="ed" data-edit="i:${i}" aria-label="Edit this session" title="Edit">${PENCIL}</button>`}</li>`;
+  }
+  function render(){
+    const items = opts.items(), groups = groupSessions(items).reverse();
+    const visible = new Set(items.map(x => x.i)); st.sel.forEach(i => { if (!visible.has(i)) st.sel.delete(i); });
+    const dateP = t => opts.showDate() ? new Date(t).toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ', ' : '';
+    let h = '';
+    for (const g of groups){
+      const name = esc(g.items[0].s.task || 'Untitled session');
+      if (g.items.length === 1){
+        const it = g.items[0], k = 'i:' + it.i;
+        h += st.edit === k ? editForm(k, g) : row(it, '', name, dateP(it.s.t) + hmRange(sStart(it.s), it.s.t));
+        continue;
+      }
+      const gk = 'g:' + g.key, open = st.open.has(g.key), allSel = g.items.every(x => st.sel.has(x.i)), someSel = g.items.some(x => st.sel.has(x.i));
+      if (st.edit === gk){ h += editForm(gk, g); }
+      else h += `<li class="grp${allSel ? ' sel' : ''}" data-g="${g.key}">${st.select ? `<input type="checkbox" data-g="${g.key}" ${allSel?'checked':''} ${someSel && !allSel ? 'data-mixed="1"' : ''} aria-label="Select all blocks in this group">` : ''}<span class="t">${dateP(g.start)}${hmRange(g.start, g.end)}</span><span class="task"><button class="exp" data-exp="${g.key}" aria-expanded="${open}" aria-label="${open?'Hide':'Show'} blocks">${open ? '▾' : '▸'}</button><span class="nm">${name}</span><em>${esc(g.items[0].s.tag || '')}</em><span class="badge">${g.items.length} blocks</span></span><span class="min">${fmtMin(g.min)}</span>${st.select ? '' : `<button class="ed" data-edit="${gk}" aria-label="Edit this group" title="Edit">${PENCIL}</button>`}</li>`;
+      if (open) g.items.map((it, n) => [it, n + 1]).reverse().forEach(([it, n]) => {
+        const k = 'i:' + it.i;
+        h += st.edit === k ? editForm(k, {items: [it]}) : row(it, 'sub', `Block ${n}`, hmRange(sStart(it.s), it.s.t));
+      });
+    }
+    listEl.innerHTML = groups.length ? `<ul class="sessions${st.select ? ' selecting' : ''}${opts.showDate() ? ' all' : ''}">${h}</ul>` : `<div class="empty">${opts.empty()}</div>`;
+    listEl.querySelectorAll('[data-mixed]').forEach(c => c.indeterminate = true);
+    const n = st.sel.size;
+    if (!groups.length){ barEl.innerHTML = ''; st.select = false; return; }
+    if (st.confirm && n) barEl.innerHTML = `<span class="count">Delete ${n} block${n===1?'':'s'}? This can't be undone.</span><button class="small-btn danger" data-act="yes">Delete</button><button class="small-btn" data-act="no">Cancel</button>`;
+    else if (st.select){
+      st.confirm = false;
+      barEl.innerHTML = `<label><input type="checkbox" data-act="all" ${n && n === items.length ? 'checked' : ''}> Select all</label><span class="count">${n} selected</span><button class="small-btn danger" data-act="del" ${n?'':'disabled'}>Delete selected</button><button class="small-btn" data-act="done">Done</button>`;
+      const all = barEl.querySelector('[data-act="all"]'); if (all) all.indeterminate = n > 0 && n < items.length;
+    } else barEl.innerHTML = `<button class="small-btn" data-act="start">Select sessions to delete</button>`;
+  }
+  root.addEventListener('click', e => {
+    const t = e.target, exp = t.closest('[data-exp]'), ed = t.closest('[data-edit]'), act = t.closest('[data-act]');
+    if (exp){ const k = exp.dataset.exp; st.open.has(k) ? st.open.delete(k) : st.open.add(k); render(); return; }
+    if (ed){ st.edit = ed.dataset.edit; if (ed.dataset.edit.startsWith('i:')){ /* keep the group open while editing a block */ } render(); const f = listEl.querySelector('.sl-edit input'); f && f.focus(); return; }
+    if (act){
+      const a = act.dataset.act, items = opts.items();
+      if (a === 'cancel-edit') st.edit = null;
+      else if (a === 'start'){ st.select = true; st.sel.clear(); st.edit = null; }
+      else if (a === 'done'){ st.select = false; st.sel.clear(); }
+      else if (a === 'all'){ if (act.checked) items.forEach(x => st.sel.add(x.i)); else st.sel.clear(); }
+      else if (a === 'del') st.confirm = true;
+      else if (a === 'no') st.confirm = false;
+      else if (a === 'yes'){
+        const n = st.sel.size; LOG = LOG.filter((_, i) => !st.sel.has(i)); store.set('fb.log', LOG);
+        st.sel.clear(); st.confirm = false; st.select = false; renderLog(); toast(`Deleted ${n} block${n===1?'':'s'}.`); return;
+      }
+      render(); return;
+    }
+    if (!st.select) return;
+    const li = t.closest('li[data-i], li[data-g]'); if (!li) return;
+    if (li.dataset.g){
+      const g = groupSessions(opts.items()).find(x => x.key === li.dataset.g); if (!g) return;
+      const all = g.items.every(x => st.sel.has(x.i)); g.items.forEach(x => all ? st.sel.delete(x.i) : st.sel.add(x.i));
+    } else { const i = +li.dataset.i; st.sel.has(i) ? st.sel.delete(i) : st.sel.add(i); }
+    st.confirm = false; render();
+  });
+  root.addEventListener('submit', e => {
+    e.preventDefault();
+    const f = e.target, key = f.dataset.key, fd = new FormData(f), task = String(fd.get('task') || '').trim(), tag = String(fd.get('tag') || 'General');
+    if (key.startsWith('g:')){
+      const g = groupSessions(opts.items()).find(x => x.key === key.slice(2)); if (!g) return;
+      g.items.forEach(({i}) => { LOG[i] = {...LOG[i], task, tag}; });
+    } else {
+      const i = +key.slice(2), min = Math.round(+fd.get('min')), start = new Date(String(fd.get('start'))).getTime();
+      if (!(min >= 1 && min <= 600)){ toast('Minutes must be between 1 and 600.'); return; }
+      if (!isFinite(start)){ toast('Pick a valid start date and time.'); return; }
+      LOG[i] = {...LOG[i], task, tag, min, t: start + min * 60000};
+    }
+    LOG.sort((a, b) => a.t - b.t); store.set('fb.log', LOG);
+    st.edit = null; st.sel.clear(); renderLog(); toast('Session updated.');
+  });
+  return {render, reset(){ st.select = false; st.confirm = false; st.sel.clear(); st.edit = null; }};
+}
+
+// Log tab: pick a day (or all sessions)
+let sessView = 'today';
+const logList = SessionList($('#logSessions'), {
+  items: () => { const want = sessView === 'today' ? dayKey(Date.now()) : sessView; return LOG.map((s, i) => ({s, i})).filter(({s}) => sessView === 'all' || dayKey(s.t) === want); },
+  showDate: () => sessView === 'all',
+  empty: () => sessView === 'today' ? 'No sessions yet today. Press Start and your first block lands here when it ends.' : 'No sessions here.'
+});
+function renderSessions(){
+  const today = dayKey(Date.now());
+  const days = [...new Set(LOG.map(s => dayKey(s.t)))].filter(k => k !== today).sort().reverse();
+  if (sessView !== 'today' && sessView !== 'all' && !days.includes(sessView)) sessView = 'today';
+  const label = k => new Date(k + 'T12:00').toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+  $('#sessDay').innerHTML = [['today','Today'], ...days.map(k => [k, label(k)]), ['all','All sessions']]
+    .map(([v,l]) => `<option value="${v}" ${v===sessView?'selected':''}>${l}</option>`).join('');
+  logList.render();
+  renderCalendar();
+}
+$('#sessDay').onchange = e => { sessView = e.target.value; logList.reset(); logList.render(); };
+
+/* ---------- calendar ---------- */
+let calMonth = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+let calDay = dayKey(Date.now());
+const calList = SessionList($('#calSessions'), {
+  items: () => LOG.map((s, i) => ({s, i})).filter(({s}) => dayKey(s.t) === calDay),
+  showDate: () => false,
+  empty: () => 'Nothing logged on this day.'
+});
+function renderCalendar(){
+  if (!$('#calGrid')) return;
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), today = dayKey(Date.now());
+  $('#calTitle').textContent = calMonth.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+  const byDay = {};
+  LOG.forEach(s => { const k = dayKey(s.t), d = byDay[k] || (byDay[k] = {min:0, by:{}, n:0}); d.min += s.min; d.n++; const t = s.tag || 'General'; d.by[t] = (d.by[t] || 0) + s.min; });
+  const first = new Date(y, m, 1), lead = first.getDay(), daysIn = new Date(y, m + 1, 0).getDate();
+  let maxMin = 0, monthMin = 0, monthDays = 0;
+  for (let d = 1; d <= daysIn; d++){ const r = byDay[dayKey(new Date(y, m, d, 12))]; if (r){ maxMin = Math.max(maxMin, r.min); monthMin += r.min; monthDays++; } }
+  let h = '';
+  for (let i = 0; i < lead; i++) h += '<span class="cal-cell pad" aria-hidden="true"></span>';
+  for (let d = 1; d <= daysIn; d++){
+    const k = dayKey(new Date(y, m, d, 12)), r = byDay[k], heat = r ? .25 + .75 * r.min / maxMin : 0;
+    const segs = r ? Object.entries(r.by).sort((a,b) => b[1] - a[1]).map(([t, mm]) => `<i style="flex:${mm};background:${actColor(t)}"></i>`).join('') : '';
+    const lab = new Date(y, m, d).toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'}) + (r ? `, ${fmtMin(r.min)} studied` : ', nothing logged');
+    h += `<button class="cal-cell${r ? ' has' : ''}${k === today ? ' today' : ''}${k === calDay ? ' on' : ''}${k > today ? ' future' : ''}" data-k="${k}" style="--heat:${heat}" aria-label="${lab}" aria-pressed="${k === calDay}"><span class="n">${d}</span>${r ? `<span class="m">${fmtMin(r.min)}</span><span class="segs">${segs}</span>` : ''}</button>`;
+  }
+  $('#calGrid').innerHTML = h;
+  $('#calMonthSum').textContent = monthMin ? `${fmtMin(monthMin)} studied on ${monthDays} day${monthDays===1?'':'s'} this month` : 'Nothing logged this month yet.';
+  // selected day
+  const r = byDay[calDay];
+  $('#calDayTitle').textContent = calDay === today ? 'Today' : new Date(calDay + 'T12:00').toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+  if (r){
+    const rows = Object.entries(r.by).sort((a,b) => b[1] - a[1]), top = rows[0][1];
+    $('#calDayBreak').innerHTML = `<p class="cal-total"><b>${fmtMin(r.min)}</b> across ${r.n} focus block${r.n===1?'':'s'}</p><div class="tagbars">${rows.map(([t, mm]) => `<div class="tagbar" style="--c:${actColor(t)}"><span class="name"><i></i><b>${esc(t)}</b></span><span class="track2"><i style="width:${mm/top*100}%"></i></span><span class="m">${fmtMin(mm)}</span></div>`).join('')}</div>`;
+  } else $('#calDayBreak').innerHTML = '';
+  calList.render();
+}
+$('#calGrid').onclick = e => { const c = e.target.closest('[data-k]'); if (!c) return; calDay = c.dataset.k; calList.reset(); renderCalendar(); };
+$('#calPrev').onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); renderCalendar(); };
+$('#calNext').onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); renderCalendar(); };
+$('#calToday').onclick = () => { const d = new Date(); calMonth = new Date(d.getFullYear(), d.getMonth(), 1); calDay = dayKey(d); calList.reset(); renderCalendar(); };
 
 /* ---------- Spotify ---------- */
 // Spotify's embedded player, driven by Spotify's iFrame API. The published page runs inside
