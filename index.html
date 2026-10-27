@@ -177,10 +177,23 @@ input[type="range"]{width:150px;accent-color:var(--accent)}
 .tagbar .m{color:var(--muted);font-variant-numeric:tabular-nums}
 .sessions{list-style:none;margin:8px 0 0;padding:0}
 .sessions li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:baseline}
-.sessions .t{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.sessions .t{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:8ch;white-space:nowrap}
+.sessions.all .t{min-width:15ch}
 .sessions .task{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sessions .task em{font-style:normal;color:var(--muted);font-size:12px;margin-left:6px}
 .sessions .min{font-variant-numeric:tabular-nums;font-weight:600}
+.sessions.selecting li{grid-template-columns:auto auto minmax(0,1fr) auto;cursor:pointer;align-items:center}
+.sessions.selecting li:hover{background:var(--soft)}
+.sessions li.sel{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.sessions input[type="checkbox"]{width:17px;height:17px;margin:0;accent-color:var(--accent);cursor:pointer}
+.sess-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:18px}
+.sess-head .h{margin:0}
+.sess-head select{padding:5px 8px;border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);background:var(--bg);font-size:13px;max-width:60%}
+.sess-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;font-size:13px}
+.sess-bar label{display:inline-flex;align-items:center;gap:6px;font-weight:600;cursor:pointer}
+.sess-bar label input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
+.sess-bar .count{color:var(--muted);margin-right:auto}
+.small-btn:disabled{opacity:.45;cursor:not-allowed}
 .empty{color:var(--muted);font-size:14px;background:var(--bg);border-radius:12px;padding:14px;margin-top:10px}
 .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;margin-top:14px}
 .danger{color:#c0392b;border-color:currentColor}
@@ -406,9 +419,9 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
         <div class="legend" id="legend"></div>
         <div class="h">This week by activity</div>
         <div id="tagBars"></div>
-        <div class="h">Today's sessions</div>
+        <div class="sess-head"><div class="h">Sessions</div><select id="sessDay" aria-label="Which day's sessions to show"></select></div>
         <div id="sessionList"></div>
-        <div class="confirm" id="clearWrap"><button class="small-btn" id="clearLog">Clear history</button></div>
+        <div class="sess-bar" id="sessBar"></div>
       </div>
 
       <div class="pane" id="pane-music" hidden>
@@ -841,10 +854,58 @@ function renderLog(){
   $('#tagBars').innerHTML = tags.length
     ? `<div class="tagbars">${tags.map(([t,m]) => `<div class="tagbar" data-a="${esc(t)}" style="--c:${actColor(t)}"><span class="name"><i></i><b>${esc(t)}</b></span><span class="track2"><i style="width:${m/tmax*100}%"></i></span><span class="m">${fmtMin(m)}</span></div>`).join('')}</div>`
     : `<div class="empty">Finish a focus block and your time per activity shows up here.</div>`;
-  $('#sessionList').innerHTML = todays.length
-    ? `<ul class="sessions">${todays.slice().reverse().map(s => { const t = new Date(s.t); return `<li><span class="t">${t.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</span><span class="task">${esc(s.task || 'Untitled session')}<em>${esc(s.tag||'')}</em></span><span class="min">${fmtMin(s.min)}</span></li>`; }).join('')}</ul>`
-    : `<div class="empty">No sessions yet today. Press Start and your first block lands here when it ends.</div>`;
+  renderSessions();
 }
+
+/* ---------- session list: browse by day, select and delete ---------- */
+let sessView = 'today', sessSelect = false, sessConfirm = false, sessSel = new Set();
+function renderSessions(){
+  const today = dayKey(Date.now());
+  const days = [...new Set(LOG.map(s => dayKey(s.t)))].filter(k => k !== today).sort().reverse();
+  if (sessView !== 'today' && sessView !== 'all' && !days.includes(sessView)) sessView = 'today';
+  const label = k => new Date(k + 'T12:00').toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+  $('#sessDay').innerHTML = [['today','Today'], ...days.map(k => [k, label(k)]), ['all','All sessions']]
+    .map(([v,l]) => `<option value="${v}" ${v===sessView?'selected':''}>${l}</option>`).join('');
+  const want = sessView === 'today' ? today : sessView;
+  const list = LOG.map((s,i) => ({s,i})).filter(({s}) => sessView === 'all' || dayKey(s.t) === want).reverse();
+  // drop selections that are no longer visible
+  const visible = new Set(list.map(x => x.i)); sessSel.forEach(i => { if (!visible.has(i)) sessSel.delete(i); });
+  const when = t => { const d = new Date(t), tm = d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); return sessView === 'all' ? d.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ', ' + tm : tm; };
+  $('#sessionList').innerHTML = list.length
+    ? `<ul class="sessions ${sessSelect?'selecting':''} ${sessView==='all'?'all':''}">${list.map(({s,i}) => `<li data-i="${i}" class="${sessSel.has(i)?'sel':''}">${sessSelect ? `<input type="checkbox" data-i="${i}" ${sessSel.has(i)?'checked':''} aria-label="Select this session">` : ''}<span class="t">${when(s.t)}</span><span class="task">${esc(s.task || 'Untitled session')}<em>${esc(s.tag||'')}</em></span><span class="min">${fmtMin(s.min)}</span></li>`).join('')}</ul>`
+    : `<div class="empty">${sessView === 'today' ? 'No sessions yet today. Press Start and your first block lands here when it ends.' : 'No sessions here.'}</div>`;
+  const bar = $('#sessBar'), n = sessSel.size;
+  if (!list.length){ bar.innerHTML = ''; sessSelect = false; return; }
+  if (sessConfirm && n){
+    bar.innerHTML = `<span class="count">Delete ${n} session${n===1?'':'s'}? This can't be undone.</span><button class="small-btn danger" id="sessYes">Delete</button><button class="small-btn" id="sessNo">Cancel</button>`;
+  } else if (sessSelect){
+    sessConfirm = false;
+    bar.innerHTML = `<label><input type="checkbox" id="sessAll" ${n && n === list.length ? 'checked' : ''}> Select all</label><span class="count">${n} selected</span><button class="small-btn danger" id="sessDel" ${n?'':'disabled'}>Delete selected</button><button class="small-btn" id="sessDone">Done</button>`;
+    const all = $('#sessAll'); if (all) all.indeterminate = n > 0 && n < list.length;
+  } else {
+    bar.innerHTML = `<button class="small-btn" id="sessStart">Select sessions to delete</button>`;
+  }
+}
+$('#sessDay').onchange = e => { sessView = e.target.value; sessSel.clear(); sessConfirm = false; renderSessions(); };
+$('#sessionList').onclick = e => {
+  if (!sessSelect) return;
+  const li = e.target.closest('li[data-i]'); if (!li) return;
+  const i = +li.dataset.i; sessSel.has(i) ? sessSel.delete(i) : sessSel.add(i); sessConfirm = false; renderSessions();
+};
+$('#sessBar').onclick = e => {
+  const id = e.target.id;
+  if (id === 'sessStart'){ sessSelect = true; sessSel.clear(); }
+  else if (id === 'sessDone'){ sessSelect = false; sessSel.clear(); }
+  else if (id === 'sessAll'){ const boxes = [...document.querySelectorAll('#sessionList li[data-i]')].map(li => +li.dataset.i); if (e.target.checked) boxes.forEach(i => sessSel.add(i)); else sessSel.clear(); }
+  else if (id === 'sessDel'){ sessConfirm = true; }
+  else if (id === 'sessNo'){ sessConfirm = false; }
+  else if (id === 'sessYes'){
+    const n = sessSel.size; LOG = LOG.filter((_, i) => !sessSel.has(i)); store.set('fb.log', LOG);
+    sessSel.clear(); sessConfirm = false; sessSelect = false; renderLog(); toast(`Deleted ${n} session${n===1?'':'s'}.`); return;
+  }
+  else return;
+  renderSessions();
+};
 
 /* ---------- activity colors & chart tooltip ---------- */
 // Colorblind-safe categorical palette, light and dark steps. Each activity keeps its color
@@ -1540,12 +1601,6 @@ $('#timerSize').oninput = e => { P.timerSize = +e.target.value; saveP(); applyLo
 $('#ticksOn').onchange = e => { P.ticks = e.target.checked; saveP(); applyLook(); };
 $('#resetLook').onclick = () => { LOOK_KEYS.forEach(k => P[k] = clone(DEFAULTS)[k]); saveP(); renderAll(); renderLookSound(); toast('Look reset to default.'); };
 new MutationObserver(() => { renderAll(); renderLookSound(); }).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
-$('#clearWrap').onclick = e => {
-  const id = e.target.id;
-  if (id === 'clearLog') $('#clearWrap').innerHTML = `<span>Delete all ${LOG.length} sessions?</span><button class="small-btn danger" id="clearYes">Delete</button><button class="small-btn" id="clearNo">Cancel</button>`;
-  else if (id === 'clearYes'){ LOG = []; store.set('fb.log', LOG); renderLog(); $('#clearWrap').innerHTML = '<button class="small-btn" id="clearLog">Clear history</button>'; toast('History cleared.'); }
-  else if (id === 'clearNo') $('#clearWrap').innerHTML = '<button class="small-btn" id="clearLog">Clear history</button>';
-};
 function addNote(){ const v = $('#noteIn').value.trim(); if (!v) return; NOTES.unshift({id:Date.now().toString(36), text:v, done:false}); $('#noteIn').value = ''; saveNotes(); renderNotes(); }
 $('#noteAdd').onclick = addNote;
 $('#noteIn').onkeydown = e => { if (e.key === 'Enter') addNote(); };
