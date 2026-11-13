@@ -108,7 +108,7 @@ body.focus-mode .dial-wrap{width:min(100%,calc(460px * var(--tscale)))}
 /* Panel */
 .panel{overflow:hidden}
 .tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto}
-.tab{flex:1 0 auto;background:none;border:0;padding:14px 14px 12px;font-weight:600;font-size:14px;color:var(--muted);border-bottom:2px solid transparent}
+.tab{flex:1 0 auto;background:none;border:0;padding:14px 10px 12px;font-weight:600;font-size:13.5px;color:var(--muted);border-bottom:2px solid transparent}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .pane{padding:6px 20px 20px}
 .lead{color:var(--muted);font-size:14px;margin:12px 0 4px}
@@ -376,6 +376,55 @@ body:not(.m-off) .week.grow .col:nth-child(7) .stk{animation-delay:.24s}
 body:not(.m-off) .tagbar .track2 i{transition:width .6s cubic-bezier(.2,.8,.2,1)}
 body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+/* achievements */
+.ach-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:4px 11px 4px 9px;font-size:13px;color:var(--muted)}
+.ach-btn svg{width:16px;height:16px;color:#d4a11a}
+.ach-btn b{color:var(--ink);font-variant-numeric:tabular-nums}
+.ach-btn:hover{border-color:var(--muted)}
+.ach-sum{display:grid;grid-template-columns:1fr auto;gap:8px 16px;align-items:end;margin-top:14px}
+.ach-big b,.ach-pts b{font-family:var(--f-display);font-weight:800;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.ach-big span,.ach-pts span{color:var(--muted);font-size:13px;margin-left:5px}
+.ach-pts{text-align:right}.ach-pts b{font-size:26px}
+.ach-bar{grid-column:1/-1;height:8px;background:var(--soft);border-radius:99px;overflow:hidden}
+.ach-bar i{display:block;height:100%;background:linear-gradient(90deg,#b87333,#d4a11a,#2fa9c0,#9d4bef);border-radius:99px}
+.ach-tiers{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.ach-tiers span{display:inline-flex;align-items:center;gap:5px}
+.ach-tiers i{width:10px;height:10px;border-radius:50%;background:var(--t)}
+.ach-tiers b{color:var(--ink);font-variant-numeric:tabular-nums}
+.ach-filters{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:18px}
+.ach-filters select{padding:6px 9px;border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);background:var(--bg);font-size:13px}
+.ach-h{display:flex;justify-content:space-between}
+.ach-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ach{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:var(--r-ctl);padding:10px 12px;background:var(--surface)}
+.ach.got{border-color:color-mix(in srgb,var(--t2,var(--line)) 40%,var(--line))}
+.ach-ic{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;background:color-mix(in srgb,var(--t) 16%,var(--surface));color:var(--t);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--t) 70%,transparent)}
+.ach-ic svg{width:20px;height:20px}
+.ach:not(.got) .ach-ic{filter:grayscale(1);opacity:.45}
+.ach.secret .ach-ic svg{opacity:.25}
+.ach-tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ach-tx b{font-weight:700;font-size:14px}
+.ach:not(.got) .ach-tx b{color:var(--muted)}
+.ach-tx > span{font-size:13px;color:var(--muted)}
+.ach-tx small{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ach.got .ach-tx small{color:var(--ink);opacity:.7}
+.ach-prog{display:block;height:5px;background:var(--soft);border-radius:99px;overflow:hidden;margin-top:4px}
+.ach-prog i{display:block;height:100%;border-radius:99px}
+.ach-tier{display:flex;flex-direction:column;align-items:flex-end;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t);white-space:nowrap}
+.ach-tier em{font-style:normal;color:var(--muted);font-weight:600;letter-spacing:0;text-transform:none}
+.ach:not(.got) .ach-tier{opacity:.6}
+.ach-pop{position:fixed;z-index:40;top:calc(16px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;gap:12px;align-items:center;max-width:min(360px,calc(100vw - 32px));text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-ctl);padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.25);cursor:pointer}
+.ach-pop .ach-ic.big{width:48px;height:48px}
+.ach-pop .ach-ic.big svg{width:24px;height:24px}
+.ach-pop-tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ach-pop-tx small{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.ach-pop-tx b{font-size:16px}
+.ach-pop-tx span{font-size:13px;color:var(--muted)}
+.ach-pop-tx em{font-style:normal;font-size:12px;color:var(--muted);margin-top:2px}
+.ach-pop.in{animation:achIn .5s cubic-bezier(.2,1.3,.4,1)}
+.ach-pop.out{animation:achOut .35s ease forwards}
+@keyframes achIn{from{opacity:0;transform:translateY(-16px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes achOut{to{opacity:0;transform:translateX(30px)}}
+body.m-off .ach-pop{animation:none!important}
 @media (prefers-reduced-motion: reduce){.arc,.bar div{transition:none}}
 </style>
 
@@ -385,7 +434,7 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
       <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M16 17V10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M12 3h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
       Focus Bench
     </div>
-    <div class="today"><span><b id="todayMin">0m</b> focused today</span><span class="dots" id="goalDots" title="Daily goal"></span></div>
+    <div class="today"><span><b id="todayMin">0m</b> focused today</span><span class="dots" id="goalDots" title="Daily goal"></span><button class="ach-btn" id="achBtn" title="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><b>0</b><span>/0</span></button></div>
   </header>
 
   <main class="grid">
@@ -440,6 +489,7 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
         <button class="tab" data-tab="cal" aria-selected="false">Calendar</button>
         <button class="tab" data-tab="music" aria-selected="false">Music</button>
         <button class="tab" data-tab="notes" aria-selected="false">Notes</button>
+        <button class="tab" data-tab="awards" aria-selected="false">Awards</button>
       </nav>
 
       <div class="pane" id="pane-timer">
@@ -578,6 +628,13 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
         <div class="confirm"><button class="small-btn" id="spTry" hidden></button></div>
       </div>
 
+      <div class="pane" id="pane-awards" hidden>
+        <div class="ach-sum" id="achSum"></div>
+        <div id="achNear"><div class="h">Closest to unlocking</div><ul class="ach-list" id="achNearList"></ul></div>
+        <div class="ach-filters"><div class="seg" id="achFilter"></div><select id="achCatSel" aria-label="Category"></select></div>
+        <div id="achList"></div>
+      </div>
+
       <div class="pane" id="pane-notes" hidden>
         <p class="lead">A thought pops up mid-session? Park it here and get back to work. Deal with it on your break.</p>
         <div class="addrow"><input id="noteIn" placeholder="Email TA about lab, buy printer paper…" maxlength="140"><button class="small-btn" id="noteAdd">Park it</button></div>
@@ -590,6 +647,7 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
 <canvas id="fxBack" class="fx" aria-hidden="true"></canvas>
 <canvas id="fxFront" class="fx front" aria-hidden="true"></canvas>
 <div class="toast" id="toast" hidden></div>
+<button class="ach-pop" id="achPop" hidden></button>
 <div class="vtip" id="vtip" role="tooltip" hidden></div>
 
 <script>
@@ -705,7 +763,7 @@ function pause(){
   S.running = false; wake(false); changed();
 }
 const toggle = () => S.running ? pause() : start();
-function reset(){ S.running = false; S.flowAcc = 0; S.remaining = durMs(S.phase); wake(false); changed(); }
+function reset(){ achBump('resets'); S.running = false; S.flowAcc = 0; S.remaining = durMs(S.phase); wake(false); changed(); }
 function resetCycle(){ S.phase = 'focus'; S.round = 1; reset(); }
 
 function advance(autoStart){
@@ -869,6 +927,7 @@ function lum(hex){
 const onColor = hex => lum(hex) > .36 ? '#10141c' : '#ffffff';
 const accentHex = () => P.accent === 'custom' ? P.customAccent : (ACCENTS[P.accent] || ACCENTS.cobalt)[isDark() ? 1 : 0];
 function applyLook(){
+  achSet('themes', P.theme); achSet('fonts', P.digits); if (P.accent === 'custom') achSet('accentUsed', 1);
   const r = document.documentElement.style, b = document.body, th = THEMES[P.theme] || THEMES.auto, dark = isDark();
   ['bg','surface','ink','muted','line','soft'].forEach(k => th[k] ? r.setProperty('--' + k, th[k]) : r.removeProperty('--' + k));
   r.colorScheme = th.bg ? (th.dark ? 'dark' : 'light') : '';
@@ -969,6 +1028,7 @@ function renderLookSound(){
 /* ---------- log ---------- */
 const dayKey = d => { d = new Date(d); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
 function renderLog(){
+  if (typeof achQueue === 'function') achQueue();
   const today = dayKey(Date.now());
   const todays = LOG.filter(s => dayKey(s.t) === today);
   const todayMin = todays.reduce((a,s) => a + s.min, 0);
@@ -1151,7 +1211,7 @@ function SessionList(root, opts){
       else if (a === 'no') st.confirm = false;
       else if (a === 'yes'){
         const n = st.sel.size; LOG = LOG.filter((_, i) => !st.sel.has(i)); store.set('fb.log', LOG);
-        st.sel.clear(); st.confirm = false; st.select = false; renderLog(); toast(`Deleted ${n} block${n===1?'':'s'}.`); return;
+        st.sel.clear(); st.confirm = false; st.select = false; renderLog(); toast(`Deleted ${n} block${n===1?'':'s'}.`); achBump('deletes', n); return;
       }
       render(); return;
     }
@@ -1176,7 +1236,7 @@ function SessionList(root, opts){
       LOG[i] = {...LOG[i], task, tag, min, t: start + min * 60000};
     }
     LOG.sort((a, b) => a.t - b.t); store.set('fb.log', LOG);
-    st.edit = null; st.sel.clear(); renderLog(); toast('Session updated.');
+    st.edit = null; st.sel.clear(); renderLog(); toast('Session updated.'); achBump('edits');
   });
   return {render, reset(){ st.select = false; st.confirm = false; st.sel.clear(); st.edit = null; }};
 }
@@ -1279,7 +1339,7 @@ function renderCalMode(){
 }
 $('#calMode').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
-  P.calView = b.dataset.v; saveP();
+  P.calView = b.dataset.v; saveP(); if (b.dataset.v === 'month') achBump('calMonth');
   // open the new view on the week or month that holds the selected day
   const d = new Date(calDay + 'T12:00'); calMonth = new Date(d.getFullYear(), d.getMonth(), 1); calWeek = startOfWeek(d);
   renderCalMode(); renderCalendar();
@@ -1437,6 +1497,7 @@ function renderMusic(){
   mountPlayer();
 }
 function addItem(it){
+  achBump('music');
   P.music.list = P.music.list.filter(x => x.id !== it.id); P.music.list.push(it);
   if (!P.music.current) P.music.current = it.id;
   spOverride = it.id; P.music.current = it.id;
@@ -1588,14 +1649,16 @@ requestAnimationFrame(function frame(){
 });
 
 /* ---------- backup & restore ---------- */
-function backupText(){ return JSON.stringify({app:'focus-bench', version:1, exported:new Date().toISOString(), log:LOG, notes:NOTES, settings:P}); }
+function backupText(){ return JSON.stringify({app:'focus-bench', version:1, exported:new Date().toISOString(), log:LOG, notes:NOTES, settings:P, achievements:ACH}); }
 $('#bkCopy').onclick = () => {
+  achBump('backup');
   const txt = backupText(), out = $('#bkOut');
   out.value = txt; out.hidden = false;
   const fallback = () => { out.focus(); out.select(); toast('Backup selected. Press Ctrl+C (or Cmd+C on a Mac) to copy it.'); };
   try { navigator.clipboard.writeText(txt).then(() => toast(`Backup copied: ${LOG.length} sessions. Paste it into the other copy.`), fallback); } catch(e){ fallback(); }
 };
 $('#bkDownload').onclick = () => {
+  achBump('backup');
   const d = new Date(), name = `focus-bench-backup-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
   const url = URL.createObjectURL(new Blob([backupText()], {type:'application/json'}));
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
@@ -1619,6 +1682,13 @@ function restoreBackup(raw){
     P.task = curTask; saveP();
     $('#task').value = P.task;
   }
+  if (data.achievements && typeof data.achievements === 'object'){
+    const A = data.achievements;
+    Object.entries(A.u || {}).forEach(([k, t]) => { ACH.u[k] = ACH.u[k] ? Math.min(ACH.u[k], t) : t; });
+    Object.entries(A.c || {}).forEach(([k, v]) => { ACH.c[k] = Math.max(ACH.c[k] || 0, +v || 0); });
+    Object.entries(A.s || {}).forEach(([k, v]) => { ACH.s[k] = [...new Set([...(ACH.s[k] || []), ...(v || [])])]; });
+    ACH.seeded = true; saveAch();
+  }
   applyLook(); renderTimerPane(); renderLookSound(); renderNotes(); renderAll(); renderMusic(); renderLog();
   $('#bkIn').value = '';
   const skipped = data.log.length - fresh.length;
@@ -1627,6 +1697,361 @@ function restoreBackup(raw){
 $('#bkRestore').onclick = () => { const v = $('#bkIn').value; if (!v.trim()){ toast('Paste a backup into the box first.'); return; } restoreBackup(v); };
 $('#bkFile').onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => restoreBackup(r.result); r.readAsText(f); e.target.value = ''; };
 if (window.top !== window) $('#bkDownload').hidden = true;   // Claude's viewer blocks downloads; Copy still works
+
+/* ---------- achievements ---------- */
+// Most are worked out from your session history, so they also unlock retroactively and come back
+// after a restore. A few track things you do in the app (counters and "tried" sets in fb.ach).
+var ACH = merge({u:{}, c:{}, s:{}, seeded:false}, store.get('fb.ach', {}));
+const saveAch = () => store.set('fb.ach', ACH);
+let achTimer = null;
+function achQueue(){ clearTimeout(achTimer); achTimer = setTimeout(checkAch, 250); }
+function achBump(k, n){ ACH.c[k] = (ACH.c[k] || 0) + (n || 1); saveAch(); achQueue(); }
+function achSet(k, v){ const a = ACH.s[k] || (ACH.s[k] = []); if (v != null && !a.includes(v)){ a.push(v); saveAch(); achQueue(); } }
+
+const TIERS = {
+  bronze:{name:'Bronze', pts:5, c:'#b87333'},
+  silver:{name:'Silver', pts:10, c:'#8d99aa'},
+  gold:{name:'Gold', pts:25, c:'#d4a11a'},
+  platinum:{name:'Platinum', pts:50, c:'#2fa9c0'},
+  legendary:{name:'Legendary', pts:100, c:'#9d4bef'}
+};
+const ACH_CATS = {start:'Getting started', time:'Total time', sessions:'Session count', long:'Long sessions', day:'Big days', week:'Weeks & months', streak:'Streaks & habits', clock:'Time of day', dates:'Special dates', modes:'Timer modes', acts:'Activities & tasks', explore:'Exploring the app', meta:'Collector'};
+const ACH_ICONS = {
+  start:'<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+  time:'<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>',
+  sessions:'<rect x="4" y="4" width="16" height="5" rx="1.5"/><rect x="4" y="10" width="16" height="5" rx="1.5"/><rect x="4" y="16" width="16" height="4" rx="1.5"/>',
+  long:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>',
+  day:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  week:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15l2.5 2.5L16 13"/>',
+  streak:'<path d="M12 22c4 0 7-3 7-7 0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-2 2-5 5-5 8 0 4 3 7 7 7z"/>',
+  clock:'<path d="M20 15A8 8 0 1 1 9 4a6.5 6.5 0 0 0 11 11z"/>',
+  dates:'<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
+  modes:'<circle cx="12" cy="12" r="9"/><path d="M12 12l4-4"/><circle cx="12" cy="12" r="1.5"/>',
+  acts:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.5"/>',
+  explore:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  meta:'<path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/>'
+};
+// [id, category, tier, name, description, value(stats), goal, options]
+const H = 60;
+const ACHS = [
+  ['first','start','bronze','First Step','Finish your first focus session.', s => s.n, 1],
+  ['named','start','bronze','Name It','Log a session with a description of what you worked on.', s => s.named, 1],
+  ['goal1','start','bronze','Goal Getter','Hit your daily goal for the first time.', s => s.goalDays, 1],
+  ['note1','start','bronze','Parking Lot','Park a stray thought in Notes.', s => s.c.notes, 1],
+  ['notedone','start','bronze','Cleared Your Head','Check off a parked note.', s => s.c.notesDone, 1],
+  ['tag1','start','bronze','Personal Touch','Add an activity of your own.', s => s.c.tagsAdded, 1],
+
+  ['t1','time','bronze','Warming Up','Focus for 1 hour in total.', s => s.total, 1*H, {u:'h'}],
+  ['t5','time','bronze','Getting Serious','Focus for 5 hours in total.', s => s.total, 5*H, {u:'h'}],
+  ['t10','time','silver','Ten-Hour Club','Focus for 10 hours in total.', s => s.total, 10*H, {u:'h'}],
+  ['t25','time','silver','Quarter Century','Focus for 25 hours in total.', s => s.total, 25*H, {u:'h'}],
+  ['t50','time','gold','Fifty Hours Deep','Focus for 50 hours in total.', s => s.total, 50*H, {u:'h'}],
+  ['t100','time','gold','Centurion','Focus for 100 hours in total.', s => s.total, 100*H, {u:'h'}],
+  ['t250','time','platinum','Deep Diver','Focus for 250 hours in total.', s => s.total, 250*H, {u:'h'}],
+  ['t500','time','platinum','Scholar','Focus for 500 hours in total.', s => s.total, 500*H, {u:'h'}],
+  ['t1000','time','legendary','The 1,000-Hour Mind','Focus for 1,000 hours in total.', s => s.total, 1000*H, {u:'h'}],
+
+  ['n5','sessions','bronze','High Five','Finish 5 focus sessions.', s => s.n, 5],
+  ['n10','sessions','bronze','Double Digits','Finish 10 focus sessions.', s => s.n, 10],
+  ['n25','sessions','silver','Two Dozen and Change','Finish 25 focus sessions.', s => s.n, 25],
+  ['n50','sessions','silver','Half Century','Finish 50 focus sessions.', s => s.n, 50],
+  ['n100','sessions','gold','Triple Digits','Finish 100 focus sessions.', s => s.n, 100],
+  ['n250','sessions','gold','The Grinder','Finish 250 focus sessions.', s => s.n, 250],
+  ['n500','sessions','platinum','Focus Machine','Finish 500 focus sessions.', s => s.n, 500],
+  ['n1000','sessions','platinum','A Thousand Blocks','Finish 1,000 focus sessions.', s => s.n, 1000],
+  ['n2500','sessions','legendary','Unstoppable Force','Finish 2,500 focus sessions.', s => s.n, 2500],
+
+  ['l30','long','bronze','Half-Hour Hero','Log a single session of 30 minutes or more.', s => s.maxSess, 30, {u:'m'}],
+  ['l60','long','bronze','Hour of Power','Log a single session of 1 hour or more.', s => s.maxSess, 60, {u:'m'}],
+  ['l90','long','silver','In the Zone','Log a single session of 90 minutes or more.', s => s.maxSess, 90, {u:'m'}],
+  ['l120','long','silver','Two-Hour Tunnel','Log a single session of 2 hours or more.', s => s.maxSess, 120, {u:'m'}],
+  ['l180','long','gold','Three-Hour Trance','Log a single session of 3 hours or more.', s => s.maxSess, 180, {u:'m'}],
+  ['l240','long','platinum','Four Hours, No Blinking','Log a single session of 4 hours or more.', s => s.maxSess, 240, {u:'m'}],
+  ['l360','long','legendary','Unbroken','Log a single session of 6 hours or more.', s => s.maxSess, 360, {u:'m'}],
+  ['g3','long','bronze','Back to Back','Do 3 blocks of the same task back to back.', s => s.maxGroup, 3],
+  ['g4p','long','silver','Full Cycle','Do 4 Pomodoro blocks of the same task back to back.', s => s.maxPomoGroup, 4],
+  ['g6','long','silver','Chain Reaction','Do 6 blocks of the same task back to back.', s => s.maxGroup, 6],
+  ['g8p','long','gold','Double Cycle','Do 8 Pomodoro blocks of the same task back to back.', s => s.maxPomoGroup, 8],
+  ['g12','long','platinum','Iron Focus','Do 12 blocks of the same task back to back.', s => s.maxGroup, 12],
+
+  ['d1','day','bronze','Solid Day','Focus for 1 hour in one day.', s => s.maxDay, 1*H, {u:'h'}],
+  ['d2','day','bronze','Productive Day','Focus for 2 hours in one day.', s => s.maxDay, 2*H, {u:'h'}],
+  ['d4','day','silver','Locked In','Focus for 4 hours in one day.', s => s.maxDay, 4*H, {u:'h'}],
+  ['d6','day','gold','Six-Hour Grind','Focus for 6 hours in one day.', s => s.maxDay, 6*H, {u:'h'}],
+  ['d8','day','platinum','Full Shift','Focus for 8 hours in one day.', s => s.maxDay, 8*H, {u:'h'}],
+  ['d10','day','legendary','Marathon Day','Focus for 10 hours in one day.', s => s.maxDay, 10*H, {u:'h'}],
+  ['d12','day','legendary','Twelve-Hour Legend','Focus for 12 hours in one day.', s => s.maxDay, 12*H, {u:'h'}],
+  ['dn4','day','bronze','Four Square','Finish 4 sessions in one day.', s => s.maxDayN, 4],
+  ['dn8','day','silver','Eight Is Great','Finish 8 sessions in one day.', s => s.maxDayN, 8],
+  ['dn12','day','gold','Dozen Done','Finish 12 sessions in one day.', s => s.maxDayN, 12],
+  ['dn16','day','platinum','Sixteen Blocks','Finish 16 sessions in one day.', s => s.maxDayN, 16],
+
+  ['w5','week','bronze','Good Week','Focus for 5 hours in one week.', s => s.maxWeek, 5*H, {u:'h'}],
+  ['w10','week','silver','Ten-Hour Week','Focus for 10 hours in one week.', s => s.maxWeek, 10*H, {u:'h'}],
+  ['w20','week','gold','Twenty-Hour Week','Focus for 20 hours in one week.', s => s.maxWeek, 20*H, {u:'h'}],
+  ['w30','week','platinum','Thirty-Hour Week','Focus for 30 hours in one week.', s => s.maxWeek, 30*H, {u:'h'}],
+  ['w40','week','legendary','Full-Time Student','Focus for 40 hours in one week.', s => s.maxWeek, 40*H, {u:'h'}],
+  ['m20','week','silver','Strong Month','Focus for 20 hours in one month.', s => s.maxMonth, 20*H, {u:'h'}],
+  ['m50','week','gold','Fifty-Hour Month','Focus for 50 hours in one month.', s => s.maxMonth, 50*H, {u:'h'}],
+  ['m100','week','legendary','Hundred-Hour Month','Focus for 100 hours in one month.', s => s.maxMonth, 100*H, {u:'h'}],
+  ['dows','week','silver','Seven Flavors','Study on every day of the week at least once.', s => s.dows, 7],
+  ['perfweek','week','gold','Perfect Week','Study every day of a Sunday-to-Saturday week.', s => s.perfectWeek, 7],
+
+  ['s2','streak','bronze','Back Again','Study 2 days in a row.', s => s.bestStreak, 2, {u:'d'}],
+  ['s3','streak','bronze','Hat Trick','Study 3 days in a row.', s => s.bestStreak, 3, {u:'d'}],
+  ['s7','streak','silver','Week Streak','Study 7 days in a row.', s => s.bestStreak, 7, {u:'d'}],
+  ['s14','streak','gold','Fortnight','Study 14 days in a row.', s => s.bestStreak, 14, {u:'d'}],
+  ['s30','streak','platinum','Month of Momentum','Study 30 days in a row.', s => s.bestStreak, 30, {u:'d'}],
+  ['s60','streak','platinum','Two Months Strong','Study 60 days in a row.', s => s.bestStreak, 60, {u:'d'}],
+  ['s100','streak','legendary','Triple-Digit Streak','Study 100 days in a row.', s => s.bestStreak, 100, {u:'d'}],
+  ['s365','streak','legendary','Year of Focus','Study 365 days in a row.', s => s.bestStreak, 365, {u:'d'}],
+  ['gs3','streak','silver','On Target','Hit your daily goal 3 days in a row.', s => s.goalStreak, 3, {u:'d'}],
+  ['gs7','streak','gold','Bullseye Week','Hit your daily goal 7 days in a row.', s => s.goalStreak, 7, {u:'d'}],
+  ['gs30','streak','legendary','Goal Machine','Hit your daily goal 30 days in a row.', s => s.goalStreak, 30, {u:'d'}],
+  ['da10','streak','bronze','Regular','Study on 10 different days.', s => s.daysActive, 10, {u:'d'}],
+  ['da30','streak','silver','Habit Formed','Study on 30 different days.', s => s.daysActive, 30, {u:'d'}],
+  ['da100','streak','gold','100 Days In','Study on 100 different days.', s => s.daysActive, 100, {u:'d'}],
+  ['da250','streak','platinum','Dedicated','Study on 250 different days.', s => s.daysActive, 250, {u:'d'}],
+
+  ['owl','clock','bronze','Night Owl','Start a session after 11 PM.', s => s.owl, 1],
+  ['lunch','clock','bronze','Lunch Break Learner','Start a session between noon and 1 PM.', s => s.lunch, 1],
+  ['weekend','clock','bronze','Weekend Warrior','Study on a Saturday or Sunday.', s => s.weekend, 1],
+  ['early','clock','silver','Early Bird','Start a session between 5 and 7 AM.', s => s.early, 1],
+  ['midnight','clock','silver','Midnight Oil','Start a session between midnight and 3 AM.', s => s.midnight, 1],
+  ['monday','clock','silver','Monday Motivation','Study on a Monday before 9 AM.', s => s.monMorning, 1],
+  ['fullwknd','clock','silver','Full Weekend','Study on both days of the same weekend.', s => s.fullWeekend, 1],
+  ['allday','clock','silver','Dawn to Dusk','Start sessions in the morning, afternoon and evening of the same day.', s => s.allDay, 1],
+  ['dawn','clock','gold','Before the Birds','Start a session between 4 and 5 AM.', s => s.dawn, 1],
+  ['three','clock','gold','3 AM Club','Some say nothing good happens after 3 AM.', s => s.three, 1, {secret:1}],
+  ['insomnia','clock','gold','Insomniac','Start sessions before 6 AM and after 11 PM on the same date.', s => s.insomniac, 1, {secret:1}],
+  ['clock24','clock','legendary','Around the Clock','Start sessions in every one of the 24 hours of the day, over time.', s => s.hours, 24],
+
+  ['comeback','dates','bronze','Comeback Kid','Come back and study after a week or more away.', s => s.comeback, 1, {secret:1}],
+  ['fri13','dates','silver','Unlucky? Not You','Study on a Friday the 13th.', s => s.fri13, 1, {secret:1}],
+  ['valentine','dates','silver','Studying Is My Valentine','Study on February 14.', s => s.sp['02-14'], 1, {secret:1}],
+  ['spooky','dates','silver','Spooky Studies','Study on Halloween.', s => s.sp['10-31'], 1, {secret:1}],
+  ['dot','dates','silver','On the Dot','Finish a Stopwatch session at exactly 60 minutes.', s => s.swDot, 1, {secret:1}],
+  ['newyear','dates','gold','New Year, Same Grind','Study on January 1.', s => s.sp['01-01'], 1, {secret:1}],
+  ['xmas','dates','gold','Holiday Grind','Study on December 25.', s => s.sp['12-25'], 1, {secret:1}],
+  ['pi','dates','gold','Pi Time','Start or end a session at exactly 3:14.', s => s.pi, 1, {secret:1}],
+  ['lucky7','dates','gold','Lucky Sevens','Finish 7 sessions on the 7th of a month.', s => s.lucky7, 1, {secret:1}],
+  ['leap','dates','legendary','Leap of Focus','Study on February 29. Good luck.', s => s.sp['02-29'], 1, {secret:1}],
+
+  ['m-pomodoro','modes','bronze','Tomato Timer','Finish a Pomodoro block.', s => s.modes.pomodoro, 1],
+  ['m-fifty','modes','bronze','52/17 Club','Finish a 52/17 block.', s => s.modes.fifty, 1],
+  ['m-flow','modes','bronze','Go With the Flow','Finish a Flowtime session.', s => s.modes.flow, 1],
+  ['m-timebox','modes','bronze','Boxed In','Finish a Timebox session.', s => s.modes.timebox, 1],
+  ['m-stopwatch','modes','bronze','Clock Watcher','Finish an assignment in Stopwatch mode.', s => s.modes.stopwatch, 1],
+  ['m-custom','modes','bronze','Made to Measure','Finish a block in Custom mode.', s => s.modes.custom, 1],
+  ['modeall','modes','silver','Mode Master','Finish a session in all six timer modes.', s => s.modeCount, 6],
+  ['flow90','modes','gold','Flow State','Stay in one Flowtime stretch for 90 minutes or more.', s => s.flowMax, 90, {u:'m'}],
+  ['sw10','modes','silver','Assignment Slayer','Finish 10 assignments in Stopwatch mode.', s => s.modes.stopwatch, 10],
+  ['sw50','modes','gold','Homework Destroyer','Finish 50 assignments in Stopwatch mode.', s => s.modes.stopwatch, 50],
+  ['sw150','modes','platinum','Assignment Annihilator','Finish 150 assignments in Stopwatch mode.', s => s.modes.stopwatch, 150],
+
+  ['a3','acts','bronze','Variety Pack','Log time in 3 different activities.', s => s.actCount, 3],
+  ['a6','acts','silver','Renaissance Student','Log time in 6 different activities.', s => s.actCount, 6],
+  ['k10','acts','bronze','Busy Bee','Work on 10 differently named tasks.', s => s.taskCount, 10],
+  ['k50','acts','silver','Many Hats','Work on 50 differently named tasks.', s => s.taskCount, 50],
+  ['k200','acts','gold','Jack of All Trades','Work on 200 differently named tasks.', s => s.taskCount, 200],
+  ['haul5','acts','silver','Long Haul','Work on the same task on 5 different days.', s => s.maxTaskDays, 5, {u:'d'}],
+  ['haul15','acts','gold','Magnum Opus','Work on the same task on 15 different days.', s => s.maxTaskDays, 15, {u:'d'}],
+  ['tag10','acts','silver','Specialist','Spend 10 hours on one activity.', s => s.maxTag, 10*H, {u:'h'}],
+  ['round','acts','gold','Well Rounded','Spend at least 5 hours on each of 3 different activities.', s => s.tags5h, 3],
+  ['tag50','acts','gold','Expert','Spend 50 hours on one activity.', s => s.maxTag, 50*H, {u:'h'}],
+  ['tag100','acts','platinum','Master of One','Spend 100 hours on one activity.', s => s.maxTag, 100*H, {u:'h'}],
+
+  ['mini','explore','bronze','Picture in Picture','Pop out the mini clock.', s => s.c.mini, 1],
+  ['tunnel','explore','bronze','Tunnel Vision','Turn on focus mode.', s => s.c.focusMode, 1],
+  ['amb','explore','bronze','Ambience','Focus with a background sound playing.', s => s.set.amb, 1],
+  ['rain','explore','bronze','Rainy Day','Focus with the rain sound playing.', s => s.rain, 1],
+  ['storm','explore','bronze','Stormchaser','Focus through a thunderstorm.', s => s.storm, 1],
+  ['themes5','explore','bronze','Interior Designer','Try 5 different themes.', s => s.set.themes, 5],
+  ['fonts5','explore','bronze','Typographer','Try 5 different timer fonts.', s => s.set.fonts, 5],
+  ['accent','explore','bronze','Your Colors','Pick your own custom accent color.', s => s.set.accentUsed, 1],
+  ['dj','explore','bronze','DJ','Add some music in the Music tab.', s => s.c.music, 1],
+  ['backup','explore','bronze','Safety First','Make a backup of your data.', s => s.c.backup, 1],
+  ['edit','explore','bronze','Revisionist','Edit a logged session.', s => s.c.edits, 1],
+  ['del','explore','bronze','Clean Slate','Delete a logged session.', s => s.c.deletes, 1],
+  ['bigpic','explore','bronze','The Big Picture','Open the monthly calendar.', s => s.c.calMonth, 1],
+  ['trophy','explore','bronze','Trophy Hunter','Open the Awards tab.', s => s.c.awards, 1],
+  ['resets','explore','bronze','Commitment Issues','Reset the timer 10 times.', s => s.c.resets, 10, {secret:1}],
+  ['curator','explore','silver','Curator','Add 5 things to your music.', s => s.c.music, 5],
+  ['keys25','explore','silver','Keyboard Warrior','Use keyboard shortcuts 25 times.', s => s.c.keys, 25],
+  ['notes25','explore','silver','Overthinker','Park 25 notes.', s => s.c.notes, 25],
+  ['tidy25','explore','silver','Tidy Mind','Check off 25 parked notes.', s => s.c.notesDone, 25],
+  ['fontsall','explore','silver','Type Nerd','Try every timer font.', s => s.set.fonts, Object.keys(DIGIT_FONTS).length],
+  ['thunder50','explore','silver','Thunderstruck','Hear 50 claps of thunder.', s => s.c.thunder, 50, {secret:1}],
+  ['themesall','explore','gold','Chameleon','Try every theme.', s => s.set.themes, Object.keys(THEMES).length],
+  ['keys250','explore','gold','Who Needs a Mouse','Use keyboard shortcuts 250 times.', s => s.c.keys, 250, {secret:1}],
+
+  ['col10','meta','bronze','Collector','Unlock 10 achievements.', s => s.unlocked, 10],
+  ['col25','meta','silver','Trophy Shelf','Unlock 25 achievements.', s => s.unlocked, 25],
+  ['col50','meta','gold','Trophy Room','Unlock 50 achievements.', s => s.unlocked, 50],
+  ['colhalf','meta','platinum','Halfway There','Unlock half of all achievements.', s => s.unlocked, 0],
+  ['colall','meta','legendary','Completionist','Unlock every other achievement. Seriously.', s => s.unlocked, 0]
+].map(([id, cat, tier, name, desc, val, goal, o]) => ({id, cat, tier, name, desc, val, goal, u: o && o.u, secret: !!(o && o.secret)}));
+ACHS.find(a => a.id === 'colhalf').goal = Math.ceil(ACHS.length / 2);
+ACHS.find(a => a.id === 'colall').goal = ACHS.length - 1;
+
+function streakOf(keys){
+  let best = 0, run = 0, prev = null;
+  for (const k of keys){
+    const t = new Date(k + 'T12:00').getTime();
+    run = prev != null && Math.round((t - prev) / 864e5) === 1 ? run + 1 : 1;
+    best = Math.max(best, run); prev = t;
+  }
+  return best;
+}
+function achStats(){
+  const st = {n:0, total:0, maxSess:0, named:0, modes:{}, tags:{}, sp:{}, swDot:0, flowMax:0, early:0, dawn:0, owl:0, midnight:0, three:0, lunch:0, monMorning:0, weekend:0, fri13:0, pi:0};
+  const tasks = new Set(), taskDays = {}, hours = new Set(), dows = new Set(), days = {}, partsByDay = {};
+  for (const s of LOG){
+    const start = s.t - s.min * 60000, d = new Date(start), e = new Date(s.t), h = d.getHours(), dow = d.getDay(), k = dayKey(s.t), sk = dayKey(start);
+    st.n++; st.total += s.min; st.maxSess = Math.max(st.maxSess, s.min);
+    const task = (s.task || '').trim().toLowerCase();
+    if (task){ st.named++; tasks.add(task); (taskDays[task] = taskDays[task] || new Set()).add(k); }
+    const tag = s.tag || 'General'; st.tags[tag] = (st.tags[tag] || 0) + s.min;
+    const m = s.mode || 'pomodoro'; st.modes[m] = (st.modes[m] || 0) + 1;
+    if (m === 'stopwatch' && s.min === 60) st.swDot++;
+    if (m === 'flow') st.flowMax = Math.max(st.flowMax, s.min);
+    hours.add(h); dows.add(dow);
+    if (h === 3) st.three++; if (h === 4) st.dawn++; if (h >= 5 && h < 7) st.early++; if (h >= 23) st.owl++; if (h < 3) st.midnight++; if (h === 12) st.lunch++;
+    if (dow === 1 && h < 9) st.monMorning++;
+    if (dow === 0 || dow === 6) st.weekend++;
+    if (dow === 5 && d.getDate() === 13) st.fri13++;
+    const md = `${pad(d.getMonth()+1)}-${pad(d.getDate())}`; st.sp[md] = 1;
+    if ([d, e].some(x => x.getHours() % 12 === 3 && x.getMinutes() === 14)) st.pi++;
+    const day = days[k] || (days[k] = {min:0, n:0}); day.min += s.min; day.n++;
+    const parts = partsByDay[sk] || (partsByDay[sk] = new Set());
+    parts.add(h >= 5 && h < 12 ? 'am' : h >= 12 && h < 17 ? 'pm' : h >= 17 ? 'eve' : 'night');
+    if (h < 6) parts.add('pre6'); if (h >= 23) parts.add('post23');
+  }
+  const keys = Object.keys(days).sort();
+  st.daysActive = keys.length;
+  st.bestStreak = streakOf(keys);
+  const goalKeys = keys.filter(k => days[k].n >= P.goal);
+  st.goalDays = goalKeys.length; st.goalStreak = streakOf(goalKeys);
+  st.maxDay = 0; st.maxDayN = 0; st.comeback = 0; st.lucky7 = 0; st.fullWeekend = 0;
+  const weekMin = {}, weekDays = {}, monthMin = {};
+  let prev = null;
+  for (const k of keys){
+    const r = days[k], dt = new Date(k + 'T12:00');
+    st.maxDay = Math.max(st.maxDay, r.min); st.maxDayN = Math.max(st.maxDayN, r.n);
+    if (prev != null && Math.round((dt - prev) / 864e5) >= 8) st.comeback = 1;
+    prev = dt;
+    if (dt.getDate() === 7 && r.n >= 7) st.lucky7 = 1;
+    if (dt.getDay() === 6){ const nx = new Date(dt); nx.setDate(nx.getDate() + 1); if (days[dayKey(nx)]) st.fullWeekend = 1; }
+    const wk = dayKey(startOfWeek(dt));
+    weekMin[wk] = (weekMin[wk] || 0) + r.min; (weekDays[wk] = weekDays[wk] || new Set()).add(k);
+    monthMin[k.slice(0, 7)] = (monthMin[k.slice(0, 7)] || 0) + r.min;
+  }
+  st.maxWeek = Math.max(0, ...Object.values(weekMin));
+  st.maxMonth = Math.max(0, ...Object.values(monthMin));
+  st.perfectWeek = Math.max(0, ...Object.values(weekDays).map(x => x.size));
+  st.allDay = Object.values(partsByDay).some(p => p.has('am') && p.has('pm') && p.has('eve')) ? 1 : 0;
+  st.insomniac = Object.values(partsByDay).some(p => p.has('pre6') && p.has('post23')) ? 1 : 0;
+  st.hours = hours.size; st.dows = dows.size;
+  st.taskCount = tasks.size;
+  st.maxTaskDays = Math.max(0, ...Object.values(taskDays).map(x => x.size));
+  st.actCount = Object.keys(st.tags).length;
+  st.maxTag = Math.max(0, ...Object.values(st.tags));
+  st.tags5h = Object.values(st.tags).filter(m => m >= 300).length;
+  st.modeCount = ['pomodoro','fifty','flow','timebox','stopwatch','custom'].filter(m => st.modes[m]).length;
+  let maxGroup = 0, maxPomo = 0;
+  groupSessions(LOG.map((s, i) => ({s, i}))).forEach(g => {
+    maxGroup = Math.max(maxGroup, g.items.length);
+    if (g.items.every(x => (x.s.mode || 'pomodoro') === 'pomodoro')) maxPomo = Math.max(maxPomo, g.items.length);
+  });
+  st.maxGroup = maxGroup; st.maxPomoGroup = maxPomo;
+  st.c = ACH.c;
+  st.set = {}; Object.keys(ACH.s).forEach(k => st.set[k] = ACH.s[k].length);
+  st.rain = (ACH.s.amb || []).includes('rain') ? 1 : 0;
+  st.storm = (ACH.s.amb || []).includes('storm') ? 1 : 0;
+  st.unlocked = Object.keys(ACH.u).length;
+  return st;
+}
+const achVal = (a, st) => { try { return +a.val(st) || 0; } catch(e){ return 0; } };
+function checkAch(){
+  const st = achStats(), fresh = [];
+  let changedAny = true;
+  while (changedAny){            // repeat so the "unlock N achievements" ones can chain
+    changedAny = false;
+    for (const a of ACHS){
+      if (ACH.u[a.id]) continue;
+      if (achVal(a, st) >= a.goal){ ACH.u[a.id] = Date.now(); fresh.push(a); st.unlocked++; changedAny = true; }
+    }
+  }
+  if (!fresh.length){ if (!ACH.seeded){ ACH.seeded = true; saveAch(); } renderAchHeader(); return; }
+  saveAch();
+  if (!ACH.seeded){
+    // first run: don't flood the screen with history you already earned
+    ACH.seeded = true; saveAch();
+    toast(`You've already earned ${fresh.length} achievement${fresh.length===1?'':'s'} from your history. Open the Awards tab to see them.`);
+  } else fresh.forEach(a => achPopQueue.push(a));
+  renderAchHeader(); renderAwards(); achPopNext();
+}
+
+/* unlock pop-ups */
+const achPopQueue = []; let achPopBusy = false;
+function achIcon(a, cls){ return `<span class="ach-ic ${cls || ''}" style="--t:${TIERS[a.tier].c}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ACH_ICONS[a.cat]}</svg></span>`; }
+function achPopNext(){
+  if (achPopBusy || !achPopQueue.length) return;
+  achPopBusy = true;
+  const a = achPopQueue.shift(), more = achPopQueue.length > 2 ? achPopQueue.splice(0).length : 0, T = TIERS[a.tier];
+  const el = $('#achPop');
+  el.innerHTML = `${achIcon(a, 'big')}<span class="ach-pop-tx"><small style="color:${T.c}">${T.name} achievement unlocked · +${T.pts}</small><b>${esc(a.name)}</b><span>${esc(a.desc)}</span>${more ? `<em>and ${more} more</em>` : ''}</span>`;
+  el.hidden = false; el.classList.remove('out'); void el.offsetWidth; el.classList.add('in');
+  el.onclick = () => { el.hidden = true; achPopBusy = false; openTab('awards'); };
+  if (AC && P.volume > 0){ const t = AC.currentTime + .02, v = P.volume; [784, 988, 1175, 1568].forEach((f, i) => tone(f, 'triangle', t + i * .08, .5, .16 * v)); }
+  if (a.tier === 'gold' || a.tier === 'platinum' || a.tier === 'legendary') fx.burst();
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => { el.hidden = true; el.classList.remove('in','out'); achPopBusy = false; achPopNext(); }, 350); }, a.tier === 'legendary' ? 6500 : 4200);
+}
+
+/* header and Awards tab */
+function renderAchHeader(){
+  const n = Object.keys(ACH.u).length;
+  $('#achBtn b').textContent = n; $('#achBtn span').textContent = `/${ACHS.length}`;
+}
+function openTab(name){ const t = document.querySelector(`.tab[data-tab="${name}"]`); if (t) t.click(); }
+$('#achBtn').onclick = () => { openTab('awards'); document.querySelector('.panel').scrollIntoView({behavior: 'smooth', block: 'start'}); };
+let achFilter = 'all', achCat = 'all';
+function achProgressText(a, v){
+  const f = x => a.u === 'h' ? (x >= 60 ? `${Math.floor(x / 60)}h${x % 60 ? ' ' + (x % 60) + 'm' : ''}` : `${Math.round(x)}m`) : a.u === 'm' ? fmtMin(Math.round(x)) : a.u === 'd' ? `${x} day${x===1?'':'s'}` : x.toLocaleString();
+  return `${f(Math.min(v, a.goal))} / ${f(a.goal)}`;
+}
+function achCard(a, st){
+  const got = ACH.u[a.id], T = TIERS[a.tier], hide = a.secret && !got, v = achVal(a, st), pct = Math.min(100, v / a.goal * 100);
+  const when = got ? new Date(got).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'}) : '';
+  return `<li class="ach${got ? ' got' : ''}${hide ? ' secret' : ''}">${achIcon(a)}
+    <span class="ach-tx"><b>${hide ? 'Secret achievement' : esc(a.name)}</b><span>${hide ? 'Keep studying to discover this one.' : esc(a.desc)}</span>
+    ${got ? `<small>Unlocked ${when}</small>` : (!hide && a.goal > 1 ? `<span class="ach-prog"><i style="width:${pct}%;background:${T.c}"></i></span><small>${achProgressText(a, v)}</small>` : '')}</span>
+    <span class="ach-tier" style="--t:${T.c}">${T.name}<em>+${T.pts}</em></span></li>`;
+}
+function renderAwards(){
+  if (!$('#achList') || $('#pane-awards').hidden) return;
+  const st = achStats(), got = ACHS.filter(a => ACH.u[a.id]), pts = got.reduce((n, a) => n + TIERS[a.tier].pts, 0), maxPts = ACHS.reduce((n, a) => n + TIERS[a.tier].pts, 0);
+  $('#achSum').innerHTML = `<div class="ach-big"><b>${got.length}</b><span>/ ${ACHS.length} unlocked</span></div><div class="ach-pts"><b>${pts.toLocaleString()}</b><span>/ ${maxPts.toLocaleString()} points</span></div>
+    <div class="ach-bar"><i style="width:${got.length / ACHS.length * 100}%"></i></div>
+    <div class="ach-tiers">${Object.entries(TIERS).map(([k, T]) => { const all = ACHS.filter(a => a.tier === k); return `<span style="--t:${T.c}"><i></i>${T.name} <b>${all.filter(a => ACH.u[a.id]).length}/${all.length}</b></span>`; }).join('')}</div>`;
+  // the closest locked ones, as a nudge
+  const near = ACHS.filter(a => !ACH.u[a.id] && !a.secret && a.goal > 1 && a.cat !== 'meta').map(a => ({a, r: achVal(a, st) / a.goal})).filter(x => x.r > 0).sort((x, y) => y.r - x.r).slice(0, 3);
+  $('#achNear').hidden = !near.length;
+  $('#achNearList').innerHTML = near.map(x => achCard(x.a, st)).join('');
+  $('#achFilter').innerHTML = [['all','All'],['got','Unlocked'],['locked','Locked']].map(([v, l]) => `<button data-v="${v}" aria-pressed="${achFilter===v}">${l}</button>`).join('');
+  $('#achCatSel').innerHTML = `<option value="all">All categories</option>` + Object.entries(ACH_CATS).map(([k, l]) => `<option value="${k}" ${k===achCat?'selected':''}>${l}</option>`).join('');
+  let h = '';
+  for (const [cat, label] of Object.entries(ACH_CATS)){
+    if (achCat !== 'all' && achCat !== cat) continue;
+    const list = ACHS.filter(a => a.cat === cat && (achFilter === 'all' || (achFilter === 'got') === !!ACH.u[a.id]));
+    if (!list.length) continue;
+    const all = ACHS.filter(a => a.cat === cat);
+    h += `<div class="h ach-h"><span>${label}</span><span>${all.filter(a => ACH.u[a.id]).length}/${all.length}</span></div><ul class="ach-list">${list.map(a => achCard(a, st)).join('')}</ul>`;
+  }
+  $('#achList').innerHTML = h || `<div class="empty">Nothing here yet.</div>`;
+}
+$('#achFilter').onclick = e => { const b = e.target.closest('button'); if (!b) return; achFilter = b.dataset.v; renderAwards(); };
+$('#achCatSel').onchange = e => { achCat = e.target.value; renderAwards(); };
 
 /* ---------- notes ---------- */
 function renderNotes(){
@@ -1817,6 +2242,7 @@ const THUNDER_GAP = {rare: [70, 160], some: [25, 75], often: [10, 35]};
 let nextStrike = null;
 async function playThunder(){
   if (!ac()) return;
+  achBump('thunder');
   const p = nextStrike || synth('thunder');
   nextStrike = synth('thunder');           // render the following strike ahead of time
   const [buf] = await p;
@@ -1868,6 +2294,7 @@ function updateAmbient(){
   const want = P.ambient !== 'off' && (ambPreview || (S.running && (!P.ambFocusOnly || S.phase === 'focus')));
   $('#ambPreview').textContent = ambPreview ? 'Stop preview' : 'Preview';
   if (!want || !AC){ stopAmb(); return; }
+  if (S.running && S.phase === 'focus') achSet('amb', P.ambient);
   if (amb && amb.type === P.ambient){ amb.g.gain.setTargetAtTime(P.ambVol * .7, AC.currentTime, .1); return; }
   stopAmb(); startAmb(P.ambient);
 }
@@ -1897,7 +2324,7 @@ async function toggleMini(){
   if (window.top === window && 'documentPictureInPicture' in window){
     try {
       const [w,h] = SIZES[P.mini] || SIZES.m;
-      pipWin = await documentPictureInPicture.requestWindow({width:w, height:h});
+      pipWin = await documentPictureInPicture.requestWindow({width:w, height:h}); achBump('mini');
       buildDocPip(pipWin);
       pipWin.addEventListener('pagehide', () => { pipWin = null; renderAll(); });
       renderAll(); return;
@@ -1938,7 +2365,7 @@ async function openVideoPip(){
     pipVideo.addEventListener('enterpictureinpicture', () => { renderAll(); updateMedia(); });
   }
   await pipVideo.play();
-  await pipVideo.requestPictureInPicture();
+  await pipVideo.requestPictureInPicture(); achBump('mini');
   setupMedia();
 }
 function drawPip(f, fr){
@@ -1994,7 +2421,7 @@ function updateMedia(){
 
 /* ---------- focus mode ---------- */
 function toggleFocusMode(){
-  const on = !document.body.classList.contains('focus-mode');
+  const on = !document.body.classList.contains('focus-mode'); if (on) achBump('focusMode');
   document.body.classList.toggle('focus-mode', on);
   try {
     if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
@@ -2026,13 +2453,15 @@ document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t));
   document.querySelectorAll('.pane').forEach(p => { const on = p.id === 'pane-' + t.dataset.tab; if (on && p.hidden){ p.classList.remove('pane-in'); void p.offsetWidth; p.classList.add('pane-in'); } p.hidden = !on; });
   moveTabInk();
+  try { t.scrollIntoView({block:'nearest', inline:'nearest', behavior:'smooth'}); } catch(e){}
+  if (t.dataset.tab === 'awards'){ achBump('awards'); renderAwards(); }
   if (t.dataset.tab === 'log'){ const w = $('#week'); w.classList.remove('grow'); void w.offsetWidth; w.classList.add('grow'); }
 });
 $('#autoBreak').onchange = e => { P.autoBreak = e.target.checked; saveP(); };
 $('#autoFocus').onchange = e => { P.autoFocus = e.target.checked; saveP(); };
 $('#goal').onchange = e => { P.goal = Math.min(30, Math.max(1, parseInt(e.target.value,10) || 6)); e.target.value = P.goal; saveP(); renderLog(); };
 $('#tagList').onclick = e => { const b = e.target.closest('button'); if (!b) return; P.tags.splice(+b.dataset.i, 1); saveP(); renderTags(); };
-function addTag(){ const v = $('#newTag').value.trim(); if (!v) return; if (!P.tags.includes(v)) P.tags.push(v); P.tag = v; $('#newTag').value = ''; saveP(); renderTags(); }
+function addTag(){ const v = $('#newTag').value.trim(); if (!v) return; if (!P.tags.includes(v)){ P.tags.push(v); achBump('tagsAdded'); } P.tag = v; $('#newTag').value = ''; saveP(); renderTags(); }
 $('#addTag').onclick = addTag;
 $('#newTag').onkeydown = e => { if (e.key === 'Enter') addTag(); };
 $('#volume').oninput = e => { P.volume = +e.target.value; saveP(); };
@@ -2054,18 +2483,19 @@ $('#timerSize').oninput = e => { P.timerSize = +e.target.value; saveP(); applyLo
 $('#ticksOn').onchange = e => { P.ticks = e.target.checked; saveP(); applyLook(); };
 $('#resetLook').onclick = () => { LOOK_KEYS.forEach(k => P[k] = clone(DEFAULTS)[k]); saveP(); renderAll(); renderLookSound(); toast('Look reset to default.'); };
 new MutationObserver(() => { renderAll(); renderLookSound(); }).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
-function addNote(){ const v = $('#noteIn').value.trim(); if (!v) return; NOTES.unshift({id:Date.now().toString(36), text:v, done:false}); $('#noteIn').value = ''; saveNotes(); renderNotes(); }
+function addNote(){ const v = $('#noteIn').value.trim(); if (!v) return; achBump('notes'); NOTES.unshift({id:Date.now().toString(36), text:v, done:false}); $('#noteIn').value = ''; saveNotes(); renderNotes(); }
 $('#noteAdd').onclick = addNote;
 $('#noteIn').onkeydown = e => { if (e.key === 'Enter') addNote(); };
 $('#noteList').onclick = e => {
   if (e.target.dataset.del){ NOTES = NOTES.filter(n => n.id !== e.target.dataset.del); saveNotes(); renderNotes(); }
-  else if (e.target.dataset.id){ const n = NOTES.find(n => n.id === e.target.dataset.id); if (n){ n.done = e.target.checked; saveNotes(); renderNotes(); } }
+  else if (e.target.dataset.id){ const n = NOTES.find(n => n.id === e.target.dataset.id); if (n){ n.done = e.target.checked; if (n.done) achBump('notesDone'); saveNotes(); renderNotes(); } }
 };
 $('#noteClear').onclick = () => { NOTES = NOTES.filter(n => !n.done); saveNotes(); renderNotes(); };
 document.addEventListener('keydown', e => {
   const t = e.target;
   if (e.metaKey || e.ctrlKey || e.altKey || t.matches('input, textarea, select')) return;
   const k = e.key.toLowerCase();
+  if (' rsmf'.includes(k) && k) achBump('keys');
   if (k === ' '){ if (t.closest('button')) return; e.preventDefault(); toggle(); }
   else if (k === 'r') reset();
   else if (k === 's') skip();
@@ -2079,6 +2509,7 @@ applyLook(); renderTimerPane(); renderLookSound(); renderLog(); renderNotes(); r
 requestAnimationFrame(moveTabInk);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveTabInk);
 prewarm();
+renderAchHeader(); checkAch();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderTime);
 })();
 </script>
