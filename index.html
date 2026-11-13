@@ -613,6 +613,7 @@ const MODES = {
   pomodoro:{name:'Pomodoro', hint:'Short focus sprints with a longer break every few rounds. Good for getting started on something you are avoiding.'},
   fifty:{name:'52 / 17', hint:'Longer focus blocks with a real break. Good for reading and writing once you are warmed up.'},
   flow:{name:'Flowtime', hint:'The clock counts up. Work until your focus fades, then press "Take break". Your break length scales with how long you worked.'},
+  stopwatch:{name:'Stopwatch', hint:'The clock counts up with no breaks. Start it when you begin an assignment and press "Done" when you finish. The whole session is logged as one entry. You can pause it anytime, and it survives a page reload.'},
   timebox:{name:'Timebox', hint:'One countdown for one task. When time is up, you stop and move on.'},
   custom:{name:'Custom', hint:'Set your own focus, break and round lengths.'}
 };
@@ -675,13 +676,15 @@ let S = merge({phase:'focus', round:1, remaining:null, flowAcc:0, flowBreakMin:5
 S.running = false;
 function durMs(phase){
   const m = P.mode, c = P.modes[m];
+  if (m === 'stopwatch') return 0;
   if (m === 'timebox') return c.focus * 60000;
   if (m === 'flow') return phase === 'focus' ? 0 : S.flowBreakMin * 60000;
   if (m === 'fifty') return (phase === 'focus' ? c.focus : c.short) * 60000;
   return c[phase] * 60000;
 }
+if (P.mode === 'stopwatch') S.phase = 'focus';
 if (S.remaining == null || (P.mode !== 'flow' && S.remaining > durMs(S.phase))) S.remaining = durMs(S.phase);
-const countUp = () => P.mode === 'flow' && S.phase === 'focus';
+const countUp = () => (P.mode === 'flow' || P.mode === 'stopwatch') && S.phase === 'focus';
 const remaining = () => S.running ? Math.max(0, S.endAt - Date.now()) : S.remaining;
 const flowElapsed = () => S.flowAcc + (S.running ? Date.now() - S.flowStart : 0);
 const focusElapsed = () => countUp() ? flowElapsed() : durMs('focus') - remaining();
@@ -730,7 +733,18 @@ function flowBreak(){
   toast(`Nice. You earned a ${S.flowBreakMin} minute break.`);
   if (P.autoBreak) start(); else { wake(false); changed(); }
 }
+// Stopwatch: log everything since Start as one session, celebrate, and reset to 0:00
+function finishStopwatch(){
+  const el = flowElapsed();
+  S.running = false; S.flowAcc = 0; wake(false);
+  if (el < 60000){ toast('Under a minute, so nothing was logged.'); changed(); return; }
+  logFocus(el);
+  chime(P.chime); fx.burst(); popDial();
+  toast(`Done! Logged ${fmtMin(Math.round(el / 60000))}${P.task ? ' on ' + P.task.trim() : ''}.`);
+  changed();
+}
 function skip(){
+  if (P.mode === 'stopwatch') return finishStopwatch();
   if (countUp()) return flowBreak();
   const was = S.running;
   if (S.phase === 'focus'){ const el = focusElapsed(); if (el >= 60000) logFocus(el); }
@@ -782,6 +796,7 @@ function phaseName(){
   if (S.phase === 'long') return 'Long break';
   if (P.mode === 'timebox') return 'Timebox';
   if (P.mode === 'flow') return 'Flow · counting up';
+  if (P.mode === 'stopwatch') return 'Stopwatch · until done';
   return 'Focus';
 }
 
@@ -826,12 +841,12 @@ function renderAll(){
     let h = '';
     for (let i = 1; i <= n; i++) h += `<i class="${i < cur || (i === cur && S.phase !== 'focus') ? 'done' : i === cur ? 'now' : ''}"></i>`;
     r.innerHTML = h; r.title = `Round ${cur} of ${n}`;
-  } else if (P.mode === 'timebox') { r.textContent = P.task ? '' : ''; r.title=''; }
+  } else if (P.mode === 'timebox' || P.mode === 'stopwatch') { r.textContent = ''; r.title=''; }
   else { r.textContent = `Round ${S.round}`; r.title=''; }
   $('#pausedTag').textContent = !S.running && !notStarted() ? 'Paused' : '';
 
   $('#startBtn').textContent = S.running ? 'Pause' : notStarted() ? (S.phase === 'focus' ? 'Start' : 'Start break') : 'Resume';
-  $('#skipBtn').textContent = countUp() ? 'Take break' : P.mode === 'timebox' ? 'Finish' : S.phase === 'focus' ? 'Skip' : 'End break';
+  $('#skipBtn').textContent = P.mode === 'stopwatch' ? 'Done' : countUp() ? 'Take break' : P.mode === 'timebox' ? 'Finish' : S.phase === 'focus' ? 'Skip' : 'End break';
   $('#miniBtn span').textContent = miniOpen() ? 'Close mini clock' : 'Pop out mini clock';
   $('#miniBtn').classList.toggle('on', miniOpen());
   $('#focusBtn span').textContent = b.classList.contains('focus-mode') ? 'Exit focus mode' : 'Focus mode';
@@ -890,6 +905,8 @@ function renderTimerPane(){
   } else if (m === 'flow'){
     h += numRow('f-ratio','Break ratio','break = focus time ÷ this number',c.ratio,2,10);
     h += numRow('f-minBreak','Shortest break','minutes',c.minBreak,1,30);
+  } else if (m === 'stopwatch'){
+    h = '';
   } else {
     h += numRow('f-focus','Timebox length','minutes',c.focus,1,480);
   }
@@ -902,8 +919,8 @@ function renderTimerPane(){
     if (!S.running) S.remaining = durMs(S.phase);
     changed();
   }));
-  $('#rowAutoBreak').hidden = m === 'timebox';
-  $('#rowAutoFocus').hidden = m === 'timebox';
+  $('#rowAutoBreak').hidden = m === 'timebox' || m === 'stopwatch';
+  $('#rowAutoFocus').hidden = m === 'timebox' || m === 'stopwatch';
   $('#autoBreak').checked = P.autoBreak; $('#autoFocus').checked = P.autoFocus; $('#goal').value = P.goal;
   renderTags();
 }
@@ -1954,7 +1971,7 @@ function updateMini(f, fr){
     d.getElementById('pb').style.width = (fr * 100) + '%';
     d.getElementById('pk').textContent = [P.task, P.tag].filter(Boolean).join(' · ');
     d.getElementById('pp').textContent = S.running ? 'Pause' : 'Start';
-    d.getElementById('sk').textContent = countUp() ? 'Break' : 'Skip';
+    d.getElementById('sk').textContent = P.mode === 'stopwatch' ? 'Done' : countUp() ? 'Break' : 'Skip';
     pipWin.document.title = f.text;
   }
   if (pipVideo && document.pictureInPictureElement === pipVideo) drawPip(f, fr);
