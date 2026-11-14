@@ -78,6 +78,157 @@ button{cursor:pointer}
 .dock-btn.on svg,.dock-btn.on small{color:var(--cur)}
 .qnotes li{font-size:14px}
 #matchSlot:empty{display:none}
+/* ranked */
+.emb{display:inline-flex;width:22px;height:22px;flex:none;vertical-align:middle}
+.emb svg{width:100%;height:100%;display:block}
+.emb.xs{width:15px;height:15px;vertical-align:-3px}.emb.sm{width:26px;height:26px}.emb.md{width:40px;height:40px}.emb.xl{width:96px;height:96px}
+.rank-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:4px 12px 4px 8px;font-size:13px;color:var(--muted);white-space:nowrap}
+.rank-chip b{color:var(--ink);font-weight:700}
+.rank-chip:hover{border-color:var(--muted)}
+.av{width:38px;height:38px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;background:hsl(var(--h) 52% 44%);letter-spacing:.02em}
+.av.sm{width:28px;height:28px;font-size:11px}.av.lg{width:60px;height:60px;font-size:22px}
+.av.me{background:var(--accent);color:var(--on-accent);font-size:11px}
+.av.me.sm{font-size:9px}
+.bot-tag{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 4px;vertical-align:2px}
+.bdgs{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
+.bdg{display:inline-flex}
+.bdg .ach-ic{width:22px;height:22px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--t) 80%,transparent)}
+.bdg .ach-ic svg{width:12px;height:12px}
+.bdg.lg .ach-ic{width:34px;height:34px}.bdg.lg .ach-ic svg{width:17px;height:17px}
+.bdgs.wrap{gap:6px}
+.bdg-name{font-size:12px;font-weight:600;margin-right:8px}
+.match{display:flex;flex-direction:column;gap:12px}
+.match.found{animation:matchIn .6s cubic-bezier(.2,1.3,.4,1)}
+body.m-off .match.found{animation:none}
+@keyframes matchIn{0%{transform:scale(.94);opacity:0}100%{transform:none;opacity:1}}
+.m-head{display:flex;justify-content:space-between;align-items:center}
+.live-dot{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#e0533a}
+.live-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:#e0533a}
+body:not(.m-off) .live-dot::before{animation:flicker 1.4s ease-in-out infinite}
+.m-players{display:flex;flex-direction:column;gap:8px}
+.m-p{display:flex;gap:10px;align-items:center;min-width:0}
+.m-p.them{cursor:pointer;border-radius:var(--r-ctl);margin:-4px;padding:4px}
+.m-p.them:hover{background:var(--soft)}
+.m-n{display:flex;flex-direction:column;gap:2px;min-width:0}
+.m-n b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-n small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vs{align-self:center;font-family:var(--f-display);font-weight:800;font-size:14px;letter-spacing:.1em;color:var(--muted)}
+.m-bars{display:flex;flex-direction:column;gap:7px}
+.m-bar{display:grid;grid-template-columns:4.6em minmax(0,1fr) 4.4em;gap:8px;align-items:center;font-size:12px}
+.m-bar > span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-weight:600}
+.m-bar b{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.trk{position:relative;height:10px;background:var(--soft);border-radius:99px;overflow:visible}
+.trk i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .8s linear}
+.m-bar.bot .trk i{background:color-mix(in srgb,var(--ink) 45%,var(--soft))}
+.trk em{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);border-radius:2px}
+.m-chat{margin:0;font-size:13px;font-style:italic;color:var(--muted)}
+.m-status{margin:0;font-size:13px}
+.m-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.stakes{font-size:12px;color:var(--muted)}
+.stakes b{color:var(--ink);font-variant-numeric:tabular-nums}
+.pos{color:#1f9d55!important}.neg{color:#d64545!important}
+.m-result{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.m-result > b{font-family:var(--f-display);font-weight:800;font-size:30px;letter-spacing:.03em;text-transform:uppercase;line-height:1}
+.m-result.r-W > b{color:#1f9d55}.m-result.r-L > b{color:#d64545}.m-result.r-D > b{color:var(--muted)}
+.m-result em{font-style:normal;font-weight:700}
+.m-result.r-W em{color:#1f9d55}.m-result.r-L em{color:#d64545}
+.m-result .how{margin:0;font-size:13px}
+.promo{margin:0;font-weight:700;color:var(--accent)}.demo{margin:0;color:var(--muted)}
+.m-prog{display:flex;align-items:center;gap:8px;width:100%}
+.m-prog small{font-size:11px;color:var(--muted);white-space:nowrap}
+.bar2{flex:1;display:block;height:8px;background:var(--soft);border-radius:99px;overflow:hidden}
+.bar2 i{display:block;height:100%;border-radius:99px}
+.bar2.big{height:10px;width:100%;max-width:420px;flex:none}
+.mi-row{display:flex;align-items:center;gap:10px}
+.mi-row span{display:flex;flex-direction:column}
+.mi-row small{color:var(--muted);font-size:12px}
+.ranked-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px;align-items:start}
+.rk-main,.rk-side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.rk-hero{display:flex;gap:22px;align-items:center}
+.rk-hero-tx{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.rk-hero-tx > b{font-family:var(--f-display);font-weight:800;font-size:38px;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.rk-hero-tx > small{color:var(--muted);font-size:13px}
+.rk-hero-tx .bdgs{margin-top:6px;gap:8px}
+.rk-hero-tx .bdgs .link-btn{margin:0 0 0 6px}
+.rk-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.rk-kpis .stat b{font-size:clamp(20px,2.2vw,28px);white-space:nowrap}
+.rk-kpis .stat b small{font-size:.5em;color:var(--muted);font-weight:600}
+.rk-chart{position:relative}
+.rk-chart svg{width:100%;height:200px;display:block;overflow:visible}
+.g-major{stroke:var(--line);stroke-width:1}.g-minor{stroke:var(--line);stroke-width:1;stroke-dasharray:3 4;opacity:.7}
+.g-lab{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.g-line{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.g-area{fill:color-mix(in srgb,var(--accent) 12%,transparent)}
+.g-end{fill:var(--accent);stroke:var(--surface);stroke-width:2.5}
+.g-guide{stroke:var(--muted);stroke-width:1;stroke-dasharray:2 3;opacity:0}
+.rk-chart:hover .g-guide{opacity:1}
+.g-tip{position:absolute;transform:translate(-50%,calc(-100% - 12px));background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:12px;white-space:nowrap;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.15);display:flex;gap:5px;align-items:baseline;flex-wrap:wrap;max-width:220px}
+.g-tip small{flex-basis:100%;color:var(--muted)}
+.g-cap{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.rk-hist{list-style:none;margin:6px 0 10px;padding:0}
+.rk-hist li{display:grid;grid-template-columns:22px auto minmax(0,1fr) auto 3em 3.6em;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.rk-hist .res{font-weight:800;text-align:center;border-radius:5px;font-size:11px;padding:2px 0;color:#fff}
+.hr-W .res{background:#1f9d55}.hr-L .res{background:#d64545}.hr-D .res{background:var(--muted)}
+.rk-hist .who{display:flex;flex-direction:column;min-width:0}
+.rk-hist .who small{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lnk{border:0;background:none;padding:0;font-weight:600;color:var(--ink);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lnk:hover{color:var(--accent);text-decoration:underline}
+.rk-hist .tm{font-variant-numeric:tabular-nums;white-space:nowrap}.rk-hist .tm i{color:var(--muted);font-style:normal}
+.rk-hist .dl{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.rk-hist .when{color:var(--muted);text-align:right;font-size:12px}
+.empty-li{color:var(--muted);padding:12px 0}
+.ladder-h{display:flex;justify-content:space-between}
+.ladder{list-style:none;margin:8px 0 0;padding:0}
+.ladder li{display:grid;grid-template-columns:3.6em 1em auto minmax(0,1fr) 24px 16px 3.2em;gap:8px;align-items:center;padding:6px 6px;border-radius:8px;font-size:13px;cursor:pointer}
+.ladder li:hover{background:var(--soft)}
+.ladder li.me{background:color-mix(in srgb,var(--accent) 13%,transparent);cursor:default;font-weight:700}
+.ladder .pl{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+.ladder .mv{font-size:9px}.mv.up{color:#1f9d55}.mv.dn{color:#d64545}
+.ladder .who{display:flex;flex-direction:column;min-width:0}
+.ladder .who b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ladder .who small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ladder .rt{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.rk-ranks{list-style:none;margin:8px 0 0;padding:0}
+.rk-ranks li{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:7px 6px;border-radius:8px}
+.rk-ranks li span{display:flex;flex-direction:column}
+.rk-ranks li small{color:var(--muted);font-size:12px}
+.rk-ranks .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rk-ranks li.here{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.rk-ranks em{font-style:normal;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-card{position:relative;width:min(520px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:22px;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.modal .x{position:absolute;top:10px;right:10px;border:0;background:none;width:34px;height:34px;border-radius:8px;font-size:22px;color:var(--muted)}
+.modal .x:hover{background:var(--soft)}
+.bm-top{display:flex;gap:14px;align-items:center}
+.bm-top div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.bm-top b{font-size:19px}.bm-top small{color:var(--muted)}
+.bm-bio{font-style:italic;color:var(--muted);margin:14px 0}
+.bm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.bm-grid span{display:flex;flex-direction:column;background:var(--bg);border-radius:var(--r-ctl);padding:9px 10px}
+.bm-grid b{font-variant-numeric:tabular-nums}.bm-grid small{font-size:11px;color:var(--muted)}
+.showcase{margin-bottom:6px}
+.sc-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sc-head .link-btn{margin:0}
+.sc-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.sc-slot{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;background:var(--bg);border-radius:var(--r-ctl);padding:12px 8px;min-width:0}
+.sc-slot b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.sc-slot small{font-size:11px;color:var(--muted)}
+.sc-slot.empty{justify-content:center;border:1px dashed var(--line);background:none}
+.ach-star{border:0;background:none;color:var(--line);font-size:17px;line-height:1;padding:4px 0 0;cursor:pointer}
+.ach-star:hover{color:var(--muted)}.ach-star.on{color:#d4a11a}
+@media (max-width:1100px){.ranked-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  .rank-chip b{display:none}
+  .rk-hero{flex-direction:column;align-items:flex-start;gap:12px}.emb.xl{width:72px;height:72px}
+  .rk-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rk-kpis .stat:last-child{grid-column:auto}
+  #goalDots{display:none}
+  .rk-hist li{grid-template-columns:22px minmax(0,1fr) auto 3em;}
+  .rk-hist li .av,.rk-hist li .when{display:none}
+  .ladder li{grid-template-columns:3.2em 1em minmax(0,1fr) 16px 3em}
+  .ladder li .av,.ladder li .bdg{display:none}
+  .bm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 /* streak */
 .streak-wrap{position:relative}
 .streak-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:4px 12px 4px 8px;font-size:13px;color:var(--muted);white-space:nowrap}
@@ -561,7 +712,7 @@ body.m-off .ach-pop{animation:none!important}
     </div>
     <button class="nav-btn" data-page="focus" data-key="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg><span>Focus</span><kbd>1</kbd></button>
     <button class="nav-btn" data-page="stats" data-key="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Stats</span><kbd>2</kbd></button>
-    <!--RANKED-NAV-->
+    <button class="nav-btn" data-page="ranked" data-key="3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg><span>Ranked</span><kbd>3</kbd></button>
     <button class="nav-btn" data-page="awards" data-key="4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><span>Awards</span><kbd>4</kbd></button>
     <button class="nav-btn more-btn" id="moreBtn" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></button>
     <div class="nav-extra" id="navExtra">
@@ -581,7 +732,7 @@ body.m-off .ach-pop{animation:none!important}
           <div class="sw-row" id="streakWeek"></div>
           <p id="streakMsg"></p>
           <small>A day counts once you've studied 10 minutes.</small>
-        </div></div><span class="today-min"><b id="todayMin">0m</b> today</span><span class="dots" id="goalDots" title="Daily goal"></span><!--RANK-CHIP--><button class="ach-btn" id="achBtn" title="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><b>0</b><span>/0</span></button></div>
+        </div></div><span class="today-min"><b id="todayMin">0m</b> today</span><span class="dots" id="goalDots" title="Daily goal"></span><button class="rank-chip" id="rankChip" data-go="ranked" hidden></button><button class="ach-btn" id="achBtn" title="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><b>0</b><span>/0</span></button></div>
     </header>
 
     <section class="page page-focus" id="page-focus" data-title="Focus">
@@ -691,11 +842,27 @@ body.m-off .ach-pop{animation:none!important}
       </div>
     </section>
 
-    <!--RANKED-PAGE-->
+    <section class="page" id="page-ranked" data-title="Ranked" hidden>
+      <div class="ranked-grid">
+        <div class="rk-main">
+          <div class="card rk-hero" id="rkHero"></div>
+          <div class="kpis rk-kpis" id="rkKpis"></div>
+          <div class="card"><div class="h first">Elo over time</div><div class="rk-chart" id="rkChart"></div></div>
+          <div class="card"><div class="h first">Match history</div><ul class="rk-hist" id="rkHist"></ul><button class="small-btn" id="rkMore" hidden>Show more</button></div>
+        </div>
+        <div class="rk-side">
+          <div class="card"><div class="h first ladder-h"><span>Ladder</span><span id="rkLadderPos"></span></div><ol class="ladder" id="rkLadder"></ol><p class="hint">▲▼ show who gained or lost Elo since yesterday. Click a bot to see its profile.</p></div>
+          <div class="card"><div class="h first">Ranks</div><ul class="rk-ranks" id="rkRanks"></ul></div>
+          <div class="card"><div class="row"><label for="rkOn">Ranked matches<span class="sub">Get matched with a bot each time you start studying</span></label><input type="checkbox" class="switch" id="rkOn"></div>
+            <p class="hint">Only running focus time counts. Breaks pause both clocks. Sittings under 10 minutes aren't rated, and a match ends after 30 minutes away.</p></div>
+        </div>
+      </div>
+    </section>
 
     <section class="page" id="page-awards" data-title="Awards" hidden>
       <div class="card" id="pane-awards">
 
+        <div class="showcase" id="achShowcase"></div>
         <div class="ach-sum" id="achSum"></div>
         <div id="achNear"><div class="h">Closest to unlocking</div><ul class="ach-list" id="achNearList"></ul></div>
         <div class="ach-filters"><div class="seg" id="achFilter"></div><select id="achCatSel" aria-label="Category"></select></div>
@@ -840,6 +1007,7 @@ body.m-off .ach-pop{animation:none!important}
 <canvas id="fxBack" class="fx" aria-hidden="true"></canvas>
 <canvas id="fxFront" class="fx front" aria-hidden="true"></canvas>
 <div class="toast" id="toast" hidden></div>
+<div class="modal" id="botModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bmName"><button class="x" aria-label="Close">×</button><div id="botModalBody"></div></div></div>
 <button class="ach-pop" id="achPop" hidden></button>
 <div class="vtip" id="vtip" role="tooltip" hidden></div>
 
@@ -989,7 +1157,9 @@ function finishStopwatch(){
   const el = flowElapsed();
   S.running = false; S.flowAcc = 0; wake(false);
   if (el < 60000){ toast('Under a minute, so nothing was logged.'); changed(); return; }
+  try { rankedTick(); } catch(e){}
   logFocus(el);
+  if (R && R.cur && R.cur.state === 'live') endMatch('done');
   chime(P.chime); fx.burst(); popDial();
   toast(`Done! Logged ${fmtMin(Math.round(el / 60000))}${P.task ? ' on ' + P.task.trim() : ''}.`);
   changed();
@@ -1021,6 +1191,7 @@ function logFocus(ms){
 /* ---------- loop ---------- */
 let lastSec = -1, lastSave = 0;
 setInterval(() => {
+  try { rankedTick(); } catch(e){}
   if (S.running && !countUp() && Date.now() >= S.endAt){ complete(); return; }
   if (S.running){
     const sec = Math.floor((countUp() ? flowElapsed() : remaining()) / 1000);
@@ -1838,7 +2009,7 @@ requestAnimationFrame(function frame(){
 });
 
 /* ---------- backup & restore ---------- */
-function backupText(){ return JSON.stringify({app:'focus-bench', version:1, exported:new Date().toISOString(), log:LOG, notes:NOTES, settings:P, achievements:ACH}); }
+function backupText(){ return JSON.stringify({app:'focus-bench', version:1, exported:new Date().toISOString(), log:LOG, notes:NOTES, settings:P, achievements:ACH, ranked:R}); }
 $('#bkCopy').onclick = () => {
   achBump('backup');
   const txt = backupText(), out = $('#bkOut');
@@ -1878,6 +2049,7 @@ function restoreBackup(raw){
     Object.entries(A.s || {}).forEach(([k, v]) => { ACH.s[k] = [...new Set([...(ACH.s[k] || []), ...(v || [])])]; });
     ACH.seeded = true; saveAch();
   }
+  if (data.ranked && typeof data.ranked === 'object' && (data.ranked.played || 0) > R.played){ store.set('fb.ranked', data.ranked); loadRanked(); renderMatch(); renderRankChip(); }
   applyLook(); renderTimerPane(); renderLookSound(); renderNotes(); renderAll(); renderMusic(); renderLog();
   $('#bkIn').value = '';
   const skipped = data.log.length - fresh.length;
@@ -1904,7 +2076,7 @@ const TIERS = {
   platinum:{name:'Platinum', pts:50, c:'#2fa9c0'},
   legendary:{name:'Legendary', pts:100, c:'#9d4bef'}
 };
-const ACH_CATS = {start:'Getting started', time:'Total time', sessions:'Session count', long:'Long sessions', day:'Big days', week:'Weeks & months', streak:'Streaks & habits', clock:'Time of day', dates:'Special dates', modes:'Timer modes', acts:'Activities & tasks', explore:'Exploring the app', meta:'Collector'};
+const ACH_CATS = {start:'Getting started', time:'Total time', sessions:'Session count', long:'Long sessions', day:'Big days', week:'Weeks & months', streak:'Streaks & habits', clock:'Time of day', dates:'Special dates', modes:'Timer modes', acts:'Activities & tasks', explore:'Exploring the app', ranked:'Ranked', meta:'Collector'};
 const ACH_ICONS = {
   start:'<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
   time:'<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>',
@@ -1918,6 +2090,7 @@ const ACH_ICONS = {
   modes:'<circle cx="12" cy="12" r="9"/><path d="M12 12l4-4"/><circle cx="12" cy="12" r="1.5"/>',
   acts:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.5"/>',
   explore:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  ranked:'<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/>',
   meta:'<path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/>'
 };
 // [id, category, tier, name, description, value(stats), goal, options]
@@ -2074,6 +2247,21 @@ const ACHS = [
   ['themesall','explore','gold','Chameleon','Try every theme.', s => s.set.themes, Object.keys(THEMES).length],
   ['keys250','explore','gold','Who Needs a Mouse','Use keyboard shortcuts 250 times.', s => s.c.keys, 250, {secret:1}],
 
+  ['r-win','ranked','bronze','First Win','Win a ranked match.', s => s.r.w, 1],
+  ['r-10','ranked','bronze','Contender','Play 10 ranked matches.', s => s.r.played, 10],
+  ['r-soph','ranked','bronze','Moving Up','Reach Sophomore in Ranked.', s => s.r.played ? s.r.best : 0, 900],
+  ['r-ws5','ranked','silver','On a Roll','Win 5 ranked matches in a row.', s => s.r.bestWs, 5],
+  ['r-schol','ranked','silver','Scholar Status','Reach Scholar in Ranked.', s => s.r.played ? s.r.best : 0, 1100],
+  ['r-rev','ranked','silver','Revenge','Beat your nemesis, a bot that has beaten you 5 or more times.', s => s.r.revenge, 1],
+  ['r-hon','ranked','gold','With Honors','Reach Honors in Ranked.', s => s.r.played ? s.r.best : 0, 1300],
+  ['r-dean','ranked','gold',"Dean's List","Reach Dean's List in Ranked.", s => s.r.played ? s.r.best : 0, 1500],
+  ['r-upset','ranked','gold','Giant Slayer','Beat a bot rated 300 or more above you.', s => s.r.bestUpset, 300],
+  ['r-100','ranked','gold','Veteran','Play 100 ranked matches.', s => s.r.played, 100],
+  ['r-ws10','ranked','platinum','Unbeatable','Win 10 ranked matches in a row.', s => s.r.bestWs, 10],
+  ['r-val','ranked','platinum','Valedictorian','Reach Valedictorian in Ranked.', s => s.r.played ? s.r.best : 0, 1750],
+  ['r-prof','ranked','legendary','Professor','Reach the Professor rank.', s => s.r.played ? s.r.best : 0, 2000],
+  ['r-ten','ranked','legendary','Tenured','Win 10 ranked matches at the Professor rank.', s => s.r.profWins, 10],
+
   ['col10','meta','bronze','Collector','Unlock 10 achievements.', s => s.unlocked, 10],
   ['col25','meta','silver','Trophy Shelf','Unlock 25 achievements.', s => s.unlocked, 25],
   ['col50','meta','gold','Trophy Room','Unlock 50 achievements.', s => s.unlocked, 50],
@@ -2157,6 +2345,7 @@ function achStats(){
   st.set = {}; Object.keys(ACH.s).forEach(k => st.set[k] = ACH.s[k].length);
   st.rain = (ACH.s.amb || []).includes('rain') ? 1 : 0;
   st.storm = (ACH.s.amb || []).includes('storm') ? 1 : 0;
+  st.r = R ? {played: R.played, w: R.w, bestWs: R.bestWs, bestUpset: R.bestUpset, revenge: R.revenge, best: R.best, profWins: R.profWins} : {played:0, w:0, bestWs:0, bestUpset:0, revenge:0, best:0, profWins:0};
   st.unlocked = Object.keys(ACH.u).length;
   return st;
 }
@@ -2212,11 +2401,20 @@ function achCard(a, st){
   const when = got ? new Date(got).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'}) : '';
   return `<li class="ach${got ? ' got' : ''}${hide ? ' secret' : ''}">${achIcon(a)}
     <span class="ach-tx"><b>${hide ? 'Secret achievement' : esc(a.name)}</b><span>${hide ? 'Keep studying to discover this one.' : esc(a.desc)}</span>
-    ${got ? `<small>Unlocked ${when}</small>` : (!hide && a.goal > 1 ? `<span class="ach-prog"><i style="width:${pct}%;background:${T.c}"></i></span><small>${achProgressText(a, v)}</small>` : '')}</span>
-    <span class="ach-tier" style="--t:${T.c}">${T.name}<em>+${T.pts}</em></span></li>`;
+    ${got ? `<small>Unlocked ${when}${rarTxt(a.id)}</small>` : (!hide && a.goal > 1 ? `<span class="ach-prog"><i style="width:${pct}%;background:${T.c}"></i></span><small>${achProgressText(a, v)}</small>` : '')}</span>
+    <span class="ach-tier" style="--t:${T.c}">${T.name}<em>+${T.pts}</em>${got && typeof R !== 'undefined' && R ? `<button class="ach-star${myFeatured().includes(a.id) ? ' on' : ''}" data-star="${a.id}" title="Feature on your match card" aria-label="Feature ${esc(a.name)} on your match card" aria-pressed="${myFeatured().includes(a.id)}">★</button>` : ''}</span></li>`;
+}
+function rarTxt(id){ if (typeof rarityOf !== 'function' || !R) return ''; const p = rarityOf(id); return p == null ? '' : ` · held by ${p < .001 ? '<0.1' : (p * 100).toFixed(p < .1 ? 1 : 0)}% of players`; }
+function renderShowcase(){
+  const el = $('#achShowcase'); if (!el || !R) return;
+  const f = myFeatured();
+  el.innerHTML = `<div class="sc-head"><div class="h first">Your showcase</div><span class="hint">${R.showcase ? 'Picked by you' : 'Auto: your rarest'}${R.showcase ? ' · <button class="link-btn" data-act="sc-auto">Use my rarest</button>' : ''}</span></div>
+    <div class="sc-slots">${[0,1,2].map(k => { const a = f[k] && achById(f[k]); return a ? `<span class="sc-slot">${badgeHtml(a.id, 'lg')}<b>${esc(a.name)}</b><small>${TIERS[a.tier].name}${rarTxt(a.id)}</small></span>` : '<span class="sc-slot empty"><small>Empty</small></span>'; }).join('')}</div>
+    <p class="hint">These show on your side of every ranked match. Tap ★ on an unlocked achievement to feature it.</p>`;
 }
 function renderAwards(){
   if (!$('#achList') || $('#page-awards').hidden) return;
+  renderShowcase();
   const st = achStats(), got = ACHS.filter(a => ACH.u[a.id]), pts = got.reduce((n, a) => n + TIERS[a.tier].pts, 0), maxPts = ACHS.reduce((n, a) => n + TIERS[a.tier].pts, 0);
   $('#achSum').innerHTML = `<div class="ach-big"><b>${got.length}</b><span>/ ${ACHS.length} unlocked</span></div><div class="ach-pts"><b>${pts.toLocaleString()}</b><span>/ ${maxPts.toLocaleString()} points</span></div>
     <div class="ach-bar"><i style="width:${got.length / ACHS.length * 100}%"></i></div>
@@ -2687,6 +2885,495 @@ document.addEventListener('keydown', e => {
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderLookSound(); });
 
+/* ---------- Ranked: 5,000 bots, Elo, ranks, badges ---------- */
+// The roster is rebuilt from a fixed seed on every load (names, looks, styles, habits), so only the
+// numbers that change are saved: each bot's rating and study totals, packed into a typed array.
+const ROSTER_N = 5000, ROSTER_SEED = 20261113, BF = 12;   // fields per bot in the packed array
+const F = {rating:0, total:1, sessions:2, days:3, cur:4, best:5, maxSess:6, maxDay:7, maxWeek:8, maxMonth:9, week:10, month:11};
+function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const gaussOf = rnd => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const pick = (rnd, a) => a[Math.floor(rnd() * a.length)];
+const clampN = (x, a, b) => Math.max(a, Math.min(b, x));
+
+const RANKS = [
+  {name:'Freshman', lo:-1e9, c:'#8a929e', cuts:[700, 800, 900]},
+  {name:'Sophomore', lo:900, c:'#3a9d68', cuts:[967, 1034, 1100]},
+  {name:'Scholar', lo:1100, c:'#3b7be0', cuts:[1167, 1234, 1300]},
+  {name:'Honors', lo:1300, c:'#8456e8', cuts:[1367, 1434, 1500]},
+  {name:"Dean's List", lo:1500, c:'#cf9b12', cuts:[1584, 1667, 1750]},
+  {name:'Valedictorian', lo:1750, c:'#e0533a', cuts:[1834, 1917, 2000]},
+  {name:'Professor', lo:2000, c:'#c02bc8', cuts:[]}
+];
+function rankOf(r){
+  let i = RANKS.length - 1; while (i > 0 && r < RANKS[i].lo) i--;
+  const R0 = RANKS[i];
+  if (!R0.cuts.length) return {i, name:R0.name, div:'', full:R0.name, c:R0.c, lo:R0.lo, hi:null, d:0};
+  const d = r < R0.cuts[0] ? 0 : r < R0.cuts[1] ? 1 : 2;           // 0 = III, 1 = II, 2 = I
+  const lo = d === 0 ? (i === 0 ? 600 : R0.lo) : R0.cuts[d - 1], hi = R0.cuts[d];
+  return {i, name:R0.name, div:['III','II','I'][d], full:`${R0.name} ${['III','II','I'][d]}`, c:R0.c, lo, hi, d};
+}
+function emblem(rk, cls){
+  const pips = rk.div ? [...Array(rk.d + 1)].map((_, k) => `<path d="M8 ${17 - k * 4.2}l4 -2.6 4 2.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`).join('')
+    : '<path d="M12 7.2l1.5 3.1 3.4.4-2.5 2.3.7 3.3-3.1-1.7-3.1 1.7.7-3.3-2.5-2.3 3.4-.4z" fill="#fff"/>';
+  return `<span class="emb ${cls || ''}" title="${esc(rk.full)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8l8.5 3.6v6.3c0 5.2-3.6 9-8.5 10.5C7.1 20.7 3.5 16.9 3.5 11.7V5.4z" fill="${rk.c}"/><path d="M12 1.8l8.5 3.6v6.3c0 5.2-3.6 9-8.5 10.5" fill="#000" opacity=".12"/>${pips}</svg></span>`;
+}
+// typical sitting length (minutes) for a rating
+const SIT = [[500,15],[800,25],[1000,35],[1200,50],[1400,70],[1600,90],[1800,120],[2000,150],[2200,190],[2400,240],[2800,330]];
+function typical(r){
+  if (r <= SIT[0][0]) return SIT[0][1];
+  for (let k = 1; k < SIT.length; k++) if (r <= SIT[k][0]){ const [a, x] = SIT[k-1], [b, y] = SIT[k]; return x + (y - x) * (r - a) / (b - a); }
+  return SIT[SIT.length - 1][1];
+}
+
+/* the roster, regenerated from the seed */
+const STYLES = ['Steady','Steady','Steady','Sprinter','Sprinter','Grinder','Grinder','Wildcard','Wildcard','Night Owl','Early Bird'];
+const NM_A = ['lofi','quiet','night','coffee','study','calc','bio','chem','library','deep','focus','pixel','neon','mellow','sleepy','caffeine','notes','flash','ivy','maple','ember','nova','echo','sol','juniper','atlas','orbit','sage','cozy','paper','ink','tea','matcha','cloud','moss','river','solar','lunar','static','vinyl','quill','cedar','cobalt','velvet','retro','tidy','zen','grind','late','early'];
+const NM_B = ['maya','pete','kenji','ari','noor','leo','zara','finn','priya','omar','lena','theo','jun','sami','ana','rui','bea','kai','mira','eli','nina','dev','rosa','yuki','tom','ada','felix','iris','hana','arjun','chloe','diego','emma','gus','hugo','isla','jade','kofi','lars','mo','nadia','oscar','pia','quinn','raf','sofia','tariq','uma','vik','wren'];
+const NM_C = ['reads','studies','notes','grinds','codes','learns','writes','focus','crams','solves','thinks','works','labs','reviews','drafts'];
+const SUBJECTS = ['Organic chemistry','Calculus II','Linear algebra','Microeconomics','Biology','Physics I','Data structures','Accounting','Statistics','World history','Psychology','Philosophy','Spanish','Anatomy','Thermodynamics','Marketing','Discrete math','Art history','Neuroscience','Mechanical design','Political science','Nursing pharmacology','Japanese','Music theory','Genetics','Circuits','Literature','Biochem','Machine learning','Architecture'];
+const BIOS = ['one more chapter, then sleep (lie)','powered by iced coffee','library 3rd floor regular','flashcards are a lifestyle','studying so future me says thanks','do not disturb, midterm szn','lo-fi on, world off','quiet grind, loud results','reading the textbook nobody reads','pomodoros and peppermint tea','here to beat my own record','just trying to pass orgo','notes so neat they get borrowed','will study for snacks','early lecture survivor','night shift scholar','one problem set at a time','learning out loud','highlighters in every color','my desk is my happy place','procrastination recovery arc','study playlist on repeat','gym, study, sleep, repeat','second coffee, first chapter','i read the syllabus','finals mode: permanent','teaching it back to myself','dean\'s list or bust','focus is a muscle','tiny steps every day'];
+const PEAKS = {Morning:[5,12], Afternoon:[12,17], Evening:[17,22], 'Late night':[22,29]};
+const CHAT = ['halfway through problem set 3','coffee #2','flashcards time','this chapter is long','ok locking in','rewriting my notes','lab report grind','one more practice exam','reading the slides again','on question 14','music up, phone down','outlining the essay','reviewing lecture 9','almost through the reading','doing the hard problems first'];
+const TAPS = ['ok brain is fried, gg','calling it here, gg','dinner time, good match','need a nap, gg','that\'s enough for today','gg, nice sitting','out of coffee, done','my eyes hurt, gg','going to the gym, gg','gg, see you next time'];
+let BOTS = [];
+function genBot(i){
+  const rnd = mulberry32(ROSTER_SEED + i * 7919);
+  const pat = Math.floor(rnd() * 7), a = pick(rnd, NM_A), b = pick(rnd, NM_B), c = pick(rnd, NM_C), num = 1 + Math.floor(rnd() * 99);
+  const cap = x => x[0].toUpperCase() + x.slice(1);
+  let name = [`${b}_${a}`, `${a}${cap(b)}`, `${b}.${c}`, `${cap(b)}${num}`, `Dr.${cap(a)}`, `${a}_${num}`, `${cap(b)}${cap(c)}`][pat];
+  const style = pick(rnd, STYLES);
+  const peak = style === 'Night Owl' ? 'Late night' : style === 'Early Bird' ? 'Morning' : pick(rnd, ['Morning','Afternoon','Evening','Evening','Late night']);
+  const hi = rnd() < .08;   // a thin elite group sits on top of the main bell curve
+  const base = Math.round(clampN(hi ? 1700 + gaussOf(rnd) * 280 : 1120 + gaussOf(rnd) * 260, 520, 2750));
+  const fav = style === 'Sprinter' ? 'pomodoro' : style === 'Grinder' ? 'stopwatch' : style === 'Wildcard' ? 'flow' : pick(rnd, ['pomodoro','pomodoro','fifty','custom','timebox','stopwatch']);
+  return {i, name, ini: name.replace(/^Dr\./, '').replace(/[^A-Za-z]/g, ' ').trim().split(/\s+|(?=[A-Z])/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('') || 'B',
+    hue: Math.floor(rnd() * 360), style, peak, subject: pick(rnd, SUBJECTS), bio: pick(rnd, BIOS), base, fav,
+    sitMul: .85 + rnd() * .3, age: 20 + Math.floor(Math.pow(rnd(), 1.3) * 500), pAct: rnd(), x: [rnd(), rnd(), rnd(), rnd(), rnd(), rnd(), rnd(), rnd()]};
+}
+function buildRoster(){
+  const seen = new Map();
+  BOTS = [...Array(ROSTER_N)].map((_, i) => { const b = genBot(i); const n = seen.get(b.name) || 0; seen.set(b.name, n + 1); if (n) b.name += '_' + (n + 1); return b; });
+}
+const activity = (b, r) => clampN(.35 + (r - 800) / 2600 + b.pAct * .25, .2, .97);
+const blockLen = (b, r) => b.fav === 'pomodoro' ? 25 : b.fav === 'fifty' ? 52 : b.fav === 'custom' ? 45 : typical(r) * b.sitMul;
+const sittingsPerDay = b => b.style === 'Sprinter' ? 2.4 : b.style === 'Grinder' ? 1.3 : 1.7;
+function initBotStats(arr){
+  BOTS.forEach(b => {
+    const o = b.i * BF, rnd = mulberry32(ROSTER_SEED ^ (b.i * 104729)), r = b.base, p = activity(b, r);
+    const L = typical(r) * b.sitMul, perDay = L * sittingsPerDay(b), days = Math.max(1, Math.round(b.age * p));
+    const total = Math.round(days * perDay * (.85 + rnd() * .3));
+    const best = Math.max(1, Math.min(days, Math.round(Math.log(Math.max(2, b.age * (1 - p))) / Math.log(1 / p) * (.7 + rnd() * .6))));
+    arr[o+F.rating] = r; arr[o+F.total] = total; arr[o+F.sessions] = Math.max(1, Math.round(total / blockLen(b, r)));
+    arr[o+F.days] = days; arr[o+F.best] = best; arr[o+F.cur] = rnd() < p ? Math.floor(rnd() * best) : 0;
+    arr[o+F.maxSess] = Math.round(L * (b.style === 'Grinder' ? 2.3 : b.style === 'Wildcard' ? 2 : 1.5) * (.9 + rnd() * .3));
+    arr[o+F.maxDay] = Math.round(perDay * (1.8 + rnd() * 1.2));
+    arr[o+F.maxWeek] = Math.round(Math.min(arr[o+F.maxDay] * 7, perDay * 7 * p * (1.3 + rnd() * .4)));
+    arr[o+F.maxMonth] = Math.round(Math.min(arr[o+F.maxWeek] * 4.4, perDay * 30 * p * (1.15 + rnd() * .3)));
+    arr[o+F.week] = Math.round(perDay * p * new Date().getDay()); arr[o+F.month] = Math.round(perDay * p * (new Date().getDate() - 1));
+  });
+}
+const b64 = a => { let s = ''; const u = new Uint8Array(a.buffer); for (let k = 0; k < u.length; k += 0x8000) s += String.fromCharCode.apply(null, u.subarray(k, k + 0x8000)); return btoa(s); };
+const unb64 = (s, T) => { const bin = atob(s), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); return new T(u.buffer); };
+
+/* saved state */
+var R = null, BS = null, PREV = null;     // BS: packed bot stats, PREV: ratings at the last daily update
+function loadRanked(){
+  buildRoster();
+  R = merge({v:1, on:true, mmr:1000, best:1000, played:0, w:0, l:0, d:0, ws:0, bestWs:0, bestUpset:0, revenge:0, profWins:0, hist:[], rec:{}, last:-1, showcase:null, cur:null, lastSim:null, rar:null}, store.get('fb.ranked', {}));
+  try { if (R.bots){ BS = unb64(R.bots, Int32Array); if (BS.length !== ROSTER_N * BF) BS = null; } } catch(e){ BS = null; }
+  try { if (R.prev){ PREV = unb64(R.prev, Int16Array); if (PREV.length !== ROSTER_N) PREV = null; } } catch(e){ PREV = null; }
+  if (!BS){ BS = new Int32Array(ROSTER_N * BF); initBotStats(BS); R.lastSim = dayKey(Date.now()); }
+  if (!PREV){ PREV = new Int16Array(ROSTER_N); for (let i = 0; i < ROSTER_N; i++) PREV[i] = BS[i * BF]; }
+  dailySim();
+}
+let rkSaveT = null;
+function saveRanked(now){
+  const doSave = () => { R.bots = b64(BS); R.prev = b64(PREV); store.set('fb.ranked', R); };
+  clearTimeout(rkSaveT); now ? doSave() : rkSaveT = setTimeout(doSave, 800);
+}
+const botRating = i => BS[i * BF];
+
+/* the daily update: bots study and play each other; at most 7 days of catch-up */
+function dailySim(){
+  const today = dayKey(Date.now());
+  if (!R.lastSim){ R.lastSim = today; return; }
+  let days = Math.round((new Date(today + 'T12:00') - new Date(R.lastSim + 'T12:00')) / 864e5);
+  if (days <= 0) return;
+  days = Math.min(days, 7);
+  for (let k = 0; k < ROSTER_N; k++) PREV[k] = BS[k * BF];
+  const rnd = Math.random;
+  for (let dd = days; dd >= 1; dd--){
+    const day = new Date(); day.setDate(day.getDate() - dd + 1);
+    for (const b of BOTS){
+      const o = b.i * BF, r = BS[o], p = activity(b, r);
+      if (day.getDay() === 0) BS[o+F.week] = 0;
+      if (day.getDate() === 1) BS[o+F.month] = 0;
+      if (rnd() < p){
+        const L = typical(r) * b.sitMul, sits = Math.max(1, Math.round(sittingsPerDay(b) * (.6 + rnd() * .8)));
+        let m = 0, longest = 0; for (let s = 0; s < sits; s++){ const x = L * Math.exp(.3 * gaussOf(rnd)); m += x; longest = Math.max(longest, x); }
+        m = Math.round(m);
+        BS[o+F.total] += m; BS[o+F.sessions] += Math.max(1, Math.round(m / blockLen(b, r))); BS[o+F.days]++;
+        BS[o+F.cur]++; BS[o+F.best] = Math.max(BS[o+F.best], BS[o+F.cur]);
+        BS[o+F.maxDay] = Math.max(BS[o+F.maxDay], m); BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], Math.round(longest));
+        BS[o+F.week] += m; BS[o+F.month] += m;
+        BS[o+F.maxWeek] = Math.max(BS[o+F.maxWeek], BS[o+F.week]); BS[o+F.maxMonth] = Math.max(BS[o+F.maxMonth], BS[o+F.month]);
+      } else BS[o+F.cur] = 0;
+    }
+    // bot-vs-bot matches between neighbors on the ladder, zero-sum so ratings stay centered
+    const order = sortedBots();
+    for (let k = 0; k < order.length; k++){
+      if (rnd() > .5) continue;
+      const j = clampN(k + Math.round(gaussOf(rnd) * 4) || 1, 0, order.length - 1); if (j === k) continue;
+      const a = order[k], c = order[j], ra = BS[a * BF], rc = BS[c * BF];
+      const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = rnd() < ea ? 1 : 0, dlt = Math.round(12 * (sa - ea));
+      BS[a * BF] = clampN(ra + dlt, 300, 3200); BS[c * BF] = clampN(rc - dlt, 300, 3200);
+    }
+  }
+  R.lastSim = today; R.rar = null; sortedCache = null; badgeCache.clear();
+  saveRanked(true);
+}
+let sortedCache = null;
+function sortedBots(){ if (!sortedCache){ sortedCache = [...Array(ROSTER_N).keys()].sort((a, b) => BS[b * BF] - BS[a * BF]); } return sortedCache; }
+
+/* bot study profiles and badges */
+function botStats(i){
+  const b = BOTS[i], o = i * BF, x = b.x, r = BS[o], days = BS[o+F.days], n = BS[o+F.sessions], total = BS[o+F.total];
+  const rr = mulberry32(ROSTER_SEED + i * 31337), f = () => rr();
+  const yrs = days / 365, bl = blockLen(b, r);
+  const modes = {}; modes[b.fav] = Math.round(n * .6);
+  ['pomodoro','fifty','flow','timebox','stopwatch','custom'].forEach(m => { if (m !== b.fav && f() < clampN(days / 120, .05, .8)) modes[m] = Math.max(1, Math.round(n * .08 * f())); });
+  const night = b.peak === 'Late night', morn = b.peak === 'Morning';
+  const sp = {}; ['01-01','02-14','10-31','12-25'].forEach(k => { if (f() < clampN(yrs * .55, 0, .9)) sp[k] = 1; }); if (f() < yrs * .02) sp['02-29'] = 1;
+  const acts = 3 + Math.floor(x[0] * 5), maxDayN = Math.max(1, Math.round(BS[o+F.maxDay] / Math.min(bl, 52)));
+  const goalP = clampN(typical(r) * sittingsPerDay(b) / (25 * 6) * .8, 0, .95);
+  const st = {
+    n, total, maxSess: BS[o+F.maxSess], named: n, modes, tags: {}, sp, swDot: (modes.stopwatch || 0) > 20 && f() < .3 ? 1 : 0,
+    flowMax: modes.flow ? Math.round(BS[o+F.maxSess] * .8) : 0,
+    early: morn || f() < .2 ? 1 : 0, dawn: morn && f() < .35 ? 1 : 0, owl: night || f() < .45 ? 1 : 0, midnight: night && days > 20 ? 1 : f() < .1 ? 1 : 0,
+    three: night && days > 40 && f() < .25 ? 1 : 0, lunch: f() < .5 ? 1 : 0, monMorning: morn || f() < .2 ? 1 : 0, weekend: days > 5 ? 1 : 0,
+    fri13: f() < clampN(yrs * 1.3, 0, .9) ? 1 : 0, pi: f() < clampN(days / 2000, 0, .3) ? 1 : 0,
+    daysActive: days, bestStreak: BS[o+F.best], goalDays: Math.round(days * goalP), goalStreak: Math.round(BS[o+F.best] * goalP * .8),
+    maxDay: BS[o+F.maxDay], maxDayN, comeback: activity(b, r) < .6 && f() < .6 ? 1 : 0, lucky7: maxDayN >= 7 && f() < clampN(yrs * .4, 0, .5) ? 1 : 0,
+    fullWeekend: days > 15 && f() < .75 ? 1 : 0, maxWeek: BS[o+F.maxWeek], maxMonth: BS[o+F.maxMonth], perfectWeek: Math.min(7, BS[o+F.best]),
+    allDay: BS[o+F.maxDay] > 240 && f() < .55 ? 1 : 0, insomniac: night && f() < clampN(yrs * .15, 0, .4) ? 1 : 0,
+    hours: Math.min(24, Math.round(6 + days / 10 + (b.style === 'Wildcard' ? 5 : 0))), dows: Math.min(7, days >= 14 ? 7 : days),
+    taskCount: Math.round(n * (.25 + x[1] * .2)), maxTaskDays: Math.min(days, Math.round(3 + days * (.08 + x[2] * .12))),
+    actCount: acts, maxTag: Math.round(total * (.3 + x[3] * .3)), tags5h: Math.min(acts, Math.floor(total / (300 * 1.6))),
+    maxGroup: Math.max(1, Math.round(maxDayN * .55)), maxPomoGroup: b.fav === 'pomodoro' ? Math.max(1, Math.round(maxDayN * .55)) : 0,
+    c: {notes: Math.round(days * .4 * x[4]), notesDone: Math.round(days * .3 * x[4]), tagsAdded: x[5] < .7 ? 1 : 0, mini: x[6] < .6 ? 1 : 0, focusMode: x[7] < .6 ? 1 : 0,
+        music: Math.round(x[5] * 8), backup: x[6] < .3 ? 1 : 0, edits: x[7] < .5 ? 2 : 0, deletes: x[4] < .4 ? 1 : 0, calMonth: x[3] < .6 ? 1 : 0, awards: 1,
+        resets: Math.round(x[2] * 30), keys: Math.round(n * x[1] * .5), thunder: x[0] < .3 ? days * 2 : 0},
+    set: {themes: 1 + Math.floor(x[1] * x[2] * Object.keys(THEMES).length), fonts: 1 + Math.floor(x[3] * x[4] * Object.keys(DIGIT_FONTS).length), amb: x[5] < .6 ? 1 + Math.floor(x[6] * 4) : 0, accentUsed: x[7] < .3 ? 1 : 0},
+    rain: x[5] < .5 ? 1 : 0, storm: x[5] < .3 ? 1 : 0,
+    r: {played: Math.round(days * .8), w: Math.round(days * .4), bestWs: Math.round(2 + x[2] * 8), bestUpset: Math.round(x[3] * 350), revenge: x[4] < .5 ? 1 : 0, best: r + Math.round(x[6] * 120), profWins: r >= 2000 ? Math.round(days * .2) : 0},
+    unlocked: 0
+  };
+  st.modeCount = Object.keys(modes).length;
+  return st;
+}
+const badgeCache = new Map();
+function earnedFor(st){
+  const got = [];
+  for (const a of ACHS){ if (a.cat === 'meta') continue; if (achVal(a, st) >= a.goal) got.push(a.id); }
+  st.unlocked = got.length;
+  for (const a of ACHS){ if (a.cat !== 'meta') continue; if (achVal(a, st) >= a.goal){ got.push(a.id); st.unlocked++; } }
+  return got;
+}
+function botBadges(i){
+  if (badgeCache.has(i)) return badgeCache.get(i);
+  const got = earnedFor(botStats(i)); badgeCache.set(i, got); return got;
+}
+const TIER_RANK = {legendary:0, platinum:1, gold:2, silver:3, bronze:4};
+const achById = id => ACHS.find(a => a.id === id);
+function rarityOf(id){ return R.rar && R.rar.counts[id] != null ? (R.rar.counts[id] + (ACH.u[id] ? 1 : 0)) / (ROSTER_N + 1) : null; }
+function rareSort(ids){
+  return ids.slice().sort((p, q) => { const a = rarityOf(p), b = rarityOf(q); if (a != null && b != null && a !== b) return a - b; return TIER_RANK[achById(p).tier] - TIER_RANK[achById(q).tier]; });
+}
+function featured(ids, peakHint){
+  const sorted = rareSort(ids.filter(id => achById(id) && achById(id).cat !== 'meta'));
+  const out = sorted.slice(0, 2);
+  const pers = peakHint && sorted.find(id => !out.includes(id) && peakHint.includes(id));
+  if (pers) out.push(pers); else if (sorted[2]) out.push(sorted[2]);
+  return out;
+}
+function botFeatured(i){ const b = BOTS[i]; return featured(botBadges(i), b.peak === 'Late night' ? ['owl','midnight','three','insomnia'] : b.peak === 'Morning' ? ['early','dawn','monday'] : b.style === 'Grinder' ? ['l240','l180','l120','d8','d6'] : b.style === 'Sprinter' ? ['g8p','g4p','dn12','dn8'] : null); }
+function myFeatured(){
+  const mine = ACHS.filter(a => ACH.u[a.id]).map(a => a.id);
+  const chosen = (R.showcase || []).filter(id => ACH.u[id]);
+  return chosen.length ? chosen.slice(0, 3) : featured(mine);
+}
+// rarity across all 5,000 bots, worked out in small chunks while idle, once per daily update
+let rarityRunning = false;
+function computeRarity(done){
+  if (R.rar && R.rar.day === R.lastSim){ done && done(); return; }
+  if (rarityRunning) return; rarityRunning = true;
+  const counts = {}; ACHS.forEach(a => counts[a.id] = 0);
+  let i = 0;
+  const idle = window.requestIdleCallback || (f => setTimeout(() => f({timeRemaining: () => 8}), 16));
+  const step = dl => {
+    const end = Math.min(ROSTER_N, i + 250);
+    for (; i < end; i++) botBadges(i).forEach(id => counts[id]++);
+    if (i < ROSTER_N) idle(step);
+    else { R.rar = {day: R.lastSim, counts}; rarityRunning = false; saveRanked(); done && done(); }
+  };
+  idle(step);
+}
+function badgeHtml(id, size){
+  const a = achById(id); if (!a) return '';
+  const pct = rarityOf(id), rare = pct == null ? '' : ` · held by ${pct < .001 ? '<0.1' : (pct * 100).toFixed(pct < .1 ? 1 : 0)}% of players`;
+  return `<span class="bdg ${size || ''}" title="${esc(a.name)} · ${TIERS[a.tier].name}${rare}">${achIcon(a)}</span>`;
+}
+function avatar(b, cls){ return `<span class="av ${cls || ''}" style="--h:${b.hue}" aria-hidden="true">${esc(b.ini)}</span>`; }
+const myAvatar = cls => `<span class="av me ${cls || ''}" aria-hidden="true">You</span>`;
+
+/* matchmaking */
+function findOpponent(){
+  const me = R.mmr, order = sortedBots(), h = new Date().getHours();
+  const rivals = Object.entries(R.rec).filter(([i, r]) => r[0] + r[1] + r[2] >= 3 && Math.abs(botRating(+i) - me) <= 200).map(([i]) => +i).filter(i => i !== R.last);
+  if (rivals.length && Math.random() < .15) return pick(Math.random, rivals);
+  for (const w of [75, 150, 300, 2000]){
+    const cand = order.filter(i => i !== R.last && Math.abs(botRating(i) - me) <= w);
+    if (cand.length >= (w < 2000 ? 5 : 1)){
+      const weighted = []; cand.forEach(i => { const [a, z] = PEAKS[BOTS[i].peak], hh = h < 5 ? h + 24 : h; weighted.push(i); if (hh >= a && hh < z) weighted.push(i); });
+      return pick(Math.random, weighted);
+    }
+  }
+  return order[0];
+}
+function rollTarget(i){
+  const b = BOTS[i], L = typical(botRating(i)) * b.sitMul, g = gaussOf(Math.random), h = new Date().getHours();
+  const late = h >= 21 || h < 3, morning = h >= 5 && h < 12;
+  let t;
+  switch (b.style){
+    case 'Sprinter': t = L * .85 * Math.exp(.12 * g); break;
+    case 'Grinder': t = L * .9 * Math.exp(.45 * g); break;
+    case 'Wildcard': t = Math.random() < .5 ? L * .55 * Math.exp(.3 * g) : L * 1.45 * Math.exp(.3 * g); break;
+    case 'Night Owl': t = L * (late ? 1.2 : morning ? .85 : 1) * Math.exp(.25 * g); break;
+    case 'Early Bird': t = L * (morning ? 1.2 : late ? .85 : 1) * Math.exp(.25 * g); break;
+    default: t = L * Math.exp(.18 * g);
+  }
+  return Math.round(clampN(t, 12, 600) * 60000);
+}
+const kFactor = () => R.played < 5 ? 40 : 24;
+function stakes(br){ const E = 1 / (1 + Math.pow(10, (br - R.mmr) / 400)), K = kFactor(); return {E, win: Math.round(K * (1 - E)), loss: Math.round(K * E), draw: Math.round(K * (.5 - E))}; }
+function startMatch(){
+  const b = findOpponent(), br = botRating(b), now = Date.now();
+  const lines = [...CHAT].sort(() => Math.random() - .5).slice(0, 6);
+  R.cur = {pl: R.played < 5 ? R.played + 1 : 0, b, br, mmr0: R.mmr, target: rollTarget(b), you: 0, them: 0, t0: now, last: now, tick: now, state: 'live', tapped: false, lines, tap: pick(Math.random, TAPS), feat: botFeatured(b), mine: myFeatured()};
+  R.last = b; saveRanked();
+  const B = BOTS[b];
+  toast(`Match found: ${B.name} (${rankOf(br).full} · ${br.toLocaleString()})`);
+  renderMatch(true);
+}
+function finalize(res, why){
+  const c = R.cur; if (!c || c.state !== 'live') return;
+  const youMin = Math.round(c.you / 60000), themMin = Math.round(Math.min(c.them, c.target) / 60000), B = BOTS[c.b];
+  if (res !== 'W' && c.you < 10 * 60000){
+    R.cur = null; saveRanked(); renderMatch();
+    if (why !== 'silent') toast('Match not rated: you studied less than 10 minutes.');
+    return;
+  }
+  const s = stakes(c.br), delta = res === 'W' ? s.win : res === 'D' ? s.draw : -s.loss;
+  const before = rankOf(R.mmr);
+  R.mmr = clampN(R.mmr + delta, 100, 4000); R.best = Math.max(R.best, R.mmr); R.played++;
+  BS[c.b * BF] = clampN(BS[c.b * BF] - delta, 300, 3200); sortedCache = null;
+  // the bot studied too
+  const o = c.b * BF; BS[o+F.total] += themMin; BS[o+F.sessions]++; BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], themMin);
+  const rec = R.rec[c.b] || (R.rec[c.b] = [0, 0, 0]);
+  const nem = nemesis();
+  if (res === 'W'){ R.w++; R.ws++; R.bestWs = Math.max(R.bestWs, R.ws); rec[0]++; R.bestUpset = Math.max(R.bestUpset, c.br - c.mmr0); if (nem === c.b) R.revenge = 1; if (c.mmr0 >= 2000) R.profWins++; }
+  else if (res === 'L'){ R.l++; R.ws = 0; rec[1]++; }
+  else { R.d++; rec[2]++; }
+  const after = rankOf(R.mmr);
+  R.hist.unshift({t: Date.now(), b: c.b, br: c.br, you: youMin, them: themMin, r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0});
+  if (R.hist.length > 500) R.hist.length = 500;
+  c.state = 'done'; c.res = res; c.delta = delta; c.promo = after.i > before.i || (after.i === before.i && after.d > before.d) ? after.full : (after.i < before.i || (after.i === before.i && after.d < before.d) ? -1 : 0);
+  saveRanked(true);
+  if (res === 'W'){ chime(P.chime); if (c.promo && c.promo !== -1) fx.burst(); }
+  renderMatch(); renderRankChip(); achQueue();
+  if (!$('#page-ranked').hidden) renderRanked();
+}
+function nemesis(){ let best = -1, n = 4; Object.entries(R.rec).forEach(([i, r]) => { if (r[1] > n){ n = r[1]; best = +i; } }); return best; }
+function endMatch(why){
+  const c = R.cur; if (!c || c.state !== 'live') return;
+  if (c.tapped && c.you > c.target) return finalize('W', why);
+  finalize(!c.tapped && c.target - c.you <= 60000 ? 'D' : 'L', why);
+}
+// runs inside the timer loop
+let rkLastRender = 0, rkLastSave = 0, rkFresh = true;
+function rankedTick(){
+  if (!R || !R.on) return;
+  const now = Date.now(), running = S.running && S.phase === 'focus';
+  if (!running) rkFresh = true;                       // a new match needs a fresh start (Start, or the next focus block)
+  if (running && rkFresh && (!R.cur || R.cur.state === 'done')){ rkFresh = false; startMatch(); }
+  if (running) rkFresh = false;
+  const c = R.cur; if (!c) return;
+  if (c.state === 'live'){
+    if (running){
+      const dt = Math.min(2000, Math.max(0, now - c.tick));
+      c.you += dt; if (c.them < c.target) c.them = Math.min(c.target, c.them + dt); c.last = now;
+      if (!c.tapped && c.them >= c.target){ c.tapped = true; renderMatch(); }
+      if (c.tapped && c.you > c.target){ finalize('W'); return; }
+    } else if (now - c.last > 30 * 60000){ endMatch('idle'); return; }
+    if (now - rkLastSave > 5000){ rkLastSave = now; saveRanked(); }
+  }
+  c.tick = now;
+  if (now - rkLastRender > 900){ rkLastRender = now; renderMatch(); }
+}
+
+/* match card on the Focus page */
+const mm = ms => fmtMin(Math.floor(ms / 60000));
+function renderMatch(fresh){
+  const slot = $('#matchSlot'); if (!slot) return;
+  if (!R.on){ slot.innerHTML = ''; return; }
+  const c = R.cur, rk = rankOf(R.mmr);
+  if (!c){
+    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.mmr.toLocaleString()} Elo${R.played < 5 ? ` · placement ${R.played}/5` : ''}</small></span></div><p class="hint">Press Start and you'll be matched with a bot near your rating. Whoever studies longer wins.</p><button class="link-btn" data-go="ranked">Ranked page →</button></div>`;
+    return;
+  }
+  const B = BOTS[c.b], brk = rankOf(c.br), s = stakes(c.br), max = Math.max(c.you, c.tapped ? c.target : c.them, 60000) * 1.08;
+  const live = c.state === 'live';
+  const lineIdx = Math.min(c.lines.length - 1, Math.floor(c.them / (7 * 60000)));
+  const tired = B.style === 'Steady' && !c.tapped && c.them > c.target * .85;
+  const botLine = c.tapped ? `“${c.tap}”` : tired ? '“starting to slow down…”' : c.them > 60000 ? `“${c.lines[lineIdx]}”` : '“gl hf”';
+  const status = !live ? '' : `${esc(B.name)} is still going. Keep studying: if they stop first, you win.`;
+  let result = '';
+  if (!live){
+    const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = rankOf(R.mmr), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
+    const how = c.res === 'W' ? `${esc(B.name)} tapped out at ${mm(c.target)}. You outlasted them.` : c.res === 'L' ? `You stopped at ${mm(c.you)}. ${esc(B.name)} was still going.` : `You stopped just short of ${esc(B.name)}'s ${mm(c.target)}.`;
+    result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em></span>
+      ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
+      <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : 'Top rank'}</small></div>
+      <p class="hint">Your next match starts with your next focus block.</p><button class="small-btn" data-act="m-dismiss">OK</button></div>`;
+  }
+  slot.innerHTML = `<div class="card match${fresh ? ' found' : ''}${live ? '' : ' over'}">
+    <div class="m-head"><span class="h first">${c.pl ? `Placement match ${c.pl} of 5` : 'Ranked match'}</span>${live ? '<span class="live-dot">Live</span>' : ''}</div>
+    <div class="m-players">
+      <div class="m-p">${myAvatar()}<span class="m-n"><b>You</b><small>${emblem(rankOf(c.mmr0), 'xs')} ${rankOf(c.mmr0).full} · ${c.mmr0.toLocaleString()}</small><span class="bdgs">${c.mine.map(id => badgeHtml(id)).join('')}</span></span></div>
+      <span class="vs">VS</span>
+      <div class="m-p them" data-bot="${c.b}">${avatar(B)}<span class="m-n"><b>${esc(B.name)} <i class="bot-tag">bot</i></b><small>${emblem(brk, 'xs')} ${brk.full} · ${c.br.toLocaleString()}</small><span class="bdgs">${c.feat.map(id => badgeHtml(id)).join('')}</span></span></div>
+    </div>
+    <div class="m-bars">
+      <div class="m-bar"><span>You</span><span class="trk"><i style="width:${c.you / max * 100}%"></i></span><b>${mm(c.you)}</b></div>
+      <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.tapped ? mm(c.target) : live ? 'going…' : '?'}</b></div>
+    </div>
+    ${live ? `<p class="m-chat">${esc(B.name)}: ${esc(botLine)}</p><p class="m-status">${status}</p>
+    <div class="m-foot"><span class="stakes">Win <b class="pos">+${s.win}</b> · Draw <b>${s.draw > 0 ? '+' : s.draw < 0 ? '−' : ''}${Math.abs(s.draw)}</b> · Loss <b class="neg">−${s.loss}</b></span><button class="small-btn" data-act="m-end">End match</button></div>` : result}
+  </div>`;
+}
+$('#matchSlot').addEventListener('click', e => {
+  const a = e.target.closest('[data-act]'), them = e.target.closest('[data-bot]');
+  if (a && a.dataset.act === 'm-end'){ if (a.dataset.sure){ endMatch('button'); } else { a.dataset.sure = 1; a.textContent = 'Tap again to end'; a.classList.add('danger'); setTimeout(() => renderMatch(), 3500); } return; }
+  if (a && a.dataset.act === 'm-dismiss'){ R.cur = null; saveRanked(); renderMatch(); return; }
+  if (them && !e.target.closest('.bdg')) openBot(+them.dataset.bot);
+});
+
+/* header chip */
+function renderRankChip(){
+  const el = $('#rankChip'); if (!el) return;
+  el.hidden = !R.on;
+  const rk = rankOf(R.mmr);
+  el.innerHTML = `${emblem(rk, 'xs')}<b>${rk.full}</b><span>${R.mmr.toLocaleString()}</span>`;
+  el.title = `${rk.full} · ${R.mmr.toLocaleString()} Elo`;
+}
+
+/* Ranked page */
+let rkHistShown = 30;
+function renderRanked(){
+  const rk = rankOf(R.mmr), next = rk.hi ? rankOf(rk.hi) : null, prog = rk.hi ? (R.mmr - rk.lo) / (rk.hi - rk.lo) : 1;
+  const games = R.w + R.l + R.d, wr = games ? Math.round(R.w / games * 100) : 0;
+  $('#rkHero').innerHTML = `${emblem(rk, 'xl')}<div class="rk-hero-tx"><small>${R.played < 5 ? `Placement ${R.played}/5 · your rank firms up after 5 matches` : 'Your rank'}</small><b style="color:${rk.c}">${rk.full}</b>
+    <span>${R.mmr.toLocaleString()} Elo · best ${R.best.toLocaleString()}</span>
+    <span class="bar2 big"><i style="width:${prog * 100}%;background:${rk.c}"></i></span>
+    <small>${next ? `${(rk.hi - R.mmr).toLocaleString()} Elo to ${next.full}` : 'You are at the top rank. Keep your Elo climbing.'}</small>
+    <span class="bdgs lg">${myFeatured().map(id => badgeHtml(id, 'lg')).join('')}<button class="link-btn" data-go="awards">Change showcase →</button></span></div>`;
+  $('#rkKpis').innerHTML = `<div class="stat"><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><span>wins–losses${R.d ? '–draws' : ''}</span></div><div class="stat"><b>${wr}%</b><span>win rate</span></div><div class="stat"><b>${R.ws}</b><span>win streak · best ${R.bestWs}</span></div><div class="stat"><b>${R.played}</b><span>matches played</span></div>`;
+  renderEloChart();
+  const hist = R.hist.slice(0, rkHistShown);
+  $('#rkHist').innerHTML = hist.map(h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}${h.tap ? '' : '+'}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></li>`; }).join('')
+    || '<li class="empty-li">No matches yet. Start a focus block on the Focus page and you\'ll be matched automatically.</li>';
+  $('#rkMore').hidden = R.hist.length <= rkHistShown;
+  // ladder: 10 above and 10 below you
+  const order = sortedBots(); let pos = order.findIndex(i => botRating(i) < R.mmr); if (pos < 0) pos = order.length;
+  const from = Math.max(0, pos - 10), to = Math.min(order.length, pos + 10), nem = nemesis();
+  const row = (i, place) => { const B = BOTS[i], r = botRating(i), mv = r - PREV[i], rec = R.rec[i], feat = botFeatured(i)[0];
+    return `<li data-bot="${i}"><span class="pl">#${place.toLocaleString()}</span><span class="mv ${mv > 0 ? 'up' : mv < 0 ? 'dn' : ''}">${mv > 0 ? '▲' : mv < 0 ? '▼' : ''}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)}</b><small>${B.style}${rec ? ` · ${i === nem ? 'nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'rival' : 'played'} ${rec[0]}–${rec[1]}` : ''}</small></span>${feat ? badgeHtml(feat) : '<span></span>'}${emblem(rankOf(r), 'xs')}<span class="rt">${r.toLocaleString()}</span></li>`; };
+  let lad = '';
+  for (let k = from; k < pos; k++) lad += row(order[k], k + 1);
+  lad += `<li class="me"><span class="pl">#${(pos + 1).toLocaleString()}</span><span class="mv"></span>${myAvatar('sm')}<span class="who"><b>You</b><small>${rk.full}</small></span>${myFeatured()[0] ? badgeHtml(myFeatured()[0]) : '<span></span>'}${emblem(rk, 'xs')}<span class="rt">${R.mmr.toLocaleString()}</span></li>`;
+  for (let k = pos; k < to; k++) lad += row(order[k], k + 2);
+  $('#rkLadder').innerHTML = lad;
+  $('#rkLadderPos').textContent = `#${(pos + 1).toLocaleString()} of ${(ROSTER_N + 1).toLocaleString()}`;
+  // rank list with how many players hold each
+  const counts = RANKS.map(() => 0); for (let i = 0; i < ROSTER_N; i++) counts[rankOf(botRating(i)).i]++; counts[rk.i]++;
+  $('#rkRanks').innerHTML = RANKS.slice().reverse().map(x => { const k = RANKS.indexOf(x), here = k === rk.i; return `<li class="${here ? 'here' : ''}">${emblem({...rankOf(Math.max(x.lo, 600)), d: 2, div: x.cuts.length ? 'I' : ''}, 'sm')}<span><b>${x.name}</b><small>${k === RANKS.length - 1 ? '2,000+' : `${k === 0 ? 'under 900' : `${x.lo.toLocaleString()}–${(RANKS[k + 1].lo - 1).toLocaleString()}`}`} Elo · III, II, I</small></span><span class="cnt">${(counts[k] / (ROSTER_N + 1) * 100).toFixed(counts[k] / (ROSTER_N + 1) < .01 ? 1 : 0)}%</span>${here ? '<em>You</em>' : ''}</li>`; }).join('').replace('2,000+ Elo · III, II, I', '2,000+ Elo');
+  $('#rkOn').checked = R.on;
+}
+function renderEloChart(){
+  const el = $('#rkChart'), pts = R.hist.slice(0, 100).reverse().map(h => h.m);
+  if (!R.hist.length){ el.innerHTML = '<p class="hint">Your Elo line shows up after your first rated match.</p>'; return; }
+  pts.unshift(R.hist.length >= 100 ? R.hist[99].m - R.hist[99].d : 1000);
+  const W = 640, H = 200, pl = 8, pr = 74, pt = 14, pb = 14, lo = Math.floor((Math.min(...pts) - 40) / 50) * 50, hi = Math.ceil((Math.max(...pts) + 40) / 50) * 50;
+  const X = k => pl + (W - pl - pr) * (pts.length === 1 ? 1 : k / (pts.length - 1)), Y = v => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo));
+  let grid = '';
+  RANKS.forEach((x, ri) => [ri === 0 ? 600 : x.lo, ...x.cuts.slice(0, 2)].forEach((v, j) => {
+    if (v <= lo || v >= hi || (j > 0 && hi - lo >= 500)) return;
+    const lab = x.cuts.length ? `${x.name} ${['III','II','I'][j]}` : x.name;
+    grid += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" class="${j === 0 ? 'g-major' : 'g-minor'}"/><text x="${W - pr + 6}" y="${Y(v) + 4}" class="g-lab">${esc(lab)}</text>`;
+  }));
+  const d = pts.map((v, k) => `${k ? 'L' : 'M'}${X(k).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Elo over your last ${pts.length - 1} matches">${grid}<path d="${d} L${X(pts.length - 1)},${H - pb} L${X(0)},${H - pb}Z" class="g-area"/><path d="${d}" class="g-line"/><circle cx="${X(pts.length - 1)}" cy="${Y(pts[pts.length - 1])}" r="4.5" class="g-end"/><line class="g-guide" y1="${pt}" y2="${H - pb}" x1="-10" x2="-10"/></svg><div class="g-tip" hidden></div><small class="g-cap">Last ${pts.length - 1} match${pts.length === 2 ? '' : 'es'}</small>`;
+  const svg = el.querySelector('svg'), tip = el.querySelector('.g-tip'), guide = el.querySelector('.g-guide'), hs = R.hist.slice(0, 100).reverse();
+  svg.onpointermove = e => {
+    const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, k = clampN(Math.round((x - pl) / (W - pl - pr) * (pts.length - 1)), 1, pts.length - 1), h = hs[k - 1];
+    guide.setAttribute('x1', X(k)); guide.setAttribute('x2', X(k));
+    tip.hidden = false; tip.style.left = `${X(k) / W * 100}%`; tip.style.top = `${Y(pts[k]) / H * 100}%`;
+    tip.innerHTML = `<b>${h.m.toLocaleString()}</b> <span class="${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><small>${{W:'Win',L:'Loss',D:'Draw'}[h.r]} vs ${esc(BOTS[h.b].name)}</small>`;
+  };
+  svg.onpointerleave = () => { tip.hidden = true; guide.setAttribute('x1', -10); guide.setAttribute('x2', -10); };
+}
+$('#rkMore').onclick = () => { rkHistShown += 30; renderRanked(); };
+$('#rkOn').onchange = e => {
+  R.on = e.target.checked;
+  if (!R.on && R.cur && R.cur.state === 'live') endMatch('off');
+  if (!R.on) R.cur = null;
+  saveRanked(); renderMatch(); renderRankChip();
+  toast(R.on ? 'Ranked is on. You\'ll be matched when you press Start.' : 'Ranked is off. Your rating is saved.');
+};
+document.addEventListener('click', e => { const b = e.target.closest('#page-ranked [data-bot], .lnk[data-bot]'); if (b && !e.target.closest('.bdg')) openBot(+b.dataset.bot); });
+
+/* bot profile */
+function openBot(i){
+  const B = BOTS[i], r = botRating(i), rk = rankOf(r), rec = R.rec[i], got = rareSort(botBadges(i)), feat = botFeatured(i), o = i * BF;
+  const lastM = R.hist.find(h => h.b === i), nem = nemesis();
+  $('#botModalBody').innerHTML = `<div class="bm-top">${avatar(B, 'lg')}<div><b id="bmName">${esc(B.name)} <i class="bot-tag">bot</i></b><span>${emblem(rk, 'xs')} ${rk.full} · ${r.toLocaleString()} Elo</span><small>${B.style} · ${B.peak} · ${esc(B.subject)}</small></div></div>
+    <p class="bm-bio">“${esc(B.bio)}”</p>
+    <div class="bm-grid"><span><b>~${fmtMin(Math.round(typical(r) * B.sitMul))}</b><small>typical sitting</small></span><span><b>${fmtMin(BS[o+F.total]).replace(/ \d+m$/, '')}</b><small>studied in total</small></span><span><b>${BS[o+F.best]}</b><small>best streak (days)</small></span>
+      <span><b>${rec ? `${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}` : '–'}</b><small>${rec ? (i === nem ? 'your record · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'your record · rival' : 'your record') : 'not played yet'}</small></span></div>
+    ${lastM ? `<p class="hint">Last match: ${{W:'you won', L:'you lost', D:'draw'}[lastM.r]}, ${fmtMin(lastM.you)} vs ${fmtMin(lastM.them)}, ${new Date(lastM.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}.</p>` : ''}
+    <div class="h">Featured badges</div><div class="bdgs lg">${feat.map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('')}</div>
+    <div class="h">All achievements · ${got.length}/${ACHS.length}</div><div class="bdgs wrap">${got.map(id => badgeHtml(id)).join('')}</div>`;
+  $('#botModal').hidden = false; $('#botModal .x').focus();
+}
+$('#botModal').addEventListener('click', e => { if (e.target === $('#botModal') || e.target.closest('.x')) $('#botModal').hidden = true; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#botModal').hidden = true; });
+
+/* showcase picking on the Awards page */
+$('#pane-awards').addEventListener('click', e => {
+  const s = e.target.closest('[data-star]'); if (!s) return;
+  const id = s.dataset.star; let sc = (R.showcase || myFeatured()).filter(x => ACH.u[x]);
+  if (sc.includes(id)) sc = sc.filter(x => x !== id); else { if (sc.length >= 3) sc.shift(); sc.push(id); }
+  R.showcase = sc; saveRanked(); renderAwards();
+});
+$('#pane-awards').addEventListener('click', e => { if (e.target.closest('[data-act="sc-auto"]')){ R.showcase = null; saveRanked(); renderAwards(); } });
+function onPageShown(name){
+  if (name === 'ranked'){ renderRanked(); computeRarity(() => { if (!$('#page-ranked').hidden) renderRanked(); }); }
+  if (name === 'awards') computeRarity(() => { if (!$('#page-awards').hidden) renderAwards(); });
+}
+
+loadRanked();
+setTimeout(() => computeRarity(), 3000);
+
 /* ---------- study streak ---------- */
 // A day counts toward your streak once you've logged at least 10 minutes on it.
 const STREAK_MIN = 10;
@@ -2824,7 +3511,7 @@ requestAnimationFrame(moveTabInk);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveTabInk);
 prewarm();
 document.querySelectorAll('.fl').forEach(f => f.innerHTML = FLAME);
-renderAchHeader(); checkAch(); renderStreak();
+renderAchHeader(); checkAch(); renderStreak(); renderMatch(); renderRankChip();
 showPage(P.page && $('#page-' + P.page) ? P.page : 'focus');
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderTime);
 })();
