@@ -91,7 +91,23 @@ button{cursor:pointer}
 .av.me.sm{font-size:9px}
 .bot-tag{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 4px;vertical-align:2px}
 .bdgs{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
-.bdg{display:inline-flex}
+.bdg{display:inline-flex;cursor:help;border-radius:50%}
+.bdg:hover .ach-ic,.bdg:focus-visible .ach-ic{transform:scale(1.15)}
+.bdg .ach-ic{transition:transform .12s}
+.bdg-tip{position:fixed;z-index:60;width:260px;max-width:calc(100vw - 20px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-ctl);padding:12px 14px;box-shadow:0 14px 36px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.tip-top{display:flex;gap:10px;align-items:center}
+.tip-top .ach-ic.big{width:40px;height:40px}.tip-top .ach-ic.big svg{width:20px;height:20px}
+.tip-top span{display:flex;flex-direction:column;min-width:0}
+.tip-top b{font-size:15px}
+.tip-top small{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.tip-how{margin:0;font-size:13px;line-height:1.45}
+.tip-how span{display:block;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+.tip-how em{color:var(--muted)}
+.tip-rare{font-size:12px;color:var(--muted)}
+.tip-me{font-size:12px;font-weight:600;border-top:1px solid var(--line);padding-top:7px}
+.tip-me.got{color:#1f9d55}
+.tip-bar{display:block;height:5px;background:var(--soft);border-radius:99px;overflow:hidden;margin-top:-2px}
+.tip-bar i{display:block;height:100%;border-radius:99px}
 .bdg .ach-ic{width:22px;height:22px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--t) 80%,transparent)}
 .bdg .ach-ic svg{width:12px;height:12px}
 .bdg.lg .ach-ic{width:34px;height:34px}.bdg.lg .ach-ic svg{width:17px;height:17px}
@@ -667,8 +683,26 @@ body:not(.m-off) .toast{animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)}
 .ach-tiers span{display:inline-flex;align-items:center;gap:5px}
 .ach-tiers i{width:10px;height:10px;border-radius:50%;background:var(--t)}
 .ach-tiers b{color:var(--ink);font-variant-numeric:tabular-nums}
-.ach-filters{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:18px}
-.ach-filters select{padding:6px 9px;border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);background:var(--bg);font-size:13px}
+.ach-tools{margin-top:18px;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:16px}
+.ach-tools-top{display:flex;gap:8px}
+.ach-tools-top input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--bg);font-size:14px}
+.ach-ftoggle{display:none}
+.ach-fpanel{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.frow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.flab{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.frow select{padding:6px 9px;border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);background:var(--bg);font-size:13px}
+.seg.chips button{display:inline-flex;align-items:center;gap:6px}
+.seg.chips button i{width:9px;height:9px;border-radius:50%;background:var(--t);display:block}
+.seg.chips button[aria-pressed="true"]{background:color-mix(in srgb,var(--t) 18%,var(--surface));color:var(--ink);border-color:var(--t)}
+.ach-count{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+.ach-count .link-btn{margin:0}
+@media (max-width:760px){
+  .ach-ftoggle{display:inline-flex}
+  .ach-fpanel{display:none;flex-direction:column;align-items:stretch;gap:12px;background:var(--bg);border-radius:var(--r-ctl);padding:12px}
+  .ach-fpanel.open{display:flex}
+  .frow{flex-direction:column;align-items:flex-start;gap:6px}
+  .frow select{width:100%}
+}
 .ach-h{display:flex;justify-content:space-between}
 .ach-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
 .ach{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:var(--r-ctl);padding:10px 12px;background:var(--surface)}
@@ -865,7 +899,20 @@ body.m-off .ach-pop{animation:none!important}
         <div class="showcase" id="achShowcase"></div>
         <div class="ach-sum" id="achSum"></div>
         <div id="achNear"><div class="h">Closest to unlocking</div><ul class="ach-list" id="achNearList"></ul></div>
-        <div class="ach-filters"><div class="seg" id="achFilter"></div><select id="achCatSel" aria-label="Category"></select></div>
+        <div class="ach-tools">
+          <div class="ach-tools-top">
+            <input type="search" id="achSearch" placeholder="Search achievements, e.g. streak or night" aria-label="Search achievements" autocomplete="off">
+            <button class="small-btn ach-ftoggle" id="achFToggle" aria-expanded="false" aria-controls="achFPanel">Sort &amp; filter</button>
+          </div>
+          <div class="ach-fpanel" id="achFPanel">
+            <label class="frow"><span class="flab">Sort by</span><select id="achSort"></select></label>
+            <div class="frow"><span class="flab">Status</span><div class="seg" id="achFilter" role="group" aria-label="Status"></div></div>
+            <div class="frow"><span class="flab">Tier</span><div class="seg chips" id="achTierChips" role="group" aria-label="Tiers"></div></div>
+            <div class="frow"><span class="flab">Rarity</span><div class="seg" id="achRarSeg" role="group" aria-label="Rarity"></div></div>
+            <label class="frow"><span class="flab">Category</span><select id="achCatSel"></select></label>
+          </div>
+          <div class="ach-count"><span id="achCount"></span><button class="link-btn" id="achClear" hidden>Clear filters</button></div>
+        </div>
         <div id="achList"></div>
       </div>
     </section>
@@ -1007,6 +1054,7 @@ body.m-off .ach-pop{animation:none!important}
 <canvas id="fxBack" class="fx" aria-hidden="true"></canvas>
 <canvas id="fxFront" class="fx front" aria-hidden="true"></canvas>
 <div class="toast" id="toast" hidden></div>
+<div class="bdg-tip" id="bdgTip" role="tooltip" hidden></div>
 <div class="modal" id="botModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bmName"><button class="x" aria-label="Close">×</button><div id="botModalBody"></div></div></div>
 <button class="ach-pop" id="achPop" hidden></button>
 <div class="vtip" id="vtip" role="tooltip" hidden></div>
@@ -2435,7 +2483,43 @@ function renderAchHeader(){
   const n = Object.keys(ACH.u).length;
   $('#achBtn b').textContent = n; $('#achBtn span').textContent = `/${ACHS.length}`;
 }
-let achFilter = 'all', achCat = 'all';
+const AF_DEFAULT = {q:'', sort:'cat', status:'all', tiers:[], rar:'all', cat:'all'};
+let AF = Object.assign({}, AF_DEFAULT, P.achView || {}, {q:''});
+const saveAF = () => { P.achView = {sort: AF.sort, status: AF.status, tiers: AF.tiers, rar: AF.rar, cat: AF.cat}; saveP(); };
+const AF_SORTS = [['cat','Category'],['near','Closest to unlocking'],['rare','Rarest first'],['common','Most common first'],['tierDesc','Tier: Legendary first'],['tierAsc','Tier: Bronze first'],['recent','Recently unlocked'],['pts','Points'],['name','Name, A–Z']];
+const TIER_ORDER = ['bronze','silver','gold','platinum','legendary'];
+function achFiltered(st){
+  const q = AF.q.trim().toLowerCase();
+  return ACHS.filter(a => {
+    const got = !!ACH.u[a.id], hidden = a.secret && !got;
+    if (q && !(hidden ? 'secret achievement' : `${a.name} ${a.desc} ${ACH_CATS[a.cat]}`).toLowerCase().includes(q)) return false;
+    if (AF.status === 'got' && !got) return false;
+    if (AF.status === 'locked' && got) return false;
+    if (AF.status === 'progress' && (got || hidden || a.goal <= 1 || achVal(a, st) <= 0)) return false;
+    if (AF.status === 'secret' && !a.secret) return false;
+    if (AF.tiers.length && !AF.tiers.includes(a.tier)) return false;
+    if (AF.rar !== 'all'){ const r = typeof rarityOf === 'function' && R ? rarityOf(a.id) : null; if (r == null || r >= (AF.rar === 'ultra' ? .01 : .1)) return false; }
+    if (AF.cat !== 'all' && a.cat !== AF.cat) return false;
+    return true;
+  });
+}
+function achSorted(list, st){
+  const rar = id => { const r = typeof rarityOf === 'function' && R ? rarityOf(id) : null; return r == null ? 2 : r; };
+  const prog = a => ACH.u[a.id] ? -1 : a.secret ? -.5 : Math.min(1, achVal(a, st) / a.goal);
+  const by = {
+    near: (a, b) => prog(b) - prog(a),
+    rare: (a, b) => rar(a.id) - rar(b.id),
+    common: (a, b) => rar(b.id) - rar(a.id),
+    tierDesc: (a, b) => TIER_ORDER.indexOf(b.tier) - TIER_ORDER.indexOf(a.tier),
+    tierAsc: (a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier),
+    recent: (a, b) => (ACH.u[b.id] || 0) - (ACH.u[a.id] || 0),
+    pts: (a, b) => TIERS[b.tier].pts - TIERS[a.tier].pts,
+    name: (a, b) => 0
+  }[AF.sort];
+  const nm = a => a.secret && !ACH.u[a.id] ? 'Secret achievement' : a.name;
+  return list.slice().sort((a, b) => (by ? by(a, b) : 0) || nm(a).localeCompare(nm(b)));
+}
+function afActive(){ return AF.q.trim() || AF.status !== 'all' || AF.tiers.length || AF.rar !== 'all' || AF.cat !== 'all'; }
 function achProgressText(a, v){
   const f = x => a.u === 'h' ? (x >= 60 ? `${Math.floor(x / 60)}h${x % 60 ? ' ' + (x % 60) + 'm' : ''}` : `${Math.round(x)}m`) : a.u === 'm' ? fmtMin(Math.round(x)) : a.u === 'd' ? `${x} day${x===1?'':'s'}` : x.toLocaleString();
   return `${f(Math.min(v, a.goal))} / ${f(a.goal)}`;
@@ -2467,20 +2551,36 @@ function renderAwards(){
   const near = ACHS.filter(a => !ACH.u[a.id] && !a.secret && a.goal > 1 && a.cat !== 'meta').map(a => ({a, r: achVal(a, st) / a.goal})).filter(x => x.r > 0).sort((x, y) => y.r - x.r).slice(0, 3);
   $('#achNear').hidden = !near.length;
   $('#achNearList').innerHTML = near.map(x => achCard(x.a, st)).join('');
-  $('#achFilter').innerHTML = [['all','All'],['got','Unlocked'],['locked','Locked']].map(([v, l]) => `<button data-v="${v}" aria-pressed="${achFilter===v}">${l}</button>`).join('');
-  $('#achCatSel').innerHTML = `<option value="all">All categories</option>` + Object.entries(ACH_CATS).map(([k, l]) => `<option value="${k}" ${k===achCat?'selected':''}>${l}</option>`).join('');
+  // sort and filter controls
+  $('#achSort').innerHTML = AF_SORTS.map(([v, l]) => `<option value="${v}" ${v===AF.sort?'selected':''}>${l}</option>`).join('');
+  $('#achFilter').innerHTML = [['all','All'],['got','Unlocked'],['locked','Locked'],['progress','In progress'],['secret','Secret']].map(([v, l]) => `<button data-v="${v}" aria-pressed="${AF.status===v}">${l}</button>`).join('');
+  $('#achTierChips').innerHTML = TIER_ORDER.map(k => `<button data-v="${k}" style="--t:${TIERS[k].c}" aria-pressed="${AF.tiers.includes(k)}"><i></i>${TIERS[k].name}</button>`).join('');
+  $('#achRarSeg').innerHTML = [['all','All'],['rare','Rare (under 10%)'],['ultra','Ultra rare (under 1%)']].map(([v, l]) => `<button data-v="${v}" aria-pressed="${AF.rar===v}">${l}</button>`).join('');
+  $('#achCatSel').innerHTML = `<option value="all">All categories</option>` + Object.entries(ACH_CATS).map(([k, l]) => `<option value="${k}" ${k===AF.cat?'selected':''}>${l}</option>`).join('');
+  if ($('#achSearch').value !== AF.q) $('#achSearch').value = AF.q;
+  const list = achSorted(achFiltered(st), st);
   let h = '';
-  for (const [cat, label] of Object.entries(ACH_CATS)){
-    if (achCat !== 'all' && achCat !== cat) continue;
-    const list = ACHS.filter(a => a.cat === cat && (achFilter === 'all' || (achFilter === 'got') === !!ACH.u[a.id]));
-    if (!list.length) continue;
-    const all = ACHS.filter(a => a.cat === cat);
-    h += `<div class="h ach-h"><span>${label}</span><span>${all.filter(a => ACH.u[a.id]).length}/${all.length}</span></div><ul class="ach-list">${list.map(a => achCard(a, st)).join('')}</ul>`;
-  }
-  $('#achList').innerHTML = h || `<div class="empty">Nothing here yet.</div>`;
+  if (AF.sort === 'cat'){
+    for (const [cat, label] of Object.entries(ACH_CATS)){
+      const inCat = list.filter(a => a.cat === cat); if (!inCat.length) continue;
+      const all = ACHS.filter(a => a.cat === cat);
+      h += `<div class="h ach-h"><span>${label}</span><span>${all.filter(a => ACH.u[a.id]).length}/${all.length}</span></div><ul class="ach-list">${inCat.map(a => achCard(a, st)).join('')}</ul>`;
+    }
+  } else if (list.length) h = `<ul class="ach-list flat">${list.map(a => achCard(a, st)).join('')}</ul>`;
+  const rarPending = AF.rar !== 'all' && !(R && R.rar);
+  $('#achList').innerHTML = h || `<div class="empty">${rarPending ? 'Rarity is still being worked out. Give it a few seconds.' : 'No achievements match these filters.'}</div>`;
+  $('#achCount').textContent = `Showing ${list.length} of ${ACHS.length}`;
+  $('#achClear').hidden = !afActive();
 }
-$('#achFilter').onclick = e => { const b = e.target.closest('button'); if (!b) return; achFilter = b.dataset.v; renderAwards(); };
-$('#achCatSel').onchange = e => { achCat = e.target.value; renderAwards(); };
+$('#achSort').onchange = e => { AF.sort = e.target.value; saveAF(); renderAwards(); };
+$('#achFilter').onclick = e => { const b = e.target.closest('button'); if (!b) return; AF.status = b.dataset.v; saveAF(); renderAwards(); };
+$('#achTierChips').onclick = e => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.v; AF.tiers = AF.tiers.includes(k) ? AF.tiers.filter(x => x !== k) : [...AF.tiers, k]; saveAF(); renderAwards(); };
+$('#achRarSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; AF.rar = b.dataset.v; saveAF(); renderAwards(); if (AF.rar !== 'all' && typeof computeRarity === 'function') computeRarity(renderAwards); };
+$('#achCatSel').onchange = e => { AF.cat = e.target.value; saveAF(); renderAwards(); };
+let achSearchT = null;
+$('#achSearch').addEventListener('input', e => { clearTimeout(achSearchT); achSearchT = setTimeout(() => { AF.q = e.target.value; renderAwards(); }, 120); });
+$('#achClear').onclick = () => { AF = Object.assign({}, AF_DEFAULT, {sort: AF.sort}); $('#achSearch').value = ''; saveAF(); renderAwards(); };
+$('#achFToggle').onclick = () => { const o = $('#achFPanel').classList.toggle('open'); $('#achFToggle').setAttribute('aria-expanded', o); };
 
 /* ---------- notes ---------- */
 function renderNotes(){
@@ -3166,9 +3266,42 @@ function computeRarity(done){
 }
 function badgeHtml(id, size){
   const a = achById(id); if (!a) return '';
-  const pct = rarityOf(id), rare = pct == null ? '' : ` · held by ${pct < .001 ? '<0.1' : (pct * 100).toFixed(pct < .1 ? 1 : 0)}% of players`;
-  return `<span class="bdg ${size || ''}" title="${esc(a.name)} · ${TIERS[a.tier].name}${rare}">${achIcon(a)}</span>`;
+  return `<span class="bdg ${size || ''}" data-ach="${a.id}" tabindex="0" role="button" aria-label="${esc(a.name)}, ${TIERS[a.tier].name} achievement. Show details">${achIcon(a)}</span>`;
 }
+/* badge detail card: what it is, how to get it, how rare, and where you stand */
+let tipStats = null, tipStatsAt = 0, tipFor = null, tipAt = 0;
+function showBadgeTip(el){
+  const a = achById(el.dataset.ach); if (!a) return;
+  const tip = $('#bdgTip'), T = TIERS[a.tier], got = ACH.u[a.id], hidden = a.secret && !got;
+  if (Date.now() - tipStatsAt > 3000){ tipStats = achStats(); tipStatsAt = Date.now(); }
+  const pct = rarityOf(a.id);
+  const v = achVal(a, tipStats);
+  const mine = got ? `<span class="tip-me got">You have this · unlocked ${new Date(got).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})}</span>`
+    : hidden ? `<span class="tip-me">You don't have this yet</span>`
+    : `<span class="tip-me">You don't have this yet${a.goal > 1 ? ` · your progress: ${achProgressText(a, v)}` : ''}</span>${a.goal > 1 ? `<span class="tip-bar"><i style="width:${Math.min(100, v / a.goal * 100)}%;background:${T.c}"></i></span>` : ''}`;
+  tip.innerHTML = `<div class="tip-top">${achIcon(a, 'big')}<span><b>${esc(a.name)}</b><small style="color:${T.c}">${T.name} · +${T.pts}</small></span></div>
+    <p class="tip-how">${hidden ? '<em>Secret: unlock it yourself to find out how.</em>' : `<span>How to get it</span>${esc(a.desc)}`}</p>
+    ${pct == null ? '' : `<small class="tip-rare">Held by ${pct < .001 ? 'under 0.1' : (pct * 100).toFixed(pct < .1 ? 1 : 0)}% of players</small>`}
+    ${mine}`;
+  tip.hidden = false; tipFor = el; tipAt = Date.now();
+  // place it above the badge, or below if there's no room, kept inside the screen
+  const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, pad = 10;
+  let left = Math.min(Math.max(pad, r.left + r.width / 2 - w / 2), innerWidth - w - pad);
+  let top = r.top - h - 10; if (top < pad) top = r.bottom + 10;
+  tip.style.left = left + 'px'; tip.style.top = Math.min(top, innerHeight - h - pad) + 'px';
+}
+function hideBadgeTip(){ $('#bdgTip').hidden = true; tipFor = null; }
+document.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const b = e.target.closest && e.target.closest('.bdg[data-ach]'); if (b) showBadgeTip(b); });
+document.addEventListener('pointerout', e => { if (e.pointerType === 'touch') return; const b = e.target.closest && e.target.closest('.bdg[data-ach]'); if (b && !b.contains(e.relatedTarget)) hideBadgeTip(); });
+document.addEventListener('click', e => {
+  const b = e.target.closest('.bdg[data-ach]');
+  if (b){ e.stopPropagation(); tipFor === b && !$('#bdgTip').hidden && Date.now() - tipAt > 400 ? hideBadgeTip() : showBadgeTip(b); return; }
+  if (!e.target.closest('#bdgTip')) hideBadgeTip();
+}, true);
+document.addEventListener('focusin', e => { const b = e.target.closest && e.target.closest('.bdg[data-ach]'); if (b) showBadgeTip(b); });
+document.addEventListener('focusout', e => { if (e.target.closest && e.target.closest('.bdg[data-ach]')) hideBadgeTip(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideBadgeTip(); });
+addEventListener('scroll', hideBadgeTip, true);
 function avatar(b, cls){ return `<span class="av ${cls || ''}" style="--h:${b.hue}" aria-hidden="true">${esc(b.ini)}</span>`; }
 const myAvatar = cls => `<span class="av me ${cls || ''}" aria-hidden="true">You</span>`;
 
@@ -3292,6 +3425,16 @@ function renderMatch(fresh){
       <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : 'Top rank'}</small></div>
       <p class="hint">Your next match starts with your next focus block.</p><button class="small-btn" data-act="m-dismiss">OK</button></div>`;
   }
+  // while a match is live, only the moving parts change, so badges you're hovering stay put
+  const key = `${c.t0}|${c.state}|${c.tapped}`;
+  if (!fresh && live && slot.dataset.key === key && slot.querySelector('.m-bars')){
+    const bars = slot.querySelectorAll('.m-bar');
+    bars[0].querySelector('i').style.width = `${c.you / max * 100}%`; bars[0].querySelector('b').textContent = mm(c.you);
+    bars[1].querySelector('i').style.width = `${(c.tapped ? c.target : c.them) / max * 100}%`;
+    const chat = `${B.name}: ${botLine}`; if (slot.querySelector('.m-chat').textContent !== chat) slot.querySelector('.m-chat').textContent = chat;
+    return;
+  }
+  slot.dataset.key = key;
   slot.innerHTML = `<div class="card match${fresh ? ' found' : ''}${live ? '' : ' over'}">
     <div class="m-head"><span class="h first">${c.pl ? `Placement match ${c.pl} of 5` : 'Ranked match'}</span>${live ? '<span class="live-dot">Live</span>' : ''}</div>
     <div class="m-players">
@@ -3309,7 +3452,7 @@ function renderMatch(fresh){
 }
 $('#matchSlot').addEventListener('click', e => {
   const a = e.target.closest('[data-act]'), them = e.target.closest('[data-bot]');
-  if (a && a.dataset.act === 'm-end'){ if (a.dataset.sure){ endMatch('button'); } else { a.dataset.sure = 1; a.textContent = 'Tap again to end'; a.classList.add('danger'); setTimeout(() => renderMatch(), 3500); } return; }
+  if (a && a.dataset.act === 'm-end'){ if (a.dataset.sure){ endMatch('button'); } else { a.dataset.sure = 1; a.textContent = 'Tap again to end'; a.classList.add('danger'); setTimeout(() => { $('#matchSlot').dataset.key = ''; renderMatch(); }, 3500); } return; }
   if (a && a.dataset.act === 'm-dismiss'){ R.cur = null; saveRanked(); renderMatch(); return; }
   if (them && !e.target.closest('.bdg')) openBot(+them.dataset.bot);
 });
