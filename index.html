@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Big+Shoulders+Display:wght@300;500;800&family=Caveat:wght@400;500;700&family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,800&family=Fredoka:wght@300;500;600;700&family=JetBrains+Mono:wght@300;500;700;800&family=Lexend:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Orbitron:wght@400;500;800&family=Playfair+Display:wght@400;500;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=VT323&display=swap">
 <style>
-/* Layout: a desk instrument. The dial sits on the left like a kitchen timer; a settings drawer with tabs sits on the right. Stacks on phones. */
+/* Layout: an app shell. A slim page rail on the left (a bottom bar on phones); the Focus page keeps the dial in the middle with task and live panels either side. */
 :root{
   --acc-l:#2f54d6; --acc-d:#8ea7ff;
   --bg:#eceff4; --surface:#fbfcfe; --ink:#151b27; --muted:#5d677a; --line:#d6dce6; --soft:#e4e8f0;
@@ -23,6 +23,7 @@
 :root[data-theme="dark"]{--bg:#0e1219;--surface:#161b25;--ink:#e6eaf1;--muted:#8f99ab;--line:#283143;--soft:#1e2532;--accent:var(--acc-d);--rest:#f0b44c;--on-accent:#0e1219;color-scheme:dark}
 
 *{box-sizing:border-box}
+html,body{margin:0}
 [hidden]{display:none!important}
 .switch:disabled{opacity:.45;cursor:not-allowed}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
@@ -34,12 +35,113 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--cur);outline-offset:2px}
 
-.app{max-width:1180px;margin:0 auto;padding-block:18px 48px;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  display:flex;flex-direction:column;gap:18px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:800;font-size:26px;letter-spacing:.02em;text-transform:uppercase}
-.brand svg{width:28px;height:28px}
+.shell{display:grid;grid-template-columns:212px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:2px;padding:18px 12px;border-right:1px solid var(--line);background:var(--surface);z-index:5}
+.brand{display:flex;align-items:center;gap:9px;white-space:nowrap;font-family:var(--f-display);font-weight:800;font-size:18px;letter-spacing:.02em;text-transform:uppercase;padding:2px 8px 18px}
+.brand svg{width:24px;height:24px;flex:none;color:var(--accent)}
+.nav-btn{display:flex;align-items:center;gap:11px;width:100%;border:0;background:none;border-radius:var(--r-ctl);padding:10px 10px;font-weight:600;font-size:14px;color:var(--muted);text-align:left;transition:background-color .15s,color .15s}
+.nav-btn svg{width:19px;height:19px;flex:none}
+.nav-btn span{flex:1}
+.nav-btn kbd{font-family:var(--f-mono);font-size:10px;color:var(--muted);opacity:0;border:1px solid var(--line);border-radius:4px;padding:0 4px;transition:opacity .15s}
+.side:hover .nav-btn kbd{opacity:.8}
+.nav-btn:hover{background:var(--soft);color:var(--ink)}
+.nav-btn[aria-current="page"]{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent)}
+.more-btn{display:none}
+.nav-extra{display:flex;flex-direction:column;gap:2px;flex:1}
+.nav-spacer{flex:1}
+.main{min-width:0;width:100%;max-width:1320px;margin:0 auto;padding-block:18px 56px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+.strip{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:40px}
+.page-title{margin:0;font-family:var(--f-display);font-weight:800;font-size:30px;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.page{display:flex;flex-direction:column;gap:18px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:18px 20px 20px;min-width:0}
+.card.narrow{max-width:720px}
+.h.first,.card > .h:first-child{margin-top:0}
+.hint{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.link-btn{border:0;background:none;padding:0;margin-top:12px;font-size:13px;font-weight:600;color:var(--accent)}
+.link-btn:hover{text-decoration:underline}
+/* Focus page */
+.focus-grid{display:grid;grid-template-columns:minmax(230px,280px) minmax(0,1fr) minmax(240px,300px);grid-template-areas:"left timer right";gap:18px;align-items:start}
+.focus-grid .timer-card{grid-area:timer}
+.fcol-left{grid-area:left}.fcol-right{grid-area:right}
+.fcol{display:flex;flex-direction:column;gap:18px;min-width:0}
+.fcol .task-row{width:100%}
+.fcol .task-row input,.fcol .task-row select{flex:1 1 100%}
+.fcol .modes{justify-content:flex-start}
+.modes.left{justify-content:flex-start;margin-top:4px}
+.dock{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:min(100%,460px)}
+.dock-btn{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--line);background:var(--bg);border-radius:var(--r-ctl);padding:10px 4px 8px;font-size:12.5px;font-weight:600;color:var(--ink);min-height:68px;min-width:0}
+.dock-btn svg{width:19px;height:19px;color:var(--muted)}
+.dock-btn small{font-size:11px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.dock-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.dock-btn:hover{border-color:var(--muted)}
+.dock-btn.on{border-color:var(--cur);background:color-mix(in srgb,var(--cur) 10%,var(--surface))}
+.dock-btn.on svg,.dock-btn.on small{color:var(--cur)}
+.qnotes li{font-size:14px}
+#matchSlot:empty{display:none}
+#pane-cal .cal-top{margin-top:0}
+@media (max-width:460px){
+  .dock{gap:6px}
+  .dock-btn{font-size:11px;padding:9px 2px 7px}
+  .controls .primary{min-width:120px;padding:13px 22px}
+  .controls .ghost{padding:11px 14px}
+}
+/* Stats page */
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.kpis .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:14px 16px}
+.stats-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+.sess-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+#sessDayWrap > .h:first-child{font-size:13px;color:var(--ink);letter-spacing:.06em}
+/* Settings page */
+.page-settings{display:grid;grid-template-columns:170px minmax(0,780px);gap:24px;align-items:start}
+.toc{position:sticky;top:18px;display:flex;flex-direction:column;gap:2px}
+.toc a{color:var(--muted);text-decoration:none;font-weight:600;font-size:14px;padding:7px 10px;border-radius:var(--r-ctl)}
+.toc a:hover{background:var(--soft);color:var(--ink)}
+.toc a.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.set-body{display:flex;flex-direction:column;gap:18px;min-width:0}
+.set{scroll-margin-top:18px}
+.set h2{margin:0 0 4px;font-family:var(--f-display);font-weight:800;font-size:22px;letter-spacing:.02em;text-transform:uppercase}
+.keylist{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.keylist li{display:flex;align-items:center;gap:8px;font-size:14px}
+.keylist kbd{font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--bg)}
+.keylist span{color:var(--muted);margin-left:4px}
+/* Awards and Music pages use more width */
+#page-awards .ach-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:8px}
+#page-music .sp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+#page-music .sp-sugs{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+#page-music .sp-add{flex-direction:row;flex-wrap:wrap}
+#page-music .sp-add input{flex:1 1 260px}
+#page-music .sp-add button{align-self:stretch}
+@media (max-width:1180px){
+  .focus-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"timer timer" "left right"}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  .stats-grid{grid-template-columns:minmax(0,1fr)}
+  .page-settings{grid-template-columns:minmax(0,1fr)}
+  .toc{position:static;flex-direction:row;flex-wrap:wrap}
+}
+@media (max-width:760px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;top:auto;left:0;right:0;bottom:0;height:auto;flex-direction:row;gap:0;padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px));border-right:0;border-top:1px solid var(--line);z-index:30}
+  .side .brand{display:none}
+  .nav-btn,.more-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;font-size:11px;flex:1;min-width:0}
+  .nav-btn span{flex:none}
+  .nav-btn kbd{display:none}
+  .nav-extra{display:none;position:absolute;right:8px;bottom:calc(100% + 8px);min-width:190px;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.2)}
+  .side.more-open .nav-extra{display:flex}
+  .nav-extra .nav-btn{flex-direction:row;font-size:14px;padding:11px 12px;gap:11px}
+  .nav-spacer{display:none}
+  .more-btn.on{color:var(--accent)}
+  .main{padding-block:14px calc(96px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .page-title{font-size:24px}
+  .focus-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"timer" "left" "right"}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpis .stat:last-child{grid-column:1/-1}
+  .card{padding:16px}
+  #page-awards .ach-list,#page-music .sp-grid{grid-template-columns:minmax(0,1fr)}
+  .ach-pop{bottom:calc(84px + env(safe-area-inset-bottom,0px));top:auto}
+  .toast{bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+}
 .today{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;flex-wrap:wrap}
 .today b{color:var(--ink);font-variant-numeric:tabular-nums}
 .dots{display:inline-flex;gap:4px;align-items:center}
@@ -100,17 +202,12 @@ body:not(.m-off) .primary:active,body:not(.m-off) .ghost:active,body:not(.m-off)
 .keys{margin:0;font-size:12px;color:var(--muted);text-align:center}
 .keys kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;background:var(--bg)}
 
-body.focus-mode .top,body.focus-mode .panel,body.focus-mode .keys,body.focus-mode .modes{display:none}
-body.focus-mode .grid{grid-template-columns:minmax(0,1fr)}
+body.focus-mode .side,body.focus-mode .strip,body.focus-mode .fcol{display:none}
+body.focus-mode .shell{grid-template-columns:minmax(0,1fr)}
+body.focus-mode .focus-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"timer"}
 body.focus-mode .timer-card{border-color:transparent;background:transparent;padding-top:6vh}
 body.focus-mode .dial-wrap{width:min(100%,calc(460px * var(--tscale)))}
 
-/* Panel */
-.panel{overflow:hidden}
-.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto}
-.tab{flex:1 0 auto;background:none;border:0;padding:14px 10px 12px;font-weight:600;font-size:13.5px;color:var(--muted);border-bottom:2px solid transparent}
-.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-.pane{padding:6px 20px 20px}
 .lead{color:var(--muted);font-size:14px;margin:12px 0 4px}
 .row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:0}
@@ -359,11 +456,7 @@ body.m-full[data-run="on"][data-phase="break"] .dial-wrap{animation:breathe 6s e
 .dial-wrap.pop,body.m-full[data-run="on"][data-phase="break"] .dial-wrap.pop{animation:pop .55s cubic-bezier(.3,1.6,.5,1)}
 @keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.06)}100%{transform:scale(1)}}
 body:not(.m-off) .phase,body:not(.m-off) .arc,body:not(.m-off) .primary,body:not(.m-off) .bar div{transition-property:color,stroke,background-color,stroke-dashoffset,width,filter;transition-duration:.6s}
-.tabs{position:relative}
-.tab-ink{position:absolute;left:0;bottom:-1px;height:2px;background:var(--accent);width:0;transition:transform .35s cubic-bezier(.3,.9,.3,1),width .35s cubic-bezier(.3,.9,.3,1);pointer-events:none}
-body:not(.m-off) .tab[aria-selected="true"]{border-bottom-color:transparent}
-body.m-off .tab-ink{display:none}
-body:not(.m-off) .pane.pane-in{animation:paneIn .3s ease}
+body:not(.m-off) .page.pane-in{animation:paneIn .3s ease}
 @keyframes paneIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 body:not(.m-off) .week.grow .stk{animation:grow .6s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom}
 body:not(.m-off) .week.grow .col:nth-child(2) .stk{animation-delay:.04s}
@@ -428,19 +521,34 @@ body.m-off .ach-pop{animation:none!important}
 @media (prefers-reduced-motion: reduce){.arc,.bar div{transition:none}}
 </style>
 
-<div class="app" id="app">
-  <header class="top">
+<div class="app shell" id="app">
+  <nav class="side" id="nav" aria-label="Pages">
     <div class="brand">
       <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M16 17V10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M12 3h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-      Focus Bench
+      <span>Focus Bench</span>
     </div>
-    <div class="today"><span><b id="todayMin">0m</b> focused today</span><span class="dots" id="goalDots" title="Daily goal"></span><button class="ach-btn" id="achBtn" title="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><b>0</b><span>/0</span></button></div>
-  </header>
+    <button class="nav-btn" data-page="focus" data-key="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg><span>Focus</span><kbd>1</kbd></button>
+    <button class="nav-btn" data-page="stats" data-key="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Stats</span><kbd>2</kbd></button>
+    <!--RANKED-NAV-->
+    <button class="nav-btn" data-page="awards" data-key="4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><span>Awards</span><kbd>4</kbd></button>
+    <button class="nav-btn more-btn" id="moreBtn" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></button>
+    <div class="nav-extra" id="navExtra">
+      <button class="nav-btn" data-page="music" data-key="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Music</span><kbd>5</kbd></button>
+      <button class="nav-btn" data-page="notes" data-key="6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg><span>Notes</span><kbd>6</kbd></button>
+      <span class="nav-spacer"></span>
+      <button class="nav-btn" data-page="settings" data-key="7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span><kbd>7</kbd></button>
+    </div>
+  </nav>
 
-  <main class="grid">
-    <section class="timer-card" aria-label="Timer">
-      <div class="modes" role="tablist" id="modes"></div>
+  <div class="main">
+    <header class="strip">
+      <h1 class="page-title" id="pageTitle">Focus</h1>
+      <div class="today"><!--STREAK-CHIP--><span class="today-min"><b id="todayMin">0m</b> today</span><span class="dots" id="goalDots" title="Daily goal"></span><!--RANK-CHIP--><button class="ach-btn" id="achBtn" title="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><b>0</b><span>/0</span></button></div>
+    </header>
 
+    <section class="page page-focus" id="page-focus" data-title="Focus">
+      <div class="focus-grid">
+        <section class="timer-card" aria-label="Timer">
       <div class="dial-wrap">
         <svg id="dial" viewBox="0 0 320 320" aria-hidden="true">
           <g class="ticks" id="ticks"></g>
@@ -456,55 +564,174 @@ body.m-off .ach-pop{animation:none!important}
         </div>
       </div>
       <div class="bar" id="bar"><div id="barFill"></div></div>
-
-      <div class="task-row">
-        <input id="task" type="text" placeholder="What are you working on?" autocomplete="off" maxlength="80">
-        <select id="tagSel" aria-label="Activity"></select>
-      </div>
-
       <div class="controls">
         <button class="ghost" id="resetBtn">Reset</button>
         <button class="primary" id="startBtn">Start</button>
         <button class="ghost" id="skipBtn">Skip</button>
       </div>
-      <div class="controls">
-        <button class="outline" id="miniBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="12" width="7" height="5" rx="1" fill="currentColor"/></svg><span>Pop out mini clock</span></button>
-        <button class="outline" id="focusBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Focus mode</span></button>
-      </div>
+          <div class="dock" role="group" aria-label="Quick controls">
+            <button class="dock-btn" id="dockSound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg><span>Sound</span><small id="dockSoundState">Off</small></button>
+            <button class="dock-btn" id="dockMusic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Music</span><small id="dockMusicState">None</small></button>
+            <button class="dock-btn" id="miniBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="12" width="7" height="5" rx="1" fill="currentColor"/></svg><span>Mini clock</span><small>Pop out</small></button>
+            <button class="dock-btn" id="focusBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Focus mode</span><small>Full screen</small></button>
+          </div>
       <div class="sp-wrap" id="spWrap" hidden>
         <div class="sp-now" id="spNow"></div>
         <div id="spPlayer"></div>
         <a class="outline sp-open" id="spOpen" target="_blank" rel="noopener" hidden></a>
       </div>
-      <p class="keys"><kbd>Space</kbd> start/pause · <kbd>R</kbd> reset · <kbd>S</kbd> skip · <kbd>M</kbd> mini clock · <kbd>F</kbd> focus mode</p>
+        </section>
+
+        <aside class="fcol fcol-left">
+          <div class="card">
+            <div class="h first">Now working on</div>
+            <div class="task-row">
+              <input id="task" type="text" placeholder="What are you working on?" autocomplete="off" maxlength="80">
+              <select id="tagSel" aria-label="Activity"></select>
+            </div>
+            <div class="h">Timer mode</div>
+            <div class="modes" role="tablist" id="modes"></div>
+            <p class="hint" id="modeHintFocus"></p>
+            <button class="link-btn" data-go="settings" data-sec="set-timer">Change lengths and goals →</button>
+          </div>
+        </aside>
+
+        <aside class="fcol fcol-right">
+          <div id="matchSlot"></div>
+          <div class="card">
+            <div class="h first">Parking lot</div>
+            <div class="addrow"><input id="qNoteIn" placeholder="Jot a stray thought…" maxlength="140"><button class="small-btn" id="qNoteAdd">Park</button></div>
+            <ul class="notes qnotes" id="qNoteList"></ul>
+            <button class="link-btn" data-go="notes">All notes →</button>
+          </div>
+        </aside>
+      </div>
     </section>
 
-    <aside class="panel" aria-label="Settings">
-      <nav class="tabs" role="tablist">
-        <span class="tab-ink" id="tabInk" aria-hidden="true"></span>
-        <button class="tab" data-tab="timer" aria-selected="true">Timer</button>
-        <button class="tab" data-tab="sound" aria-selected="false">Sound</button>
-        <button class="tab" data-tab="look" aria-selected="false">Look</button>
-        <button class="tab" data-tab="log" aria-selected="false">Log</button>
-        <button class="tab" data-tab="cal" aria-selected="false">Calendar</button>
-        <button class="tab" data-tab="music" aria-selected="false">Music</button>
-        <button class="tab" data-tab="notes" aria-selected="false">Notes</button>
-        <button class="tab" data-tab="awards" aria-selected="false">Awards</button>
-      </nav>
+    <section class="page" id="page-stats" data-title="Stats" hidden>
+      <div class="kpis">
+        <div class="stat"><b id="stToday">0m</b><span>today</span></div>
+        <div class="stat"><b id="stBlocks">0/6</b><span>blocks vs goal</span></div>
+        <div class="stat"><b id="stStreak">0</b><span>day streak</span></div>
+        <div class="stat"><b id="stWeek">0m</b><span>this week</span></div>
+        <div class="stat"><b id="stBest">0m</b><span>best day ever</span></div>
+      </div>
+      <div class="stats-grid">
+        <div class="card" id="pane-cal">
+        <div class="cal-top"><div class="seg" id="calMode" role="group" aria-label="Calendar view"></div></div>
+        <div class="cal-head">
+          <button class="small-btn" id="calPrev" aria-label="Previous month">‹</button>
+          <b id="calTitle"></b>
+          <button class="small-btn" id="calNext" aria-label="Next month">›</button>
+          <button class="small-btn" id="calToday">Today</button>
+        </div>
+        <div class="cal-dow" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-week" id="calWeek"></div>
+        <p class="cal-month" id="calMonthSum"></p>
+        </div>
+        <div class="card" id="pane-log">
+        <div class="h first">Last 7 days</div>
+        <div class="week" id="week"></div>
+        <div class="days" id="days"></div>
+        <div class="legend" id="legend"></div>
+        <div class="h">This week by activity</div>
+        <div id="tagBars"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sess-top"><div class="h first">Sessions</div><div class="seg" id="sessScope" role="group" aria-label="Which sessions"><button data-v="day" aria-pressed="true">Selected day</button><button data-v="all" aria-pressed="false">All sessions</button></div></div>
+        <div id="sessDayWrap">
+        <div class="h" id="calDayTitle">Today</div>
+        <div id="calDayBreak"></div>
+        <div class="sl" id="calSessions"><div class="sl-list"></div><div class="sl-bar sess-bar"></div></div>
+        </div>
+        <div id="sessAllWrap" hidden>
+        <div class="sess-head" hidden><select id="sessDay" aria-label="Which day's sessions to show"></select></div>
+        <div class="sl" id="logSessions"><div class="sl-list"></div><div class="sl-bar sess-bar"></div></div>
+        </div>
+      </div>
+    </section>
 
-      <div class="pane" id="pane-timer">
+    <!--RANKED-PAGE-->
+
+    <section class="page" id="page-awards" data-title="Awards" hidden>
+      <div class="card" id="pane-awards">
+
+        <div class="ach-sum" id="achSum"></div>
+        <div id="achNear"><div class="h">Closest to unlocking</div><ul class="ach-list" id="achNearList"></ul></div>
+        <div class="ach-filters"><div class="seg" id="achFilter"></div><select id="achCatSel" aria-label="Category"></select></div>
+        <div id="achList"></div>
+      </div>
+    </section>
+
+    <section class="page" id="page-music" data-title="Music" hidden>
+      <div class="card" id="pane-music">
+
+        <div class="h">Your music</div>
+        <p class="lead">Click one to put it in the player on the Focus page.</p>
+        <ul class="sp-grid" id="spList"></ul>
+
+        <div id="spSuggestWrap">
+          <div class="h">Study playlists from Spotify</div>
+          <div class="sp-sugs" id="spSuggest"></div>
+        </div>
+
+        <div class="h">Add your own</div>
+        <p class="lead">Paste a link to a playlist, album, song or podcast. In Spotify, use Share, then Copy link. Playlists must be public.</p>
+        <div class="sp-add">
+          <input id="spIn" type="url" placeholder="https://open.spotify.com/playlist/…" autocomplete="off">
+          <input id="spName" type="text" placeholder="Name it, e.g. My lo-fi mix" maxlength="40" autocomplete="off">
+          <button class="small-btn" id="spAdd">Add to my music</button>
+        </div>
+
+        <div class="h">Music for each activity</div>
+        <p class="lead">When you pick an activity next to the timer, its music goes in the player.</p>
+        <div id="spByTag"></div>
+
+        <div class="h">Let the timer control the music</div>
+        <div class="row"><label for="spAuto">Play when a focus block starts</label><input type="checkbox" class="switch" id="spAuto"></div>
+        <div class="row"><span>During breaks</span><div class="seg" id="spBreakSeg"></div></div>
+        <div class="row" id="spBreakPickRow"><label for="spBreakPick">Break music</label><select id="spBreakPick"></select></div>
+        <div class="row"><label for="spTimer">Pause when I pause or reset the timer</label><input type="checkbox" class="switch" id="spTimer"></div>
+        <div class="row"><span>Player size</span><div class="seg" id="spSizeSeg"></div></div>
+        <p class="lead" id="spNote"></p>
+        <div class="confirm"><button class="small-btn" id="spTry" hidden></button></div>
+      </div>
+    </section>
+
+    <section class="page" id="page-notes" data-title="Notes" hidden>
+      <div class="card narrow" id="pane-notes">
+
+        <p class="lead">A thought pops up mid-session? Park it here and get back to work. Deal with it on your break.</p>
+        <div class="addrow"><input id="noteIn" placeholder="Email TA about lab, buy printer paper…" maxlength="140"><button class="small-btn" id="noteAdd">Park it</button></div>
+        <ul class="notes" id="noteList"></ul>
+        <div class="confirm"><button class="small-btn" id="noteClear">Clear checked</button></div>
+      </div>
+    </section>
+
+    <section class="page page-settings" id="page-settings" data-title="Settings" hidden>
+      <nav class="toc" aria-label="Settings sections">
+        <a href="#set-timer" data-sec="set-timer">Timer</a><a href="#set-activities" data-sec="set-activities">Activities</a><a href="#set-sound" data-sec="set-sound">Sound</a><a href="#set-look" data-sec="set-look">Look</a><a href="#set-backup" data-sec="set-backup">Backup</a><a href="#set-keys" data-sec="set-keys">Shortcuts</a>
+      </nav>
+      <div class="set-body">
+        <section class="card set" id="set-timer"><h2>Timer</h2>
+          <p class="lead">Showing settings for <b id="setModeName"></b>. Pick another mode to change its lengths.</p>
+          <div class="modes left" id="modesSet"></div>
         <p class="lead" id="modeHint"></p>
         <div id="modeFields"></div>
         <div class="h">Flow between blocks</div>
         <div class="row" id="rowAutoBreak"><label for="autoBreak">Start breaks automatically</label><input type="checkbox" class="switch" id="autoBreak"></div>
         <div class="row" id="rowAutoFocus"><label for="autoFocus">Start next focus block automatically</label><input type="checkbox" class="switch" id="autoFocus"></div>
         <div class="row"><label for="goal">Daily goal<span class="sub">Focus blocks per day</span></label><input type="number" id="goal" min="1" max="30"></div>
-        <div class="h">Activities</div>
+        </section>
+        <section class="card set" id="set-activities"><h2>Activities</h2>
+          <p class="lead">What you pick next to the timer. Each one gets its own color in Stats.</p>
         <div class="tags" id="tagList"></div>
         <div class="addrow"><input id="newTag" placeholder="Add an activity" maxlength="30"><button class="small-btn" id="addTag">Add</button></div>
-      </div>
+        </section>
+        <section class="card set" id="set-sound"><h2>Sound</h2>
 
-      <div class="pane" id="pane-sound" hidden>
         <div class="h">End-of-block chime</div>
         <div class="row"><span>Sound</span><div class="seg" id="chimeSeg"></div></div>
         <div class="row"><label for="volume">Volume</label><input type="range" id="volume" min="0" max="1" step="0.05"></div>
@@ -517,9 +744,9 @@ body.m-off .ach-pop{animation:none!important}
         <div class="row"><label for="ambVol">Volume</label><input type="range" id="ambVol" min="0" max="1" step="0.05"></div>
         <div class="row"><label for="ambFocusOnly">Only during focus blocks<span class="sub">Goes quiet on breaks</span></label><input type="checkbox" class="switch" id="ambFocusOnly"></div>
         <div class="row"><span>Listen without starting the timer</span><button class="small-btn" id="ambPreview">Preview</button></div>
-      </div>
+        </section>
+        <section class="card set" id="set-look"><h2>Look</h2>
 
-      <div class="pane" id="pane-look" hidden>
         <div class="h">Theme</div>
         <div class="themes" id="themeGrid"></div>
 
@@ -551,24 +778,8 @@ body.m-off .ach-pop{animation:none!important}
         <div class="row"><span>Window size<span class="sub">You can also drag the corner to resize it</span></span><div class="seg" id="miniSeg"></div></div>
         <p class="lead">The mini clock floats on top of your other windows and keeps counting while you work in other apps. It works in Chrome and Edge. Safari and Firefox don't allow it.</p>
         <div class="confirm"><button class="small-btn" id="resetLook">Reset look to default</button></div>
-      </div>
-
-      <div class="pane" id="pane-log" hidden>
-        <div class="stats">
-          <div class="stat"><b id="stToday">0m</b><span>today</span></div>
-          <div class="stat"><b id="stBlocks">0/6</b><span>blocks vs goal</span></div>
-          <div class="stat"><b id="stStreak">0</b><span>day streak</span></div>
-        </div>
-        <div class="h">Last 7 days</div>
-        <div class="week" id="week"></div>
-        <div class="days" id="days"></div>
-        <div class="legend" id="legend"></div>
-        <div class="h">This week by activity</div>
-        <div id="tagBars"></div>
-        <div class="sess-head"><div class="h">Sessions</div><select id="sessDay" aria-label="Which day's sessions to show"></select></div>
-        <div class="sl" id="logSessions"><div class="sl-list"></div><div class="sl-bar sess-bar"></div></div>
-
-        <div class="h">Back up or move your data</div>
+        </section>
+        <section class="card set" id="set-backup"><h2>Back up or move your data</h2>
         <p class="lead">Each copy of Focus Bench (the downloaded file, the website, the page in Claude) keeps its own history in your browser. To move it, make a backup in the copy that has your history, then restore it in the other one.</p>
         <div class="confirm"><button class="small-btn" id="bkCopy">Copy backup</button><button class="small-btn" id="bkDownload">Download backup file</button></div>
         <textarea id="bkOut" class="bk-text" rows="3" readonly hidden aria-label="Your backup"></textarea>
@@ -577,72 +788,16 @@ body.m-off .ach-pop{animation:none!important}
           <label class="bk-check"><input type="checkbox" id="bkSettings" checked> Also bring over settings (theme, activities, timer lengths, music)</label>
           <div class="confirm"><button class="small-btn" id="bkRestore">Restore pasted backup</button><label class="small-btn bk-file" id="bkFileLbl">Restore from a file<input type="file" id="bkFile" accept=".json,.txt,application/json,text/plain"></label></div>
         </div>
+        </section>
+        <section class="card set" id="set-keys"><h2>Keyboard shortcuts</h2>
+          <ul class="keylist">
+            <li><kbd>Space</kbd><span>Start or pause</span></li><li><kbd>R</kbd><span>Reset</span></li><li><kbd>S</kbd><span>Skip, or Done in Stopwatch</span></li>
+            <li><kbd>M</kbd><span>Mini clock</span></li><li><kbd>F</kbd><span>Focus mode</span></li><li><kbd>1</kbd>–<kbd>7</kbd><span>Switch pages</span></li>
+          </ul>
+        </section>
       </div>
-
-      <div class="pane" id="pane-cal" hidden>
-        <div class="cal-top"><div class="seg" id="calMode" role="group" aria-label="Calendar view"></div></div>
-        <div class="cal-head">
-          <button class="small-btn" id="calPrev" aria-label="Previous month">‹</button>
-          <b id="calTitle"></b>
-          <button class="small-btn" id="calNext" aria-label="Next month">›</button>
-          <button class="small-btn" id="calToday">Today</button>
-        </div>
-        <div class="cal-dow" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
-        <div class="cal-grid" id="calGrid"></div>
-        <div class="cal-week" id="calWeek"></div>
-        <p class="cal-month" id="calMonthSum"></p>
-        <div class="h" id="calDayTitle">Today</div>
-        <div id="calDayBreak"></div>
-        <div class="sl" id="calSessions"><div class="sl-list"></div><div class="sl-bar sess-bar"></div></div>
-      </div>
-
-      <div class="pane" id="pane-music" hidden>
-        <div class="h">Your music</div>
-        <p class="lead">Click one to put it in the player under the timer.</p>
-        <ul class="sp-grid" id="spList"></ul>
-
-        <div id="spSuggestWrap">
-          <div class="h">Study playlists from Spotify</div>
-          <div class="sp-sugs" id="spSuggest"></div>
-        </div>
-
-        <div class="h">Add your own</div>
-        <p class="lead">Paste a link to a playlist, album, song or podcast. In Spotify, use Share, then Copy link. Playlists must be public.</p>
-        <div class="sp-add">
-          <input id="spIn" type="url" placeholder="https://open.spotify.com/playlist/…" autocomplete="off">
-          <input id="spName" type="text" placeholder="Name it, e.g. My lo-fi mix" maxlength="40" autocomplete="off">
-          <button class="small-btn" id="spAdd">Add to my music</button>
-        </div>
-
-        <div class="h">Music for each activity</div>
-        <p class="lead">When you pick an activity next to the timer, its music goes in the player.</p>
-        <div id="spByTag"></div>
-
-        <div class="h">Let the timer control the music</div>
-        <div class="row"><label for="spAuto">Play when a focus block starts</label><input type="checkbox" class="switch" id="spAuto"></div>
-        <div class="row"><span>During breaks</span><div class="seg" id="spBreakSeg"></div></div>
-        <div class="row" id="spBreakPickRow"><label for="spBreakPick">Break music</label><select id="spBreakPick"></select></div>
-        <div class="row"><label for="spTimer">Pause when I pause or reset the timer</label><input type="checkbox" class="switch" id="spTimer"></div>
-        <div class="row"><span>Player size</span><div class="seg" id="spSizeSeg"></div></div>
-        <p class="lead" id="spNote"></p>
-        <div class="confirm"><button class="small-btn" id="spTry" hidden></button></div>
-      </div>
-
-      <div class="pane" id="pane-awards" hidden>
-        <div class="ach-sum" id="achSum"></div>
-        <div id="achNear"><div class="h">Closest to unlocking</div><ul class="ach-list" id="achNearList"></ul></div>
-        <div class="ach-filters"><div class="seg" id="achFilter"></div><select id="achCatSel" aria-label="Category"></select></div>
-        <div id="achList"></div>
-      </div>
-
-      <div class="pane" id="pane-notes" hidden>
-        <p class="lead">A thought pops up mid-session? Park it here and get back to work. Deal with it on your break.</p>
-        <div class="addrow"><input id="noteIn" placeholder="Email TA about lab, buy printer paper…" maxlength="140"><button class="small-btn" id="noteAdd">Park it</button></div>
-        <ul class="notes" id="noteList"></ul>
-        <div class="confirm"><button class="small-btn" id="noteClear">Clear checked</button></div>
-      </div>
-    </aside>
-  </main>
+    </section>
+  </div>
 </div>
 <canvas id="fxBack" class="fx" aria-hidden="true"></canvas>
 <canvas id="fxFront" class="fx front" aria-hidden="true"></canvas>
@@ -891,7 +1046,8 @@ function renderAll(){
   b.classList.remove('m-full','m-subtle','m-off'); b.classList.add('m-' + motion());
   applyLook();
 
-  $('#modes').innerHTML = Object.entries(MODES).map(([k,v]) => `<button class="chip" role="tab" data-mode="${k}" aria-selected="${k===P.mode}">${v.name}</button>`).join('');
+  $('#modes').innerHTML = $('#modesSet').innerHTML = Object.entries(MODES).map(([k,v]) => `<button class="chip" role="tab" data-mode="${k}" aria-selected="${k===P.mode}">${v.name}</button>`).join('');
+  if ($('#setModeName')) $('#setModeName').textContent = MODES[P.mode].name;
   $('#phaseLabel').textContent = phaseName();
   const r = $('#rounds');
   if ((P.mode === 'pomodoro' || P.mode === 'custom') && P.modes[P.mode].rounds > 0){
@@ -905,9 +1061,10 @@ function renderAll(){
 
   $('#startBtn').textContent = S.running ? 'Pause' : notStarted() ? (S.phase === 'focus' ? 'Start' : 'Start break') : 'Resume';
   $('#skipBtn').textContent = P.mode === 'stopwatch' ? 'Done' : countUp() ? 'Take break' : P.mode === 'timebox' ? 'Finish' : S.phase === 'focus' ? 'Skip' : 'End break';
-  $('#miniBtn span').textContent = miniOpen() ? 'Close mini clock' : 'Pop out mini clock';
+  $('#miniBtn span').textContent = 'Mini clock';
   $('#miniBtn').classList.toggle('on', miniOpen());
-  $('#focusBtn span').textContent = b.classList.contains('focus-mode') ? 'Exit focus mode' : 'Focus mode';
+  $('#focusBtn span').textContent = 'Focus mode'; $('#focusBtn small').textContent = b.classList.contains('focus-mode') ? 'Exit' : 'Full screen'; $('#focusBtn').classList.toggle('on', b.classList.contains('focus-mode'));
+  if (typeof renderDock === 'function' && $('#dockSound')) renderDock();
   renderTime();
 }
 function changed(){ saveState(); renderAll(); updateAmbient(); updateMedia(); musicSync(); }
@@ -951,7 +1108,7 @@ function numRow(id, label, sub, val, min, max){
 }
 function renderTimerPane(){
   const m = P.mode, c = P.modes[m];
-  $('#modeHint').textContent = MODES[m].hint;
+  $('#modeHint').textContent = MODES[m].hint; $('#modeHintFocus').textContent = MODES[m].hint;
   let h = '';
   if (m === 'pomodoro' || m === 'custom'){
     h += numRow('f-focus','Focus length','minutes',c.focus,1,240);
@@ -1028,6 +1185,7 @@ function renderLookSound(){
 /* ---------- log ---------- */
 const dayKey = d => { d = new Date(d); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
 function renderLog(){
+  renderKpis();
   if (typeof achQueue === 'function') achQueue();
   const today = dayKey(Date.now());
   const todays = LOG.filter(s => dayKey(s.t) === today);
@@ -1631,11 +1789,7 @@ function popDial(){
   if (motion() === 'off') return;
   const d = $('.dial-wrap'); d.classList.remove('pop'); void d.offsetWidth; d.classList.add('pop');
 }
-function moveTabInk(){
-  const ink = $('#tabInk'), t = document.querySelector('.tab[aria-selected="true"]');
-  if (!ink || !t) return;
-  ink.style.width = t.offsetWidth + 'px'; ink.style.transform = `translateX(${t.offsetLeft}px)`;
-}
+function moveTabInk(){}
 addEventListener('resize', moveTabInk);
 $('.dial-wrap').addEventListener('animationend', e => { if (e.animationName === 'pop') e.currentTarget.classList.remove('pop'); });
 // started on the next frame, after the whole script (including the sound engine) has loaded
@@ -2013,8 +2167,6 @@ function renderAchHeader(){
   const n = Object.keys(ACH.u).length;
   $('#achBtn b').textContent = n; $('#achBtn span').textContent = `/${ACHS.length}`;
 }
-function openTab(name){ const t = document.querySelector(`.tab[data-tab="${name}"]`); if (t) t.click(); }
-$('#achBtn').onclick = () => { openTab('awards'); document.querySelector('.panel').scrollIntoView({behavior: 'smooth', block: 'start'}); };
 let achFilter = 'all', achCat = 'all';
 function achProgressText(a, v){
   const f = x => a.u === 'h' ? (x >= 60 ? `${Math.floor(x / 60)}h${x % 60 ? ' ' + (x % 60) + 'm' : ''}` : `${Math.round(x)}m`) : a.u === 'm' ? fmtMin(Math.round(x)) : a.u === 'd' ? `${x} day${x===1?'':'s'}` : x.toLocaleString();
@@ -2029,7 +2181,7 @@ function achCard(a, st){
     <span class="ach-tier" style="--t:${T.c}">${T.name}<em>+${T.pts}</em></span></li>`;
 }
 function renderAwards(){
-  if (!$('#achList') || $('#pane-awards').hidden) return;
+  if (!$('#achList') || $('#page-awards').hidden) return;
   const st = achStats(), got = ACHS.filter(a => ACH.u[a.id]), pts = got.reduce((n, a) => n + TIERS[a.tier].pts, 0), maxPts = ACHS.reduce((n, a) => n + TIERS[a.tier].pts, 0);
   $('#achSum').innerHTML = `<div class="ach-big"><b>${got.length}</b><span>/ ${ACHS.length} unlocked</span></div><div class="ach-pts"><b>${pts.toLocaleString()}</b><span>/ ${maxPts.toLocaleString()} points</span></div>
     <div class="ach-bar"><i style="width:${got.length / ACHS.length * 100}%"></i></div>
@@ -2057,6 +2209,7 @@ $('#achCatSel').onchange = e => { achCat = e.target.value; renderAwards(); };
 function renderNotes(){
   $('#noteList').innerHTML = NOTES.map(n => `<li class="${n.done?'done':''}"><input type="checkbox" data-id="${n.id}" ${n.done?'checked':''} aria-label="Done"><span>${esc(n.text)}</span><button data-del="${n.id}" aria-label="Delete">×</button></li>`).join('')
     || '<li style="border:0"><span class="lead" style="margin:0">Nothing parked.</span></li>';
+  renderQuickNotes();
 }
 const saveNotes = () => store.set('fb.notes', NOTES);
 
@@ -2441,22 +2594,15 @@ $('#resetBtn').onclick = reset;
 $('#skipBtn').onclick = skip;
 $('#miniBtn').onclick = toggleMini;
 $('#focusBtn').onclick = toggleFocusMode;
-$('#modes').onclick = e => {
+function onModeClick(e){
   const b = e.target.closest('[data-mode]'); if (!b || b.dataset.mode === P.mode) return;
   if (S.running && S.phase === 'focus'){ const el = focusElapsed(); if (el >= 60000) logFocus(el); }
   P.mode = b.dataset.mode; saveP(); S.flowBreakMin = 5; resetCycle(); renderTimerPane();
-};
+}
+$('#modes').onclick = $('#modesSet').onclick = onModeClick;
 $('#task').value = P.task;
 $('#task').addEventListener('input', e => { P.task = e.target.value; saveP(); updateMedia(); });
 $('#tagSel').addEventListener('change', e => { P.tag = e.target.value; saveP(); });
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
-  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t));
-  document.querySelectorAll('.pane').forEach(p => { const on = p.id === 'pane-' + t.dataset.tab; if (on && p.hidden){ p.classList.remove('pane-in'); void p.offsetWidth; p.classList.add('pane-in'); } p.hidden = !on; });
-  moveTabInk();
-  try { t.scrollIntoView({block:'nearest', inline:'nearest', behavior:'smooth'}); } catch(e){}
-  if (t.dataset.tab === 'awards'){ achBump('awards'); renderAwards(); }
-  if (t.dataset.tab === 'log'){ const w = $('#week'); w.classList.remove('grow'); void w.offsetWidth; w.classList.add('grow'); }
-});
 $('#autoBreak').onchange = e => { P.autoBreak = e.target.checked; saveP(); };
 $('#autoFocus').onchange = e => { P.autoFocus = e.target.checked; saveP(); };
 $('#goal').onchange = e => { P.goal = Math.min(30, Math.max(1, parseInt(e.target.value,10) || 6)); e.target.value = P.goal; saveP(); renderLog(); };
@@ -2496,6 +2642,8 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || t.matches('input, textarea, select')) return;
   const k = e.key.toLowerCase();
   if (' rsmf'.includes(k) && k) achBump('keys');
+  if (/^[1-7]$/.test(k)){ const b = document.querySelector(`.nav-btn[data-key="${k}"]`); if (b) showPage(b.dataset.page); return; }
+  if (k === 'escape') $('#nav').classList.remove('more-open');
   if (k === ' '){ if (t.closest('button')) return; e.preventDefault(); toggle(); }
   else if (k === 'r') reset();
   else if (k === 's') skip();
@@ -2504,12 +2652,107 @@ document.addEventListener('keydown', e => {
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderLookSound(); });
 
+/* ---------- pages & navigation ---------- */
+const PAGE_ALIAS = {log:'stats', cal:'stats', timer:['settings','set-timer'], sound:['settings','set-sound'], look:['settings','set-look']};
+function showPage(name, sec){
+  const el = $('#page-' + name); if (!el) return;
+  document.querySelectorAll('.page').forEach(p => {
+    const on = p === el;
+    if (on && p.hidden){ p.classList.remove('pane-in'); void p.offsetWidth; p.classList.add('pane-in'); }
+    p.hidden = !on;
+  });
+  document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.dataset.page === name ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  $('#moreBtn').classList.toggle('on', ['music','notes','settings'].includes(name));
+  $('#nav').classList.remove('more-open');
+  $('#pageTitle').textContent = el.dataset.title;
+  document.body.dataset.page = name;
+  if (P.page !== name){ P.page = name; saveP(); }
+  if (name === 'stats'){ renderLog(); const w = $('#week'); w.classList.remove('grow'); void w.offsetWidth; w.classList.add('grow'); }
+  if (name === 'awards'){ achBump('awards'); renderAwards(); }
+  if (typeof onPageShown === 'function') onPageShown(name);
+  if (sec){ const t = $('#' + sec); if (t) setTimeout(() => t.scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}), 30); }
+  else window.scrollTo(0, 0);
+}
+function openTab(name){ const a = PAGE_ALIAS[name] || name; Array.isArray(a) ? showPage(a[0], a[1]) : showPage(a); }
+$('#nav').addEventListener('click', e => {
+  const b = e.target.closest('.nav-btn[data-page]');
+  if (b){ showPage(b.dataset.page); return; }
+  if (e.target.closest('#moreBtn')) $('#nav').classList.toggle('more-open');
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('#nav')) $('#nav').classList.remove('more-open');
+  const g = e.target.closest('[data-go]');
+  if (g){ e.preventDefault(); showPage(g.dataset.go, g.dataset.sec); }
+  const a = e.target.closest('.toc a[data-sec]');
+  if (a){ e.preventDefault(); $('#' + a.dataset.sec).scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); }
+});
+// highlight the settings section you're looking at
+if ('IntersectionObserver' in window){
+  const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) document.querySelectorAll('.toc a').forEach(a => a.classList.toggle('on', a.dataset.sec === en.target.id)); }), {rootMargin: '-20% 0px -70% 0px'});
+  document.querySelectorAll('.set').forEach(x => io.observe(x));
+}
+$('#achBtn').onclick = () => showPage('awards');
+
+/* Stats summary tiles */
+function renderKpis(){
+  if (!$('#stWeek')) return;
+  const wk = dayKey(startOfWeek(new Date())), byDay = {};
+  LOG.forEach(s => { const k = dayKey(s.t); byDay[k] = (byDay[k] || 0) + s.min; });
+  $('#stWeek').textContent = fmtMin(Object.entries(byDay).filter(([k]) => k >= wk).reduce((n, [, m]) => n + m, 0));
+  $('#stBest').textContent = fmtMin(Math.max(0, ...Object.values(byDay)));
+}
+$('#sessScope').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const all = b.dataset.v === 'all';
+  $('#sessScope').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  $('#sessDayWrap').hidden = all; $('#sessAllWrap').hidden = !all;
+  if (all){ sessView = 'all'; logList.reset(); logList.render(); }
+};
+
+/* quick dock under the timer */
+function renderDock(){
+  const sOn = P.ambient !== 'off', sNames = {rain:'Rain', storm:'Storm', white:'White', pink:'Pink', brown:'Brown'};
+  $('#dockSound').classList.toggle('on', sOn);
+  $('#dockSoundState').textContent = sOn ? sNames[P.ambient] + (S.running || ambPreview ? ' · on' : ' · ready') : 'Off';
+  const it = spWanted().it, playing = it && canEmbed() && !spPaused;
+  $('#dockMusic').classList.toggle('on', !!playing);
+  $('#dockMusicState').textContent = !it ? 'Add some' : !canEmbed() ? 'Open' : playing ? 'Playing' : 'Paused';
+  $('#miniBtn').classList.toggle('on', miniOpen());
+  $('#miniBtn small').textContent = miniOpen() ? 'Open' : 'Pop out';
+}
+$('#dockSound').onclick = () => {
+  if (P.ambient === 'off') P.ambient = P.lastAmb || 'rain'; else { P.lastAmb = P.ambient; P.ambient = 'off'; }
+  saveP(); ac(); prewarm(); updateAmbient(); renderLookSound(); renderDock();
+  toast(P.ambient === 'off' ? 'Background sound off.' : `${$('#dockSoundState').textContent.split(' ·')[0]} sound on. It plays while the timer runs.`);
+};
+$('#dockMusic').onclick = () => {
+  const it = spWanted().it;
+  if (!it){ showPage('music'); return; }
+  if (!canEmbed()){ window.open(spUrl(it), '_blank', 'noopener'); return; }
+  spPaused ? spPlay() : spPause();
+  setTimeout(renderDock, 300);
+};
+setInterval(() => { if (!document.hidden) renderDock(); }, 1000);
+
+/* parking lot on the Focus page */
+function renderQuickNotes(){
+  if (!$('#qNoteList')) return;
+  const open = NOTES.filter(n => !n.done).slice(0, 5);
+  $('#qNoteList').innerHTML = open.map(n => `<li><input type="checkbox" data-id="${n.id}" aria-label="Done"><span>${esc(n.text)}</span></li>`).join('')
+    || '<li style="border:0"><span class="hint" style="margin:0">Nothing parked.</span></li>';
+}
+function addQuickNote(){ const v = $('#qNoteIn').value.trim(); if (!v) return; achBump('notes'); NOTES.unshift({id: Date.now().toString(36), text: v, done: false}); $('#qNoteIn').value = ''; saveNotes(); renderNotes(); }
+$('#qNoteAdd').onclick = addQuickNote;
+$('#qNoteIn').onkeydown = e => { if (e.key === 'Enter') addQuickNote(); };
+$('#qNoteList').onchange = e => { const n = NOTES.find(x => x.id === e.target.dataset.id); if (n){ n.done = true; achBump('notesDone'); saveNotes(); renderNotes(); } };
+
 /* ---------- boot ---------- */
 applyLook(); renderTimerPane(); renderLookSound(); renderLog(); renderNotes(); renderAll(); renderMusic();
 requestAnimationFrame(moveTabInk);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveTabInk);
 prewarm();
 renderAchHeader(); checkAch();
+showPage(P.page && $('#page-' + P.page) ? P.page : 'focus');
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderTime);
 })();
 </script>
