@@ -1139,7 +1139,7 @@ let NOTES = store.get('fb.notes', []);
 const saveP = () => store.set('fb.settings', P);
 
 /* ---------- timer state ---------- */
-let S = merge({phase:'focus', round:1, remaining:null, flowAcc:0, flowBreakMin:5, segOff:0, segTask:null, segTag:null}, store.get('fb.state', {}));
+let S = merge({phase:'focus', round:1, remaining:null, flowAcc:0, flowBreakMin:5, segOff:0, segTask:null, segTag:null, segAt:0}, store.get('fb.state', {}));
 S.running = false;
 function durMs(phase){
   const m = P.mode, c = P.modes[m];
@@ -1155,12 +1155,12 @@ const countUp = () => (P.mode === 'flow' || P.mode === 'stopwatch') && S.phase =
 const remaining = () => S.running ? Math.max(0, S.endAt - Date.now()) : S.remaining;
 const flowElapsed = () => S.flowAcc + (S.running ? Date.now() - S.flowStart : 0);
 const focusElapsed = () => countUp() ? flowElapsed() : durMs('focus') - remaining();
-const saveState = () => store.set('fb.state', {phase:S.phase, round:S.round, remaining:remaining(), flowAcc:countUp()?flowElapsed():S.flowAcc, flowBreakMin:S.flowBreakMin, segOff:S.segOff, segTask:S.segTask, segTag:S.segTag});
+const saveState = () => store.set('fb.state', {phase:S.phase, round:S.round, remaining:remaining(), flowAcc:countUp()?flowElapsed():S.flowAcc, flowBreakMin:S.flowBreakMin, segOff:S.segOff, segTask:S.segTask, segTag:S.segTag, segAt:S.segAt});
 const notStarted = () => countUp() ? S.flowAcc === 0 && !S.running : !S.running && S.remaining === durMs(S.phase);
 
 function start(){
   if (S.running) return;
-  if (S.segTask == null || !blockStarted()){ S.segTask = (P.task || '').trim(); S.segTag = P.tag; S.segOff = blockStarted() ? S.segOff : 0; }
+  if (S.segTask == null || !blockStarted()){ S.segTask = (P.task || '').trim(); S.segTag = P.tag; S.segAt = Date.now(); S.segOff = blockStarted() ? S.segOff : 0; }
   ac();
   if (countUp()) S.flowStart = Date.now();
   else { if (S.remaining <= 0) S.remaining = durMs(S.phase); S.endAt = Date.now() + S.remaining; }
@@ -1244,27 +1244,19 @@ function logFocus(ms){
   renderLog();
 }
 /* splitting a block when you change what you're working on */
-// a typo fix or finishing a half-typed name is a rename, not a switch
-function sameTaskish(a, b){
-  a = a.trim().toLowerCase(); b = b.trim().toLowerCase();
-  if (a === b || !a || !b) return a === b;
-  if (a.startsWith(b) || b.startsWith(a)) return true;
-  if (Math.abs(a.length - b.length) > 2) return false;
-  const d = [...Array(b.length + 1).keys()];
-  for (let i = 1; i <= a.length; i++){ let prev = d[0]; d[0] = i; for (let j = 1; j <= b.length; j++){ const t = d[j]; d[j] = Math.min(d[j] + 1, d[j-1] + 1, prev + (a[i-1] === b[j-1] ? 0 : 1)); prev = t; } }
-  return d[b.length] <= 2 && Math.min(a.length, b.length) >= 4;
-}
 const blockStarted = () => S.phase === 'focus' && focusElapsed() > 0;
 function segOwner(){ return {task: S.segTask != null ? S.segTask : (P.task || '').trim(), tag: S.segTag != null ? S.segTag : P.tag}; }
 let taskSwitchT = null;
 function flushTaskSwitch(){
   clearTimeout(taskSwitchT); taskSwitchT = null;
   const now = {task: (P.task || '').trim(), tag: P.tag};
-  if (S.segTask == null){ S.segTask = now.task; S.segTag = now.tag; return; }
-  const old = {task: S.segTask, tag: S.segTag};
-  if (old.tag === now.tag && sameTaskish(old.task, now.task)){ S.segTask = now.task; saveState(); return; }
-  // naming an unnamed block (same activity) isn't a switch: the whole block takes the new name
-  if (!old.task && old.tag === now.tag){ S.segTask = now.task; saveState(); return; }
+  if (S.segTask == null){ S.segTask = now.task; S.segTag = now.tag; S.segAt = Date.now(); return; }
+  const old = {task: S.segTask, tag: S.segTag}, norm = x => x.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (norm(old.task) === norm(now.task) && old.tag === now.tag){ S.segTask = now.task; saveState(); return; }
+  // Not a switch, so the whole stretch just takes the new name:
+  //  - the block had no name yet (same activity), or
+  //  - you changed it again within a minute of your last change (still typing or fixing a typo)
+  if ((!old.task && old.tag === now.tag) || Date.now() - (S.segAt || 0) < 60000){ S.segTask = now.task; S.segTag = now.tag; S.segAt = Date.now(); saveState(); return; }
   if (blockStarted()){
     const min = Math.round((focusElapsed() - (S.segOff || 0)) / 60000);
     if (min >= 1){
@@ -1275,7 +1267,7 @@ function flushTaskSwitch(){
       toast(`Logged ${fmtMin(min)} on ${old.task || old.tag}. Now tracking ${now.task || now.tag}.`);
     }
   }
-  S.segTask = now.task; S.segTag = now.tag; saveState();
+  S.segTask = now.task; S.segTag = now.tag; S.segAt = Date.now(); saveState();
 }
 // typing goes through a short pause first, so a split happens once you've finished typing, not on every key
 function queueTaskSwitch(){ clearTimeout(taskSwitchT); taskSwitchT = setTimeout(flushTaskSwitch, 1500); }
