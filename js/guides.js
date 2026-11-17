@@ -393,7 +393,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#gImpModa
 /* ---- events on the page ---- */
 $('#page-guides').addEventListener('click', e => {
   const open = e.target.closest('[data-gopen]'); if (open){ gView = open.dataset.gopen; renderGuides(); window.scrollTo(0, 0); return; }
-  const th = e.target.closest('[data-gh]'); if (th){ e.preventDefault(); const t = document.getElementById(th.dataset.gh); t && t.scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); return; }
+  const th = e.target.closest('[data-gh]'); if (th){ e.preventDefault(); const t = $('#guidesBody').querySelector('#' + CSS.escape(th.dataset.gh)); t && t.scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); return; }
   const tool = e.target.closest('[data-gt]'); if (tool){ geWrap(tool.dataset.gt); return; }
   const b = e.target.closest('[data-ga]'); if (!b) return;
   const a = b.dataset.ga, g = gView && guideById(gView);
