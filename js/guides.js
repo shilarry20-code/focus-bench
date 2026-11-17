@@ -108,7 +108,7 @@ const normTags = v => (Array.isArray(v) ? v : String(v || '').replace(/^\[|\]$/g
 function makeGuide(o){
   const now = Date.now();
   return {id: gid(), title: String(o.title || 'Untitled guide').trim().slice(0, 120), cls: String(o.cls || o.class || o.course || '').trim().slice(0, 60),
-    exam: normDate(o.exam || o.exam_date || o.examDate || o.due), tags: normTags(o.tags), body: String(o.body || o.content || o.markdown || o.text || ''), created: now, updated: now};
+    exam: normDate(o.exam || o.exam_date || o.examDate || o.due), tags: normTags(o.tags), body: String(o.body || o.content || o.markdown || o.text || ''), quizzes: normQuizzes(o.quizzes), created: now, updated: now};
 }
 function parseFront(block){
   const o = {};
@@ -137,22 +137,26 @@ function parseGuides(text, fileName){
     const h1 = body.match(/^#\s+(.+)\n?/);
     if (!title && h1) title = h1[1].trim();
     if (h1 && title && h1[1].trim().toLowerCase() === title.toLowerCase()) body = body.slice(h1[0].length).replace(/^\n+/, '');
-    return makeGuide({...p.meta, title: title || base || 'Imported guide', body});
-  }).filter(g => g.body.trim() || g.title !== 'Imported guide');
+    // practice quizzes can ride along at the end of a guide, each starting with a "quiz:" front-matter block
+    const qAt = quizStart(body), quizzes = qAt >= 0 ? parseQuizzes(body.slice(qAt)) : [];
+    if (qAt >= 0) body = body.slice(0, qAt).replace(/\s+$/, '');
+    const g = makeGuide({...p.meta, title: title || base || 'Imported guide', body}); g.quizzes = quizzes;
+    return g;
+  }).filter(g => g.body.trim() || g.quizzes.length || g.title !== 'Imported guide');
 }
 function importGuides(list, replace){
   let added = 0, replaced = 0;
   list.forEach(g => {
     const same = replace && GUIDES.find(x => x.title.toLowerCase() === g.title.toLowerCase() && (x.cls || '').toLowerCase() === (g.cls || '').toLowerCase());
-    if (same){ Object.assign(same, {body: g.body, exam: g.exam || same.exam, tags: g.tags.length ? g.tags : same.tags, updated: Date.now()}); replaced++; }
-    else { GUIDES.push(g); added++; }
+    if (same){ Object.assign(same, {body: g.body, exam: g.exam || same.exam, tags: g.tags.length ? g.tags : same.tags, updated: Date.now()}); if (g.quizzes.length) addQuizzes(same, g.quizzes, true); replaced++; }
+    else { GUIDES.push(g); added++; if (g.quizzes.length) achBump('quizzes', g.quizzes.length); }
   });
   saveGuides(); if (added) achBump('guides', added);
   return {added, replaced};
 }
 function guideToMd(g){
   const fm = ['---', `title: ${g.title}`]; if (g.cls) fm.push(`class: ${g.cls}`); if (g.exam) fm.push(`exam: ${g.exam}`); if (g.tags.length) fm.push(`tags: ${g.tags.join(', ')}`); fm.push('---', '');
-  return fm.join('\n') + g.body.replace(/\s+$/, '') + '\n';
+  return fm.join('\n') + g.body.replace(/\s+$/, '') + '\n' + guideQuizzes(g).map(q => '\n' + quizToText(q)).join('');
 }
 const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'guide';
 
@@ -160,6 +164,8 @@ const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, 
 function renderGuides(){
   const el = $('#guidesBody'); if (!el) return;
   if (!guidesReady){ el.innerHTML = '<p class="hint">Loading your guides…</p>'; return; }
+  if (QR && (gEdit || gView !== QR.gid)) QR = null;
+  if (QR) return renderQuizRun();
   if (gEdit) return renderGuideEditor();
   if (gView && guideById(gView)) return renderGuideView();
   gView = null;
@@ -173,7 +179,7 @@ function renderGuides(){
     return `<button class="g-card" data-gopen="${g.id}"><span class="g-card-top"><b>${esc(g.title)}</b>${ex ? `<em class="${examSoon(g) ? 'soon' : ''}">${ex}</em>` : ''}</span>
       ${g.tags.length ? `<span class="g-tags">${g.tags.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}
       ${p.total ? `<span class="g-prog"><span class="bar2"><i style="width:${p.done / p.total * 100}%"></i></span><small>${p.done}/${p.total} checked</small></span>` : ''}
-      <small class="g-meta">${[p.qa ? `${p.qa} question${p.qa === 1 ? '' : 's'}` : '', mins ? `${fmtMin(mins)} studied` : '', `edited ${new Date(g.updated).toLocaleDateString(undefined, {month:'short', day:'numeric'})}`].filter(Boolean).join(' · ')}</small></button>`;
+      <small class="g-meta">${[p.qa ? `${p.qa} question${p.qa === 1 ? '' : 's'}` : '', (qs => qs.n ? `${qs.n} quiz${qs.n === 1 ? '' : 'zes'}${qs.best != null ? ` (avg best ${qs.best}%)` : ''}` : '')(quizSummary(g)), mins ? `${fmtMin(mins)} studied` : '', `edited ${new Date(g.updated).toLocaleDateString(undefined, {month:'short', day:'numeric'})}`].filter(Boolean).join(' · ')}</small></button>`;
   };
   el.innerHTML = `<div class="g-bar"><input id="gSearch" type="search" placeholder="Search guides" value="${esc(GF.q)}" aria-label="Search guides">
       <select id="gClass" aria-label="Class"><option value="all">All classes</option>${classes.map(c => `<option ${GF.cls === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}${GUIDES.some(g => !g.cls) ? `<option value="" ${GF.cls === '' ? 'selected' : ''}>No class</option>` : ''}</select>
@@ -183,17 +189,19 @@ function renderGuides(){
 }
 function renderGuideView(){
   requestAnimationFrame(fitGuideSide);
-  const g = guideById(gView), r = mdRender(g.body), p = guideProgress(g), mins = guideMinutes(g), ex = examText(g);
+  const g = guideById(gView), r = mdRender(g.body), p = guideProgress(g), mins = guideMinutes(g), ex = examText(g), qs = quizSummary(g);
   $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-ga="back">← All guides</button><span class="g-bar-sp"></span>
       <button class="small-btn accent" data-ga="study">▶ Study this</button><button class="small-btn" data-ga="edit">Edit</button><button class="small-btn" data-ga="export">Export</button><button class="small-btn" data-ga="del">Delete</button></div>
     <div class="g-view">
-      <article class="card g-doc"><header class="g-head"><h2>${esc(g.title)}</h2><div class="g-sub">${g.cls ? `<span class="g-cls">${esc(g.cls)}</span>` : ''}${ex ? `<span class="g-ex${examSoon(g) ? ' soon' : ''}">${ex}</span>` : ''}${g.tags.map(t => `<i class="g-tag">${esc(t)}</i>`).join('')}</div></header>
+      <div class="g-main"><article class="card g-doc"><header class="g-head"><h2>${esc(g.title)}</h2><div class="g-sub">${g.cls ? `<span class="g-cls">${esc(g.cls)}</span>` : ''}${ex ? `<span class="g-ex${examSoon(g) ? ' soon' : ''}">${ex}</span>` : ''}${g.tags.map(t => `<i class="g-tag">${esc(t)}</i>`).join('')}</div></header>
         <div class="g-md" data-gid="${g.id}">${r.html || '<p class="hint">This guide is empty. Click Edit to write it.</p>'}</div></article>
+        ${quizSection(g)}</div>
       <aside class="g-side">
         <div class="card"><div class="h first">Progress</div><div class="pf-kv">
-          ${p.total ? `<span><b>${p.done}/${p.total}</b><small>checklist done</small></span>` : ''}${r.qn ? `<span><b>${r.qn}</b><small>questions</small></span>` : ''}<span><b>${mins ? fmtMin(mins) : '0m'}</b><small>studied</small></span></div>
+          ${p.total ? `<span><b>${p.done}/${p.total}</b><small>checklist done</small></span>` : ''}${r.qn ? `<span><b>${r.qn}</b><small>questions</small></span>` : ''}<span><b>${mins ? fmtMin(mins) : '0m'}</b><small>studied</small></span>${qs.n ? `<span><b>${qs.best != null ? qs.best + '%' : qs.n}</b><small>${qs.best != null ? 'avg best quiz score' : `quiz${qs.n === 1 ? '' : 'zes'}`}</small></span>` : ''}</div>
           ${p.total ? `<span class="bar2 g-bigbar"><i style="width:${p.done / p.total * 100}%"></i></span>` : ''}
           ${r.qn ? `<div class="g-qa-btns"><button class="small-btn" data-ga="qa-open">Show all answers</button><button class="small-btn" data-ga="qa-close">Hide all</button></div>` : ''}
+          <div class="g-qa-btns"><button class="small-btn" data-qz="quizzes">Practice quizzes${qs.n ? ` (${qs.n})` : ''} ↓</button></div>
           ${p.total ? `<button class="link-btn" data-ga="uncheck">Uncheck everything</button>` : ''}</div>
         ${r.heads.length > 2 ? `<div class="card g-toc-card"><div class="h first">Contents</div><nav class="g-toc">${r.heads.map(h => `<a href="#${h.id}" data-gh="${h.id}" style="--lv:${h.lv}">${esc(h.text)}</a>`).join('')}</nav></div>` : ''}
       </aside>
@@ -287,6 +295,28 @@ A: On the line right after the question, starting with A:
 | --- | --- |
 | \`**bold**\` | **bold** |
 | \`- [ ] item\` | a checklist item |
+
+---
+quiz: Sample quiz
+---
+1. Where do practice quizzes live?
+a) In a separate tab
+*b) Inside the study guide they belong to
+c) In your notes
+Why: Each guide has a Practice quizzes section below it, so everything for one class stays in one place.
+Review: The Practice quizzes section of this guide
+
+2. True or false: getting a question wrong shows what to review.
+Answer: True
+Why: Quizzes can include a Review line for each question.
+Review: The quiz format in Import quiz
+
+3. Which of these can you do after finishing a quiz? (select all)
+*a) Retake the whole quiz
+*b) Retry only the questions you missed
+c) Change the answers you gave
+Why: Your answers are locked in, but you can retake or practice the misses.
+Review: The results screen
 `;
 
 /* ---- import dialog ---- */
@@ -313,7 +343,16 @@ Normal text, **bold**, *italic*, ==highlight==
 | table | header |
 | --- | --- |
 Q: Flashcard question
-A: Its answer`)}</pre></details>`;
+A: Its answer
+
+---
+quiz: Practice quiz title     (optional: quizzes at the end
+---                            go into this guide's quiz section)
+1. Question
+a) choice
+*b) correct choice
+Why: explanation
+Review: what to study if you miss it`)}</pre></details>`;
   $('#gImpModal').hidden = false;
   const show = () => {
     const n = gImportFound.length, btn = $('#gImpModal [data-gi="go"]');
