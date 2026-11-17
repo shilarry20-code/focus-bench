@@ -201,7 +201,9 @@ button{cursor:pointer}
 .g-chk input{margin-top:5px;accent-color:var(--accent);width:16px;height:16px;flex:none}
 .g-chk.on span{color:var(--muted);text-decoration:line-through}
 .g-tbl{overflow-x:auto;margin:10px 0}.g-md table{border-collapse:collapse;font-size:14px;min-width:50%}
-.g-md th,.g-md td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}.g-md th{background:var(--soft)}
+.g-md th,.g-md td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+/* table cells only break inside a word when that word can't fit at all, so narrow columns don't split words like Corrective */
+.g-md th,.g-md td{overflow-wrap:break-word}.g-md th{background:var(--soft)}
 .qa{border:1px solid var(--line);border-radius:var(--r-ctl);margin:8px 0;background:var(--surface)}
 .qa summary{display:flex;gap:10px;align-items:baseline;padding:10px 12px;cursor:pointer;list-style:none}
 .qa summary::-webkit-details-marker{display:none}
@@ -1086,3 +1088,18 @@ body.m-off .ach-pop{animation:none!important}
 .mb-q{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;font-size:14.5px;overflow-wrap:anywhere}.mb-q .hint{margin:0;font-size:12px}
 .mb-btns{display:flex;gap:6px;flex:none}.mb-btns .small-btn{white-space:nowrap}
 @media (max-width:640px){.qx-bar{top:4px;padding:10px 12px}.qx-dot{min-width:26px;height:26px}.mb-row{flex-direction:column}.mb-btns{align-self:flex-end}}
+
+/* ---------- hiding the side panel ---------- */
+.brand span{flex:1}
+.side-hide{flex:none;border:0;background:none;color:var(--muted);width:28px;height:28px;border-radius:7px;font:inherit;font-size:20px;line-height:1;font-family:var(--f-body,inherit);cursor:pointer;opacity:.7;transition:opacity .15s,background-color .15s}
+.side-hide:hover,.side-hide:focus-visible{opacity:1;background:var(--soft);color:var(--ink)}
+.side-show{display:none;flex:none;align-items:center;justify-content:center;width:36px;height:36px;margin-right:12px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--surface);color:var(--ink);cursor:pointer}
+.side-show svg{width:18px;height:18px}.side-show:hover{border-color:var(--accent)}
+body.side-hidden .side{display:none}
+body.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
+body.side-hidden .side-show{display:inline-flex}
+@media (max-width:760px){
+  .side-hide,body.side-hidden .side-show{display:none}
+  body.side-hidden:not(.focus-mode) .side{display:flex}
+}
+body.side-hidden .page-title{margin-right:auto}

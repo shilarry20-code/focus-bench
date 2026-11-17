@@ -12,6 +12,7 @@
     <div class="brand">
       <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M16 17V10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M12 3h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
       <span>Focus Bench</span>
+      <button class="side-hide" id="sideHide" aria-label="Hide the side panel" title="Hide the side panel (\)">«</button>
     </div>
     <button class="nav-btn" data-page="focus" data-key="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg><span>Focus</span><kbd>1</kbd></button>
     <button class="nav-btn" data-page="stats" data-key="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Stats</span><kbd>2</kbd></button>
@@ -31,6 +32,7 @@
 
   <div class="main">
     <header class="strip">
+      <button class="side-show" id="sideShow" aria-label="Show the side panel" title="Show the side panel (\)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <h1 class="page-title" id="pageTitle">Focus</h1>
       <div class="today"><div class="streak-wrap"><button class="streak-chip" id="streakChip" data-state="off" aria-expanded="false" aria-controls="streakPop"><span class="fl"></span><b id="streakN">0</b><span id="streakTxt">No streak yet</span></button>
         <div class="streak-pop" id="streakPop" hidden>
@@ -335,7 +337,7 @@
         <section class="card set" id="set-keys"><h2>Keyboard shortcuts</h2>
           <ul class="keylist">
             <li><kbd>Space</kbd><span>Start or pause</span></li><li><kbd>R</kbd><span>Reset</span></li><li><kbd>S</kbd><span>Skip, or Done in Stopwatch</span></li>
-            <li><kbd>M</kbd><span>Mini clock</span></li><li><kbd>F</kbd><span>Focus mode</span></li><li><kbd>1</kbd>–<kbd>8</kbd><span>Switch pages</span></li>
+            <li><kbd>M</kbd><span>Mini clock</span></li><li><kbd>F</kbd><span>Focus mode</span></li><li><kbd>\</kbd><span>Hide or show the side panel</span></li><li><kbd>1</kbd>–<kbd>8</kbd><span>Switch pages</span></li>
           </ul>
         </section>
       </div>
