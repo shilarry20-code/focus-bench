@@ -1,0 +1,1224 @@
+/* ---------- Ranked: 249,999 bots, Elo, ranks, badges ---------- */
+// Each bot is generated from a fixed seed (name, look, style, habits), so only the numbers that
+// change are saved: each bot's rating and study totals, packed into a typed array kept in IndexedDB.
+// The first 5,000 bots are the original roster and keep their names; the rest came later.
+const ROSTER_N = 249999, OLD_N = 5000, ROSTER_SEED = 20261113, ROSTER_V = 3, BF = 13;   // BF: fields per bot
+const F = {rating:0, total:1, sessions:2, days:3, cur:4, best:5, maxSess:6, maxDay:7, maxWeek:8, maxMonth:9, week:10, month:11, today:12};
+function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const gaussOf = rnd => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const pick = (rnd, a) => a[Math.floor(rnd() * a.length)];
+const clampN = (x, a, b) => Math.max(a, Math.min(b, x));
+
+const RANKS = [
+  {name:'Freshman', lo:-1e9, c:'#8e98a3', cuts:[700, 800, 900]},
+  {name:'Sophomore', lo:900, c:'#c27a43', cuts:[1000, 1100, 1200]},
+  {name:'Scholar', lo:1200, c:'#4a86d8', cuts:[1300, 1400, 1500]},
+  {name:'Honors', lo:1500, c:'#8456e8', cuts:[1600, 1700, 1800]},
+  {name:"Dean's List", lo:1800, c:'#d9a420', cuts:[1900, 2000, 2100]},
+  {name:'Valedictorian', lo:2100, c:'#d9473a', cuts:[2200, 2300, 2400]},
+  {name:'Professor', lo:2400, c:'#b62fc0', cuts:[2500, 2600, 2700]},
+  {name:'Distinguished Professor', sh:'Dist. Professor', lo:2700, c:'#139e9a', cuts:[2800, 2900, 3000], elite:1},
+  {name:'Provost', lo:3000, c:'#d02f4f', cuts:[3100, 3200, 3300], elite:1},
+  {name:'Chancellor', lo:3300, c:'#e0a30e', cuts:[3400, 3500, 3600], elite:1, shine:1},
+  {name:'Laureate', lo:3600, c:'#3a9be0', cuts:[], elite:1, shine:1},
+  {name:'Paragon', lo:Infinity, c:'#f2b01e', cuts:[], elite:1, shine:1, one:1}
+];
+const LAUREATE = 10, PARAGON_I = 11, LAUREATE_MIN = 3600;
+function rankOf(r){
+  let i = RANKS.length - 1; while (i > 0 && r < RANKS[i].lo) i--;
+  const R0 = RANKS[i];
+  if (!R0.cuts.length) return {i, name:R0.name, div:'', full:R0.name, sh:R0.sh || R0.name, c:R0.c, lo:R0.lo, hi:null, d:0};
+  const d = r < R0.cuts[0] ? 0 : r < R0.cuts[1] ? 1 : 2;           // 0 = I (start), 1 = II, 2 = III (top)
+  const lo = d === 0 ? (i === 0 ? 600 : R0.lo) : R0.cuts[d - 1], hi = R0.cuts[d], dv = ['I','II','III'][d];
+  return {i, name:R0.name, div:dv, full:`${R0.name} ${dv}`, sh:`${R0.sh || R0.name} ${dv}`, c:R0.c, lo, hi, d};
+}
+const PARAGON = {i:PARAGON_I, name:'Paragon', div:'', full:'Paragon', sh:'Paragon', c:RANKS[PARAGON_I].c, lo:LAUREATE_MIN, hi:null, d:0};
+const ME = -1;
+// a player's rank with the two place-based ranks: the Paragon, and Laureates numbered by place
+function rkOf(who){
+  if (R && R.para && R.para.h === who) return PARAGON;
+  if (who !== ME && !BS) return rankOf(1000);
+  const k = rankOf(who === ME ? R.mmr : botRating(who));
+  if (k.i === LAUREATE && BS){ const n = placeOf(who); return {...k, n, full:`Laureate #${n}`, sh:`Laureate #${n}`}; }
+  return k;
+}
+const myRk = () => rkOf(ME);
+// Rank emblems. emblemSvg(i, d, small): i = rank 0–11, d = division 0–2 (I–III) or -1 for none; small = simpler marks for tiny sizes.
+let EMB_UID = 0;
+const EMB_PAL = [
+  // [main, light, dark, accent]
+  ['#8e98a3', '#d3d9df', '#59626c', '#f2c94c'],   // Freshman: iron
+  ['#c27a43', '#f0b27e', '#7a4520', '#fff3e0'],   // Sophomore: bronze
+  ['#4a86d8', '#a9cdf7', '#24508f', '#ffe9a8'],   // Scholar: steel blue
+  ['#8456e8', '#c4acff', '#4e2aa6', '#ffd257'],   // Honors: violet + gold
+  ['#d9a420', '#ffe28a', '#94650a', '#7a1f2b'],   // Dean's List: gold
+  ['#d9473a', '#ff9b8a', '#8f2117', '#1c2230'],   // Valedictorian: crimson
+  ['#b62fc0', '#ee99f5', '#6d1478', '#ffd257'],   // Professor: royal magenta + gold
+  ['#139e9a', '#7ff0e6', '#0a5e5b', '#e8fffd'],   // Distinguished Professor: teal gem
+  ['#d02f4f', '#ff9aae', '#86152b', '#ffd257'],   // Provost: crimson star
+  ['#e0a30e', '#fff0a8', '#94640a', '#e8475f'],   // Chancellor: crown gold
+  ['#3a9be0', '#bfe6ff', '#1d5e96', '#fff7d6'],   // Laureate: sky + laurel
+  ['#f2b01e', '#fff6c4', '#b5770a', '#ffffff']    // Paragon
+];
+function emblemSvg(i, d, small){
+  const u = 'e' + (++EMB_UID), [c, lt, dk, ac] = EMB_PAL[i];
+  const grad = `<defs><linearGradient id="${u}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${lt}"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${dk}"/></linearGradient>
+    <linearGradient id="${u}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".5" stop-color="${lt}"/><stop offset="1" stop-color="${dk}"/></linearGradient>
+    <radialGradient id="${u}s" cx=".35" cy=".25" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`;
+  const G = `url(#${u}g)`, RIM = `url(#${u}r)`, SH = `url(#${u}s)`;
+  const shieldP = 'M24 3.5L40.5 9.5V22.5C40.5 32.5 33.5 40 24 44C14.5 40 7.5 32.5 7.5 22.5V9.5Z';
+  const shield = (inner) => `<path d="${shieldP}" fill="${G}" stroke="${RIM}" stroke-width="2.4" stroke-linejoin="round"/><path d="M24 7.5L37 12.2V22.5C37 30.4 31.6 36.6 24 40" fill="#000" opacity=".1"/><path d="${shieldP}" fill="${SH}"/>${inner}`;
+  // division marks: 1-3 little stars along the bottom
+  const star = (x, y, r, f) => { let p = ''; for (let k = 0; k < 10; k++){ const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * .45 : r; p += `${k ? 'L' : 'M'}${(x + Math.cos(a) * rr).toFixed(2)} ${(y + Math.sin(a) * rr).toFixed(2)}`; } return `<path d="${p}Z" fill="${f}" stroke="${f === '#ffd257' ? '#7a5200' : dk}" stroke-width=".7" stroke-linejoin="round"/>`; };
+  const pips = (y, f) => { if (d < 0) return ''; const r = small ? 4.6 : 4, gap = r * 2.15, w = d * gap + r * 2 + 4;
+    return `<rect x="${(24 - w / 2).toFixed(2)}" y="${(y - r - 1.6).toFixed(2)}" width="${w.toFixed(2)}" height="${(r * 2 + 3.2).toFixed(2)}" rx="${(r + 1.6).toFixed(2)}" fill="#141821" fill-opacity=".72" stroke="#fff" stroke-opacity=".35" stroke-width=".7"/>` +
+      [...Array(d + 1)].map((_, k) => star(24 + (k - d / 2) * gap, y + .3, r, '#ffd257')).join(''); };
+  let g = '';
+  switch (i){
+    case 0: // Freshman: pencil
+      g = shield(`<g transform="rotate(-40 24 20)"><rect x="21" y="9" width="6" height="16" rx="1" fill="${ac}" stroke="#7a5a12" stroke-width=".8"/><rect x="21" y="9" width="6" height="3" fill="#e99" stroke="#7a5a12" stroke-width=".8"/><path d="M21 25h6l-3 5.5z" fill="#f3dcb0" stroke="#7a5a12" stroke-width=".8" stroke-linejoin="round"/><path d="M23.2 28.4h1.6L24 30z" fill="#333"/></g>`) + pips(33.5);
+      break;
+    case 1: // Sophomore: open book
+      g = shield(`<path d="M24 14c-3-2-7-2.4-10.5-1.4v13c3.5-1 7.5-.6 10.5 1.4 3-2 7-2.4 10.5-1.4v-13C31 11.6 27 12 24 14z" fill="${ac}" stroke="${dk}" stroke-width="1" stroke-linejoin="round"/><path d="M24 14v13" stroke="${dk}" stroke-width="1"/><path d="M16.5 16.5c2-.4 4-.2 5.5.6M16.5 19.5c2-.4 4-.2 5.5.6M26 17.1c1.5-.8 3.5-1 5.5-.6M26 20.1c1.5-.8 3.5-1 5.5-.6" stroke="${c}" stroke-width=".9" fill="none" stroke-linecap="round"/>`) + pips(34);
+      break;
+    case 2: // Scholar: lamp of knowledge
+      g = shield(`<path d="M24 9.5c2.2 2.6 2.6 4.6 0 7-2.6-2.4-2.2-4.4 0-7z" fill="#ffb02e"/><path d="M24 11.5c1 1.3 1.1 2.4 0 3.5-1.1-1.1-1-2.2 0-3.5z" fill="#fff6b0"/><path d="M14 20.5c3 0 5-1.5 10-1.5s8 1.5 11-1c-.5 4.5-4.5 7-11 7-5 0-8.5-1.8-10-4.5z" fill="${ac}" stroke="${dk}" stroke-width="1" stroke-linejoin="round"/><path d="M22 17h4l-.5 2h-3z" fill="${ac}" stroke="${dk}" stroke-width=".8"/><path d="M20 25.5h8l1.5 2.5h-11z" fill="${ac}" stroke="${dk}" stroke-width=".8" stroke-linejoin="round"/>`) + pips(34);
+      break;
+    case 3: // Honors: star with ribbon
+      g = shield(`<path d="M17 25l-3 9 4-1.5 2 3.5 2.5-8.5zM31 25l3 9-4-1.5-2 3.5-2.5-8.5z" fill="#e64a7b" stroke="${dk}" stroke-width=".8" stroke-linejoin="round"/>${star(24, 19.5, 9.5, ac)}`) + pips(36.5, '#fff');
+      break;
+    case 4: // Dean's List: crest with scroll banner
+      g = `<path d="M24 2.5l4 3.5 5-1 2 4.5 4.5 2-1 5 3.5 4-3.5 4 1 5-4.5 2-2 4.5-5-1-4 3.5-4-3.5-5 1-2-4.5-4.5-2 1-5L5 21.5l3.5-4-1-5 4.5-2 2-4.5 5 1z" fill="${G}" stroke="${RIM}" stroke-width="1.6" stroke-linejoin="round"/><circle cx="24" cy="21.5" r="11" fill="${dk}" opacity=".25"/><circle cx="24" cy="21.5" r="11" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".9"/>${star(24, 17, 4.5, '#fff')}<path d="M10 22.5h28l-2.2 3.2 2.2 3.2H10l2.2-3.2z" fill="${ac}" stroke="#4d0f17" stroke-width=".8" stroke-linejoin="round"/><path d="M14.5 25.7h19" stroke="#ffd8a0" stroke-width=".9" stroke-dasharray="2 1.4"/><path d="M24 2.5l4 3.5 5-1 2 4.5 4.5 2-1 5 3.5 4" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width=".8"/>` + pips(37.5);
+      break;
+    case 5: // Valedictorian: shield with mortarboard
+      g = shield(`<path d="M24 11l13 5.5-13 5.5-13-5.5z" fill="${ac}" stroke="#000" stroke-opacity=".4" stroke-width=".8" stroke-linejoin="round"/><path d="M17 19.3v5c0 2 3.2 3.5 7 3.5s7-1.5 7-3.5v-5L24 22z" fill="${ac}" stroke="#000" stroke-opacity=".4" stroke-width=".8"/><path d="M24 16.5l8 2.5v6.5" fill="none" stroke="#ffc83d" stroke-width="1.1"/><path d="M30.8 25.3h2.4l-.4 4h-1.6z" fill="#ffc83d"/><circle cx="24" cy="16.5" r="1.2" fill="#ffc83d"/>`) + pips(34.5);
+      break;
+    case 6: // Professor: wise owl wearing a mortarboard, on an ornate crest
+      g = `<path d="M24 2l17.5 6.5v13c0 11-7.5 18.5-17.5 23-10-4.5-17.5-12-17.5-23v-13z" fill="${G}" stroke="${RIM}" stroke-width="2.2" stroke-linejoin="round"/><path d="M24 2l17.5 6.5v13c0 11-7.5 18.5-17.5 23-10-4.5-17.5-12-17.5-23v-13z" fill="${SH}"/><path d="M10.5 9.6L24 4.6l13.5 5" fill="none" stroke="${ac}" stroke-width="1.2"/>
+        <path d="M15.5 17.5l-1.6-5.2 4.6 2.6M32.5 17.5l1.6-5.2-4.6 2.6" fill="#f3e3c4" stroke="#5a3a1a" stroke-width=".8" stroke-linejoin="round"/>
+        <path d="M24 13.5c6.2 0 9.5 4 9.5 9.2 0 6-4.3 10.3-9.5 10.3s-9.5-4.3-9.5-10.3c0-5.2 3.3-9.2 9.5-9.2z" fill="#f3e3c4" stroke="#5a3a1a" stroke-width=".9"/>
+        <path d="M19 28.5c1.6 1.6 3.2 2.2 5 2.2s3.4-.6 5-2.2" fill="none" stroke="#c9a77a" stroke-width=".9" stroke-linecap="round"/><path d="M21 31.2l3-1 3 1" fill="none" stroke="#c9a77a" stroke-width=".8"/>
+        <circle cx="19.8" cy="21.5" r="3.7" fill="#fff" stroke="#5a3a1a" stroke-width=".8"/><circle cx="28.2" cy="21.5" r="3.7" fill="#fff" stroke="#5a3a1a" stroke-width=".8"/>
+        <circle cx="20.2" cy="21.8" r="1.8" fill="#1c2230"/><circle cx="27.8" cy="21.8" r="1.8" fill="#1c2230"/><circle cx="20.8" cy="21.1" r=".6" fill="#fff"/><circle cx="28.4" cy="21.1" r=".6" fill="#fff"/>
+        <path d="M24 23.6l-1.5 1.6 1.5 2 1.5-2z" fill="#f2a516" stroke="#7a4d00" stroke-width=".6" stroke-linejoin="round"/>
+        <path d="M24 7.8l10 3.9-10 3.9-10-3.9z" fill="#1c2230" stroke="${ac}" stroke-width=".7" stroke-linejoin="round"/><path d="M18.6 13.5v1.8c1.4 1 3.4 1.4 5.4 1.4s4-.4 5.4-1.4v-1.8L24 15.6z" fill="#1c2230"/>
+        <path d="M24 11.7l7.4 2.4v4.6" fill="none" stroke="${ac}" stroke-width=".9"/><path d="M30.6 18.4h1.6l-.3 2.6h-1z" fill="${ac}"/>` + pips(38.2, ac);
+      break;
+    case 7: // Distinguished Professor: faceted gem with wings
+      g = `<path d="M17 18c-5-1-9.5-4-12-8 0 6 3 11 9 13.5-3 .5-5.5 0-7.5-1.5 2 4 6 5.5 10 4.5zM31 18c5-1 9.5-4 12-8 0 6-3 11-9 13.5 3 .5 5.5 0 7.5-1.5-2 4-6 5.5-10 4.5z" fill="${lt}" stroke="${dk}" stroke-width=".9" stroke-linejoin="round" opacity=".95"/>
+        <path d="M24 5l11 6.5v13L24 31 13 24.5v-13z" fill="${G}" stroke="${RIM}" stroke-width="1.8" stroke-linejoin="round"/><path d="M24 5v13l11-6.5M24 18L13 11.5M24 18v13" stroke="#fff" stroke-opacity=".45" stroke-width=".8" fill="none"/><path d="M24 5l11 6.5L24 18z" fill="#fff" opacity=".25"/><path d="M24 18l11 6.5L24 31z" fill="#000" opacity=".15"/>` + pips(38.5);
+      break;
+    case 8: // Provost: star medallion with ribbons
+      g = `<path d="M17 28l-4 16 5.5-2.5L21 46l3-14zM31 28l4 16-5.5-2.5L27 46l-3-14z" fill="${ac}" stroke="#8a5a00" stroke-width=".8" stroke-linejoin="round"/>` +
+        (() => { let p = ''; for (let k = 0; k < 24; k++){ const a = -Math.PI / 2 + k * Math.PI / 12, r = k % 2 ? 15 : 18; p += `${k ? 'L' : 'M'}${(24 + Math.cos(a) * r).toFixed(2)} ${(20 + Math.sin(a) * r).toFixed(2)}`; } return `<path d="${p}Z" fill="${G}" stroke="${RIM}" stroke-width="1.4" stroke-linejoin="round"/>`; })() +
+        `<circle cx="24" cy="20" r="10.5" fill="${dk}" opacity=".35"/><circle cx="24" cy="20" r="10.5" fill="none" stroke="${ac}" stroke-width="1.2"/>${star(24, 20, 7.5, ac)}<circle cx="24" cy="20" r="18" fill="${SH}"/>` + pips(39.5, '#fff');
+      break;
+    case 9: // Chancellor: jeweled crown
+      g = `<g transform="translate(0 3.5)"><path d="M6 15L15 22L24 7L33 22L42 15L38.5 34H9.5Z" fill="${G}" stroke="${RIM}" stroke-width="1.8" stroke-linejoin="round"/><rect x="9" y="33" width="30" height="5.5" rx="1.5" fill="${G}" stroke="${RIM}" stroke-width="1.4"/>
+        <circle cx="6" cy="14" r="2.3" fill="${G}" stroke="${RIM}"/><circle cx="24" cy="5.5" r="2.6" fill="${G}" stroke="${RIM}"/><circle cx="42" cy="14" r="2.3" fill="${G}" stroke="${RIM}"/>
+        <path d="M24 19.5l3 3.5-3 3.5-3-3.5z" fill="${ac}" stroke="#fff" stroke-width=".7"/><circle cx="15" cy="27" r="1.9" fill="#3a9be0" stroke="#fff" stroke-width=".6"/><circle cx="33" cy="27" r="1.9" fill="#1fb36b" stroke="#fff" stroke-width=".6"/><path d="M6 15l9 7 9-15 9 15 9-7" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".7"/></g>` + pips(39.3, ac);
+      break;
+    case 10: { // Laureate: golden laurel wreath around a sky-blue medal, tied with a ribbon
+      const leaf = (x, y, rot, sc) => `<path d="M0 -5.2C2.2 -2.6 2.2 2 0 4.6C-2.2 2 -2.2 -2.6 0 -5.2Z" transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${rot.toFixed(1)}) scale(${sc})" fill="url(#${u}l)" stroke="#7a5200" stroke-width=".5"/>`;
+      let lv = '';
+      for (const sd of [-1, 1]){
+        lv += `<path d="M${24 + sd * 5} 41.6C${24 + sd * 15.5} 38 ${24 + sd * 19.5} 26 ${24 + sd * 14} 9" fill="none" stroke="#a87a10" stroke-width="1.2" stroke-linecap="round"/>`;
+        for (let k = 0; k < 8; k++){
+          const th = 30 + k * 18.5, t = th * Math.PI / 180, R0 = 17.6, x = 24 + sd * Math.sin(t) * R0, y = 24.5 + Math.cos(t) * R0;
+          // direction along the branch, heading up and around the medal
+          const dir = Math.atan2(-Math.sin(t), sd * Math.cos(t)) * 180 / Math.PI + 90, sc = 1 - k * .045;
+          lv += leaf(x + sd * Math.sin(t) * 1.9, y + Math.cos(t) * 1.9, dir + sd * 32, sc);       // outer leaf
+          lv += leaf(x - sd * Math.sin(t) * 1.5, y - Math.cos(t) * 1.5, dir - sd * 28, sc * .85); // inner leaf
+        }
+      }
+      g = `<defs><linearGradient id="${u}l" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff2b0"/><stop offset=".5" stop-color="#e8b52a"/><stop offset="1" stop-color="#a87a10"/></linearGradient></defs>${lv}
+        <path d="M20 39.5l-3 6.5 3.4-1.2 1.6 3 2-7.3zM28 39.5l3 6.5-3.4-1.2-1.6 3-2-7.3z" fill="#e8475f" stroke="#86152b" stroke-width=".6" stroke-linejoin="round"/><circle cx="24" cy="40.2" r="2.2" fill="#e8475f" stroke="#86152b" stroke-width=".6"/>
+        <circle cx="24" cy="23" r="11" fill="${G}" stroke="${RIM}" stroke-width="1.8"/><circle cx="24" cy="23" r="7.8" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".9"/>${star(24, 23, 6.3, ac)}<circle cx="24" cy="23" r="11" fill="${SH}"/>`;
+      break; }
+    default: { // Paragon: radiant crown
+      let rays = '';
+      for (let k = 0; k < 16; k++) rays += `<path d="M24 1l1.8 7h-3.6z" fill="${k % 2 ? lt : c}" transform="rotate(${k * 22.5} 24 24)" opacity="${k % 2 ? .7 : 1}"/>`;
+      g = `<g class="rays">${rays}</g><circle cx="24" cy="24" r="15.5" fill="${G}" stroke="${RIM}" stroke-width="1.8"/><circle cx="24" cy="24" r="15.5" fill="${SH}"/>
+        <path d="M14.5 28.5l-1.8-11 6 4.5L24 13l5.3 9 6-4.5-1.8 11z" fill="#fff" stroke="${dk}" stroke-width=".9" stroke-linejoin="round"/><rect x="14.5" y="29.5" width="19" height="3.4" rx="1" fill="#fff" stroke="${dk}" stroke-width=".9"/>
+        <circle cx="24" cy="23.5" r="1.7" fill="#e8475f"/><circle cx="18.8" cy="25.5" r="1.2" fill="#3a9be0"/><circle cx="29.2" cy="25.5" r="1.2" fill="#1fb36b"/>`;
+    }
+  }
+  return `<svg viewBox="0 0 48 48" aria-hidden="true">${grad}${g}</svg>`;
+}
+
+function emblem(rk, cls){
+  const i = rk.i, Rk = RANKS[i] || {}, small = /\b(xs|sm)\b/.test(cls || '');
+  return `<span class="emb ${cls || ''}${Rk.shine ? ' shine' : ''}${i === PARAGON_I ? ' para' : ''}" title="${esc(rk.full)}" style="--ec:${rk.c}">${emblemSvg(i, rk.div ? rk.d : -1, small)}</span>`;
+}
+// bot ratings were stretched when the ranks went to 100 Elo per division; the bots' habits follow
+// their old position on the ladder, so the stretch is undone before looking those up
+const STRETCH = [[0, 0], [900, 900], [1100, 1200], [1300, 1500], [1500, 1800], [1750, 2100], [2000, 2400], [2250, 2850], [2500, 3300], [2750, 3800], [3200, 4600], [9000, 12400]];
+const lerpMap = (x, pts, a, b) => { for (let k = 1; k < pts.length; k++) if (x <= pts[k][a]){ const p = pts[k - 1], q = pts[k]; return p[b] + (q[b] - p[b]) * (x - p[a]) / (q[a] - p[a]); } return x; };
+const stretchR = r => Math.round(lerpMap(r, STRETCH, 0, 1));
+const unstretchR = r => lerpMap(r, STRETCH, 1, 0);
+// typical sitting length (minutes) for a rating
+const SIT = [[500,15],[800,25],[1000,35],[1200,50],[1400,70],[1600,90],[1800,120],[2000,150],[2200,190],[2400,240],[2800,330]];
+function typical(r){
+  r = unstretchR(r);
+  if (r <= SIT[0][0]) return SIT[0][1];
+  for (let k = 1; k < SIT.length; k++) if (r <= SIT[k][0]){ const [a, x] = SIT[k-1], [b, y] = SIT[k]; return x + (y - x) * (r - a) / (b - a); }
+  return SIT[SIT.length - 1][1];
+}
+
+/* the roster, regenerated from the seed */
+const STYLES = ['Steady','Steady','Steady','Sprinter','Sprinter','Grinder','Grinder','Wildcard','Wildcard','Night Owl','Early Bird'];
+const NM_A = ['lofi','quiet','night','coffee','study','calc','bio','chem','library','deep','focus','pixel','neon','mellow','sleepy','caffeine','notes','flash','ivy','maple','ember','nova','echo','sol','juniper','atlas','orbit','sage','cozy','paper','ink','tea','matcha','cloud','moss','river','solar','lunar','static','vinyl','quill','cedar','cobalt','velvet','retro','tidy','zen','grind','late','early'];
+const NM_B = ['maya','pete','kenji','ari','noor','leo','zara','finn','priya','omar','lena','theo','jun','sami','ana','rui','bea','kai','mira','eli','nina','dev','rosa','yuki','tom','ada','felix','iris','hana','arjun','chloe','diego','emma','gus','hugo','isla','jade','kofi','lars','mo','nadia','oscar','pia','quinn','raf','sofia','tariq','uma','vik','wren'];
+const NM_C = ['reads','studies','notes','grinds','codes','learns','writes','focus','crams','solves','thinks','works','labs','reviews','drafts'];
+const SUBJECTS = ['Organic chemistry','Calculus II','Linear algebra','Microeconomics','Biology','Physics I','Data structures','Accounting','Statistics','World history','Psychology','Philosophy','Spanish','Anatomy','Thermodynamics','Marketing','Discrete math','Art history','Neuroscience','Mechanical design','Political science','Nursing pharmacology','Japanese','Music theory','Genetics','Circuits','Literature','Biochem','Machine learning','Architecture'];
+const BIOS = ['one more chapter, then sleep (lie)','powered by iced coffee','library 3rd floor regular','flashcards are a lifestyle','studying so future me says thanks','do not disturb, midterm szn','lo-fi on, world off','quiet grind, loud results','reading the textbook nobody reads','pomodoros and peppermint tea','here to beat my own record','just trying to pass orgo','notes so neat they get borrowed','will study for snacks','early lecture survivor','night shift scholar','one problem set at a time','learning out loud','highlighters in every color','my desk is my happy place','procrastination recovery arc','study playlist on repeat','gym, study, sleep, repeat','second coffee, first chapter','i read the syllabus','finals mode: permanent','teaching it back to myself','dean\'s list or bust','focus is a muscle','tiny steps every day'];
+const PEAKS = {Morning:[5,12], Afternoon:[12,17], Evening:[17,22], 'Late night':[22,29]};
+const CHAT = ['halfway through problem set 3','coffee #2','flashcards time','this chapter is long','ok locking in','rewriting my notes','lab report grind','one more practice exam','reading the slides again','on question 14','music up, phone down','outlining the essay','reviewing lecture 9','almost through the reading','doing the hard problems first'];
+const TAPS = ['ok brain is fried, gg','calling it here, gg','dinner time, good match','need a nap, gg','that\'s enough for today','gg, nice sitting','out of coffee, done','my eyes hurt, gg','going to the gym, gg','gg, see you next time'];
+const NM_D = ['owl','fox','bear','wolf','hawk','lynx','otter','panda','koala','raven','finch','heron','moth','bee','crow','seal','tiger','orca','yak','crane','gecko','badger','robin','sparrow','falcon'];
+const NM_E = ['math','lit','code','econ','hist','phys','bio','chem','art','music','law','med','stats','eng','arch','psych','nurse','pre_med','cs','design'];
+function newName(i){
+  // the later bots draw from a much bigger pool so names rarely repeat
+  const rnd = mulberry32((ROSTER_SEED ^ 0x5bd1e995) + i * 40503), cap = x => x[0].toUpperCase() + x.slice(1);
+  const a = pick(rnd, NM_A), b = pick(rnd, NM_B), c = pick(rnd, NM_C), d = pick(rnd, NM_D), e = pick(rnd, NM_E), n2 = 1 + Math.floor(rnd() * 99), n3 = 1 + Math.floor(rnd() * 999), yr = String(Math.floor(rnd() * 12) + 98).slice(-2);
+  return [`${b}_${a}${n2}`, `${a}${cap(d)}${n2}`, `${b}.${c}${n3}`, `${cap(b)}${cap(a)}`, `${e}_${b}${yr}`, `${a}_${d}_${n2}`, `Dr.${cap(b)}${cap(d)}`, `${b}${n3}`, `${cap(d)}${cap(c)}${n2}`, `${b}_${e}`, `${a}.${b}`, `${cap(a)}${cap(d)}`][Math.floor(rnd() * 12)];
+}
+const PEAK_NAMES = Object.keys(PEAKS), STYLE_NAMES = ['Steady','Sprinter','Grinder','Wildcard','Night Owl','Early Bird'], FAV_NAMES = ['pomodoro','fifty','custom','timebox','stopwatch','flow'];
+// compact per-bot data used in the hot loops (built once, cached in IndexedDB)
+let T_STY = null, T_PK = null, T_FAV = null, T_SIT = null, T_PACT = null, T_SUF = null, T_BASE = null, RK_READY = false;
+const botCache = new Map();
+function bot(i){
+  let b = botCache.get(i); if (b) return b;
+  b = genBot(i); const suf = T_SUF ? T_SUF[i] : 0; if (suf) b.name += '_' + suf;
+  if (botCache.size > 4000) botCache.clear();
+  botCache.set(i, b); return b;
+}
+const BOTS = new Proxy({}, {get: (_, k) => typeof k === 'string' && /^\d+$/.test(k) && +k < ROSTER_N ? bot(+k) : undefined});
+function buildRosterArrays(){
+  T_STY = new Uint8Array(ROSTER_N); T_PK = new Uint8Array(ROSTER_N); T_FAV = new Uint8Array(ROSTER_N);
+  T_SIT = new Float32Array(ROSTER_N); T_PACT = new Float32Array(ROSTER_N); T_SUF = new Int32Array(ROSTER_N); T_BASE = new Int16Array(ROSTER_N);
+  const seen = new Map();
+  for (let i = 0; i < ROSTER_N; i++){
+    const b = genBot(i), n = seen.get(b.name) || 0; seen.set(b.name, n + 1); if (n) T_SUF[i] = n + 1;
+    T_STY[i] = STYLE_NAMES.indexOf(b.style); T_PK[i] = PEAK_NAMES.indexOf(b.peak); T_FAV[i] = FAV_NAMES.indexOf(b.fav);
+    T_SIT[i] = b.sitMul; T_PACT[i] = b.pAct; T_BASE[i] = b.base;
+  }
+}
+function genBot(i){
+  const rnd = mulberry32(ROSTER_SEED + i * 7919);
+  const pat = Math.floor(rnd() * 7), a = pick(rnd, NM_A), b = pick(rnd, NM_B), c = pick(rnd, NM_C), num = 1 + Math.floor(rnd() * 99);
+  const cap = x => x[0].toUpperCase() + x.slice(1);
+  let name = [`${b}_${a}`, `${a}${cap(b)}`, `${b}.${c}`, `${cap(b)}${num}`, `Dr.${cap(a)}`, `${a}_${num}`, `${cap(b)}${cap(c)}`][pat];
+  if (i >= OLD_N) name = newName(i);
+  const style = pick(rnd, STYLES);
+  const peak = style === 'Night Owl' ? 'Late night' : style === 'Early Bird' ? 'Morning' : pick(rnd, ['Morning','Afternoon','Evening','Evening','Late night']);
+  const hi = rnd() < .08;   // a thin elite group sits on top of the main bell curve
+  const base = stretchR(Math.round(clampN(hi ? 1700 + gaussOf(rnd) * 280 : 1120 + gaussOf(rnd) * 260, 520, 2750)));
+  const fav = style === 'Sprinter' ? 'pomodoro' : style === 'Grinder' ? 'stopwatch' : style === 'Wildcard' ? 'flow' : pick(rnd, ['pomodoro','pomodoro','fifty','custom','timebox','stopwatch']);
+  return {i, name, ini: name.replace(/^Dr\./, '').replace(/[^A-Za-z]/g, ' ').trim().split(/\s+|(?=[A-Z])/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('') || 'B',
+    hue: Math.floor(rnd() * 360), style, peak, subject: pick(rnd, SUBJECTS), bio: pick(rnd, BIOS), base, fav,
+    sitMul: .85 + rnd() * .3, age: 20 + Math.floor(Math.pow(rnd(), 1.3) * 500), pAct: rnd(), x: [rnd(), rnd(), rnd(), rnd(), rnd(), rnd(), rnd(), rnd()]};
+}
+const activity = (b, r) => clampN(.35 + (unstretchR(r) - 800) / 2600 + b.pAct * .25, .2, .97);
+const blockLen = (b, r) => b.fav === 'pomodoro' ? 25 : b.fav === 'fifty' ? 52 : b.fav === 'custom' ? 45 : typical(r) * b.sitMul;
+const sittingsPerDay = b => b.style === 'Sprinter' ? 2.4 : b.style === 'Grinder' ? 1.3 : 1.7;
+// the same three, from the compact arrays (for the loops over every bot)
+let ACT_R = null, TYP_R = null;     // per whole rating 0–5,000: activity base and typical sitting
+function rTables(){ ACT_R = new Float32Array(5001); TYP_R = new Float32Array(5001); for (let r = 0; r <= 5000; r++){ ACT_R[r] = .35 + (unstretchR(r) - 800) / 2600; TYP_R[r] = typical(r); } }
+const rIdx = r => r < 0 ? 0 : r > 5000 ? 5000 : r | 0;
+const activityI = (i, r) => clampN(ACT_R[rIdx(r)] + T_PACT[i] * .25, .2, .97);
+const blockLenI = (i, r) => { const f = T_FAV[i]; return f === 0 ? 25 : f === 1 ? 52 : f === 2 ? 45 : TYP_R[rIdx(r)] * T_SIT[i]; };
+const sittingsI = i => T_STY[i] === 1 ? 2.4 : T_STY[i] === 2 ? 1.3 : 1.7;
+function initBotStats(arr, from){
+  for (let i = from || 0; i < ROSTER_N; i++){
+    const b = genBot(i), o = i * BF, rnd = mulberry32(ROSTER_SEED ^ (i * 104729)), r = b.base, p = activity(b, r);
+    const L = typical(r) * b.sitMul, perDay = L * sittingsPerDay(b), days = Math.max(1, Math.round(b.age * p));
+    const total = Math.round(days * perDay * (.85 + rnd() * .3));
+    const best = Math.max(1, Math.min(days, Math.round(Math.log(Math.max(2, b.age * (1 - p))) / Math.log(1 / p) * (.7 + rnd() * .6))));
+    arr[o+F.rating] = r; arr[o+F.total] = total; arr[o+F.sessions] = Math.max(1, Math.round(total / blockLen(b, r)));
+    arr[o+F.days] = days; arr[o+F.best] = best; arr[o+F.cur] = rnd() < p ? Math.floor(rnd() * best) : 0;
+    arr[o+F.maxSess] = Math.round(L * (b.style === 'Grinder' ? 2.3 : b.style === 'Wildcard' ? 2 : 1.5) * (.9 + rnd() * .3));
+    arr[o+F.maxDay] = Math.min(DAY_MAX, Math.round(perDay * (1.8 + rnd() * 1.2)));
+    arr[o+F.maxSess] = Math.min(arr[o+F.maxSess], arr[o+F.maxDay]);
+    arr[o+F.maxWeek] = Math.round(Math.min(arr[o+F.maxDay] * 7, perDay * 7 * p * (1.3 + rnd() * .4)));
+    arr[o+F.maxMonth] = Math.round(Math.min(arr[o+F.maxWeek] * 4.4, perDay * 30 * p * (1.15 + rnd() * .3)));
+    arr[o+F.week] = Math.round(perDay * p * new Date().getDay()); arr[o+F.month] = Math.round(perDay * p * (new Date().getDate() - 1)); arr[o+F.today] = 0;
+  }
+}
+const b64 = a => { let s = ''; const u = new Uint8Array(a.buffer); for (let k = 0; k < u.length; k += 0x8000) s += String.fromCharCode.apply(null, u.subarray(k, k + 0x8000)); return btoa(s); };
+const unb64 = (s, T) => { const bin = atob(s), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); return new T(u.buffer); };
+
+/* IndexedDB: the bots' numbers are about 13 MB, far past what localStorage holds */
+const IDB = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try { const r = indexedDB.open('focus-bench', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked')); }
+    catch(e){ rej(e); }
+  }));
+  const tx = (mode, fn) => open().then(db => new Promise((res, rej) => {
+    const t = db.transaction('kv', mode), req = fn(t.objectStore('kv'));
+    t.oncomplete = () => res(req && mode === 'readonly' ? req.result : undefined); t.onerror = t.onabort = () => rej(t.error);
+  }));
+  return {get: k => tx('readonly', st => st.get(k)), set: (k, v) => tx('readwrite', st => st.put(v, k)), del: k => tx('readwrite', st => st.delete(k))};
+})();
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
+
+/* saved state */
+var R = null, BS = null, PREV = null;     // BS: packed bot stats, PREV: ratings at the start of today
+let idbOk = true, botsDirty = false, botsSaveT = null;
+function loadRanked(){
+  R = merge({v:1, on:true, mmr:1000, best:1000, played:0, w:0, l:0, d:0, ws:0, bestWs:0, bestUpset:0, revenge:0, profWins:0, hist:[], rec:{}, last:-1, showcase:null, cur:null, lastSim:null, lastSlice:null, rar:null, rv:0, para:null}, store.get('fb.ranked', {}));
+  if (!R.para) R.para = {h: null, since: 0, reign: {}, long: {}};
+  RK_READY = false;
+  return loadBots().catch(e => { console.error(e); }).then(() => {
+    rTables(); RK_READY = true; botsChanged();
+    updateParagon(true);
+    saveRanked(true);
+    const show = () => { renderRankChip(); renderMatch(); if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders(); };
+    show();
+    return dailySim().then(ch => { if (ch) show(); setTimeout(() => badgePass(), 1500); });
+  });
+}
+async function loadBots(){
+  let rec = null, ros = null;
+  try { [rec, ros] = await Promise.all([IDB.get('bots'), IDB.get('roster')]); } catch(e){ idbOk = false; }
+  if (ros && ros.v === ROSTER_V && ros.n === ROSTER_N){
+    T_STY = new Uint8Array(ros.sty); T_PK = new Uint8Array(ros.pk); T_FAV = new Uint8Array(ros.fav);
+    T_SIT = new Float32Array(ros.sit); T_PACT = new Float32Array(ros.pact); T_SUF = new Int32Array(ros.suf); T_BASE = new Int16Array(ros.base);
+  } else {
+    buildRosterArrays(); botCache.clear();
+    if (idbOk) IDB.set('roster', {v: ROSTER_V, n: ROSTER_N, sty: T_STY.buffer, pk: T_PK.buffer, fav: T_FAV.buffer, sit: T_SIT.buffer, pact: T_PACT.buffer, suf: T_SUF.buffer, base: T_BASE.buffer}).catch(() => {});
+  }
+  if (rec && rec.n === ROSTER_N && rec.bs && rec.bs.byteLength === ROSTER_N * BF * 4){
+    BS = new Int32Array(rec.bs); PREV = new Int16Array(rec.prev);
+    R.lastSlice = rec.lastSlice; R.lastSim = rec.lastSim;
+  } else {
+    // first run with the big roster: keep the original 5,000 bots from the old save, add the rest
+    let old = null, oldPrev = null;
+    try { if (R.bots) old = unb64(R.bots, Int32Array); } catch(e){}
+    try { if (R.prev) oldPrev = unb64(R.prev, Int16Array); } catch(e){}
+    const oldF = old && old.length === OLD_N * BF ? BF : old && old.length === OLD_N * 12 ? 12 : 0;
+    BS = new Int32Array(ROSTER_N * BF); PREV = new Int16Array(ROSTER_N);
+    initBotStats(BS, oldF ? OLD_N : 0);
+    if (oldF){
+      for (let i = 0; i < OLD_N; i++) for (let k = 0; k < oldF; k++) BS[i * BF + k] = old[i * oldF + k];
+      if (oldF === 12) R.lastSlice = sliceStartOf(Date.now());   // those saves already counted today in full
+      if (R.rv < 2) for (let i = 0; i < OLD_N; i++) BS[i * BF] = stretchR(BS[i * BF]);
+    } else { const d0 = new Date(); d0.setHours(0, 0, 0, 0); R.lastSlice = d0.getTime() - SLICE; R.lastSim = dayKey(Date.now()); }
+    for (let i = 0; i < ROSTER_N; i++) PREV[i] = BS[i * BF];
+    if (oldPrev && oldPrev.length === OLD_N) for (let i = 0; i < OLD_N; i++) PREV[i] = R.rv < 2 ? stretchR(oldPrev[i]) : oldPrev[i];
+    botsDirty = true;
+  }
+  if (R.rv < 2){ R.hist.forEach(h => h.br = stretchR(h.br)); if (R.cur) R.cur.br = stretchR(R.cur.br); }
+  if (R.rv < 3){
+    // no bot's day can top 24 hours: pull back the few records that did, and keep sessions inside their day
+    for (let i = 0; i < ROSTER_N; i++){
+      const o = i * BF;
+      if (BS[o+F.maxDay] > DAY_MAX) BS[o+F.maxDay] = 1150 + (i * 37) % 260;
+      if (BS[o+F.maxSess] > BS[o+F.maxDay]) BS[o+F.maxSess] = Math.round(BS[o+F.maxDay] * .6);
+      if (BS[o+F.today] > DAY_MAX) BS[o+F.today] = DAY_MAX;
+    }
+    botsDirty = true;
+  }
+  R.rv = 3; delete R.bots; delete R.prev;
+}
+let rkSaveT = null;
+function saveRanked(now){
+  const doSave = () => { store.set('fb.ranked', R); if (botsDirty) saveBots(); };
+  clearTimeout(rkSaveT); now ? doSave() : rkSaveT = setTimeout(doSave, 800);
+}
+const markBots = () => { botsDirty = true; };
+function saveBots(){
+  if (!idbOk || !RK_READY || !BS) return;
+  clearTimeout(botsSaveT);
+  botsSaveT = setTimeout(() => {
+    botsDirty = false;
+    IDB.set('bots', {n: ROSTER_N, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now()}).catch(e => { console.error(e); botsDirty = true; });
+  }, 600);
+}
+addEventListener('pagehide', () => { if (botsDirty && RK_READY && idbOk){ clearTimeout(botsSaveT); botsDirty = false; IDB.set('bots', {n: ROSTER_N, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now()}).catch(() => {}); } });
+const botRating = i => BS[i * BF];
+
+/* bots update every 2 hours. Each bot has a plan for each day (study or not, how long), worked out
+   from the seed so nothing extra is saved. The plan's minutes are spread across the day's twelve
+   2-hour slices, weighted toward the bot's peak hours. Streaks and days studied roll over at midnight.
+   Catch-up after time away covers up to 7 days, with whole missed days done in one step. */
+const SLICE = 2 * 3600e3;
+function sliceStartOf(t){ const d = new Date(t); d.setMinutes(0, 0, 0); d.setHours(d.getHours() - d.getHours() % 2); return d.getTime(); }
+const SLICE_W = [];      // per peak: share of the day's minutes in each of the 12 slices (cumulative)
+PEAK_NAMES.forEach(pk => {
+  const [a, z] = PEAKS[pk], w = [];
+  for (let k = 0; k < 12; k++){
+    const h = k * 2 + 1, hh = h < 5 ? h + 24 : h;
+    w.push(hh >= a && hh < z ? 3 : (hh >= a - 2 && hh < z + 2) ? 1.5 : (h >= 2 && h < 7) ? .1 : 1);
+  }
+  const sum = w.reduce((x, y) => x + y, 0); let c = 0;
+  SLICE_W.push(w.map(x => (c += x / sum)));
+});
+const dayNum = dk => +dk.replace(/-/g, '');
+// A bot's day is fixed by its seed, the date and its long-term base rating, so past days never change
+// and its calendar can be rebuilt exactly at any time. No day tops 23 hours of study.
+const DAY_MAX = 1440, DAY_CAP = 1380;
+const PLAN = {active: false, m: 0, longest: 0};    // reused to avoid making 250,000 objects per update
+function daySits(i, dk, out){     // the day's sitting lengths in minutes (empty if the bot skipped the day)
+  const r = T_BASE[i], rnd = mulberry32(dayNum(dk) * 7 + i * 2654435761);
+  out = out || [];  out.length = 0;
+  if (!(rnd() < activityI(i, r))) return out;
+  const L = TYP_R[rIdx(r)] * T_SIT[i], sits = Math.max(1, Math.round(sittingsI(i) * (.6 + rnd() * .8)));
+  let m = 0; for (let s = 0; s < sits; s++){ const x = L * Math.exp(.3 * gaussOf(rnd)); out.push(x); m += x; }
+  if (m > DAY_CAP) for (let s = 0; s < out.length; s++) out[s] *= DAY_CAP / m;
+  return out;
+}
+const SITS = [];
+function dayPlan(i, dk, out){
+  out = out || {active: false, m: 0, longest: 0};
+  daySits(i, dk, SITS);
+  out.active = SITS.length > 0; out.m = 0; out.longest = 0;
+  let m = 0, longest = 0; for (const x of SITS){ m += x; if (x > longest) longest = x; }
+  out.m = Math.round(m); out.longest = Math.round(longest);
+  return out;
+}
+// every bot's plan for one day, worked out once and reused by that day's twelve updates
+let planDay = null, planM = null, planL = null;
+function plansFor(dk){
+  if (planDay === dk) return;
+  if (!planM){ planM = new Int32Array(ROSTER_N); planL = new Int32Array(ROSTER_N); }
+  for (let i = 0; i < ROSTER_N; i++){ dayPlan(i, dk, PLAN); planM[i] = PLAN.active ? Math.max(1, PLAN.m) : 0; planL[i] = PLAN.longest; }
+  planDay = dk;
+}
+function rollover(t){
+  // midnight: close out yesterday, then start today
+  const d = new Date(t), yk = dayKey(new Date(t - 12 * 3600e3)), sun = d.getDay() === 0, first = d.getDate() === 1;
+  const cached = planDay === yk;
+  for (let i = 0; i < ROSTER_N; i++){
+    const o = i * BF;
+    if (cached ? planM[i] > 0 : dayPlan(i, yk, PLAN).active){ BS[o+F.days]++; BS[o+F.cur]++; if (BS[o+F.cur] > BS[o+F.best]) BS[o+F.best] = BS[o+F.cur]; } else BS[o+F.cur] = 0;
+    PREV[i] = BS[o]; BS[o+F.today] = 0;
+    if (sun) BS[o+F.week] = 0;
+    if (first) BS[o+F.month] = 0;
+  }
+  planDay = null;      // plans depend on the start-of-day ratings, which just changed
+}
+function addStudy(i, add, longest){
+  const o = i * BF, before = BS[o+F.today]; add = Math.min(add, DAY_MAX - before); if (add <= 0) return;
+  const today = before + add, bl = blockLenI(i, BS[o]);
+  BS[o+F.today] = today; BS[o+F.total] += add; BS[o+F.week] += add; BS[o+F.month] += add;
+  BS[o+F.sessions] += Math.max(0, Math.round(today / bl) - Math.round(before / bl)) || (before === 0 ? 1 : 0);
+  if (today > BS[o+F.maxDay]) BS[o+F.maxDay] = today;
+  BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], Math.min(longest, today));
+  if (BS[o+F.week] > BS[o+F.maxWeek]) BS[o+F.maxWeek] = BS[o+F.week];
+  if (BS[o+F.month] > BS[o+F.maxMonth]) BS[o+F.maxMonth] = BS[o+F.month];
+}
+// bot-vs-bot matches between ladder neighbors, zero-sum so ratings stay centered
+function botMatches(busy){
+  const order = sortedBots(), rnd = Math.random, n = order.length;
+  for (let k = 0; k < n; k++){
+    if (rnd() > busy) continue;
+    const j = clampN(k + Math.round(gaussOf(rnd) * 4) || 1, 0, n - 1); if (j === k) continue;
+    const a = order[k], c = order[j], ra = BS[a * BF], rc = BS[c * BF];
+    const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = rnd() < ea ? 1 : 0, dlt = Math.round(12 * (sa - ea));
+    BS[a * BF] = clampN(ra + dlt, 300, 5000); BS[c * BF] = clampN(rc - dlt, 300, 5000);
+  }
+  botsChanged();
+}
+function runSlice(t){
+  const slot = new Date(t).getHours() / 2, dk = dayKey(t);
+  if (slot === 0) rollover(t);
+  plansFor(dk);
+  for (let i = 0; i < ROSTER_N; i++){
+    const m = planM[i]; if (!m) continue;
+    const W = SLICE_W[T_PK[i]], add = Math.round(m * W[slot]) - (slot ? Math.round(m * W[slot - 1]) : 0);
+    if (add > 0) addStudy(i, add, planL[i]);
+  }
+  botMatches(slot >= 3 && slot <= 11 ? .2 : .05);
+}
+function runDay(t){    // a whole missed day in one step
+  rollover(t);
+  const dk = dayKey(t); plansFor(dk);
+  for (let i = 0; i < ROSTER_N; i++) if (planM[i]) addStudy(i, planM[i], planL[i]);
+  botMatches(.95); botMatches(1);
+}
+// runs one update (or one whole missed day) at a time, letting the page breathe in between;
+// resolves to true if anything changed
+let simBusy = null;
+function dailySim(){
+  if (!RK_READY) return Promise.resolve(false);
+  if (simBusy) return simBusy;
+  const now = sliceStartOf(Date.now());
+  if (!R.lastSlice) R.lastSlice = now;
+  if (now <= R.lastSlice) return Promise.resolve(false);
+  // a queue of small jobs: each 2-hour update, or a whole missed day split into a few parts
+  const jobs = [];
+  let t = Math.max(R.lastSlice + SLICE, now - 7 * 864e5);
+  while (t <= now){
+    const d = new Date(t), next = new Date(d); next.setDate(d.getDate() + 1);
+    if (d.getHours() === 0 && sliceStartOf(next.getTime() - 1) <= now){
+      const tt = t, dk = dayKey(t), last = sliceStartOf(next.getTime() - 1);
+      jobs.push(() => rollover(tt), () => plansFor(dk), () => { for (let i = 0; i < ROSTER_N; i++) if (planM[i]) addStudy(i, planM[i], planL[i]); botMatches(.95); }, () => { botMatches(1); R.lastSlice = last; });
+      t = next.getTime();
+    } else { const tt = t; jobs.push(() => { runSlice(tt); R.lastSlice = tt; }); t += SLICE; }
+  }
+  let res; const prom = simBusy = new Promise(r => res = r);
+  const step = () => {
+    jobs.shift()();
+    if (jobs.length){ setTimeout(step, 25); return; }
+    R.lastSlice = now; R.lastSim = dayKey(now);
+    lbPts = null; markBots(); simBusy = null;
+    updateParagon();
+    saveRanked(true);
+    res(true);
+  };
+  step();
+  return prom;
+}
+/* sorted by rating (counting sort: ratings are whole numbers from 0 to 5,000), ties by bot number */
+let sortedCache = null, posCache = null, botsVer = 0, rankCountCache = null;
+function botsChanged(){ sortedCache = null; posCache = null; rankCountCache = null; botsVer++; badgeCache.clear(); }
+function sortedBots(){
+  if (sortedCache) return sortedCache;
+  const MAXR = 5000, cnt = new Int32Array(MAXR + 2), out = new Int32Array(ROSTER_N);
+  for (let i = 0; i < ROSTER_N; i++) cnt[MAXR - clampN(BS[i * BF], 0, MAXR) + 1]++;
+  for (let k = 1; k <= MAXR + 1; k++) cnt[k] += cnt[k - 1];
+  for (let i = 0; i < ROSTER_N; i++) out[cnt[MAXR - clampN(BS[i * BF], 0, MAXR)]++] = i;
+  return (sortedCache = out);
+}
+function posOf(i){ if (!posCache){ const o = sortedBots(); posCache = new Int32Array(ROSTER_N); for (let k = 0; k < o.length; k++) posCache[o[k]] = k; } return posCache[i]; }
+// overall place by Elo among everyone (you win ties)
+function placeOf(who){
+  if (who === ME){ const o = sortedBots(); let lo = 0, hi = o.length; while (lo < hi){ const m = (lo + hi) >> 1; if (BS[o[m] * BF] > R.mmr) lo = m + 1; else hi = m; } return lo + 1; }
+  return posOf(who) + 1 + (R.mmr >= botRating(who) ? 1 : 0);
+}
+
+/* the Paragon: the single highest-rated player, once they're a Laureate. Ties keep the holder. */
+const paraKey = h => h === ME ? 'me' : String(h);
+function reignLongest(h){ const p = R.para, k = paraKey(h); return Math.max(p.long[k] || 0, p.h === h ? Date.now() - p.since : 0); }
+function reignTotal(h){ const p = R.para, k = paraKey(h); return (p.reign[k] || 0) + (p.h === h ? Date.now() - p.since : 0); }
+function updateParagon(silent){
+  const p = R.para, o = sortedBots(), top = o[0], topR = BS[top * BF], best = Math.max(topR, R.mmr);
+  let h = null;
+  if (best >= LAUREATE_MIN){
+    const holderR = p.h === ME ? R.mmr : p.h != null ? botRating(p.h) : -1;
+    h = holderR === best ? p.h : R.mmr > topR ? ME : top;
+  }
+  if (h === p.h) return;
+  const now = Date.now(), old = p.h;
+  if (old != null){ const k = paraKey(old), held = now - p.since; p.reign[k] = (p.reign[k] || 0) + held; p.long[k] = Math.max(p.long[k] || 0, held); }
+  p.h = h; p.since = now;
+  saveRanked(); badgeCache.clear(); renderRankChip();
+  if (silent) return;
+  if (h === ME) crownShow(PARAGON, 'You are the Paragon', 'The single highest-rated player of all. Hold on to it.');
+  else if (old === ME) toast(`You lost the Paragon title to ${BOTS[h] ? BOTS[h].name : 'a rival'}.`);
+}
+function crownShow(rkObj, title, sub){
+  let ov = $('#crownOv');
+  if (!ov){ ov = document.createElement('div'); ov.id = 'crownOv'; ov.className = 'crown-ov'; document.body.appendChild(ov); ov.addEventListener('click', () => ov.hidden = true); }
+  ov.innerHTML = `<div class="crown-card" style="--ec:${rkObj.c}"><div class="crown-glow"></div>${emblem(rkObj, 'xxl')}<b>${esc(title)}</b><span>${esc(sub)}</span><small>Click anywhere to continue</small></div>`;
+  ov.hidden = false; ov.classList.remove('go'); void ov.offsetWidth; ov.classList.add('go');
+  fx.burst(); setTimeout(() => fx.burst(), 450);
+  clearTimeout(crownShow.t); crownShow.t = setTimeout(() => ov.hidden = true, 6000);
+}
+
+/* bot study profiles and badges */
+function botStats(i){
+  const b = BOTS[i], o = i * BF, x = b.x, r = BS[o], days = BS[o+F.days], n = BS[o+F.sessions], total = BS[o+F.total];
+  const rr = mulberry32(ROSTER_SEED + i * 31337), f = () => rr();
+  const yrs = days / 365, bl = blockLen(b, r);
+  const modes = {}; modes[b.fav] = Math.round(n * .6);
+  ['pomodoro','fifty','flow','timebox','stopwatch','custom'].forEach(m => { if (m !== b.fav && f() < clampN(days / 120, .05, .8)) modes[m] = Math.max(1, Math.round(n * .08 * f())); });
+  const night = b.peak === 'Late night', morn = b.peak === 'Morning';
+  const sp = {}; ['01-01','02-14','10-31','12-25'].forEach(k => { if (f() < clampN(yrs * .55, 0, .9)) sp[k] = 1; }); if (f() < yrs * .02) sp['02-29'] = 1;
+  const acts = 3 + Math.floor(x[0] * 5), maxDayN = Math.max(1, Math.round(BS[o+F.maxDay] / Math.min(bl, 52)));
+  const goalP = clampN(typical(r) * sittingsPerDay(b) / (25 * 6) * .8, 0, .95);
+  const st = {
+    n, total, maxSess: BS[o+F.maxSess], named: n, modes, tags: {}, sp, swDot: (modes.stopwatch || 0) > 20 && f() < .3 ? 1 : 0,
+    flowMax: modes.flow ? Math.round(BS[o+F.maxSess] * .8) : 0,
+    early: morn || f() < .2 ? 1 : 0, dawn: morn && f() < .35 ? 1 : 0, owl: night || f() < .45 ? 1 : 0, midnight: night && days > 20 ? 1 : f() < .1 ? 1 : 0,
+    three: night && days > 40 && f() < .25 ? 1 : 0, lunch: f() < .5 ? 1 : 0, monMorning: morn || f() < .2 ? 1 : 0, weekend: days > 5 ? 1 : 0,
+    fri13: f() < clampN(yrs * 1.3, 0, .9) ? 1 : 0, pi: f() < clampN(days / 2000, 0, .3) ? 1 : 0,
+    daysActive: days, bestStreak: BS[o+F.best], goalDays: Math.round(days * goalP), goalStreak: Math.round(BS[o+F.best] * goalP * .8),
+    maxDay: BS[o+F.maxDay], maxDayN, comeback: activity(b, r) < .6 && f() < .6 ? 1 : 0, lucky7: maxDayN >= 7 && f() < clampN(yrs * .4, 0, .5) ? 1 : 0,
+    fullWeekend: days > 15 && f() < .75 ? 1 : 0, maxWeek: BS[o+F.maxWeek], maxMonth: BS[o+F.maxMonth], perfectWeek: Math.min(7, BS[o+F.best]),
+    allDay: BS[o+F.maxDay] > 240 && f() < .55 ? 1 : 0, insomniac: night && f() < clampN(yrs * .15, 0, .4) ? 1 : 0,
+    hours: Math.min(24, Math.round(6 + days / 10 + (b.style === 'Wildcard' ? 5 : 0))), dows: Math.min(7, days >= 14 ? 7 : days),
+    taskCount: Math.round(n * (.25 + x[1] * .2)), maxTaskDays: Math.min(days, Math.round(3 + days * (.08 + x[2] * .12))),
+    actCount: acts, maxTag: Math.round(total * (.3 + x[3] * .3)), tags5h: Math.min(acts, Math.floor(total / (300 * 1.6))),
+    maxGroup: Math.max(1, Math.round(maxDayN * .55)), maxPomoGroup: b.fav === 'pomodoro' ? Math.max(1, Math.round(maxDayN * .55)) : 0,
+    c: {notes: Math.round(days * .4 * x[4]), notesDone: Math.round(days * .3 * x[4]), tagsAdded: x[5] < .7 ? 1 : 0, mini: x[6] < .6 ? 1 : 0, focusMode: x[7] < .6 ? 1 : 0,
+        music: Math.round(x[5] * 8), backup: x[6] < .3 ? 1 : 0, edits: x[7] < .5 ? 2 : 0, deletes: x[4] < .4 ? 1 : 0, calMonth: x[3] < .6 ? 1 : 0, awards: 1,
+        resets: Math.round(x[2] * 30), keys: Math.round(n * x[1] * .5), thunder: x[0] < .3 ? days * 2 : 0},
+    set: {themes: 1 + Math.floor(x[1] * x[2] * Object.keys(THEMES).length), fonts: 1 + Math.floor(x[3] * x[4] * Object.keys(DIGIT_FONTS).length), amb: x[5] < .6 ? 1 + Math.floor(x[6] * 4) : 0, accentUsed: x[7] < .3 ? 1 : 0},
+    rain: x[5] < .5 ? 1 : 0, storm: x[5] < .3 ? 1 : 0,
+    r: {played: Math.round(days * .8), w: Math.round(days * .4), bestWs: Math.round(2 + x[2] * 8), bestUpset: Math.round(x[3] * 350), revenge: x[4] < .5 ? 1 : 0, best: r + Math.round(x[6] * 120), profWins: r >= 2400 ? Math.round(days * .2) : 0, para: R.para && (R.para.h === i || R.para.reign[i] != null) ? 1 : 0, reign: R.para ? Math.floor(reignLongest(i) / 864e5) : 0},
+    unlocked: 0
+  };
+  st.modeCount = Object.keys(modes).length;
+  return st;
+}
+const badgeCache = new Map();
+function earnedFor(st){
+  const got = [];
+  for (const a of ACHS){ if (a.cat === 'meta') continue; if (achVal(a, st) >= a.goal) got.push(a.id); }
+  st.unlocked = got.length;
+  for (const a of ACHS){ if (a.cat !== 'meta') continue; if (achVal(a, st) >= a.goal){ got.push(a.id); st.unlocked++; } }
+  return got;
+}
+function botBadges(i){
+  if (badgeCache.has(i)) return badgeCache.get(i);
+  const got = earnedFor(botStats(i));
+  if (badgeCache.size > 5000) badgeCache.clear();
+  badgeCache.set(i, got); return got;
+}
+const TIER_RANK = {legendary:0, platinum:1, gold:2, silver:3, bronze:4};
+let ACH_MAP = null;
+const achById = id => (ACH_MAP || (ACH_MAP = new Map(ACHS.map(a => [a.id, a])))).get(id);
+function rarityOf(id){ return R.rar && R.rar.counts[id] != null ? (R.rar.counts[id] + (ACH.u[id] ? 1 : 0)) / (ROSTER_N + 1) : null; }
+function rareSort(ids){
+  return ids.slice().sort((p, q) => { const a = rarityOf(p), b = rarityOf(q); if (a != null && b != null && a !== b) return a - b; return TIER_RANK[achById(p).tier] - TIER_RANK[achById(q).tier]; });
+}
+function featured(ids, peakHint){
+  const sorted = rareSort(ids.filter(id => achById(id) && achById(id).cat !== 'meta'));
+  const out = sorted.slice(0, 2);
+  const pers = peakHint && sorted.find(id => !out.includes(id) && peakHint.includes(id));
+  if (pers) out.push(pers); else if (sorted[2]) out.push(sorted[2]);
+  return out;
+}
+function botFeatured(i){ const b = BOTS[i]; return featured(botBadges(i), b.peak === 'Late night' ? ['owl','midnight','three','insomnia'] : b.peak === 'Morning' ? ['early','dawn','monday'] : b.style === 'Grinder' ? ['l240','l180','l120','d8','d6'] : b.style === 'Sprinter' ? ['g8p','g4p','dn12','dn8'] : null); }
+function myFeatured(){
+  const mine = ACHS.filter(a => ACH.u[a.id]).map(a => a.id);
+  const chosen = (R.showcase || []).filter(id => ACH.u[id]);
+  return chosen.length ? chosen.slice(0, 3) : featured(mine);
+}
+/* one pass over every bot, in small idle chunks: how many bots hold each achievement (rarity, kept
+   for the day) and each bot's achievement points (for the leaderboard, redone after each update).
+   Badge lists aren't kept for every bot, only for the few on screen. */
+let passGen = 0, passRunning = false, passWait = [];
+function badgePass(done){
+  if (done) passWait.push(done);
+  if (!RK_READY) return;
+  const needRar = !(R.rar && R.rar.day === R.lastSim);
+  if (!needRar && lbPts){ const w = passWait; passWait = []; w.forEach(f => f()); return; }
+  if (passRunning) return; passRunning = true;
+  const gen = botsVer, counts = {}, pts = new Int32Array(ROSTER_N), PT = {}; ACHS.forEach(a => { counts[a.id] = 0; PT[a.id] = TIERS[a.tier].pts; });
+  let i = 0;
+  const idle = window.requestIdleCallback || (f => setTimeout(() => f({timeRemaining: () => 8}), 16));
+  const step = dl => {
+    if (botsVer !== gen){ passRunning = false; setTimeout(() => badgePass(), 500); return; }     // bots changed mid-way: start over
+    const t0 = performance.now();
+    while (i < ROSTER_N && performance.now() - t0 < 12){
+      const end = Math.min(ROSTER_N, i + 100);
+      for (; i < end; i++){ const got = badgeCache.get(i) || earnedFor(botStats(i)); let n = 0; for (const id of got){ counts[id]++; n += PT[id]; } pts[i] = n; }
+    }
+    if (i < ROSTER_N){ idle(step); return; }
+    R.rar = {day: R.lastSim, counts}; lbPts = pts; passRunning = false; saveRanked();
+    const w = passWait; passWait = []; w.forEach(f => f());
+  };
+  idle(step);
+}
+const computeRarity = done => badgePass(done);
+const ensureBotPoints = done => badgePass(done);
+function badgeHtml(id, size){
+  const a = achById(id); if (!a) return '';
+  return `<span class="bdg ${size || ''}" data-ach="${a.id}" tabindex="0" role="button" aria-label="${esc(a.name)}, ${TIERS[a.tier].name} achievement. Show details">${achIcon(a)}</span>`;
+}
+/* badge detail card: what it is, how to get it, how rare, and where you stand */
+let tipStats = null, tipStatsAt = 0, tipFor = null, tipAt = 0;
+function showBadgeTip(el){
+  const a = achById(el.dataset.ach); if (!a) return;
+  const tip = $('#bdgTip'), T = TIERS[a.tier], got = ACH.u[a.id], hidden = a.secret && !got;
+  if (Date.now() - tipStatsAt > 3000){ tipStats = achStats(); tipStatsAt = Date.now(); }
+  const pct = rarityOf(a.id);
+  const v = achVal(a, tipStats);
+  const mine = got ? `<span class="tip-me got">You have this · unlocked ${new Date(got).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})}</span>`
+    : hidden ? `<span class="tip-me">You don't have this yet</span>`
+    : `<span class="tip-me">You don't have this yet${a.goal > 1 ? ` · your progress: ${achProgressText(a, v)}` : ''}</span>${a.goal > 1 ? `<span class="tip-bar"><i style="width:${Math.min(100, v / a.goal * 100)}%;background:${T.c}"></i></span>` : ''}`;
+  tip.innerHTML = `<div class="tip-top">${achIcon(a, 'big')}<span><b>${esc(a.name)}</b><small style="color:${T.c}">${T.name} · +${T.pts}</small></span></div>
+    <p class="tip-how">${hidden ? '<em>Secret: unlock it yourself to find out how.</em>' : `<span>How to get it</span>${esc(a.desc)}`}</p>
+    ${pct == null ? '' : `<small class="tip-rare">Held by ${pct < .001 ? 'under 0.1' : (pct * 100).toFixed(pct < .1 ? 1 : 0)}% of players</small>`}
+    ${mine}`;
+  tip.hidden = false; tipFor = el; tipAt = Date.now();
+  // place it above the badge, or below if there's no room, kept inside the screen
+  const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, pad = 10;
+  let left = Math.min(Math.max(pad, r.left + r.width / 2 - w / 2), innerWidth - w - pad);
+  let top = r.top - h - 10; if (top < pad) top = r.bottom + 10;
+  tip.style.left = left + 'px'; tip.style.top = Math.min(top, innerHeight - h - pad) + 'px';
+}
+function hideBadgeTip(){ $('#bdgTip').hidden = true; tipFor = null; }
+document.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const b = e.target.closest && e.target.closest('.bdg[data-ach]'); if (b) showBadgeTip(b); });
+document.addEventListener('pointerout', e => { if (e.pointerType === 'touch') return; const b = e.target.closest && e.target.closest('.bdg[data-ach]'); if (b && !b.contains(e.relatedTarget)) hideBadgeTip(); });
+document.addEventListener('click', e => {
+  const b = e.target.closest('.bdg[data-ach]');
+  if (b){ e.stopPropagation(); tipFor === b && !$('#bdgTip').hidden && Date.now() - tipAt > 400 ? hideBadgeTip() : showBadgeTip(b); return; }
+  if (!e.target.closest('#bdgTip')) hideBadgeTip();
+}, true);
+document.addEventListener('focusin', e => { const b = e.target.closest && e.target.closest('.bdg[data-ach]'); if (b) showBadgeTip(b); });
+document.addEventListener('focusout', e => { if (e.target.closest && e.target.closest('.bdg[data-ach]')) hideBadgeTip(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideBadgeTip(); });
+addEventListener('scroll', hideBadgeTip, true);
+function avatar(b, cls){ return `<span class="av ${cls || ''}" style="--h:${b.hue}" aria-hidden="true">${esc(b.ini)}</span>`; }
+const myName = () => ((P.myName || '').trim() || 'You');
+const myIni = () => { const n = (P.myName || '').trim(); if (!n) return 'You'; const w = n.replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/).filter(Boolean); return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || n).slice(0, 2)).toUpperCase(); };
+const myAvatar = cls => `<span class="av me ${cls || ''}${P.myHue != null ? ' hue' : ''}${(P.myName || '').trim() ? ' named' : ''}"${P.myHue != null ? ` style="--h:${P.myHue}"` : ''} aria-hidden="true">${esc(myIni())}</span>`;
+
+/* matchmaking */
+function findOpponent(){
+  const me = R.mmr, order = sortedBots(), h = new Date().getHours();
+  const rivals = Object.entries(R.rec).filter(([i, r]) => r[0] + r[1] + r[2] >= 3 && Math.abs(botRating(+i) - me) <= 200).map(([i]) => +i).filter(i => i !== R.last);
+  if (rivals.length && Math.random() < .15) return pick(Math.random, rivals);
+  for (const w of [75, 150, 300, 2000]){
+    const cand = order.filter(i => i !== R.last && Math.abs(botRating(i) - me) <= w);
+    if (cand.length >= (w < 2000 ? 5 : 1)){
+      const weighted = []; cand.forEach(i => { const [a, z] = PEAKS[PEAK_NAMES[T_PK[i]]], hh = h < 5 ? h + 24 : h; weighted.push(i); if (hh >= a && hh < z) weighted.push(i); });
+      return pick(Math.random, weighted);
+    }
+  }
+  return order[0];
+}
+function rollTarget(i){
+  const b = BOTS[i], L = typical(botRating(i)) * b.sitMul, g = gaussOf(Math.random), h = new Date().getHours();
+  const late = h >= 21 || h < 3, morning = h >= 5 && h < 12;
+  let t;
+  switch (b.style){
+    case 'Sprinter': t = L * .85 * Math.exp(.12 * g); break;
+    case 'Grinder': t = L * .9 * Math.exp(.45 * g); break;
+    case 'Wildcard': t = Math.random() < .5 ? L * .55 * Math.exp(.3 * g) : L * 1.45 * Math.exp(.3 * g); break;
+    case 'Night Owl': t = L * (late ? 1.2 : morning ? .85 : 1) * Math.exp(.25 * g); break;
+    case 'Early Bird': t = L * (morning ? 1.2 : late ? .85 : 1) * Math.exp(.25 * g); break;
+    default: t = L * Math.exp(.18 * g);
+  }
+  return Math.round(clampN(t, 12, 600) * 60000);
+}
+const kFactor = () => R.played < 5 ? 40 : 24;
+function stakes(br){ const E = 1 / (1 + Math.pow(10, (br - R.mmr) / 400)), K = kFactor(); return {E, win: Math.round(K * (1 - E)), loss: Math.round(K * E), draw: Math.round(K * (.5 - E))}; }
+function startMatch(){
+  const b = findOpponent(), br = botRating(b), now = Date.now();
+  const lines = [...CHAT].sort(() => Math.random() - .5).slice(0, 6);
+  R.cur = {pl: R.played < 5 ? R.played + 1 : 0, b, br, mmr0: R.mmr, target: rollTarget(b), you: 0, them: 0, t0: now, last: now, tick: now, state: 'live', tapped: false, lines, tap: pick(Math.random, TAPS), feat: botFeatured(b), mine: myFeatured()};
+  R.last = b; saveRanked();
+  const B = BOTS[b];
+  toast(`Match found: ${B.name} (${rankOf(br).full} · ${br.toLocaleString()})`);
+  renderMatch(true);
+}
+function finalize(res, why){
+  const c = R.cur; if (!c || c.state !== 'live') return;
+  const youMin = Math.round(c.you / 60000), themMin = Math.round(c.target / 60000), B = BOTS[c.b];   // the bot always finishes its sitting
+  if (res !== 'W' && c.you < 10 * 60000){
+    R.cur = null; saveRanked(); renderMatch();
+    if (why !== 'silent') toast('Match not rated: you studied less than 10 minutes.');
+    return;
+  }
+  const s = stakes(c.br), delta = res === 'W' ? s.win : res === 'D' ? s.draw : -s.loss;
+  const before = rankOf(R.mmr);
+  R.mmr = clampN(R.mmr + delta, 100, 5000); R.best = Math.max(R.best, R.mmr); R.played++;
+  BS[c.b * BF] = clampN(BS[c.b * BF] - delta, 300, 5000); botsChanged(); markBots();
+  // the bot studied too
+  const o = c.b * BF; BS[o+F.total] += themMin; BS[o+F.sessions]++; BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], themMin);
+  const rec = R.rec[c.b] || (R.rec[c.b] = [0, 0, 0]);
+  const nem = nemesis();
+  if (res === 'W'){ R.w++; R.ws++; R.bestWs = Math.max(R.bestWs, R.ws); rec[0]++; R.bestUpset = Math.max(R.bestUpset, c.br - c.mmr0); if (nem === c.b) R.revenge = 1; if (c.mmr0 >= 2400) R.profWins++; }
+  else if (res === 'L'){ R.l++; R.ws = 0; rec[1]++; }
+  else { R.d++; rec[2]++; }
+  const after = rankOf(R.mmr);
+  R.hist.unshift({t: Date.now(), b: c.b, br: c.br, you: youMin, them: themMin, ys: Math.round(c.you / 1000), ts: Math.round(c.target / 1000), r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0});
+  if (R.hist.length > 500) R.hist.length = 500;
+  c.state = 'done'; c.res = res; c.delta = delta; c.promo = after.i > before.i || (after.i === before.i && after.d > before.d) ? after.full : (after.i < before.i || (after.i === before.i && after.d < before.d) ? -1 : 0);
+  saveRanked(true);
+  if (res === 'W'){ chime(P.chime); if (c.promo && c.promo !== -1){ fx.burst(); if (RANKS[after.i].elite && after.i > before.i) crownShow(after, `Promoted to ${RANKS[after.i].name}`, after.i === LAUREATE ? 'You reached the Laureate rank. Become the highest-rated player to claim Paragon.' : 'You reached an elite rank.'); } }
+  updateParagon();
+  renderMatch(); renderRankChip(); achQueue();
+  if (!$('#page-ranked').hidden) renderRanked();
+}
+function nemesis(){ let best = -1, n = 4; Object.entries(R.rec).forEach(([i, r]) => { if (r[1] > n){ n = r[1]; best = +i; } }); return best; }
+function endMatch(why){
+  const c = R.cur; if (!c || c.state !== 'live') return;
+  if (c.tapped && c.you > c.target) return finalize('W', why);
+  finalize(!c.tapped && c.target - c.you <= 60000 ? 'D' : 'L', why);
+}
+// runs inside the timer loop
+let rkLastRender = 0, rkLastSave = 0, rkFresh = true;
+function rankedTick(){
+  if (!R || !R.on || !RK_READY) return;
+  const now = Date.now(), running = S.running && S.phase === 'focus';
+  if (!running) rkFresh = true;                       // a new match needs a fresh start (Start, or the next focus block)
+  if (running && rkFresh && (!R.cur || R.cur.state === 'done')){ rkFresh = false; startMatch(); }
+  if (running) rkFresh = false;
+  const c = R.cur; if (!c) return;
+  if (c.state === 'live'){
+    if (running){
+      const dt = Math.min(2000, Math.max(0, now - c.tick));
+      c.you += dt; if (c.them < c.target) c.them = Math.min(c.target, c.them + dt); c.last = now;
+      if (!c.tapped && c.them >= c.target){ c.tapped = true; renderMatch(); }
+      if (c.tapped && c.you > c.target){ finalize('W'); return; }
+    } else if (now - c.last > 30 * 60000){ endMatch('idle'); return; }
+    if (now - rkLastSave > 5000){ rkLastSave = now; saveRanked(); }
+  }
+  c.tick = now;
+  if (now - rkLastRender > 900){ rkLastRender = now; renderMatch(); }
+}
+
+/* how a finished match's times read: seconds when it was close, the bot's full sitting when you lost */
+const fmtSec = sec => { const m = Math.floor(sec / 60), x = sec % 60; return `${fmtMin(m)} ${String(x).padStart(2, '0')}s`; };
+function matchTimes(h){
+  if (h.ys == null){   // older matches saved minutes only
+    return h.r === 'D' ? `${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}` : fmtMin(h.you);
+  }
+  const close = Math.abs(h.ys - h.ts) < 120, f = x => close ? fmtSec(x) : fmtMin(Math.round(x / 60));
+  return `${f(h.ys)} <i>vs</i> ${f(h.ts)}`;
+}
+/* match card on the Focus page */
+const mm = ms => fmtMin(Math.floor(ms / 60000));
+function renderMatch(fresh){
+  const slot = $('#matchSlot'); if (!slot || !RK_READY) return;
+  if (!R.on){ slot.innerHTML = ''; return; }
+  const c = R.cur, rk = myRk();
+  if (!c){
+    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.mmr.toLocaleString()} Elo${R.played < 5 ? ` · placement ${R.played}/5` : ''}</small></span></div><p class="hint">Press Start and you'll be matched with a bot near your rating. Whoever studies longer wins.</p><button class="link-btn" data-go="ranked">Ranked page →</button></div>`;
+    return;
+  }
+  const B = BOTS[c.b], brk = rankOf(c.br), s = stakes(c.br), max = Math.max(c.you, c.tapped ? c.target : c.them, 60000) * 1.08;
+  const live = c.state === 'live';
+  const lineIdx = Math.min(c.lines.length - 1, Math.floor(c.them / (7 * 60000)));
+  const tired = B.style === 'Steady' && !c.tapped && c.them > c.target * .85;
+  const botLine = c.tapped ? `“${c.tap}”` : tired ? '“starting to slow down…”' : c.them > 60000 ? `“${c.lines[lineIdx]}”` : '“gl hf”';
+  const status = !live ? '' : `${esc(B.name)} is still going. Keep studying: if they stop first, you win.`;
+  let result = '';
+  if (!live){
+    const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
+    const sec = ms => fmtSec(Math.round(ms / 1000));
+    const how = c.res === 'L' ? `${mm(c.you)} vs ${mm(c.target)}` : `${sec(c.you)} vs ${sec(c.target)}`;
+    result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em></span>
+      ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
+      <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>
+      <p class="hint">Your next match starts with your next focus block.</p><button class="small-btn" data-act="m-dismiss">OK</button></div>`;
+  }
+  // while a match is live, only the moving parts change, so badges you're hovering stay put
+  const key = `${c.t0}|${c.state}|${c.tapped}`;
+  if (!fresh && live && slot.dataset.key === key && slot.querySelector('.m-bars')){
+    const bars = slot.querySelectorAll('.m-bar');
+    bars[0].querySelector('i').style.width = `${c.you / max * 100}%`; bars[0].querySelector('b').textContent = mm(c.you);
+    bars[1].querySelector('i').style.width = `${(c.tapped ? c.target : c.them) / max * 100}%`;
+    const chat = `${B.name}: ${botLine}`; if (slot.querySelector('.m-chat').textContent !== chat) slot.querySelector('.m-chat').textContent = chat;
+    return;
+  }
+  slot.dataset.key = key;
+  slot.innerHTML = `<div class="card match${fresh ? ' found' : ''}${live ? '' : ' over'}">
+    <div class="m-head"><span class="h first">${c.pl ? `Placement match ${c.pl} of 5` : 'Ranked match'}</span>${live ? '<span class="live-dot">Live</span>' : ''}</div>
+    <div class="m-players">
+      <div class="m-p" data-me>${myAvatar()}<span class="m-n"><b>${esc(myName())}</b><small>${emblem(rankOf(c.mmr0), 'xs')} ${rankOf(c.mmr0).full} · ${c.mmr0.toLocaleString()}</small><span class="bdgs">${c.mine.map(id => badgeHtml(id)).join('')}</span></span></div>
+      <span class="vs">VS</span>
+      <div class="m-p them" data-bot="${c.b}">${avatar(B)}<span class="m-n"><b>${esc(B.name)} <i class="bot-tag">bot</i></b><small>${emblem(brk, 'xs')} ${brk.full} · ${c.br.toLocaleString()}</small><span class="bdgs">${c.feat.map(id => badgeHtml(id)).join('')}</span></span></div>
+    </div>
+    <div class="m-bars">
+      <div class="m-bar"><span>You</span><span class="trk"><i style="width:${c.you / max * 100}%"></i></span><b>${mm(c.you)}</b></div>
+      <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.tapped ? mm(c.target) : live ? 'going…' : '?'}</b></div>
+    </div>
+    ${live ? `<p class="m-chat">${esc(B.name)}: ${esc(botLine)}</p><p class="m-status">${status}</p>
+    <div class="m-foot"><span class="stakes">Win <b class="pos">+${s.win}</b> · Draw <b>${s.draw > 0 ? '+' : s.draw < 0 ? '−' : ''}${Math.abs(s.draw)}</b> · Loss <b class="neg">−${s.loss}</b></span><button class="small-btn" data-act="m-end">End match</button></div>` : result}
+  </div>`;
+}
+$('#matchSlot').addEventListener('click', e => {
+  const a = e.target.closest('[data-act]'), them = e.target.closest('[data-bot]');
+  if (a && a.dataset.act === 'm-end'){ if (a.dataset.sure){ endMatch('button'); } else { a.dataset.sure = 1; a.textContent = 'Tap again to end'; a.classList.add('danger'); setTimeout(() => { $('#matchSlot').dataset.key = ''; renderMatch(); }, 3500); } return; }
+  if (a && a.dataset.act === 'm-dismiss'){ R.cur = null; saveRanked(); renderMatch(); return; }
+  if (them && !e.target.closest('.bdg')) openBot(+them.dataset.bot);
+});
+
+/* header chip */
+function renderRankChip(){
+  const el = $('#rankChip'); if (!el) return;
+  el.hidden = !R.on;
+  const rk = myRk();
+  el.innerHTML = `${emblem(rk, 'xs')}<b>${rk.sh}</b><span>${R.mmr.toLocaleString()}</span>`;
+  el.title = `${rk.full} · ${R.mmr.toLocaleString()} Elo`;
+}
+
+/* Ranked page */
+let rkHistShown = 30;
+function renderRanked(){
+  if (!RK_READY){ $('#rkHero').innerHTML = '<p class="hint">Loading 250,000 players…</p>'; return; }
+  const rk = myRk(), next = rk.hi ? rankOf(rk.hi) : null, prog = rk.hi ? (R.mmr - rk.lo) / (rk.hi - rk.lo) : 1;
+  const games = R.w + R.l + R.d, wr = games ? Math.round(R.w / games * 100) : 0;
+  $('#rkHero').innerHTML = `${emblem(rk, 'xl')}<div class="rk-hero-tx"><small>${R.played < 5 ? `Placement ${R.played}/5 · your rank firms up after 5 matches` : 'Your rank'}</small><b style="color:${rk.c}">${rk.full}</b>
+    <span>${R.mmr.toLocaleString()} Elo · best ${R.best.toLocaleString()}</span>
+    <span class="bar2 big"><i style="width:${prog * 100}%;background:${rk.c}"></i></span>
+    <small>${next ? `${(rk.hi - R.mmr).toLocaleString()} Elo to ${next.full}` : rk.i === PARAGON_I ? 'You hold the Paragon title: no one is rated higher. Keep it.' : 'Be the highest-rated player of all to claim Paragon.'}</small>
+    <span class="bdgs lg">${myFeatured().map(id => badgeHtml(id, 'lg')).join('')}<button class="link-btn" data-go="awards">Change showcase →</button></span></div>`;
+  $('#rkKpis').innerHTML = `<div class="stat"><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><span>wins–losses${R.d ? '–draws' : ''}</span></div><div class="stat"><b>${wr}%</b><span>win rate</span></div><div class="stat"><b>${R.ws}</b><span>win streak · best ${R.bestWs}</span></div><div class="stat"><b>${R.played}</b><span>matches played</span></div>`;
+  renderEloChart();
+  const hist = R.hist.slice(0, rkHistShown);
+  $('#rkHist').innerHTML = hist.map(h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${matchTimes(h)}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></li>`; }).join('')
+    || '<li class="empty-li">No matches yet. Start a focus block on the Focus page and you\'ll be matched automatically.</li>';
+  $('#rkMore').hidden = R.hist.length <= rkHistShown;
+  // ladder: 10 above and 10 below you
+  const order = sortedBots(); let pos = order.findIndex(i => botRating(i) < R.mmr); if (pos < 0) pos = order.length;
+  const from = Math.max(0, pos - 10), to = Math.min(order.length, pos + 10), nem = nemesis();
+  const row = (i, place) => { const B = BOTS[i], r = botRating(i), para = R.para.h === i, mv = r - PREV[i], rec = R.rec[i], feat = botFeatured(i)[0];
+    return `<li data-bot="${i}"${para ? ' class="para-row"' : ''}><span class="pl">#${place.toLocaleString()}</span><span class="mv ${mv > 0 ? 'up' : mv < 0 ? 'dn' : ''}">${mv > 0 ? '▲' : mv < 0 ? '▼' : ''}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)}</b><small>${B.style}${rec ? ` · ${i === nem ? 'nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'rival' : 'played'} ${rec[0]}–${rec[1]}` : ''}</small></span>${feat ? badgeHtml(feat) : '<span></span>'}${emblem(rkOf(i), 'xs')}<span class="rt">${r.toLocaleString()}</span></li>`; };
+  let lad = '';
+  for (let k = from; k < pos; k++) lad += row(order[k], k + 1);
+  lad += `<li class="me" data-me><span class="pl">#${(pos + 1).toLocaleString()}</span><span class="mv"></span>${myAvatar('sm')}<span class="who"><b>${esc(myName())}</b><small>${rk.sh}</small></span>${myFeatured()[0] ? badgeHtml(myFeatured()[0]) : '<span></span>'}${emblem(rk, 'xs')}<span class="rt">${R.mmr.toLocaleString()}</span></li>`;
+  for (let k = pos; k < to; k++) lad += row(order[k], k + 2);
+  $('#rkLadder').innerHTML = lad;
+  $('#rkLadderPos').textContent = `#${(pos + 1).toLocaleString()} of ${(ROSTER_N + 1).toLocaleString()}`;
+  // rank list with how many players hold each
+  const N1 = ROSTER_N + 1;
+  if (!rankCountCache){ rankCountCache = RANKS.map(() => 0); for (let i = 0; i < ROSTER_N; i++){ const r = BS[i * BF]; let k = RANKS.length - 2; while (k > 0 && r < RANKS[k].lo) k--; rankCountCache[k]++; } }
+  const counts = rankCountCache.slice(); counts[rankOf(R.mmr).i]++;
+  if (R.para.h != null){ counts[LAUREATE]--; counts[PARAGON_I] = 1; }
+  const range = k => k === 0 ? 'under 900 Elo' : k === LAUREATE ? '3,600+ Elo' : k === PARAGON_I ? 'The highest-rated Laureate' : `${RANKS[k].lo.toLocaleString()}–${(RANKS[k + 1].lo - 1).toLocaleString()} Elo`;
+  const share = n => n === 0 ? 'none' : n / N1 < .001 ? `${n.toLocaleString()} player${n === 1 ? '' : 's'}` : `${(n / N1 * 100).toFixed(n / N1 < .01 ? 1 : 0)}%`;
+  $('#rkRanks').innerHTML = RANKS.map((x, k) => {
+    const here = k === rk.i, shown = k === PARAGON_I ? PARAGON : {...rankOf(k === 0 ? 850 : x.lo + 250), d: 2, div: x.cuts.length ? 'III' : ''};
+    return `<li class="${here ? 'here' : ''}${x.elite ? ' elite' : ''}">${emblem(shown, 'sm')}<span><b>${x.name}</b><small>${range(k)}${x.cuts.length ? ' · I, II, III' : ''}</small></span><span class="cnt">${k === PARAGON_I ? (R.para.h != null ? 'only 1' : 'vacant') : share(counts[k])}</span>${here ? '<em>You</em>' : ''}</li>`; }).reverse().join('');
+  renderParaCard();
+  $('#rkOn').checked = R.on;
+}
+function renderParaCard(){
+  const el = $('#rkPara'); if (!el) return;
+  const p = R.para, h = p.h, since = h != null ? Date.now() - p.since : 0;
+  const dur = ms => ms >= 864e5 ? `${Math.floor(ms / 864e5)} day${ms >= 1728e5 ? 's' : ''}` : ms >= 36e5 ? `${Math.floor(ms / 36e5)}h` : `${Math.max(1, Math.floor(ms / 6e4))}m`;
+  if (h == null){ el.innerHTML = `<div class="h first">Paragon</div><div class="para-in">${emblem(PARAGON, 'md')}<span><b>Vacant</b><small>No one has reached ${LAUREATE_MIN.toLocaleString()} Elo. The first Laureate to lead the ladder claims it.</small></span></div>`; return; }
+  const me = h === ME, B = me ? null : BOTS[h], r = me ? R.mmr : botRating(h);
+  el.innerHTML = `<div class="h first">Current Paragon</div><div class="para-in click"${me ? ' data-me' : ` data-bot="${h}"`}>${emblem(PARAGON, 'md')}${me ? myAvatar() : avatar(B)}<span><b>${me ? esc(myName()) : esc(B.name)}${me ? '' : ' <i class="bot-tag">bot</i>'}</b><small>${r.toLocaleString()} Elo · reigning ${dur(since)}</small></span></div><p class="hint">The single highest-rated player of all. Only one player holds it at a time.</p>`;
+}
+function renderEloChart(){
+  const el = $('#rkChart'), pts = R.hist.slice(0, 100).reverse().map(h => h.m);
+  if (!R.hist.length){ el.innerHTML = '<p class="hint">Your Elo line shows up after your first rated match.</p>'; return; }
+  pts.unshift(R.hist.length >= 100 ? R.hist[99].m - R.hist[99].d : 1000);
+  const W = 640, H = 200, pl = 8, pr = 74, pt = 14, pb = 14, lo = Math.floor((Math.min(...pts) - 40) / 50) * 50, hi = Math.ceil((Math.max(...pts) + 40) / 50) * 50;
+  const X = k => pl + (W - pl - pr) * (pts.length === 1 ? 1 : k / (pts.length - 1)), Y = v => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo));
+  let grid = '';
+  RANKS.forEach((x, ri) => [ri === 0 ? 600 : x.lo, ...x.cuts.slice(0, 2)].forEach((v, j) => {
+    if (v <= lo || v >= hi || (j > 0 && hi - lo >= 500)) return;
+    const lab = x.cuts.length ? `${x.name} ${['I','II','III'][j]}` : x.name;
+    grid += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" class="${j === 0 ? 'g-major' : 'g-minor'}"/><text x="${W - pr + 6}" y="${Y(v) + 4}" class="g-lab">${esc(lab)}</text>`;
+  }));
+  const d = pts.map((v, k) => `${k ? 'L' : 'M'}${X(k).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Elo over your last ${pts.length - 1} matches">${grid}<path d="${d} L${X(pts.length - 1)},${H - pb} L${X(0)},${H - pb}Z" class="g-area"/><path d="${d}" class="g-line"/><circle cx="${X(pts.length - 1)}" cy="${Y(pts[pts.length - 1])}" r="4.5" class="g-end"/><line class="g-guide" y1="${pt}" y2="${H - pb}" x1="-10" x2="-10"/></svg><div class="g-tip" hidden></div><small class="g-cap">Last ${pts.length - 1} match${pts.length === 2 ? '' : 'es'}</small>`;
+  const svg = el.querySelector('svg'), tip = el.querySelector('.g-tip'), guide = el.querySelector('.g-guide'), hs = R.hist.slice(0, 100).reverse();
+  svg.onpointermove = e => {
+    const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, k = clampN(Math.round((x - pl) / (W - pl - pr) * (pts.length - 1)), 1, pts.length - 1), h = hs[k - 1];
+    guide.setAttribute('x1', X(k)); guide.setAttribute('x2', X(k));
+    tip.hidden = false; tip.style.left = `${X(k) / W * 100}%`; tip.style.top = `${Y(pts[k]) / H * 100}%`;
+    tip.innerHTML = `<b>${h.m.toLocaleString()}</b> <span class="${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><small>${{W:'Win',L:'Loss',D:'Draw'}[h.r]} vs ${esc(BOTS[h.b].name)}</small>`;
+  };
+  svg.onpointerleave = () => { tip.hidden = true; guide.setAttribute('x1', -10); guide.setAttribute('x2', -10); };
+}
+$('#rkMore').onclick = () => { rkHistShown += 30; renderRanked(); };
+$('#rkOn').onchange = e => {
+  R.on = e.target.checked;
+  if (!R.on && R.cur && R.cur.state === 'live') endMatch('off');
+  if (!R.on) R.cur = null;
+  saveRanked(); renderMatch(); renderRankChip();
+  toast(R.on ? 'Ranked is on. You\'ll be matched when you press Start.' : 'Ranked is off. Your rating is saved.');
+};
+document.addEventListener('click', e => { const b = e.target.closest('#page-ranked [data-bot], .lnk[data-bot]'); if (b && !e.target.closest('.bdg')) openBot(+b.dataset.bot); });
+
+
+/* ---------- bot calendars: every session a bot studied, rebuilt from its seed (nothing stored) ---------- */
+const ROSTER_EPOCH = new Date(2026, 10, 13).getTime();       // bots' join dates count back from here
+const botJoinKey = i => dayKey(ROSTER_EPOCH - bot(i).age * 864e5);
+const BOT_TAGS = ['Homework', 'Exam prep', 'Reading', 'Project', 'Review'];
+const botTagColor = t => { const k = BOT_TAGS.indexOf(t), pal = SERIES[isDark() ? 'dark' : 'light']; return k >= 0 ? pal[k] : actColor(t); };
+const LANGS = ['Spanish', 'Japanese'], WRITING = ['Literature', 'World history', 'Philosophy', 'Art history', 'Political science', 'Psychology'];
+function botClasses(i){
+  const B = bot(i), rr = mulberry32(ROSTER_SEED * 3 + i * 613), list = [B.subject], n = 2 + (rr() < .5 ? 1 : 0);
+  while (list.length < n + 1){ const x = pick(rr, SUBJECTS); if (!list.includes(x)) list.push(x); }
+  return list;
+}
+function semesterOf(d){
+  const y = d.getFullYear(), m = d.getMonth();
+  const start = m >= 7 ? new Date(y, 7, 20) : m <= 4 ? new Date(y, 0, 10) : new Date(y, 4, 20);
+  const wk = Math.max(0, Math.floor((d - start) / (7 * 864e5)));
+  return {wk, summer: m === 5 || m === 6 || (m === 4 && d.getDate() > 15), exam: wk === 6 || wk === 7 ? 'Midterm' : wk >= 14 ? 'Final' : null};
+}
+function botTask(rnd, subj, kind, sem, d, k){
+  const ps = sem.wk + 1 + k % 2, ch = 1 + Math.floor(sem.wk * 1.15), lec = 1 + Math.floor(sem.wk * 2.6) + (d.getDay() >= 3 ? 1 : 0), lab = 1 + Math.floor(sem.wk / 2);
+  const lang = LANGS.includes(subj), writ = WRITING.includes(subj);
+  const T = {
+    'Homework': lang ? [`Workbook unit ${ch}`, `Vocab set ${ps}`, 'Translation practice'] : writ ? [`Response paper ${lab}`, `Discussion post ${ps}`, `Reading questions ${ch}`] : [`Problem set ${ps}`, `Homework ${ps}`, `Worksheet ${ps}`],
+    'Reading': [`Chapter ${ch} reading`, `Reading: chapter ${ch}`, `Chapter ${ch} notes`],
+    'Exam prep': sem.exam ? [`${sem.exam} prep`, `${sem.exam} practice exam`, `${sem.exam} flashcards`, `${sem.exam} review sheet`] : ['Quiz prep', 'Practice problems', 'Flashcards', `Exam ${1 + Math.floor(sem.wk / 5)} review`],
+    'Project': lang ? ['Oral presentation', 'Conversation prep'] : writ ? ['Essay draft', 'Term paper', 'Essay outline', 'Editing essay'] : [`Lab report ${lab}`, 'Group project', 'Project write-up', `Lab ${lab} prep`],
+    'Review': [`Lecture ${lec} notes`, 'Rewriting notes', 'Review session', `Lecture ${lec} review`]
+  };
+  return sem.summer ? pick(rnd, ['Summer review', 'Getting ahead', `Chapter ${1 + Math.floor(sem.wk / 2)} reading`, 'Practice problems']) : pick(rnd, T[kind]);
+}
+// one bot day in full: its sessions with times, class, task, activity and timer style
+const botDayCache = new Map();
+function botDay(i, dk){
+  const key = i + '|' + dk, todayK = dayKey(Date.now());
+  if (dk !== todayK && botDayCache.has(key)) return botDayCache.get(key);
+  let out = null;
+  if (dk >= botJoinKey(i) && dk <= todayK){
+    const xs = daySits(i, dk, []);
+    if (xs.length){
+      const B = bot(i), d = new Date(dk + 'T12:00'), rnd = mulberry32(dayNum(dk) * 131 + i * 977 + 7), sem = semesterOf(d), cls = botClasses(i);
+      const total = Math.round(xs.reduce((a, b) => a + b, 0)), lens = xs.map(x => Math.max(5, Math.round(x)));
+      lens[0] = Math.max(5, lens[0] + total - lens.reduce((a, b) => a + b, 0));
+      let gaps = lens.slice(1).map(() => 15 + Math.floor(rnd() * 100));
+      const sumL = lens.reduce((a, b) => a + b, 0), sumG = gaps.reduce((a, b) => a + b, 0);
+      if (sumL + sumG > 1435) gaps = gaps.map(g => Math.floor(g * Math.max(0, 1435 - sumL) / (sumG || 1)));
+      const span = sumL + gaps.reduce((a, b) => a + b, 0), [pa] = PEAKS[B.peak];
+      let at = clampN(Math.min(pa, 22) * 60 + Math.floor(rnd() * 100) - 30, 0, Math.max(0, 1438 - span));
+      const sessions = [];
+      lens.forEach((len, k) => {
+        const subj = k === 0 ? (rnd() < .6 ? cls[0] : pick(rnd, cls)) : pick(rnd, cls);
+        const w = rnd(), kind = sem.exam ? (w < .5 ? 'Exam prep' : w < .7 ? 'Review' : w < .85 ? 'Homework' : 'Reading')
+          : (w < .35 ? 'Homework' : w < .55 ? 'Reading' : w < .7 ? 'Review' : w < .85 ? 'Project' : 'Exam prep');
+        const mode = rnd() < .8 ? B.fav : pick(rnd, FAV_NAMES);
+        sessions.push({a: at, b: at + len, min: len, subj, task: botTask(rnd, subj, kind, sem, d, k), tag: kind, mode});
+        at += len + (gaps[k] || 0);
+      });
+      out = {sessions};
+    }
+  }
+  if (out && dk === todayK){
+    // today: only what's happened so far; a session going on right now is cut at the current minute
+    const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+    const ss = out.sessions.filter(x => x.a < nowM).map(x => x.b > nowM ? {...x, b: nowM, min: nowM - x.a, live: true} : x).filter(x => x.min > 0);
+    out = ss.length ? {sessions: ss} : null;
+  }
+  if (out){ out.min = out.sessions.reduce((n, x) => n + x.min, 0); out.n = out.sessions.length; out.by = {}; out.sessions.forEach(x => out.by[x.tag] = (out.by[x.tag] || 0) + x.min); }
+  if (dk !== todayK){ if (botDayCache.size > 3000) botDayCache.clear(); botDayCache.set(key, out); }
+  return out;
+}
+const MODE_NAMES = {pomodoro:'Pomodoro', fifty:'52/17', custom:'Custom', timebox:'Timebox', stopwatch:'Stopwatch', flow:'Flow'};
+
+/* ---------- profiles: a popup for anyone, which opens into a full page ---------- */
+let profPrev = 'ranked', profWho = null, profFilter = 'all', profEditing = false;
+const PROFILE_HUES = [null, 0, 22, 42, 95, 150, 180, 205, 228, 262, 292, 330];
+const isBotW = w => w !== ME;
+function pName(w){ return w === ME ? myName() : BOTS[w].name; }
+function pAvatar(w, cls){ return w === ME ? myAvatar(cls) : avatar(BOTS[w], cls); }
+// study numbers for anyone, in one shape
+function pStats(w){
+  if (w === ME){
+    const t = myTotals(), wk = {}, mo = {};
+    LOG.forEach(x => { const d = new Date(x.t), w0 = dayKey(startOfWeek(d)), m0 = dayKey(d).slice(0, 7); wk[w0] = (wk[w0] || 0) + x.min; mo[m0] = (mo[m0] || 0) + x.min; });
+    return {total: t.total, sessions: t.sessions, days: t.days, cur: t.cur, best: t.best, maxSess: t.maxSess, maxDay: t.maxDay, week: t.week, month: t.month,
+      maxWeek: Math.max(0, ...Object.values(wk)), maxMonth: Math.max(0, ...Object.values(mo)), pts: t.pts, ach: ACHS.filter(a => ACH.u[a.id]).length};
+  }
+  const o = w * BF, got = botBadges(w);
+  return {total: BS[o+F.total], sessions: BS[o+F.sessions], days: BS[o+F.days], cur: BS[o+F.cur], best: BS[o+F.best], maxSess: BS[o+F.maxSess], maxDay: BS[o+F.maxDay],
+    week: BS[o+F.week], month: BS[o+F.month], maxWeek: BS[o+F.maxWeek], maxMonth: BS[o+F.maxMonth], pts: got.reduce((n, id) => n + TIERS[achById(id).tier].pts, 0), ach: got.length,
+    sit: Math.round(typical(botRating(w)) * BOTS[w].sitMul)};
+}
+// minutes on a given day: yours from the log; a bot's from its daily plan (only shown as a level)
+function pDayFn(w){
+  if (w === ME){ const by = {}; LOG.forEach(x => { const k = dayKey(x.t); by[k] = (by[k] || 0) + x.min; }); return dk => by[dk] || 0; }
+  return dk => { const r = botDay(w, dk); return r ? r.min : 0; };
+}
+const LEVELS = ['No study', 'Light', 'Medium', 'Heavy'];
+const levelOf = m => m <= 0 ? 0 : m < 60 ? 1 : m < 180 ? 2 : 3;
+function pPlace(c, w, t){
+  if (w === ME) return myPlace(c, t);
+  const vi = botVal(c, w), ei = BS[w * BF]; let n = 0;
+  for (let j = 0; j < ROSTER_N; j++){ const v = botVal(c, j); if (v > vi || (v === vi && (BS[j * BF] > ei || (BS[j * BF] === ei && j < w)))) n++; }
+  const me = c.me(t); if (me > vi || (me === vi && R.mmr >= ei)) n++;
+  return n + 1;
+}
+const durTxt = ms => ms >= 864e5 ? `${Math.floor(ms / 864e5)} day${ms >= 1728e5 ? 's' : ''}` : ms >= 36e5 ? `${Math.floor(ms / 36e5)} hour${ms >= 72e5 ? 's' : ''}` : `${Math.max(1, Math.floor(ms / 6e4))} min`;
+function paraLine(w){ const tot = R.para ? reignTotal(w) : 0; if (!tot) return ''; return `<p class="pf-para">${emblem(PARAGON, 'xs')} ${R.para.h === w ? `Paragon now · reigning ${durTxt(Date.now() - R.para.since)}` : 'Former Paragon'} · ${durTxt(tot)} as Paragon in total</p>`; }
+function weekStrip(w, weeks){
+  const f = pDayFn(w), d = startOfWeek(new Date()); d.setDate(d.getDate() - 7 * (weeks - 1));
+  const today = dayKey(Date.now()); let h = '', active = 0;
+  for (let k = 0; k < weeks * 7; k++){
+    const dk = dayKey(d), future = dk > today, lv = future ? -1 : levelOf(f(dk)); if (lv > 0) active++;
+    h += `<i class="hm l${lv}"${future ? '' : ` data-pk="${dk}"`} title="${future ? '' : `${d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})} · ${lv > 0 ? fmtMin(f(dk)) : 'no study'}`}"></i>`;
+    d.setDate(d.getDate() + 1);
+  }
+  return {h, active};
+}
+function editForm(){
+  return `<div class="pf-edit"><label>Display name<input id="pfName" maxlength="20" placeholder="You" value="${esc(P.myName || '')}"></label>
+    <div class="pf-hues" role="radiogroup" aria-label="Avatar color">${PROFILE_HUES.map(hh => `<button data-hue="${hh == null ? '' : hh}" role="radio" aria-checked="${(P.myHue ?? null) === hh}" title="${hh == null ? 'Accent color' : ''}" style="${hh == null ? 'background:var(--accent)' : `background:hsl(${hh} 52% 44%)`}"></button>`).join('')}</div>
+    <div class="pf-edit-btns"><button class="small-btn accent" data-pf="save">Save</button><button class="small-btn" data-pf="cancel">Cancel</button></div></div>`;
+}
+function profileHead(w, big){
+  const rk = rkOf(w), r = w === ME ? R.mmr : botRating(w), B = w === ME ? null : BOTS[w];
+  return `<div class="pf-top">${pAvatar(w, big ? 'xl' : 'lg')}<div><b id="bmName">${esc(pName(w))}${B ? ' <i class="bot-tag">bot</i>' : ''}</b>
+    <span>${emblem(rk, 'xs')} ${esc(rk.full)} · ${r.toLocaleString()} Elo</span>
+    <small>${B ? `${B.style} · studies in the ${B.peak.toLowerCase()} · ${esc(B.subject)}` : 'Your profile'}</small></div>
+    ${w === ME && !profEditing ? '<button class="small-btn pf-editbtn" data-pf="edit">Edit</button>' : ''}</div>
+    ${w === ME && profEditing ? editForm() : ''}
+    ${B ? `<p class="bm-bio">“${esc(B.bio)}”</p>` : ''}${paraLine(w)}`;
+}
+// the popup
+function openProfile(w){
+  if (!RK_READY) return;
+  profWho = w; hideBadgeTip();
+  const st = pStats(w), feat = w === ME ? myFeatured() : botFeatured(w), rec = w === ME ? null : R.rec[w], nem = nemesis(), strip = weekStrip(w, 4);
+  const games = R.w + R.l + R.d;
+  const tiles = w === ME
+    ? [[fmtMin(st.total).replace(/ \d+m$/, ''), 'studied in total'], [st.cur, 'day streak'], [st.best, 'best streak (days)'], [`${R.w}–${R.l}${R.d ? '–' + R.d : ''}`, games ? `ranked · ${Math.round(R.w / games * 100)}% wins` : 'ranked record']]
+    : [[`~${fmtMin(st.sit)}`, 'typical sitting'], [fmtMin(st.total).replace(/ \d+m$/, ''), 'studied in total'], [st.best, 'best streak (days)'],
+       [rec ? `${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}` : '–', rec ? (w === nem ? 'your record · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'your record · rival' : 'your record') : 'not played yet']];
+  $('#botModalBody').innerHTML = `${profileHead(w)}
+    <div class="bm-grid">${tiles.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div>
+    <div class="h">Last 4 weeks <small class="pf-sub">${strip.active} active day${strip.active === 1 ? '' : 's'}</small></div><div class="hm-strip">${strip.h}</div>
+    <div class="h">Featured badges</div><div class="bdgs lg">${feat.length ? feat.map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('') : '<span class="hint">No badges yet.</span>'}</div>
+    <div class="pf-actions"><span class="hint">${st.ach} of ${ACHS.length} achievements · ${st.pts.toLocaleString()} pts</span><button class="small-btn accent" data-pf="full">⤢ Open full profile</button></div>`;
+  $('#botModal').hidden = false;
+  const f = w === ME && profEditing ? $('#pfName') : $('#botModal .x'); f && f.focus();
+}
+const openBot = i => openProfile(i);
+// the full page
+function renderProfilePage(){
+  const w = profWho; if (w == null || !RK_READY) return;
+  const st = pStats(w), t = myTotals(), B = w === ME ? null : BOTS[w];
+  const stats = [[fmtMin(st.total), 'Studied in total'], [st.sessions.toLocaleString(), 'Sessions'], [st.days.toLocaleString(), 'Days studied'], [`${st.cur} day${st.cur === 1 ? '' : 's'}`, 'Current streak'],
+    [`${st.best} day${st.best === 1 ? '' : 's'}`, 'Best streak'], [fmtMin(st.maxSess), 'Longest session'], [fmtMin(st.maxDay), 'Biggest day'], [fmtMin(st.week), 'This week'],
+    [fmtMin(st.month), 'This month'], [fmtMin(st.maxWeek), 'Best week'], [fmtMin(st.maxMonth), 'Best month'], ...(B ? [[`~${fmtMin(st.sit)}`, 'Typical sitting']] : []), [`${st.ach}/${ACHS.length}`, `Achievements · ${st.pts.toLocaleString()} pts`]];
+  // leaderboard places
+  const ptsReady = !!lbPts;
+  const lbs = LB.map(c => { const ready = c.f != null || ptsReady, pl = ready ? pPlace(c, w, t) : null, v = w === ME ? c.me(t) : botVal(c, w);
+    return `<li><button data-lb="${c.id}"><span class="nm">${c.name}</span><span class="mv2">${ready || c.f != null ? lbFmt(c.u, v) : '…'}</span><span class="pl2">${pl ? `#${pl.toLocaleString()} · ${topPct(pl)}` : '…'}</span></button></li>`; }).join('');
+  if (!ptsReady) ensureBotPoints(() => { if (!$('#page-profile').hidden && profWho === w) renderProfilePage(); });
+  // 6-month activity
+  const f = pDayFn(w), weeks = 26, d0 = startOfWeek(new Date()); d0.setDate(d0.getDate() - 7 * (weeks - 1));
+  const today = dayKey(Date.now()), mNow = today.slice(0, 7), dow = [0, 0, 0, 0, 0, 0, 0];
+  let cells = '', months = '', activeMonth = 0, daysMonth = 0, activeAll = 0, lastM = '';
+  for (let k = 0, d = new Date(d0); k < weeks * 7; k++, d.setDate(d.getDate() + 1)){
+    const dk = dayKey(d), future = dk > today, m = future ? 0 : f(dk), lv = future ? -1 : levelOf(m);
+    if (k % 7 === 0){ const mk = dk.slice(0, 7), show = mk !== lastM && (k > 0 || d.getDate() <= 14); months += `<span>${show ? d.toLocaleDateString(undefined, {month:'short'}) : ''}</span>`; if (show || k > 0) lastM = mk; }
+    if (!future){ dow[d.getDay()] += m; if (lv > 0) activeAll++; if (dk.slice(0, 7) === mNow){ daysMonth++; if (lv > 0) activeMonth++; } }
+    cells += `<i class="hm l${lv}${future ? '' : ' pick'}"${future ? '' : ` data-pk="${dk}"`} title="${future ? '' : `${d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})} · ${m > 0 ? fmtMin(m) : 'no study'}`}"></i>`;
+  }
+  const busiest = Math.max(...dow) > 0 ? new Date(2026, 0, 4 + dow.indexOf(Math.max(...dow))).toLocaleDateString(undefined, {weekday:'long'}) + 's' : '–';
+  // ranked
+  let ranked;
+  if (w === ME){
+    const games = R.w + R.l + R.d, last = R.hist.slice(0, 10);
+    ranked = `<div class="pf-kv"><span><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><small>wins–losses${R.d ? '–draws' : ''}</small></span><span><b>${games ? Math.round(R.w / games * 100) : 0}%</b><small>win rate</small></span><span><b>${R.best.toLocaleString()}</b><small>best Elo</small></span><span><b>${R.bestWs}</b><small>best win streak</small></span></div>
+      <div class="pf-dots">${last.length ? last.map(h => `<i class="d-${h.r}" title="${{W:'Win', L:'Loss', D:'Draw'}[h.r]} vs ${esc(BOTS[h.b].name)}">${h.r}</i>`).join('') : '<span class="hint">No matches yet.</span>'}</div>${last.length ? '<small class="pf-sub">Last 10 matches, newest first</small>' : ''}`;
+  } else {
+    const rec = R.rec[w], hs = R.hist.filter(h => h.b === w).slice(0, 5), nem = nemesis();
+    ranked = rec ? `<div class="pf-kv"><span><b>${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}</b><small>your record vs ${esc(B.name)}${w === nem ? ' · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? ' · rival' : ''}</small></span></div>
+      <ul class="rk-hist pf-h2h">${hs.map(h => `<li class="hr-${h.r}"><span class="res">${h.r}</span><span class="who">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span><span class="tm">${matchTimes(h)}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span></li>`).join('')}</ul>`
+      : `<p class="hint">You haven't played ${esc(B.name)} yet. Matches pair you with bots near your rating.</p>`;
+  }
+  // achievements by tier
+  const mine = new Set(ACHS.filter(a => ACH.u[a.id]).map(a => a.id));
+  let got = w === ME ? [...mine] : botBadges(w);
+  if (w !== ME && profFilter === 'missing') got = got.filter(id => !mine.has(id));
+  const tiers = ['legendary', 'platinum', 'gold', 'silver', 'bronze'].map(tr => { const ids = got.filter(id => achById(id).tier === tr); return ids.length ? `<div class="pf-tier"><span style="color:${TIERS[tr].c}">${TIERS[tr].name} · ${ids.length}</span><div class="bdgs wrap">${rareSort(ids).map(id => badgeHtml(id)).join('')}</div></div>` : ''; }).join('');
+  $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button>${w === ME ? '' : `<span class="hint">Bot profile</span>`}</div>
+    <div class="pf-grid">
+      <div class="pf-main">
+        <div class="card pf-hero">${profileHead(w, true)}<div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('')}</div></div>
+        <div class="card"><div class="h first">Study stats</div><div class="pf-stats">${stats.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div></div>
+        <div class="card"><div class="h first">Activity · last 6 months</div>
+          <div class="hm-cal"><div class="hm-months">${months}</div><div class="hm-days"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div><div class="hm-grid">${cells}</div></div>
+          <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
+        <div class="card" id="pfCal"></div>
+        <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>
+      </div>
+      <div class="pf-side">
+        <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of 250,000 players. Click one to open that leaderboard.</p></div>
+        <div class="card"><div class="h first">Ranked</div>${ranked}</div>
+      </div>
+    </div>`;
+  $('#pageTitle').textContent = w === ME ? (P.myName ? myName() : 'Your profile') : B.name;
+  renderProfileCal();
+}
+// calendar on a profile: week by default, month on request; click a day to see its sessions
+let pc = null;
+function pcReset(){ const d = new Date(); pc = {view: P.calView === 'month' ? 'month' : 'week', week: startOfWeek(d), month: new Date(d.getFullYear(), d.getMonth(), 1), day: dayKey(d)}; }
+function pcDayInfo(w, dk){
+  if (w !== ME) return botDay(w, dk);
+  const ss = LOG.filter(x => dayKey(x.t) === dk).map(x => ({a: null, t0: x.t - x.min * 60000, t1: x.t, min: x.min, subj: '', task: (x.task || '').trim() || 'Untitled session', tag: x.tag || 'General', mode: x.mode})).sort((p, q) => p.t0 - q.t0);
+  if (!ss.length) return null;
+  const by = {}; ss.forEach(x => by[x.tag] = (by[x.tag] || 0) + x.min);
+  return {sessions: ss, min: ss.reduce((n, x) => n + x.min, 0), n: ss.length, by};
+}
+const hm12 = m => { const h = Math.floor(m / 60) % 24, mm = m % 60; return `${h % 12 || 12}:${String(mm).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+function renderProfileCal(){
+  const el = $('#pfCal'); if (!el || profWho == null) return;
+  if (!pc) pcReset();
+  const w = profWho, me = w === ME, today = dayKey(Date.now()), week = pc.view === 'week', col = me ? actColor : botTagColor;
+  const segs = r => Object.entries(r.by).sort((a, b) => b[1] - a[1]).map(([t, mm]) => `<i style="flex:${mm};background:${col(t)}" title="${esc(t)} · ${fmtMin(mm)}"></i>`).join('');
+  const tip = (d, r) => `${d.toLocaleDateString(undefined, {weekday:'long', month:'short', day:'numeric'})} · ${r ? `${fmtMin(r.min)} · ` + Object.entries(r.by).sort((a, b) => b[1] - a[1]).map(([t, mm]) => `${t} ${fmtMin(mm)}`).join(', ') : 'no study'}`;
+  let body = '', title = '', sum = '';
+  if (week){
+    const days = [...Array(7)].map((_, k) => { const d = new Date(pc.week); d.setDate(d.getDate() + k); return d; }), rs = days.map(d => pcDayInfo(w, dayKey(d)));
+    const a = days[0], b = days[6], maxMin = Math.max(60, ...rs.map(r => r ? r.min : 0));
+    title = `${a.toLocaleDateString(undefined, {month:'short', day:'numeric'})} – ${b.toLocaleDateString(undefined, a.getMonth() === b.getMonth() ? {day:'numeric'} : {month:'short', day:'numeric'})}, ${b.getFullYear()}`;
+    body = `<div class="cal-week">${days.map((d, k) => { const dk = dayKey(d), r = rs[k];
+      return `<button class="wk-row${r ? ' has' : ''}${dk === today ? ' today' : ''}${dk === pc.day ? ' on' : ''}${dk > today ? ' future' : ''}" data-pk="${dk}" title="${esc(tip(d, r))}" aria-pressed="${dk === pc.day}">
+        <span class="wd"><b>${d.toLocaleDateString(undefined, {weekday:'short'})}</b><span class="dn">${d.getDate()}</span></span>
+        <span class="wk-bar">${r ? `<span class="fill" style="width:${r.min / maxMin * 100}%">${segs(r)}</span>` : ''}</span>
+        <span class="wk-m">${r ? fmtMin(r.min) : '–'}</span></button>`; }).join('')}</div>`;
+    const tot = rs.reduce((n, r) => n + (r ? r.min : 0), 0), nd = rs.filter(Boolean).length;
+    sum = tot ? `${fmtMin(tot)} studied on ${nd} day${nd === 1 ? '' : 's'} this week` : 'No study this week.';
+  } else {
+    const y = pc.month.getFullYear(), m = pc.month.getMonth(), lead = new Date(y, m, 1).getDay(), daysIn = new Date(y, m + 1, 0).getDate();
+    title = pc.month.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+    const rs = []; let maxMin = 0, tot = 0, nd = 0;
+    for (let d = 1; d <= daysIn; d++){ const r = pcDayInfo(w, dayKey(new Date(y, m, d, 12))); rs.push(r); if (r){ maxMin = Math.max(maxMin, r.min); tot += r.min; nd++; } }
+    let h = ''; for (let k = 0; k < lead; k++) h += '<span class="cal-cell pad" aria-hidden="true"></span>';
+    rs.forEach((r, k) => { const dd = new Date(y, m, k + 1, 12), dk = dayKey(dd), heat = r ? .25 + .75 * r.min / maxMin : 0;
+      h += `<button class="cal-cell${r ? ' has' : ''}${dk === today ? ' today' : ''}${dk === pc.day ? ' on' : ''}${dk > today ? ' future' : ''}" data-pk="${dk}" style="--heat:${heat}" title="${esc(tip(dd, r))}" aria-pressed="${dk === pc.day}"><span class="n">${k + 1}</span>${r ? `<span class="m">${fmtMin(r.min)}</span><span class="segs">${segs(r)}</span>` : ''}</button>`; });
+    body = `<div class="cal-dow" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="cal-grid">${h}</div>`;
+    sum = tot ? `${fmtMin(tot)} studied on ${nd} day${nd === 1 ? '' : 's'} this month` : 'No study this month.';
+  }
+  // the selected day
+  const r = pcDayInfo(w, pc.day), dTitle = pc.day === today ? 'Today' : new Date(pc.day + 'T12:00').toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+  let dayH = `<div class="h">${dTitle}</div>`;
+  if (r){
+    const rows = Object.entries(r.by).sort((a, b) => b[1] - a[1]), top = rows[0][1];
+    dayH += `<p class="cal-total"><b>${fmtMin(r.min)}</b> across ${r.n} session${r.n === 1 ? '' : 's'}</p>
+      <div class="tagbars">${rows.map(([t, mm]) => `<div class="tagbar" style="--c:${col(t)}"><span class="name"><i></i><b>${esc(t)}</b></span><span class="track2"><i style="width:${mm / top * 100}%"></i></span><span class="m">${fmtMin(mm)}</span></div>`).join('')}</div>
+      <ul class="sessions pc-sess">${r.sessions.map(x => `<li><span class="t">${me ? hmRange(x.t0, x.t1) : `${hm12(x.a)}–${hm12(x.b)}`}</span><span class="task"><span class="nm">${x.subj ? `<b>${esc(x.subj)}</b> · ` : ''}${esc(x.task)}</span><em><i class="pc-dot" style="background:${col(x.tag)}"></i>${esc(x.tag)}${x.mode ? ` · ${MODE_NAMES[x.mode] || esc(x.mode)}` : ''}${x.live ? ' · <span class="pc-live">studying now</span>' : ''}</em></span><span class="min">${fmtMin(x.min)}</span></li>`).join('')}</ul>`;
+  } else dayH += `<p class="hint">${pc.day > today ? "This day hasn't happened yet." : !me && pc.day < botJoinKey(w) ? `${esc(pName(w))} hadn't started studying here yet.` : 'No study on this day.'}</p>`;
+  el.innerHTML = `<div class="pc-top"><div class="h first">Calendar</div><div class="seg" role="group" aria-label="Calendar view"><button data-pc="week" aria-pressed="${week}">Week</button><button data-pc="month" aria-pressed="${!week}">Month</button></div></div>
+    <div class="cal-head pc-head"><button class="small-btn" data-pc="prev" aria-label="Previous ${pc.view}">‹</button><b>${title}</b><button class="small-btn" data-pc="next" aria-label="Next ${pc.view}">›</button><button class="small-btn" data-pc="today">Today</button></div>
+    ${body}<p class="cal-month">${sum}</p>${dayH}`;
+}
+function pcAct(a, dk){
+  if (dk){ pc.day = dk; const d = new Date(dk + 'T12:00'); pc.week = startOfWeek(d); pc.month = new Date(d.getFullYear(), d.getMonth(), 1); }
+  else if (a === 'week' || a === 'month'){ pc.view = a; const d = new Date(pc.day + 'T12:00'); pc.week = startOfWeek(d); pc.month = new Date(d.getFullYear(), d.getMonth(), 1); }
+  else if (a === 'prev' || a === 'next'){ const n = a === 'prev' ? -1 : 1; if (pc.view === 'month') pc.month = new Date(pc.month.getFullYear(), pc.month.getMonth() + n, 1); else { pc.week = new Date(pc.week); pc.week.setDate(pc.week.getDate() + 7 * n); } }
+  else if (a === 'today') pcReset();
+  renderProfileCal();
+}
+function openFullProfile(w){ if (profWho !== w || !pc) pcReset(); profWho = w; $('#botModal').hidden = true; showPage('profile'); }
+function saveProfileEdit(){
+  const n = ($('#pfName').value || '').trim().slice(0, 20), on = document.querySelector('.pf-hues [aria-checked="true"]');
+  P.myName = n; P.myHue = on && on.dataset.hue !== '' ? +on.dataset.hue : null; saveP(); profEditing = false;
+  renderMeBtn(); renderMatch(); renderRankChip();
+  if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders();
+  toast('Profile saved');
+}
+function profClick(e){
+  const b = e.target.closest('[data-pf]'), hue = e.target.closest('[data-hue]');
+  if (hue){ hue.parentNode.querySelectorAll('[data-hue]').forEach(x => x.setAttribute('aria-checked', x === hue)); return; }
+  if (!b) return;
+  const a = b.dataset.pf, inPage = !!e.target.closest('#page-profile'), redraw = () => inPage ? renderProfilePage() : openProfile(profWho);
+  if (a === 'full') openFullProfile(profWho);
+  else if (b.dataset.pk){ /* handled below */ }
+  else if (a === 'back') showPage(profPrev || 'ranked');
+  else if (a === 'edit'){ profEditing = true; redraw(); setTimeout(() => { const f = $('#pfName'); f && f.focus(); }, 0); }
+  else if (a === 'cancel'){ profEditing = false; redraw(); }
+  else if (a === 'save'){ saveProfileEdit(); redraw(); }
+}
+$('#botModal').addEventListener('click', e => {
+  if (e.target === $('#botModal') || e.target.closest('.x')){ $('#botModal').hidden = true; profEditing = false; return; }
+  const pk = e.target.closest('.hm-strip [data-pk]'); if (pk){ const w = profWho; pcReset(); pc.day = pk.dataset.pk; const d = new Date(pc.day + 'T12:00'); pc.week = startOfWeek(d); profWho = w; $('#botModal').hidden = true; showPage('profile'); setTimeout(() => $('#pfCal') && $('#pfCal').scrollIntoView({block: 'start'}), 30); return; }
+  profClick(e);
+});
+$('#botModal').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pfName'){ saveProfileEdit(); openProfile(ME); } });
+$('#page-profile').addEventListener('click', e => {
+  profClick(e);
+  const pcb = e.target.closest('[data-pc]'); if (pcb){ pcAct(pcb.dataset.pc); return; }
+  const pk = e.target.closest('[data-pk]'); if (pk){ pcAct(null, pk.dataset.pk); if (pk.classList.contains('hm')) $('#pfCal').scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); return; }
+  const lb = e.target.closest('[data-lb]'); if (lb){ P.lbCat = lb.dataset.lb; saveP(); lbShown = 10; lbJump = profWho === ME; showPage('leaders'); return; }
+  const fl = e.target.closest('#pfFilter [data-v]'); if (fl){ profFilter = fl.dataset.v; renderProfilePage(); }
+});
+$('#page-profile').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pfName'){ saveProfileEdit(); renderProfilePage(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape'){ $('#botModal').hidden = true; profEditing = false; } });
+// clicking yourself anywhere opens your profile
+document.addEventListener('click', e => { const m = e.target.closest('[data-me]'); if (m && !e.target.closest('.bdg') && !e.target.closest('#botModal')) openProfile(ME); });
+function renderMeBtn(){ const b = $('#meBtn'); if (b){ b.innerHTML = myAvatar('sm'); b.title = `${myName() === 'You' ? 'Your' : myName() + "'s"} profile`; } }
+$('#meBtn').onclick = () => openProfile(ME);
+renderMeBtn();
+
