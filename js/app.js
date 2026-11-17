@@ -54,8 +54,9 @@ function showPage(name, sec){
   if (name === 'stats'){ renderLog(); const w = $('#week'); w.classList.remove('grow'); void w.offsetWidth; w.classList.add('grow'); }
   if (name === 'awards'){ achBump('awards'); renderAwards(); }
   if (typeof onPageShown === 'function') onPageShown(name);
-  if (sec){ const t = $('#' + sec); if (t) setTimeout(() => t.scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}), 30); }
+  if (sec){ const t = $('#' + sec); if (t){ if (name === 'settings') setTocOn(sec, true); setTimeout(() => t.scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}), 30); } }
   else window.scrollTo(0, 0);
+  if (name === 'settings' && !sec) requestAnimationFrame(updateToc);
 }
 function openTab(name){ const a = PAGE_ALIAS[name] || name; Array.isArray(a) ? showPage(a[0], a[1]) : showPage(a); }
 $('#nav').addEventListener('click', e => {
@@ -68,13 +69,30 @@ document.addEventListener('click', e => {
   const g = e.target.closest('[data-go]');
   if (g){ e.preventDefault(); showPage(g.dataset.go, g.dataset.sec); }
   const a = e.target.closest('.toc a[data-sec]');
-  if (a){ e.preventDefault(); $('#' + a.dataset.sec).scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); }
+  if (a){ e.preventDefault(); setTocOn(a.dataset.sec, true); $('#' + a.dataset.sec).scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); }
 });
-// highlight the settings section you're looking at
-if ('IntersectionObserver' in window){
-  const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) document.querySelectorAll('.toc a').forEach(a => a.classList.toggle('on', a.dataset.sec === en.target.id)); }), {rootMargin: '-20% 0px -70% 0px'});
-  document.querySelectorAll('.set').forEach(x => io.observe(x));
+// highlight the settings section you're looking at: the last one whose top has passed 30% of the screen,
+// the last section once you're at the bottom (short ones there can't scroll up that far), or the one you just clicked
+let tocPick = null, tocPickAt = 0;
+function setTocOn(id, picked){
+  if (picked){ tocPick = id; tocPickAt = Date.now(); }
+  document.querySelectorAll('.toc a').forEach(a => a.classList.toggle('on', a.dataset.sec === id));
 }
+function updateToc(){
+  const secs = [...document.querySelectorAll('.set')].filter(x => x.offsetParent);
+  if (!secs.length) return;
+  const atBottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+  if (tocPick && Date.now() - tocPickAt < 1500) return;           // still scrolling to the one you clicked
+  if (atBottom && tocPick && secs.some(x => x.id === tocPick && x.getBoundingClientRect().top < innerHeight)) return setTocOn(tocPick);
+  tocPick = null;
+  let cur = secs[0].id;
+  secs.forEach(x => { if (x.getBoundingClientRect().top <= innerHeight * 0.3) cur = x.id; });
+  if (atBottom) cur = secs[secs.length - 1].id;
+  setTocOn(cur);
+}
+let tocRaf = 0;
+addEventListener('scroll', () => { if (!tocRaf) tocRaf = requestAnimationFrame(() => { tocRaf = 0; updateToc(); }); }, {passive: true});
+addEventListener('resize', updateToc);
 $('#achBtn').onclick = () => showPage('awards');
 
 /* Stats summary tiles */
