@@ -184,7 +184,9 @@ button{cursor:pointer}
 .g-meta{font-size:12px;color:var(--muted)}
 .g-empty{max-width:640px}.g-empty b{font-size:18px}.g-empty p{color:var(--muted)}.g-empty-btns{display:flex;gap:8px;flex-wrap:wrap}
 .g-view{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
-.g-side{display:flex;flex-direction:column;gap:18px;position:sticky;top:16px}
+.g-side{display:flex;flex-direction:column;gap:18px;position:sticky;top:16px;max-height:calc(100vh - 32px)}
+.g-side>.card{flex:none}
+.g-side>.g-toc-card{flex:0 1 auto;min-height:120px;display:flex;flex-direction:column;overflow:hidden}
 .g-head h2{margin:0 0 6px;font-size:28px;line-height:1.2}
 .g-sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
 .g-cls{font-size:13px;font-weight:700;color:var(--accent)}
@@ -219,7 +221,7 @@ button{cursor:pointer}
 .g-bigbar{margin-top:10px;display:block}
 .g-prog .bar2 i,.g-bigbar i{background:var(--accent)}
 .g-qa-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
-.g-toc{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.g-toc{display:flex;flex-direction:column;gap:2px;margin-top:8px;overflow-y:auto;min-height:0;overscroll-behavior:contain;margin-right:-8px;padding-right:8px}
 .g-toc a{font-size:13px;color:var(--ink);text-decoration:none;padding:4px 8px 4px calc((var(--lv) - 1) * 12px + 8px);border-radius:6px}
 .g-toc a:hover{background:var(--soft)}
 .g-ed-meta{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
@@ -246,7 +248,7 @@ button{cursor:pointer}
 .g-slot-head .x{border:0;background:none;font-size:20px;color:var(--muted);width:28px;height:28px;border-radius:6px}.g-slot-head .x:hover{background:var(--soft)}
 .g-slot-title{display:block;font-size:17px;margin:6px 0}
 .g-slot-md{max-height:420px;overflow:auto;margin-top:8px;font-size:14px;padding-right:4px}
-@media (max-width:1000px){.g-view{grid-template-columns:1fr}.g-side{position:static}.g-ed-split{grid-template-columns:1fr}}
+@media (max-width:1000px){.g-view{grid-template-columns:1fr}.g-side{position:static;max-height:none}.g-ed-split{grid-template-columns:1fr}}
 .hm.pick,.hm-strip .hm[data-pk]{cursor:pointer}.hm.pick:hover,.hm-strip .hm[data-pk]:hover{outline:2px solid var(--ink);outline-offset:-1px}
 .pc-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .pc-head{margin-top:10px}.pc-head b{order:0}.pc-head [data-pc="prev"]{order:-1}
@@ -4678,6 +4680,7 @@ function renderGuides(){
       : `<div class="card g-empty"><b>No study guides yet</b><p>Write one here, or import guides as Markdown, text or JSON files. Ask Claude to “make a Focus Bench study guide” on any topic, then import the file it gives you.</p><div class="g-empty-btns"><button class="small-btn accent" data-ga="new">+ New guide</button><button class="small-btn" data-ga="import">Import</button><button class="small-btn" data-ga="sample">Add a sample guide</button></div></div>`}`;
 }
 function renderGuideView(){
+  requestAnimationFrame(fitGuideSide);
   const g = guideById(gView), r = mdRender(g.body), p = guideProgress(g), mins = guideMinutes(g), ex = examText(g);
   $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-ga="back">← All guides</button><span class="g-bar-sp"></span>
       <button class="small-btn accent" data-ga="study">▶ Study this</button><button class="small-btn" data-ga="edit">Edit</button><button class="small-btn" data-ga="export">Export</button><button class="small-btn" data-ga="del">Delete</button></div>
@@ -4690,10 +4693,17 @@ function renderGuideView(){
           ${p.total ? `<span class="bar2 g-bigbar"><i style="width:${p.done / p.total * 100}%"></i></span>` : ''}
           ${r.qn ? `<div class="g-qa-btns"><button class="small-btn" data-ga="qa-open">Show all answers</button><button class="small-btn" data-ga="qa-close">Hide all</button></div>` : ''}
           ${p.total ? `<button class="link-btn" data-ga="uncheck">Uncheck everything</button>` : ''}</div>
-        ${r.heads.length > 2 ? `<div class="card"><div class="h first">Contents</div><nav class="g-toc">${r.heads.map(h => `<a href="#${h.id}" data-gh="${h.id}" style="--lv:${h.lv}">${esc(h.text)}</a>`).join('')}</nav></div>` : ''}
+        ${r.heads.length > 2 ? `<div class="card g-toc-card"><div class="h first">Contents</div><nav class="g-toc">${r.heads.map(h => `<a href="#${h.id}" data-gh="${h.id}" style="--lv:${h.lv}">${esc(h.text)}</a>`).join('')}</nav></div>` : ''}
       </aside>
     </div>`;
 }
+// keep the side panel inside the visible window, wherever the page is scrolled
+function fitGuideSide(){
+  const s = document.querySelector('#page-guides .g-side'); if (!s || $('#page-guides').hidden) return;
+  if (getComputedStyle(s).position !== 'sticky'){ s.style.maxHeight = ''; return; }
+  s.style.maxHeight = Math.max(240, innerHeight - Math.max(16, s.getBoundingClientRect().top) - 16) + 'px';
+}
+addEventListener('scroll', fitGuideSide, {passive: true}); addEventListener('resize', fitGuideSide);
 const MD_HELP = `<details class="g-help"><summary>Formatting help</summary><div><code># Heading</code> <code>**bold**</code> <code>*italic*</code> <code>==highlight==</code> <code>- bullet</code> <code>1. numbered</code> <code>- [ ] checklist item</code> <code>&gt; tip box</code> <code>\`code\`</code> <code>| table | row |</code><br>Flashcards: a line starting <code>Q:</code> followed by a line starting <code>A:</code>. The answer stays hidden until clicked.</div></details>`;
 function renderGuideEditor(){
   const g = gEdit;
