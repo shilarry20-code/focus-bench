@@ -88,7 +88,7 @@ button{cursor:pointer}
 .emb.shine:not(.xs) svg{animation:embGlow 3.2s ease-in-out infinite}
 @keyframes embGlow{0%,100%{filter:drop-shadow(0 0 1px color-mix(in srgb,var(--ec) 40%,transparent)) brightness(1)}50%{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ec) 80%,transparent)) brightness(1.18)}}
 .emb.para svg{filter:drop-shadow(0 0 4px color-mix(in srgb,var(--ec) 70%,transparent)) drop-shadow(0 0 10px color-mix(in srgb,var(--ec) 35%,transparent))}
-.emb.para .rays{transform-origin:12px 12px;animation:paraSpin 14s linear infinite}
+.emb.para .rays{transform-origin:24px 24px;animation:paraSpin 14s linear infinite}
 @keyframes paraSpin{to{transform:rotate(360deg)}}
 .para-row{background:linear-gradient(90deg,color-mix(in srgb,#f2b01e 18%,transparent),transparent 80%)!important}
 .para-row .who b{color:#d19400}
@@ -3189,16 +3189,16 @@ const pick = (rnd, a) => a[Math.floor(rnd() * a.length)];
 const clampN = (x, a, b) => Math.max(a, Math.min(b, x));
 
 const RANKS = [
-  {name:'Freshman', lo:-1e9, c:'#8a929e', cuts:[700, 800, 900]},
-  {name:'Sophomore', lo:900, c:'#3a9d68', cuts:[1000, 1100, 1200]},
-  {name:'Scholar', lo:1200, c:'#3b7be0', cuts:[1300, 1400, 1500]},
+  {name:'Freshman', lo:-1e9, c:'#8e98a3', cuts:[700, 800, 900]},
+  {name:'Sophomore', lo:900, c:'#c27a43', cuts:[1000, 1100, 1200]},
+  {name:'Scholar', lo:1200, c:'#4a86d8', cuts:[1300, 1400, 1500]},
   {name:'Honors', lo:1500, c:'#8456e8', cuts:[1600, 1700, 1800]},
-  {name:"Dean's List", lo:1800, c:'#cf9b12', cuts:[1900, 2000, 2100]},
-  {name:'Valedictorian', lo:2100, c:'#e0533a', cuts:[2200, 2300, 2400]},
-  {name:'Professor', lo:2400, c:'#c02bc8', cuts:[2500, 2600, 2700]},
+  {name:"Dean's List", lo:1800, c:'#d9a420', cuts:[1900, 2000, 2100]},
+  {name:'Valedictorian', lo:2100, c:'#d9473a', cuts:[2200, 2300, 2400]},
+  {name:'Professor', lo:2400, c:'#b62fc0', cuts:[2500, 2600, 2700]},
   {name:'Distinguished Professor', sh:'Dist. Professor', lo:2700, c:'#139e9a', cuts:[2800, 2900, 3000], elite:1},
   {name:'Provost', lo:3000, c:'#d02f4f', cuts:[3100, 3200, 3300], elite:1},
-  {name:'Chancellor', lo:3300, c:'#d99a0b', cuts:[3400, 3500, 3600], elite:1, shine:1},
+  {name:'Chancellor', lo:3300, c:'#e0a30e', cuts:[3400, 3500, 3600], elite:1, shine:1},
   {name:'Laureate', lo:3600, c:'#3a9be0', cuts:[], elite:1, shine:1},
   {name:'Paragon', lo:Infinity, c:'#f2b01e', cuts:[], elite:1, shine:1, one:1}
 ];
@@ -3207,8 +3207,8 @@ function rankOf(r){
   let i = RANKS.length - 1; while (i > 0 && r < RANKS[i].lo) i--;
   const R0 = RANKS[i];
   if (!R0.cuts.length) return {i, name:R0.name, div:'', full:R0.name, sh:R0.sh || R0.name, c:R0.c, lo:R0.lo, hi:null, d:0};
-  const d = r < R0.cuts[0] ? 0 : r < R0.cuts[1] ? 1 : 2;           // 0 = III, 1 = II, 2 = I
-  const lo = d === 0 ? (i === 0 ? 600 : R0.lo) : R0.cuts[d - 1], hi = R0.cuts[d], dv = ['III','II','I'][d];
+  const d = r < R0.cuts[0] ? 0 : r < R0.cuts[1] ? 1 : 2;           // 0 = I (start), 1 = II, 2 = III (top)
+  const lo = d === 0 ? (i === 0 ? 600 : R0.lo) : R0.cuts[d - 1], hi = R0.cuts[d], dv = ['I','II','III'][d];
   return {i, name:R0.name, div:dv, full:`${R0.name} ${dv}`, sh:`${R0.sh || R0.name} ${dv}`, c:R0.c, lo, hi, d};
 }
 const PARAGON = {i:PARAGON_I, name:'Paragon', div:'', full:'Paragon', sh:'Paragon', c:RANKS[PARAGON_I].c, lo:LAUREATE_MIN, hi:null, d:0};
@@ -3222,29 +3222,112 @@ function rkOf(who){
   return k;
 }
 const myRk = () => rkOf(ME);
-function emblem(rk, cls){
-  const i = rk.i, c = rk.c, Rk = RANKS[i] || {};
-  const chev = (y0, col) => [...Array(rk.d + 1)].map((_, k) => `<path d="M8 ${y0 - k * 4.2}l4 -2.6 4 2.6" fill="none" stroke="${col || '#fff'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`).join('');
-  const star = '<path d="M12 7.2l1.5 3.1 3.4.4-2.5 2.3.7 3.3-3.1-1.7-3.1 1.7.7-3.3-2.5-2.3 3.4-.4z" fill="#fff"/>';
-  let g;
-  if (i <= 6) g = `<path d="M12 1.8l8.5 3.6v6.3c0 5.2-3.6 9-8.5 10.5C7.1 20.7 3.5 16.9 3.5 11.7V5.4z" fill="${c}"/><path d="M12 1.8l8.5 3.6v6.3c0 5.2-3.6 9-8.5 10.5" fill="#000" opacity=".12"/>${rk.div ? chev(17) : star}`;
-  else if (i === 7) g = `<path d="M12 1.2l9.4 5.4v10.8L12 22.8 2.6 17.4V6.6z" fill="${c}"/><path d="M12 1.2l9.4 5.4v10.8L12 22.8z" fill="#000" opacity=".14"/><path d="M12 4.3l6.6 3.8v7.8L12 19.7 5.4 15.9V8.1z" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width=".9"/>${chev(16.6)}`;
-  else if (i === 8) g = `<path d="M12 .8l2.6 3.1 3.9-.9.7 4 3.6 1.8-1.9 3.5 1.9 3.5-3.6 1.8-.7 4-3.9-.9L12 23.2l-2.6-3.1-3.9.9-.7-4-3.6-1.8 1.9-3.5-1.9-3.5 3.6-1.8.7-4 3.9.9z" fill="${c}"/><circle cx="12" cy="12" r="6.6" fill="#000" opacity=".13"/>${chev(16.4)}`;
-  else if (i === 9) g = `<path d="M2.6 7.6l5 4.2L12 3.6l4.4 8.2 5-4.2-1.9 11.6H4.5z" fill="${c}"/><path d="M12 3.6l4.4 8.2 5-4.2-1.9 11.6H12z" fill="#000" opacity=".13"/><circle cx="2.6" cy="7.2" r="1.4" fill="${c}"/><circle cx="12" cy="3.1" r="1.5" fill="${c}"/><circle cx="21.4" cy="7.2" r="1.4" fill="${c}"/><rect x="4.4" y="19.6" width="15.2" height="2.6" rx="1" fill="${c}"/>${[...Array(rk.d + 1)].map((_, k) => `<circle cx="${12 + (k - rk.d / 2) * 4.2}" cy="15.4" r="1.45" fill="#fff"/>`).join('')}`;
-  else if (i === 10){
-    // laurel wreath: leaves along an arc on each side, around a medallion
-    let lv = '';
-    for (const side of [-1, 1]){
-      lv += `<path d="M${12 + side * 2.2} 21.1A8.6 8.6 0 0 ${side > 0 ? 0 : 1} ${12 + side * 7.6} 7.6" fill="none" stroke="${c}" stroke-width="1.1" stroke-linecap="round"/>`;
-      for (let k = 0; k < 6; k++){
-        const th = 22 + k * 24, t = th * Math.PI / 180, x = 12 + side * Math.sin(t) * 9.4, y = 12.4 + Math.cos(t) * 9.4;
-        const rot = side * (th - 90) - side * 38;
-        lv += `<ellipse cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" rx="1.25" ry="2.5" transform="rotate(${rot.toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})" fill="${c}"/>`;
+// Rank emblems. emblemSvg(i, d, small): i = rank 0–11, d = division 0–2 (I–III) or -1 for none; small = simpler marks for tiny sizes.
+let EMB_UID = 0;
+const EMB_PAL = [
+  // [main, light, dark, accent]
+  ['#8e98a3', '#d3d9df', '#59626c', '#f2c94c'],   // Freshman: iron
+  ['#c27a43', '#f0b27e', '#7a4520', '#fff3e0'],   // Sophomore: bronze
+  ['#4a86d8', '#a9cdf7', '#24508f', '#ffe9a8'],   // Scholar: steel blue
+  ['#8456e8', '#c4acff', '#4e2aa6', '#ffd257'],   // Honors: violet + gold
+  ['#d9a420', '#ffe28a', '#94650a', '#7a1f2b'],   // Dean's List: gold
+  ['#d9473a', '#ff9b8a', '#8f2117', '#1c2230'],   // Valedictorian: crimson
+  ['#b62fc0', '#ee99f5', '#6d1478', '#ffd257'],   // Professor: royal magenta + gold
+  ['#139e9a', '#7ff0e6', '#0a5e5b', '#e8fffd'],   // Distinguished Professor: teal gem
+  ['#d02f4f', '#ff9aae', '#86152b', '#ffd257'],   // Provost: crimson star
+  ['#e0a30e', '#fff0a8', '#94640a', '#e8475f'],   // Chancellor: crown gold
+  ['#3a9be0', '#bfe6ff', '#1d5e96', '#fff7d6'],   // Laureate: sky + laurel
+  ['#f2b01e', '#fff6c4', '#b5770a', '#ffffff']    // Paragon
+];
+function emblemSvg(i, d, small){
+  const u = 'e' + (++EMB_UID), [c, lt, dk, ac] = EMB_PAL[i];
+  const grad = `<defs><linearGradient id="${u}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${lt}"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${dk}"/></linearGradient>
+    <linearGradient id="${u}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".5" stop-color="${lt}"/><stop offset="1" stop-color="${dk}"/></linearGradient>
+    <radialGradient id="${u}s" cx=".35" cy=".25" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`;
+  const G = `url(#${u}g)`, RIM = `url(#${u}r)`, SH = `url(#${u}s)`;
+  const shieldP = 'M24 3.5L40.5 9.5V22.5C40.5 32.5 33.5 40 24 44C14.5 40 7.5 32.5 7.5 22.5V9.5Z';
+  const shield = (inner) => `<path d="${shieldP}" fill="${G}" stroke="${RIM}" stroke-width="2.4" stroke-linejoin="round"/><path d="M24 7.5L37 12.2V22.5C37 30.4 31.6 36.6 24 40" fill="#000" opacity=".1"/><path d="${shieldP}" fill="${SH}"/>${inner}`;
+  // division marks: 1-3 little stars along the bottom
+  const star = (x, y, r, f) => { let p = ''; for (let k = 0; k < 10; k++){ const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * .45 : r; p += `${k ? 'L' : 'M'}${(x + Math.cos(a) * rr).toFixed(2)} ${(y + Math.sin(a) * rr).toFixed(2)}`; } return `<path d="${p}Z" fill="${f}" stroke="${f === '#ffd257' ? '#7a5200' : dk}" stroke-width=".7" stroke-linejoin="round"/>`; };
+  const pips = (y, f) => { if (d < 0) return ''; const r = small ? 4.6 : 4, gap = r * 2.15, w = d * gap + r * 2 + 4;
+    return `<rect x="${(24 - w / 2).toFixed(2)}" y="${(y - r - 1.6).toFixed(2)}" width="${w.toFixed(2)}" height="${(r * 2 + 3.2).toFixed(2)}" rx="${(r + 1.6).toFixed(2)}" fill="#141821" fill-opacity=".72" stroke="#fff" stroke-opacity=".35" stroke-width=".7"/>` +
+      [...Array(d + 1)].map((_, k) => star(24 + (k - d / 2) * gap, y + .3, r, '#ffd257')).join(''); };
+  let g = '';
+  switch (i){
+    case 0: // Freshman: pencil
+      g = shield(`<g transform="rotate(-40 24 20)"><rect x="21" y="9" width="6" height="16" rx="1" fill="${ac}" stroke="#7a5a12" stroke-width=".8"/><rect x="21" y="9" width="6" height="3" fill="#e99" stroke="#7a5a12" stroke-width=".8"/><path d="M21 25h6l-3 5.5z" fill="#f3dcb0" stroke="#7a5a12" stroke-width=".8" stroke-linejoin="round"/><path d="M23.2 28.4h1.6L24 30z" fill="#333"/></g>`) + pips(33.5);
+      break;
+    case 1: // Sophomore: open book
+      g = shield(`<path d="M24 14c-3-2-7-2.4-10.5-1.4v13c3.5-1 7.5-.6 10.5 1.4 3-2 7-2.4 10.5-1.4v-13C31 11.6 27 12 24 14z" fill="${ac}" stroke="${dk}" stroke-width="1" stroke-linejoin="round"/><path d="M24 14v13" stroke="${dk}" stroke-width="1"/><path d="M16.5 16.5c2-.4 4-.2 5.5.6M16.5 19.5c2-.4 4-.2 5.5.6M26 17.1c1.5-.8 3.5-1 5.5-.6M26 20.1c1.5-.8 3.5-1 5.5-.6" stroke="${c}" stroke-width=".9" fill="none" stroke-linecap="round"/>`) + pips(34);
+      break;
+    case 2: // Scholar: lamp of knowledge
+      g = shield(`<path d="M24 9.5c2.2 2.6 2.6 4.6 0 7-2.6-2.4-2.2-4.4 0-7z" fill="#ffb02e"/><path d="M24 11.5c1 1.3 1.1 2.4 0 3.5-1.1-1.1-1-2.2 0-3.5z" fill="#fff6b0"/><path d="M14 20.5c3 0 5-1.5 10-1.5s8 1.5 11-1c-.5 4.5-4.5 7-11 7-5 0-8.5-1.8-10-4.5z" fill="${ac}" stroke="${dk}" stroke-width="1" stroke-linejoin="round"/><path d="M22 17h4l-.5 2h-3z" fill="${ac}" stroke="${dk}" stroke-width=".8"/><path d="M20 25.5h8l1.5 2.5h-11z" fill="${ac}" stroke="${dk}" stroke-width=".8" stroke-linejoin="round"/>`) + pips(34);
+      break;
+    case 3: // Honors: star with ribbon
+      g = shield(`<path d="M17 25l-3 9 4-1.5 2 3.5 2.5-8.5zM31 25l3 9-4-1.5-2 3.5-2.5-8.5z" fill="#e64a7b" stroke="${dk}" stroke-width=".8" stroke-linejoin="round"/>${star(24, 19.5, 9.5, ac)}`) + pips(36.5, '#fff');
+      break;
+    case 4: // Dean's List: crest with scroll banner
+      g = `<path d="M24 2.5l4 3.5 5-1 2 4.5 4.5 2-1 5 3.5 4-3.5 4 1 5-4.5 2-2 4.5-5-1-4 3.5-4-3.5-5 1-2-4.5-4.5-2 1-5L5 21.5l3.5-4-1-5 4.5-2 2-4.5 5 1z" fill="${G}" stroke="${RIM}" stroke-width="1.6" stroke-linejoin="round"/><circle cx="24" cy="21.5" r="11" fill="${dk}" opacity=".25"/><circle cx="24" cy="21.5" r="11" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".9"/>${star(24, 17, 4.5, '#fff')}<path d="M10 22.5h28l-2.2 3.2 2.2 3.2H10l2.2-3.2z" fill="${ac}" stroke="#4d0f17" stroke-width=".8" stroke-linejoin="round"/><path d="M14.5 25.7h19" stroke="#ffd8a0" stroke-width=".9" stroke-dasharray="2 1.4"/><path d="M24 2.5l4 3.5 5-1 2 4.5 4.5 2-1 5 3.5 4" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width=".8"/>` + pips(37.5);
+      break;
+    case 5: // Valedictorian: shield with mortarboard
+      g = shield(`<path d="M24 11l13 5.5-13 5.5-13-5.5z" fill="${ac}" stroke="#000" stroke-opacity=".4" stroke-width=".8" stroke-linejoin="round"/><path d="M17 19.3v5c0 2 3.2 3.5 7 3.5s7-1.5 7-3.5v-5L24 22z" fill="${ac}" stroke="#000" stroke-opacity=".4" stroke-width=".8"/><path d="M24 16.5l8 2.5v6.5" fill="none" stroke="#ffc83d" stroke-width="1.1"/><path d="M30.8 25.3h2.4l-.4 4h-1.6z" fill="#ffc83d"/><circle cx="24" cy="16.5" r="1.2" fill="#ffc83d"/>`) + pips(34.5);
+      break;
+    case 6: // Professor: wise owl wearing a mortarboard, on an ornate crest
+      g = `<path d="M24 2l17.5 6.5v13c0 11-7.5 18.5-17.5 23-10-4.5-17.5-12-17.5-23v-13z" fill="${G}" stroke="${RIM}" stroke-width="2.2" stroke-linejoin="round"/><path d="M24 2l17.5 6.5v13c0 11-7.5 18.5-17.5 23-10-4.5-17.5-12-17.5-23v-13z" fill="${SH}"/><path d="M10.5 9.6L24 4.6l13.5 5" fill="none" stroke="${ac}" stroke-width="1.2"/>
+        <path d="M15.5 17.5l-1.6-5.2 4.6 2.6M32.5 17.5l1.6-5.2-4.6 2.6" fill="#f3e3c4" stroke="#5a3a1a" stroke-width=".8" stroke-linejoin="round"/>
+        <path d="M24 13.5c6.2 0 9.5 4 9.5 9.2 0 6-4.3 10.3-9.5 10.3s-9.5-4.3-9.5-10.3c0-5.2 3.3-9.2 9.5-9.2z" fill="#f3e3c4" stroke="#5a3a1a" stroke-width=".9"/>
+        <path d="M19 28.5c1.6 1.6 3.2 2.2 5 2.2s3.4-.6 5-2.2" fill="none" stroke="#c9a77a" stroke-width=".9" stroke-linecap="round"/><path d="M21 31.2l3-1 3 1" fill="none" stroke="#c9a77a" stroke-width=".8"/>
+        <circle cx="19.8" cy="21.5" r="3.7" fill="#fff" stroke="#5a3a1a" stroke-width=".8"/><circle cx="28.2" cy="21.5" r="3.7" fill="#fff" stroke="#5a3a1a" stroke-width=".8"/>
+        <circle cx="20.2" cy="21.8" r="1.8" fill="#1c2230"/><circle cx="27.8" cy="21.8" r="1.8" fill="#1c2230"/><circle cx="20.8" cy="21.1" r=".6" fill="#fff"/><circle cx="28.4" cy="21.1" r=".6" fill="#fff"/>
+        <path d="M24 23.6l-1.5 1.6 1.5 2 1.5-2z" fill="#f2a516" stroke="#7a4d00" stroke-width=".6" stroke-linejoin="round"/>
+        <path d="M24 7.8l10 3.9-10 3.9-10-3.9z" fill="#1c2230" stroke="${ac}" stroke-width=".7" stroke-linejoin="round"/><path d="M18.6 13.5v1.8c1.4 1 3.4 1.4 5.4 1.4s4-.4 5.4-1.4v-1.8L24 15.6z" fill="#1c2230"/>
+        <path d="M24 11.7l7.4 2.4v4.6" fill="none" stroke="${ac}" stroke-width=".9"/><path d="M30.6 18.4h1.6l-.3 2.6h-1z" fill="${ac}"/>` + pips(38.2, ac);
+      break;
+    case 7: // Distinguished Professor: faceted gem with wings
+      g = `<path d="M17 18c-5-1-9.5-4-12-8 0 6 3 11 9 13.5-3 .5-5.5 0-7.5-1.5 2 4 6 5.5 10 4.5zM31 18c5-1 9.5-4 12-8 0 6-3 11-9 13.5 3 .5 5.5 0 7.5-1.5-2 4-6 5.5-10 4.5z" fill="${lt}" stroke="${dk}" stroke-width=".9" stroke-linejoin="round" opacity=".95"/>
+        <path d="M24 5l11 6.5v13L24 31 13 24.5v-13z" fill="${G}" stroke="${RIM}" stroke-width="1.8" stroke-linejoin="round"/><path d="M24 5v13l11-6.5M24 18L13 11.5M24 18v13" stroke="#fff" stroke-opacity=".45" stroke-width=".8" fill="none"/><path d="M24 5l11 6.5L24 18z" fill="#fff" opacity=".25"/><path d="M24 18l11 6.5L24 31z" fill="#000" opacity=".15"/>` + pips(38.5);
+      break;
+    case 8: // Provost: star medallion with ribbons
+      g = `<path d="M17 28l-4 16 5.5-2.5L21 46l3-14zM31 28l4 16-5.5-2.5L27 46l-3-14z" fill="${ac}" stroke="#8a5a00" stroke-width=".8" stroke-linejoin="round"/>` +
+        (() => { let p = ''; for (let k = 0; k < 24; k++){ const a = -Math.PI / 2 + k * Math.PI / 12, r = k % 2 ? 15 : 18; p += `${k ? 'L' : 'M'}${(24 + Math.cos(a) * r).toFixed(2)} ${(20 + Math.sin(a) * r).toFixed(2)}`; } return `<path d="${p}Z" fill="${G}" stroke="${RIM}" stroke-width="1.4" stroke-linejoin="round"/>`; })() +
+        `<circle cx="24" cy="20" r="10.5" fill="${dk}" opacity=".35"/><circle cx="24" cy="20" r="10.5" fill="none" stroke="${ac}" stroke-width="1.2"/>${star(24, 20, 7.5, ac)}<circle cx="24" cy="20" r="18" fill="${SH}"/>` + pips(39.5, '#fff');
+      break;
+    case 9: // Chancellor: jeweled crown
+      g = `<g transform="translate(0 3.5)"><path d="M6 15L15 22L24 7L33 22L42 15L38.5 34H9.5Z" fill="${G}" stroke="${RIM}" stroke-width="1.8" stroke-linejoin="round"/><rect x="9" y="33" width="30" height="5.5" rx="1.5" fill="${G}" stroke="${RIM}" stroke-width="1.4"/>
+        <circle cx="6" cy="14" r="2.3" fill="${G}" stroke="${RIM}"/><circle cx="24" cy="5.5" r="2.6" fill="${G}" stroke="${RIM}"/><circle cx="42" cy="14" r="2.3" fill="${G}" stroke="${RIM}"/>
+        <path d="M24 19.5l3 3.5-3 3.5-3-3.5z" fill="${ac}" stroke="#fff" stroke-width=".7"/><circle cx="15" cy="27" r="1.9" fill="#3a9be0" stroke="#fff" stroke-width=".6"/><circle cx="33" cy="27" r="1.9" fill="#1fb36b" stroke="#fff" stroke-width=".6"/><path d="M6 15l9 7 9-15 9 15 9-7" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".7"/></g>` + pips(39.3, ac);
+      break;
+    case 10: { // Laureate: golden laurel wreath around a sky-blue medal, tied with a ribbon
+      const leaf = (x, y, rot, sc) => `<path d="M0 -5.2C2.2 -2.6 2.2 2 0 4.6C-2.2 2 -2.2 -2.6 0 -5.2Z" transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${rot.toFixed(1)}) scale(${sc})" fill="url(#${u}l)" stroke="#7a5200" stroke-width=".5"/>`;
+      let lv = '';
+      for (const sd of [-1, 1]){
+        lv += `<path d="M${24 + sd * 5} 41.6C${24 + sd * 15.5} 38 ${24 + sd * 19.5} 26 ${24 + sd * 14} 9" fill="none" stroke="#a87a10" stroke-width="1.2" stroke-linecap="round"/>`;
+        for (let k = 0; k < 8; k++){
+          const th = 30 + k * 18.5, t = th * Math.PI / 180, R0 = 17.6, x = 24 + sd * Math.sin(t) * R0, y = 24.5 + Math.cos(t) * R0;
+          // direction along the branch, heading up and around the medal
+          const dir = Math.atan2(-Math.sin(t), sd * Math.cos(t)) * 180 / Math.PI + 90, sc = 1 - k * .045;
+          lv += leaf(x + sd * Math.sin(t) * 1.9, y + Math.cos(t) * 1.9, dir + sd * 32, sc);       // outer leaf
+          lv += leaf(x - sd * Math.sin(t) * 1.5, y - Math.cos(t) * 1.5, dir - sd * 28, sc * .85); // inner leaf
+        }
       }
+      g = `<defs><linearGradient id="${u}l" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff2b0"/><stop offset=".5" stop-color="#e8b52a"/><stop offset="1" stop-color="#a87a10"/></linearGradient></defs>${lv}
+        <path d="M20 39.5l-3 6.5 3.4-1.2 1.6 3 2-7.3zM28 39.5l3 6.5-3.4-1.2-1.6 3-2-7.3z" fill="#e8475f" stroke="#86152b" stroke-width=".6" stroke-linejoin="round"/><circle cx="24" cy="40.2" r="2.2" fill="#e8475f" stroke="#86152b" stroke-width=".6"/>
+        <circle cx="24" cy="23" r="11" fill="${G}" stroke="${RIM}" stroke-width="1.8"/><circle cx="24" cy="23" r="7.8" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".9"/>${star(24, 23, 6.3, ac)}<circle cx="24" cy="23" r="11" fill="${SH}"/>`;
+      break; }
+    default: { // Paragon: radiant crown
+      let rays = '';
+      for (let k = 0; k < 16; k++) rays += `<path d="M24 1l1.8 7h-3.6z" fill="${k % 2 ? lt : c}" transform="rotate(${k * 22.5} 24 24)" opacity="${k % 2 ? .7 : 1}"/>`;
+      g = `<g class="rays">${rays}</g><circle cx="24" cy="24" r="15.5" fill="${G}" stroke="${RIM}" stroke-width="1.8"/><circle cx="24" cy="24" r="15.5" fill="${SH}"/>
+        <path d="M14.5 28.5l-1.8-11 6 4.5L24 13l5.3 9 6-4.5-1.8 11z" fill="#fff" stroke="${dk}" stroke-width=".9" stroke-linejoin="round"/><rect x="14.5" y="29.5" width="19" height="3.4" rx="1" fill="#fff" stroke="${dk}" stroke-width=".9"/>
+        <circle cx="24" cy="23.5" r="1.7" fill="#e8475f"/><circle cx="18.8" cy="25.5" r="1.2" fill="#3a9be0"/><circle cx="29.2" cy="25.5" r="1.2" fill="#1fb36b"/>`;
     }
-    g = `${lv}<circle cx="12" cy="12.4" r="5.6" fill="${c}"/><circle cx="12" cy="12.4" r="5.6" fill="#000" opacity=".12"/><path d="M12 8.6l1.15 2.35 2.6.3-1.9 1.8.55 2.55L12 14.3l-2.4 1.3.55-2.55-1.9-1.8 2.6-.3z" fill="#fff"/>`; }
-  else g = `<g class="rays">${[...Array(12)].map((_, k) => `<path d="M12 .4l1.1 3.4h-2.2z" fill="${c}" transform="rotate(${k * 30} 12 12)" opacity="${k % 2 ? .55 : 1}"/>`).join('')}</g><circle cx="12" cy="12" r="7.4" fill="${c}"/><circle cx="12" cy="12" r="7.4" fill="#fff" opacity=".18"/><path d="M7.4 14.6l-.9-5 3 2.1L12 7.6l2.5 4.1 3-2.1-.9 5z" fill="#fff"/><rect x="7.4" y="15.2" width="9.2" height="1.6" rx=".6" fill="#fff"/>`;
-  return `<span class="emb ${cls || ''}${Rk.shine ? ' shine' : ''}${i === PARAGON_I ? ' para' : ''}" title="${esc(rk.full)}" style="--ec:${c}"><svg viewBox="0 0 24 24" aria-hidden="true">${g}</svg></span>`;
+  }
+  return `<svg viewBox="0 0 48 48" aria-hidden="true">${grad}${g}</svg>`;
+}
+
+function emblem(rk, cls){
+  const i = rk.i, Rk = RANKS[i] || {}, small = /\b(xs|sm)\b/.test(cls || '');
+  return `<span class="emb ${cls || ''}${Rk.shine ? ' shine' : ''}${i === PARAGON_I ? ' para' : ''}" title="${esc(rk.full)}" style="--ec:${rk.c}">${emblemSvg(i, rk.div ? rk.d : -1, small)}</span>`;
 }
 // bot ratings were stretched when the ranks went to 100 Elo per division; the bots' habits follow
 // their old position on the ladder, so the stretch is undone before looking those up
@@ -3953,8 +4036,8 @@ function renderRanked(){
   const range = k => k === 0 ? 'under 900 Elo' : k === LAUREATE ? '3,600+ Elo' : k === PARAGON_I ? 'The highest-rated Laureate' : `${RANKS[k].lo.toLocaleString()}–${(RANKS[k + 1].lo - 1).toLocaleString()} Elo`;
   const share = n => n === 0 ? 'none' : n / N1 < .001 ? `${n.toLocaleString()} player${n === 1 ? '' : 's'}` : `${(n / N1 * 100).toFixed(n / N1 < .01 ? 1 : 0)}%`;
   $('#rkRanks').innerHTML = RANKS.map((x, k) => {
-    const here = k === rk.i, shown = k === PARAGON_I ? PARAGON : {...rankOf(k === 0 ? 850 : x.lo + 250), d: 2, div: x.cuts.length ? 'I' : ''};
-    return `<li class="${here ? 'here' : ''}${x.elite ? ' elite' : ''}">${emblem(shown, 'sm')}<span><b>${x.name}</b><small>${range(k)}${x.cuts.length ? ' · III, II, I' : ''}</small></span><span class="cnt">${k === PARAGON_I ? (R.para.h != null ? 'only 1' : 'vacant') : share(counts[k])}</span>${here ? '<em>You</em>' : ''}</li>`; }).reverse().join('');
+    const here = k === rk.i, shown = k === PARAGON_I ? PARAGON : {...rankOf(k === 0 ? 850 : x.lo + 250), d: 2, div: x.cuts.length ? 'III' : ''};
+    return `<li class="${here ? 'here' : ''}${x.elite ? ' elite' : ''}">${emblem(shown, 'sm')}<span><b>${x.name}</b><small>${range(k)}${x.cuts.length ? ' · I, II, III' : ''}</small></span><span class="cnt">${k === PARAGON_I ? (R.para.h != null ? 'only 1' : 'vacant') : share(counts[k])}</span>${here ? '<em>You</em>' : ''}</li>`; }).reverse().join('');
   renderParaCard();
   $('#rkOn').checked = R.on;
 }
@@ -3975,7 +4058,7 @@ function renderEloChart(){
   let grid = '';
   RANKS.forEach((x, ri) => [ri === 0 ? 600 : x.lo, ...x.cuts.slice(0, 2)].forEach((v, j) => {
     if (v <= lo || v >= hi || (j > 0 && hi - lo >= 500)) return;
-    const lab = x.cuts.length ? `${x.name} ${['III','II','I'][j]}` : x.name;
+    const lab = x.cuts.length ? `${x.name} ${['I','II','III'][j]}` : x.name;
     grid += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" class="${j === 0 ? 'g-major' : 'g-minor'}"/><text x="${W - pr + 6}" y="${Y(v) + 4}" class="g-lab">${esc(lab)}</text>`;
   }));
   const d = pts.map((v, k) => `${k ? 'L' : 'M'}${X(k).toFixed(1)},${Y(v).toFixed(1)}`).join('');
