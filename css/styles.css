@@ -1098,20 +1098,22 @@ body.m-off .ach-pop{animation:none!important}
 .side{width:212px;box-sizing:border-box;transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s}
 body.side-hidden .shell{grid-template-columns:0px minmax(0,1fr)}
 body.side-hidden .side{transform:translateX(-100%);visibility:hidden;transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s .26s}
-/* the button that brings it back floats at the content's top-left corner, so it's there however far you scroll */
-.side-show{display:none;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:0 4px 14px -6px rgba(0,0,0,.45)}
-.side-show svg{width:18px;height:18px}.side-show:hover{border-color:var(--accent)}
-body.side-hidden .side-show{display:inline-flex;position:fixed;top:20px;left:max(16px,calc((100vw - 1320px) / 2 + 24px));z-index:30;animation:sideShowIn .26s ease both}
-body.side-hidden .strip{padding-left:50px}
-@keyframes sideShowIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
-body.m-off .shell,body.m-off .side{transition:none}body.m-off .side-show{animation:none}
-@media (prefers-reduced-motion: reduce){.shell,.side{transition:none!important}.side-show{animation:none!important}}
+/* while it's hidden, the very left edge of the window brings it back: hover for a glow and a » that follows the pointer */
+.side-edge{display:none;position:fixed;left:0;top:0;bottom:0;width:14px;padding:0;margin:0;border:0;background:none;z-index:40;cursor:pointer;--y:50%}
+.side-edge:hover,.side-edge:focus-visible{width:46px;outline:none}
+body.side-hidden .side-edge{display:block}
+.side-edge-glow{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);opacity:0;box-shadow:0 0 22px 7px color-mix(in srgb,var(--accent) 50%,transparent);transition:opacity .2s ease}
+.side-edge-icon{position:absolute;left:9px;top:var(--y);width:28px;height:28px;margin-top:-14px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);font-size:17px;font-weight:800;line-height:1;opacity:0;transform:translateX(-6px) scale(.85);transition:opacity .2s ease,transform .2s ease;pointer-events:none;box-shadow:0 4px 14px -4px color-mix(in srgb,var(--accent) 70%,transparent)}
+.side-edge:hover .side-edge-glow,.side-edge:focus-visible .side-edge-glow{opacity:.95}
+.side-edge:hover .side-edge-icon,.side-edge:focus-visible .side-edge-icon{opacity:1;transform:none}
+@media (hover:none){body.side-hidden .side-edge .side-edge-glow{opacity:.45}body.side-hidden .side-edge .side-edge-icon{opacity:.85;transform:none;width:22px;height:22px;margin-top:-11px;left:4px;font-size:13px}}
+body.m-off .shell,body.m-off .side{transition:none}body.m-off .side-edge *{transition:none}
+@media (prefers-reduced-motion: reduce){.shell,.side,.side-edge *{transition:none!important}}
 @media (max-width:760px){
-  .side-hide,body.side-hidden .side-show{display:none}
+  .side-hide,body.side-hidden .side-edge{display:none}
   .side{width:auto}
   body.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
   body.side-hidden:not(.focus-mode) .side{transform:none;visibility:visible}
-  body.side-hidden .strip{padding-left:0}
 }
 body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
-body.side-hidden .toc{top:68px}body.side-hidden .qx-bar{top:66px}@media (max-width:760px){body.side-hidden .qx-bar{top:4px}}
+
