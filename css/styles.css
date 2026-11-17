@@ -1095,26 +1095,27 @@ body.m-off .ach-pop{animation:none!important}
 .side-hide{flex:none;border:0;background:none;color:var(--muted);width:28px;height:28px;border-radius:7px;font:inherit;font-size:20px;line-height:1;font-family:var(--f-body,inherit);cursor:pointer;opacity:.7;transition:opacity .15s,background-color .15s}
 .side-hide:hover,.side-hide:focus-visible{opacity:1;background:var(--soft);color:var(--ink)}
 .shell{transition:grid-template-columns .26s cubic-bezier(.4,0,.2,1)}
-.side{width:212px;box-sizing:border-box;transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s}
+.side{width:212px;box-sizing:border-box}
 body.side-hidden .shell{grid-template-columns:0px minmax(0,1fr)}
-body.side-hidden .side{transform:translateX(-100%);visibility:hidden;transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s .26s}
-/* while it's hidden, the very left edge of the window brings it back: hover it for a glow along the edge and a
-   tall chevron (not glowing) running nearly its full height; the button itself stays see-through */
-.side-edge{display:none;position:fixed;left:0;top:0;bottom:0;width:14px;padding:0;margin:0;border:0;background:none;z-index:40;cursor:pointer}
-.side-edge:hover,.side-edge:focus-visible{width:24px;outline:none}
+body.side-hidden .side{transform:translateX(-100%);visibility:hidden}
+/* while it's hidden, hovering the very left edge lets the real panel peek out (its icon column, like a drawer
+   opened a crack); the see-through button on top catches the click, and the panel then unrolls the rest of the way */
+.side-edge{display:none;position:fixed;left:0;top:0;bottom:0;width:14px;padding:0;margin:0;border:0;border-right:1px solid transparent;background:none;z-index:40;cursor:pointer;transition:border-color .2s ease}
+.side-edge:hover,.side-edge:focus-visible{width:48px;outline:none;border-right-color:var(--line)}
 body.side-hidden .side-edge{display:block}
-.side-edge-glow{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);opacity:0;box-shadow:0 0 22px 7px color-mix(in srgb,var(--accent) 50%,transparent);transition:opacity .2s ease}
-.side-edge-chev{position:absolute;left:7px;top:14px;bottom:14px;width:12px;height:calc(100% - 28px);color:var(--muted);opacity:0;transform:translateX(-4px);transition:opacity .2s ease,transform .2s ease}
-.side-edge:hover .side-edge-glow,.side-edge:focus-visible .side-edge-glow{opacity:.95}
-.side-edge:hover .side-edge-chev,.side-edge:focus-visible .side-edge-chev{opacity:1;transform:none}
-@media (hover:none){body.side-hidden .side-edge .side-edge-glow{opacity:.45}body.side-hidden .side-edge .side-edge-chev{opacity:.6;transform:none}}
-body.m-off .shell,body.m-off .side{transition:none}body.m-off .side-edge *{transition:none}
-@media (prefers-reduced-motion: reduce){.shell,.side,.side-edge *{transition:none!important}}
+body.focus-mode .side-edge{display:none}
+.side{clip-path:inset(0 0 0 0);transition:transform .26s cubic-bezier(.4,0,.2,1),clip-path .26s cubic-bezier(.4,0,.2,1),visibility 0s}
+body.side-hidden .side{clip-path:inset(0 calc(100% - 48px) 0 0);transition:transform .26s cubic-bezier(.4,0,.2,1),clip-path .26s cubic-bezier(.4,0,.2,1),visibility 0s .26s}
+body.side-hidden:has(.side-edge:hover,.side-edge:focus-visible) .side{transform:none;visibility:visible;transition:transform .22s cubic-bezier(.2,.8,.2,1),visibility 0s}
+@media (hover:none){body.side-hidden .side-edge{border-right-color:var(--line)}}
+body.m-off .shell,body.m-off .side,body.m-off .side-edge{transition:none!important}
+@media (prefers-reduced-motion: reduce){.shell,.side,.side-edge{transition:none!important}}
 @media (max-width:760px){
   .side-hide,body.side-hidden .side-edge{display:none}
   .side{width:auto}
   body.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
   body.side-hidden:not(.focus-mode) .side{transform:none;visibility:visible}
+  .side,body.side-hidden .side{clip-path:none}
 }
 body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
 
