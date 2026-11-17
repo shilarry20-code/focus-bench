@@ -3879,7 +3879,7 @@ function startMatch(){
 }
 function finalize(res, why){
   const c = R.cur; if (!c || c.state !== 'live') return;
-  const youMin = Math.round(c.you / 60000), themMin = Math.round(Math.min(c.them, c.target) / 60000), B = BOTS[c.b];
+  const youMin = Math.round(c.you / 60000), themMin = Math.round(c.target / 60000), B = BOTS[c.b];   // the bot always finishes its sitting
   if (res !== 'W' && c.you < 10 * 60000){
     R.cur = null; saveRanked(); renderMatch();
     if (why !== 'silent') toast('Match not rated: you studied less than 10 minutes.');
@@ -3897,7 +3897,7 @@ function finalize(res, why){
   else if (res === 'L'){ R.l++; R.ws = 0; rec[1]++; }
   else { R.d++; rec[2]++; }
   const after = rankOf(R.mmr);
-  R.hist.unshift({t: Date.now(), b: c.b, br: c.br, you: youMin, them: themMin, r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0});
+  R.hist.unshift({t: Date.now(), b: c.b, br: c.br, you: youMin, them: themMin, ys: Math.round(c.you / 1000), ts: Math.round(c.target / 1000), r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0});
   if (R.hist.length > 500) R.hist.length = 500;
   c.state = 'done'; c.res = res; c.delta = delta; c.promo = after.i > before.i || (after.i === before.i && after.d > before.d) ? after.full : (after.i < before.i || (after.i === before.i && after.d < before.d) ? -1 : 0);
   saveRanked(true);
@@ -3934,6 +3934,17 @@ function rankedTick(){
   if (now - rkLastRender > 900){ rkLastRender = now; renderMatch(); }
 }
 
+/* how a finished match's times read: seconds when it was close, the bot's full sitting when you lost */
+const fmtSec = sec => { const m = Math.floor(sec / 60), x = sec % 60; return `${fmtMin(m)} ${String(x).padStart(2, '0')}s`; };
+function matchTimes(h){
+  if (h.ys == null){   // older matches saved minutes only
+    if (h.r === 'W') return `${fmtMin(h.you)} <i>·</i> they tapped out`;
+    if (h.r === 'L') return `${fmtMin(h.you)} <i>·</i> they kept going`;
+    return `${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}`;
+  }
+  const close = Math.abs(h.ys - h.ts) < 120, f = x => close ? fmtSec(x) : fmtMin(Math.round(x / 60));
+  return `${f(h.ys)} <i>vs</i> ${f(h.ts)}`;
+}
 /* match card on the Focus page */
 const mm = ms => fmtMin(Math.floor(ms / 60000));
 function renderMatch(fresh){
@@ -3953,7 +3964,8 @@ function renderMatch(fresh){
   let result = '';
   if (!live){
     const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
-    const how = c.res === 'W' ? `${esc(B.name)} tapped out at ${mm(c.target)}. You outlasted them.` : c.res === 'L' ? `You stopped at ${mm(c.you)}. ${esc(B.name)} was still going.` : `You stopped just short of ${esc(B.name)}'s ${mm(c.target)}.`;
+    const sec = ms => fmtSec(Math.round(ms / 1000));
+    const how = c.res === 'W' ? `${esc(B.name)} tapped out at ${sec(c.target)}. You outlasted them at ${sec(c.you)}.` : c.res === 'L' ? `You stopped at ${mm(c.you)}. ${esc(B.name)} kept going to ${mm(c.target)}${c.target - c.you >= 60000 ? `, ${mm(c.target - c.you)} more` : ''}.` : `You stopped at ${sec(c.you)}, just short of ${esc(B.name)}'s ${sec(c.target)}.`;
     result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em></span>
       ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
       <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>
@@ -4014,7 +4026,7 @@ function renderRanked(){
   $('#rkKpis').innerHTML = `<div class="stat"><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><span>wins–losses${R.d ? '–draws' : ''}</span></div><div class="stat"><b>${wr}%</b><span>win rate</span></div><div class="stat"><b>${R.ws}</b><span>win streak · best ${R.bestWs}</span></div><div class="stat"><b>${R.played}</b><span>matches played</span></div>`;
   renderEloChart();
   const hist = R.hist.slice(0, rkHistShown);
-  $('#rkHist').innerHTML = hist.map(h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}${h.tap ? '' : '+'}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></li>`; }).join('')
+  $('#rkHist').innerHTML = hist.map(h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${matchTimes(h)}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></li>`; }).join('')
     || '<li class="empty-li">No matches yet. Start a focus block on the Focus page and you\'ll be matched automatically.</li>';
   $('#rkMore').hidden = R.hist.length <= rkHistShown;
   // ladder: 10 above and 10 below you
@@ -4263,7 +4275,7 @@ function renderProfilePage(){
   } else {
     const rec = R.rec[w], hs = R.hist.filter(h => h.b === w).slice(0, 5), nem = nemesis();
     ranked = rec ? `<div class="pf-kv"><span><b>${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}</b><small>your record vs ${esc(B.name)}${w === nem ? ' · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? ' · rival' : ''}</small></span></div>
-      <ul class="rk-hist pf-h2h">${hs.map(h => `<li class="hr-${h.r}"><span class="res">${h.r}</span><span class="who">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span><span class="tm">${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}${h.tap ? '' : '+'}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span></li>`).join('')}</ul>`
+      <ul class="rk-hist pf-h2h">${hs.map(h => `<li class="hr-${h.r}"><span class="res">${h.r}</span><span class="who">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span><span class="tm">${matchTimes(h)}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span></li>`).join('')}</ul>`
       : `<p class="hint">You haven't played ${esc(B.name)} yet. Matches pair you with bots near your rating.</p>`;
   }
   // achievements by tier
