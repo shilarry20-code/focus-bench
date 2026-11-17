@@ -7,7 +7,11 @@ const gid = () => 'g' + Date.now().toString(36) + Math.random().toString(36).sli
 function loadGuides(){
   const fromLS = () => { GUIDES = store.get('fb.guides', []); };
   return IDB.get('guides').then(v => { if (Array.isArray(v)) GUIDES = v; else fromLS(); }, fromLS)
-    .then(() => { guidesReady = true; if (!$('#page-guides').hidden) renderGuides(); renderGuideSlot(); });
+    .then(() => {
+      // flags used to stay on questions; now they only last for one quiz, so clear any left over
+      let had = false; GUIDES.forEach(g => (g.quizzes || []).forEach(q => (q.questions || []).forEach(x => { if ('flag' in x){ delete x.flag; had = true; } })));
+      if (had) saveGuides();
+      guidesReady = true; if (!$('#page-guides').hidden) renderGuides(); renderGuideSlot(); });
 }
 let gSaveT = null;
 function saveGuides(){

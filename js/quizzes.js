@@ -1,10 +1,12 @@
 /* ---------- practice quizzes: each study guide can hold quizzes you import and take ---------- */
 // A quiz lives on its guide (g.quizzes), so it saves, backs up, exports and deletes with the guide.
-// Quiz = {id, title, questions, pick, shuffle, prevSet, created, updated, best, last, tries, lastAt}
+// Quiz = {id, title, questions, pick, shuffle, prevSet, created, updated, best, last, tries, lastAt, scores}
+//   scores = the % of every full attempt, for the average (counted from when averages were added)
 //   A quiz is a bank: each attempt draws `pick` questions (0 = all, empty = 10), favoring unseen and missed ones.
 // Question = {id, type: 'mc' | 'tf' | 'multi' | 'short', q, choices, correct: [indexes], answer, why, review, st}
 //   st = {seen, right, lastOk, last, streak, missed}: how this question has gone for you, kept when the quiz is edited.
-//   missed = in the guide's mistake bank (until right twice in a row). flag = you flagged it; stays until you unflag it.
+//   missed = in the guide's mistake bank (until right twice in a row).
+// Flags belong to one attempt (QR.flags) and are gone once you leave its results.
 // Loaded before guides.js; everything here runs only when called, after every script has loaded.
 
 let QR = null;          // the quiz being taken (see "taking a quiz")
@@ -185,7 +187,6 @@ function normQuiz(o, base){
     q.id = x && typeof x.id === 'string' ? x.id : qqid();
     if (x && x.st && typeof x.st === 'object') q.st = {seen: +x.st.seen || 0, right: +x.st.right || 0, lastOk: typeof x.st.lastOk === 'boolean' ? x.st.lastOk : null, last: +x.st.last || 0,
       streak: +x.st.streak || 0, missed: typeof x.st.missed === 'boolean' ? x.st.missed : x.st.lastOk === false};
-    if (x && x.flag) q.flag = true;
     return q;
   }).filter(Boolean).slice(0, 300);
   if (!questions.length) return null;
@@ -193,8 +194,10 @@ function normQuiz(o, base){
   return {id: o.id && typeof o.id === 'string' ? o.id : qid(), title: String(o.title || o.quiz || o.name || base || 'Practice quiz').trim().slice(0, 120), questions,
     pick: parsePick(o.pick != null ? o.pick : o.questionsPerAttempt), shuffle: !(o.shuffle === false || /^(no|false|off|0)$/i.test(String(o.shuffle == null ? '' : o.shuffle).trim())),
     prevSet: Array.isArray(o.prevSet) ? o.prevSet.filter(v => typeof v === 'string') : [],
-    created: +o.created || now, updated: +o.updated || now, best: o.best != null ? +o.best : null, last: o.last != null ? +o.last : null, tries: +o.tries || 0, lastAt: +o.lastAt || 0};
+    created: +o.created || now, updated: +o.updated || now, best: o.best != null ? +o.best : null, last: o.last != null ? +o.last : null, tries: +o.tries || 0, lastAt: +o.lastAt || 0,
+    scores: Array.isArray(o.scores) ? o.scores.map(Number).filter(v => v >= 0 && v <= 100).slice(-500) : []};
 }
+const quizAvg = qz => qz.scores && qz.scores.length ? qz.scores.reduce((a, b) => a + b, 0) / qz.scores.length : null;
 // questions per attempt: a number, 0 for "all", or null for the default (10)
 function parsePick(v){
   if (v == null || String(v).trim() === '') return null;
@@ -206,7 +209,7 @@ const perAttempt = qz => { const n = qz.questions.length; return qz.pick === 0 ?
 function carryStats(oldQs, newQs){
   const by = new Map(); (oldQs || []).forEach(x => by.set(normAns(x.q), x));
   const used = new Set();
-  newQs.forEach(x => { const o = by.get(normAns(x.q)) || (x.id && (oldQs || []).find(y => y.id === x.id)); if (o && !used.has(o.id)){ used.add(o.id); x.id = o.id; if (o.st) x.st = o.st; if (o.flag && x.flag == null) x.flag = true; } else if (!x.id || used.has(x.id)) x.id = qqid(); });
+  newQs.forEach(x => { const o = by.get(normAns(x.q)) || (x.id && (oldQs || []).find(y => y.id === x.id)); if (o && !used.has(o.id)){ used.add(o.id); x.id = o.id; if (o.st) x.st = o.st; } else if (!x.id || used.has(x.id)) x.id = qqid(); });
   return newQs;
 }
 function normQuizzes(v){ return Array.isArray(v) ? v.map(x => normQuiz(x)).filter(Boolean) : []; }
@@ -263,11 +266,11 @@ function setGuideTab(id, t){
 function quizPage(g){
   const qs = guideQuizzes(g), sm = quizSummary(g), tries = qs.reduce((n, q) => n + (q.tries || 0), 0), qn = qs.reduce((n, q) => n + q.questions.length, 0);
   const card = qz => {
-    const n = qz.questions.length, per = perAttempt(qz), seen = qz.questions.filter(x => x.st && x.st.seen).length, missed = qz.questions.filter(inMistakes).length, flagged = qz.questions.filter(x => x.flag).length;
+    const n = qz.questions.length, per = perAttempt(qz), seen = qz.questions.filter(x => x.st && x.st.seen).length, missed = qz.questions.filter(inMistakes).length;
     return `<div class="card g-qz-card"><div class="g-qz-info"><b>${esc(qz.title)}</b>
       <small>${[per < n ? `Bank of ${n} questions · ${per} per attempt` : `${n} question${n === 1 ? '' : 's'}`, qz.tries ? `${qz.tries} attempt${qz.tries === 1 ? '' : 's'}` : 'not taken yet', qz.lastAt ? `last taken ${agoText(qz.lastAt)}` : ''].filter(Boolean).join(' · ')}</small>
-      ${seen || flagged ? `<small>${[seen ? `${seen} of ${n} seen` : '', seen ? (missed ? `<span class="neg">${missed} in the mistake bank</span>` : 'none missed right now') : '', flagged ? `🚩 ${flagged} flagged` : ''].filter(Boolean).join(' · ')}</small>` : ''}</div>
-    ${qz.tries ? `<div class="g-qz-scores"><span><b class="${qz.best === 100 ? 'pos' : ''}">${pctText(qz.best)}</b><small>best</small></span><span><b>${pctText(qz.last)}</b><small>last</small></span></div>
+      ${seen ? `<small>${seen} of ${n} seen · ${missed ? `<span class="neg">${missed} in the mistake bank</span>` : 'none missed right now'}</small>` : ''}</div>
+    ${qz.tries ? `<div class="g-qz-scores"><span><b class="${qz.best === 100 ? 'pos' : ''}">${pctText(qz.best)}</b><small>best</small></span><span><b>${pctText(qz.last)}</b><small>last</small></span><span><b>${pctText(quizAvg(qz))}</b><small>avg</small></span></div>
       <span class="bar2 g-qz-bar"><i style="width:${qz.best}%"></i></span>` : ''}
     <div class="g-qz-btns"><button class="small-btn accent" data-qz="take" data-q="${qz.id}">${qz.tries ? 'Retake' : 'Take quiz'}</button><button class="small-btn" data-qz="edit" data-q="${qz.id}">Edit</button><button class="small-btn" data-qz="export" data-q="${qz.id}">Export</button><button class="small-btn" data-qz="del" data-q="${qz.id}">Delete</button></div></div>`; };
   return `<div class="g-qz-page">
@@ -359,9 +362,9 @@ function recordAnswer(x, ok){
   if (ok){ st.right++; st.streak = (st.streak || 0) + 1; st.missed = was && st.streak < 2; return was && !st.missed ? 'cleared' : ''; }
   st.streak = 0; st.missed = true; return '';
 }
-function mistakePool(g, withFlags){
+function mistakePool(g){
   const out = [];
-  guideQuizzes(g).forEach(qz => qz.questions.forEach((x, k) => { if (inMistakes(x) || (withFlags && x.flag)) out.push({q: qz.id, k, x}); }));
+  guideQuizzes(g).forEach(qz => qz.questions.forEach((x, k) => { if (inMistakes(x)) out.push({q: qz.id, k, x}); }));
   return out;
 }
 
@@ -372,7 +375,7 @@ function beginRun(g, base, items){
   items = items.filter(it => { const qz = quizzes.find(z => z.id === it.q); return qz && qz.questions[it.k]; });
   if (!items.length){ toast('No questions to practice.'); return; }
   QR = {gid: g.id, ...base, items: items.map(it => { const qz = quizzes.find(z => z.id === it.q); return {q: it.q, k: it.k, perm: choicePerm(qz, qz.questions[it.k])}; }),
-    ans: items.map(() => null), grade: items.map(() => undefined), submitted: false, saved: false, cleared: 0, onlyMissed: false};
+    ans: items.map(() => null), grade: items.map(() => undefined), flags: new Set(), submitted: false, saved: false, cleared: 0, onlyMissed: false};
   MBV = null; renderGuides(); window.scrollTo(0, 0);
 }
 function startQuiz(g, qz, retry){
@@ -384,9 +387,9 @@ function startQuiz(g, qz, retry){
 // up to 10 from the mistake bank, leaning toward the ones missed most often
 function startMistakes(g, retry){
   if (retry) return beginRun(g, {mode: 'mistakes', full: false, bank: 0}, retry);
-  const pool = mistakePool(g, !!P.mbFlags);
+  const pool = mistakePool(g);
   if (!pool.length){ toast('Nothing in the mistake bank right now.'); return; }
-  const pick = pool.map(o => ({o, key: Math.pow(Math.random(), 1 / (1 + Math.max(0, (o.x.st ? o.x.st.seen - o.x.st.right : 0)) + (inMistakes(o.x) ? 1 : 0)))}))
+  const pick = pool.map(o => ({o, key: Math.pow(Math.random(), 1 / (2 + Math.max(0, (o.x.st ? o.x.st.seen - o.x.st.right : 0))))}))
     .sort((a, b) => b.key - a.key).slice(0, 10).map(({o}) => ({q: o.q, k: o.k}));
   beginRun(g, {mode: 'mistakes', full: false, bank: 0}, shuffled(pick));
 }
@@ -399,7 +402,7 @@ const TYPE_TAG = {multi: 'Select all that apply', tf: 'True or false', short: 'S
 
 function qxCard(i){
   const it = QR.items[i], cur = itemQ(it); if (!cur) return '';
-  const {qz, x} = cur, a = QR.ans[i], sub = QR.submitted, gr = QR.grade[i], answered = isAnswered(i);
+  const {qz, x} = cur, a = QR.ans[i], sub = QR.submitted, gr = QR.grade[i], answered = isAnswered(i), flag = QR.flags.has(i);
   const state = sub ? (gr === true ? ' ok' : gr === false ? ' bad' : ' pend') : answered ? ' done' : '';
   let body;
   if (x.type === 'short'){
@@ -418,16 +421,16 @@ function qxCard(i){
     else fb = `<div class="qz-fb ${gr ? 'ok' : 'bad'}"><b>${gr ? 'Correct.' : answered ? 'Not quite.' : 'Not answered.'}</b>${gr && x.type !== 'short' ? '' : ` The answer is <b>${ans}</b>.`}
       ${x.why ? `<p>${qInline(x.why)}</p>` : ''}${!gr && x.review ? `<p class="qz-rev"><b>Review:</b> ${qInline(x.review)}</p>` : ''}</div>`;
   }
-  return `<div class="card qx-q${state}${x.flag ? ' flagged' : ''}" id="qx-${i}" data-i="${i}">
+  return `<div class="card qx-q${state}${flag ? ' flagged' : ''}" id="qx-${i}" data-i="${i}">
     <div class="qx-qhead"><span class="qz-l">${i + 1}</span>${TYPE_TAG[x.type] ? `<small class="qx-tag">${TYPE_TAG[x.type]}</small>` : ''}${QR.mode === 'mistakes' ? `<small class="hint qx-from">${esc(qz.title)}</small>` : ''}<span class="g-bar-sp"></span>
-      <button class="qx-flag" data-qx="flag" data-i="${i}" aria-pressed="${!!x.flag}">${x.flag ? '🚩 Flagged' : '⚑ Flag'}</button></div>
+      <button class="qx-flag" data-qx="flag" data-i="${i}" aria-pressed="${flag}">${flag ? '🚩 Flagged' : '⚑ Flag'}</button></div>
     <div class="qz-q">${qInline(x.q)}</div>${body}${fb}</div>`;
 }
 function qxBar(){
-  const n = QR.items.length, flagged = QR.items.filter(it => { const c = itemQ(it); return c && c.x.flag; }).length;
+  const n = QR.items.length, flagged = QR.flags.size;
   const right = QR.grade.filter(v => v === true).length, pending = QR.grade.filter(v => v === null).length, answered = QR.items.filter((_, i) => isAnswered(i)).length;
   const dots = QR.items.map((it, i) => {
-    const c = itemQ(it), f = c && c.x.flag, gr = QR.grade[i];
+    const f = QR.flags.has(i), gr = QR.grade[i];
     const cls = QR.submitted ? (gr === true ? ' ok' : gr === false ? ' bad' : ' pend') : isAnswered(i) ? ' a' : '';
     return `<button class="qx-dot${cls}${f ? ' f' : ''}" data-qx="go" data-i="${i}" aria-label="Question ${i + 1}${f ? ', flagged' : ''}">${i + 1}</button>`; }).join('');
   return `<div class="qx-bar-top"><span class="qx-status"><b>${QR.submitted ? `${right} / ${n} right` : `${answered} of ${n} answered`}</b>${pending ? ` · ${pending} to mark` : ''}${flagged ? ` · 🚩 ${flagged} flagged` : ''}</span><span class="g-bar-sp"></span>
@@ -442,7 +445,7 @@ function qxSummary(g){
   const newBest = QR.full && QR.saved && QR.prevBest != null && pct > QR.prevBest;
   const sub = pending ? `Mark the ${pending} short answer${pending === 1 ? '' : 's'} below to finish${QR.full ? ' and save your score' : ''}.`
     : QR.mode === 'mistakes' ? `${QR.cleared ? `${QR.cleared} question${QR.cleared === 1 ? '' : 's'} cleared from the mistake bank. ` : ''}${mistakePool(g).length} left in the bank. Practice rounds don’t change your quiz scores.`
-    : QR.full ? [newBest ? 'New best!' : '', `Best ${pctText(qz.best)}`, `${qz.tries} attempt${qz.tries === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
+    : QR.full ? [newBest ? 'New best!' : '', `Best ${pctText(qz.best)}`, quizAvg(qz) != null ? `Avg ${pctText(quizAvg(qz))}` : '', `${qz.tries} attempt${qz.tries === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
     : 'Practice round on the ones you missed. It doesn’t change your best score.';
   return `<div class="card qx-res"><div class="qz-score ${pending ? '' : pct === 100 ? 'ok' : pct < 60 ? 'bad' : ''}"><b>${right} / ${n}</b><span>${pct}%</span></div>
     <p class="hint qz-score-sub">${sub}</p>
@@ -457,7 +460,7 @@ function renderQuizRun(){
   if (!g || (QR.mode === 'quiz' && !qz)){ QR = null; return renderGuides(); }
   const n = QR.items.length;
   const title = QR.mode === 'mistakes' ? 'Mistake bank practice' : qz.title;
-  const sub = QR.mode === 'mistakes' ? `${g.title} · questions you've missed${P.mbFlags ? ' and flagged' : ''}` : `${g.title}${QR.full ? (QR.bank > n ? ` · ${n} of ${QR.bank} questions this time` : '') : ' · missed questions only'}`;
+  const sub = QR.mode === 'mistakes' ? `${g.title} · questions you've missed` : `${g.title}${QR.full ? (QR.bank > n ? ` · ${n} of ${QR.bank} questions this time` : '') : ' · missed questions only'}`;
   $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-qx="quit">← Back to quizzes</button></div>
     <div class="qx-title"><h2>${esc(title)}</h2><small class="hint">${esc(sub)}</small></div>
     ${QR.submitted ? qxSummary(g) : ''}
@@ -495,6 +498,7 @@ function qxFinish(){
   if (QR.mode === 'quiz' && QR.full){
     const qz = runQuiz(QR.qid); QR.prevBest = qz.best;
     qz.last = pct; qz.best = qz.best == null ? pct : Math.max(qz.best, pct); qz.tries = (qz.tries || 0) + 1; qz.lastAt = Date.now();
+    qz.scores = [...(qz.scores || []), pct].slice(-500);
     if (pct === 100){ achBump('quizPerfect'); fx.burst(); }
   }
   saveGuides();
@@ -505,9 +509,9 @@ const plain = s => String(s || '').replace(/\s*\n\s*/g, ' / ').trim();
 function quizResultsText(){
   const g = guideById(QR.gid); if (!g || !QR.submitted) return '';
   const qz = QR.mode === 'quiz' ? runQuiz(QR.qid) : null, n = QR.items.length, right = QR.grade.filter(v => v === true).length;
-  const flagged = QR.items.filter(it => { const c = itemQ(it); return c && c.x.flag; }).length;
+  const flagged = QR.flags.size;
   const L = [QR.mode === 'mistakes' ? 'Mistake bank practice results' : `Practice quiz results: ${qz.title}`, `Study guide: ${g.title}${g.cls ? ` (${g.cls})` : ''}`,
-    `Score: ${right}/${n} (${Math.round(right / n * 100)}%)${QR.full && QR.bank > n ? ` · ${n} questions drawn from a bank of ${QR.bank}` : ''}${QR.full && QR.saved ? ` · best ${pctText(qz.best)} · attempt ${qz.tries}` : QR.mode === 'quiz' && !QR.full ? ' · retry of missed questions only' : ''}`,
+    `Score: ${right}/${n} (${Math.round(right / n * 100)}%)${QR.full && QR.bank > n ? ` · ${n} questions drawn from a bank of ${QR.bank}` : ''}${QR.full && QR.saved ? ` · best ${pctText(qz.best)}${quizAvg(qz) != null ? ` · average ${pctText(quizAvg(qz))}` : ''} · attempt ${qz.tries}` : QR.mode === 'quiz' && !QR.full ? ' · retry of missed questions only' : ''}`,
     `Taken: ${new Date().toLocaleString(undefined, {month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'})}`];
   if (flagged) L.push(`I flagged ${flagged} question${flagged === 1 ? '' : 's'} (marked [FLAGGED]) as ones I want explained.`);
   const reviews = [...new Set(QR.items.filter((_, i) => QR.grade[i] === false).map(it => { const c = itemQ(it); return c && c.x.review; }).filter(Boolean))];
@@ -515,7 +519,7 @@ function quizResultsText(){
   L.push('', 'Questions:');
   QR.items.forEach((it, i) => {
     const c = itemQ(it); if (!c) return; const {qz: z, x} = c, gr = QR.grade[i], a = QR.ans[i];
-    L.push('', `${i + 1}. [${gr === true ? 'RIGHT' : gr === false ? 'WRONG' : 'NOT MARKED'}]${x.flag ? ' [FLAGGED]' : ''} ${plain(x.q)}${QR.mode === 'mistakes' ? `  (from: ${plain(z.title)})` : ''}`);
+    L.push('', `${i + 1}. [${gr === true ? 'RIGHT' : gr === false ? 'WRONG' : 'NOT MARKED'}]${QR.flags.has(i) ? ' [FLAGGED]' : ''} ${plain(x.q)}${QR.mode === 'mistakes' ? `  (from: ${plain(z.title)})` : ''}`);
     if (x.type === 'mc' || x.type === 'multi') L.push(`   Choices: ${it.perm.map((ci, d) => `${LETTERS[d]}) ${plain(x.choices[ci])}`).join('  ')}`);
     L.push(`   My answer: ${!isAnswered(i) ? '(no answer)' : x.type === 'short' ? plain(a) : inShownOrder(it, a).map(ci => plain(shownLabel(it, x, ci))).join(', ')}`);
     if (gr !== true) L.push(`   Correct answer: ${x.type === 'short' ? plain(x.answer) : inShownOrder(it, x.correct).map(ci => plain(shownLabel(it, x, ci))).join(', ')}`);
@@ -532,26 +536,25 @@ function copyQuizResults(){
 /* ---- the mistake bank list ---- */
 function renderMistakeList(){
   const g = guideById(MBV); if (!g){ MBV = null; return renderGuides(); }
-  const groups = guideQuizzes(g).map(qz => ({qz, rows: qz.questions.map((x, k) => ({x, k})).filter(r => inMistakes(r.x) || r.x.flag)})).filter(gr => gr.rows.length);
+  const groups = guideQuizzes(g).map(qz => ({qz, rows: qz.questions.map((x, k) => ({x, k})).filter(r => inMistakes(r.x))})).filter(gr => gr.rows.length);
   const missedN = mistakePool(g).length;
   const row = (qz, {x, k}) => {
-    const misses = x.st ? Math.max(0, x.st.seen - x.st.right) : 0, inBank = inMistakes(x);
-    return `<div class="mb-row${inBank ? '' : ' flag-only'}"><div class="mb-q"><div>${qInline(x.q)}</div>
-        <small class="hint">${inBank ? `missed ${misses} time${misses === 1 ? '' : 's'} · ${x.st && x.st.streak ? `right ${x.st.streak} of 2 in a row` : 'needs 2 right in a row'}` : 'not missed, flagged only'}${x.flag ? ' · 🚩 flagged' : ''}</small></div>
-      <div class="mb-btns"><button class="small-btn" data-mb="flag" data-q="${qz.id}" data-k="${k}">${x.flag ? 'Unflag' : 'Flag'}</button>${inBank ? `<button class="small-btn" data-mb="rm" data-q="${qz.id}" data-k="${k}">Remove</button>` : ''}</div></div>`;
+    const misses = x.st ? Math.max(0, x.st.seen - x.st.right) : 0;
+    return `<div class="mb-row"><div class="mb-q"><div>${qInline(x.q)}</div>
+        <small class="hint">missed ${misses} time${misses === 1 ? '' : 's'} · ${x.st && x.st.streak ? `right ${x.st.streak} of 2 in a row` : 'needs 2 right in a row'}</small></div>
+      <div class="mb-btns"><button class="small-btn" data-mb="rm" data-q="${qz.id}" data-k="${k}">Remove</button></div></div>`;
   };
-  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-mb="back">← Back to quizzes</button><span class="g-bar-sp"></span><button class="small-btn accent" data-mb="practice" ${mistakePool(g, !!P.mbFlags).length ? '' : 'disabled'}>Practice</button></div>
+  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-mb="back">← Back to quizzes</button><span class="g-bar-sp"></span><button class="small-btn accent" data-mb="practice" ${missedN ? '' : 'disabled'}>Practice</button></div>
     <div class="qx-title"><h2>Mistake bank</h2><small class="hint">${esc(g.title)} · ${missedN} missed question${missedN === 1 ? '' : 's'}. A question leaves the bank after you get it right twice in a row.</small></div>
     ${groups.length ? groups.map(gr => `<div class="card mb-group"><div class="h first">${esc(gr.qz.title)}</div>${gr.rows.map(r => row(gr.qz, r)).join('')}</div>`).join('')
-      : '<div class="card g-empty"><b>Nothing here right now</b><p>Questions you get wrong in this guide’s quizzes land here until you get them right twice in a row. Questions you flag show up here too.</p></div>'}`;
+      : '<div class="card g-empty"><b>Nothing here right now</b><p>Questions you get wrong in this guide’s quizzes land here until you get them right twice in a row.</p></div>'}`;
 }
 function mistakeCard(g){
-  const pool = mistakePool(g), flaggedOnly = mistakePool(g, true).length - pool.length, quizzesN = new Set(pool.map(o => o.q)).size;
-  const practiceN = Math.min(10, pool.length + (P.mbFlags ? flaggedOnly : 0));
+  const pool = mistakePool(g), quizzesN = new Set(pool.map(o => o.q)).size, practiceN = Math.min(10, pool.length);
   return `<div class="card g-mb${pool.length ? '' : ' quiet'}"><div class="g-mb-info"><b>Mistake bank</b>
       <small>${pool.length ? `${pool.length} question${pool.length === 1 ? '' : 's'} you've missed across ${quizzesN} quiz${quizzesN === 1 ? '' : 'zes'}` : 'No missed questions right now'}</small>
       <small class="hint">Questions you get wrong land here until you get them right twice in a row.</small></div>
-    <div class="g-mb-btns">${flaggedOnly ? `<label class="qe-chk g-mb-chk"><input type="checkbox" id="mbFlags" ${P.mbFlags ? 'checked' : ''}> Include ${flaggedOnly} flagged</label>` : ''}
+    <div class="g-mb-btns">
       <button class="small-btn" data-mb="view">View all</button><button class="small-btn accent" data-mb="practice" ${practiceN ? '' : 'disabled'}>Practice${practiceN ? ` ${practiceN}` : ''}</button></div></div>`;
 }
 
@@ -584,7 +587,6 @@ function cleanQuestions(list){
     if (!q && !filled && !String(x.answer || '').trim() && !(x.why || '').trim() && !(x.review || '').trim()) return;  // an untouched blank: skip it
     const y = {id: x.id || qqid(), type: x.type, q, why: String(x.why || '').trim(), review: String(x.review || '').trim()};
     if (x.st) y.st = x.st;
-    if (x.flag) y.flag = true;
     let err = !q ? 'Write the question.' : '';
     if (x.type === 'short'){ y.answer = String(x.answer || '').trim(); if (!err && !y.answer) err = 'Write the correct answer.'; }
     else if (x.type === 'tf'){ y.choices = ['True', 'False']; y.correct = x.correct.filter(i => i === 0 || i === 1).slice(0, 1); if (!err && !y.correct.length) err = 'Pick True or False.'; }
@@ -651,7 +653,6 @@ function renderQuizEditor(){
     return `<div class="card qe-q${err ? ' err' : ''}" data-qi="${k}" id="qe-q${k}">
       <div class="qe-qhead"><span class="qz-l">${k + 1}</span><select data-qf="type" aria-label="Question type">${QTYPES.map(([v, l]) => `<option value="${v}" ${x.type === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
         ${x.st && x.st.seen ? `<small class="hint qe-stat">${x.st.right}/${x.st.seen} right</small>` : ''}<span class="g-bar-sp"></span>
-        <button class="qx-flag" data-qe="flag" aria-pressed="${!!x.flag}">${x.flag ? '🚩 Flagged' : '⚑ Flag'}</button>
         <button class="small-btn" data-qe="up" ${k ? '' : 'disabled'} aria-label="Move up">↑</button><button class="small-btn" data-qe="down" ${k < n - 1 ? '' : 'disabled'} aria-label="Move down">↓</button><button class="small-btn" data-qe="dup">Duplicate</button><button class="small-btn" data-qe="delq">Delete</button></div>
       <textarea data-qf="q" rows="2" placeholder="Question">${esc(x.q)}</textarea>
       ${choiceRows}
@@ -718,8 +719,7 @@ $('#page-guides').addEventListener('click', e => {
   QE.dirty = true;
   if (a === 'add'){ QE.qs.push(blankQ()); renderQuizEditor(); qeFocus(QE.qs.length - 1); return; }
   if (!x) return;
-  if (a === 'flag'){ x.flag = !x.flag; b.setAttribute('aria-pressed', x.flag); b.textContent = x.flag ? '🚩 Flagged' : '⚑ Flag'; }
-  else if (a === 'addch'){ x.choices.push(''); renderQuizEditor(); qeFocus(k, `[data-qf="choice"][data-c="${x.choices.length - 1}"]`); }
+  if (a === 'addch'){ x.choices.push(''); renderQuizEditor(); qeFocus(k, `[data-qf="choice"][data-c="${x.choices.length - 1}"]`); }
   else if (a === 'rmch'){ const c = +b.dataset.c; x.choices.splice(c, 1); x.correct = x.correct.filter(i => i !== c).map(i => i > c ? i - 1 : i); renderQuizEditor(); }
   else if (a === 'up' || a === 'down'){ const j = a === 'up' ? k - 1 : k + 1; if (j < 0 || j >= QE.qs.length) return; [QE.qs[k], QE.qs[j]] = [QE.qs[j], QE.qs[k]]; QE.errs = {}; renderQuizEditor(); qeFocus(j, `[data-qe="${a}"]`); }
   else if (a === 'dup'){ const y = workCopy(x); y.id = qqid(); delete y.st; QE.qs.splice(k + 1, 0, y); QE.errs = {}; renderQuizEditor(); qeFocus(k + 1); }
@@ -794,11 +794,11 @@ $('#page-guides').addEventListener('click', e => {
     QR.ans[i] = x.type === 'multi' ? (cur.includes(c) ? cur.filter(v => v !== c) : [...cur, c]) : cur[0] === c ? [] : [c];
     qxRefresh(i);
   }
-  else if (a === 'flag'){ const x = itemQ(QR.items[i]).x; x.flag = !x.flag; saveGuides(); QR.submitted ? (() => { const y = scrollY; renderQuizRun(); scrollTo(0, y); })() : qxRefresh(i); }
+  else if (a === 'flag'){ QR.flags.has(i) ? QR.flags.delete(i) : QR.flags.add(i); qxRefresh(i); }
   else if (a === 'go' || a === 'nextflag'){
     let j = i;
     if (a === 'nextflag'){
-      const fl = QR.items.map((it, k) => itemQ(it).x.flag ? k : -1).filter(k => k >= 0);
+      const fl = [...QR.flags].sort((u, v) => u - v);
       const now = fl.findIndex(k => { const el = document.getElementById('qx-' + k); return el && el.getBoundingClientRect().top > 140; });
       j = fl[now >= 0 ? now : 0];
     }
@@ -847,6 +847,6 @@ $('#page-guides').addEventListener('click', e => {
   else if (a === 'view'){ MBV = g.id; renderGuides(); window.scrollTo(0, 0); }
   else if (a === 'back'){ MBV = null; setGuideTab(g.id, 'quizzes'); renderGuides(); window.scrollTo(0, 0); }
   else if (a === 'rm' && x){ x.st.missed = false; x.st.streak = 0; saveGuides(); const y = scrollY; renderGuides(); scrollTo(0, y); toast('Removed from the mistake bank.'); }
-  else if (a === 'flag' && x){ x.flag = !x.flag; saveGuides(); const y = scrollY; renderGuides(); scrollTo(0, y); }
+
 });
-$('#page-guides').addEventListener('change', e => { if (e.target.id === 'mbFlags'){ P.mbFlags = e.target.checked; saveP(); renderGuides(); } });
+
