@@ -197,6 +197,16 @@ document.addEventListener('keydown', e => {
   else if (k === 's') skip();
   else if (k === 'm') toggleMini();
   else if (k === 'f') toggleFocusMode();
+  else if (k === '\\') toggleSide();
 });
+/* hiding the side panel (computers only; phones use the bottom bar), remembered between visits */
+function applySide(){ document.body.classList.toggle('side-hidden', !!P.sideHidden); }
+function toggleSide(){
+  P.sideHidden = !P.sideHidden; saveP(); applySide();
+  const f = P.sideHidden ? $('#sideShow') : $('#sideHide'); if (f && f.offsetParent) f.focus({preventScroll: true});
+}
+$('#sideHide').onclick = toggleSide;
+$('#sideShow').onclick = toggleSide;
+applySide();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderLookSound(); });
 
