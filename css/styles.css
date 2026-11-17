@@ -1090,16 +1090,28 @@ body.m-off .ach-pop{animation:none!important}
 @media (max-width:640px){.qx-bar{top:4px;padding:10px 12px}.qx-dot{min-width:26px;height:26px}.mb-row{flex-direction:column}.mb-btns{align-self:flex-end}}
 
 /* ---------- hiding the side panel ---------- */
+/* The panel keeps its width and slides left while its grid column shrinks to 0, so the page widens smoothly. */
 .brand span{flex:1}
 .side-hide{flex:none;border:0;background:none;color:var(--muted);width:28px;height:28px;border-radius:7px;font:inherit;font-size:20px;line-height:1;font-family:var(--f-body,inherit);cursor:pointer;opacity:.7;transition:opacity .15s,background-color .15s}
 .side-hide:hover,.side-hide:focus-visible{opacity:1;background:var(--soft);color:var(--ink)}
-.side-show{display:none;flex:none;align-items:center;justify-content:center;width:36px;height:36px;margin-right:12px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--surface);color:var(--ink);cursor:pointer}
+.shell{transition:grid-template-columns .26s cubic-bezier(.4,0,.2,1)}
+.side{width:212px;box-sizing:border-box;transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s}
+body.side-hidden .shell{grid-template-columns:0px minmax(0,1fr)}
+body.side-hidden .side{transform:translateX(-100%);visibility:hidden;transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s .26s}
+/* the button that brings it back floats at the content's top-left corner, so it's there however far you scroll */
+.side-show{display:none;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:0 4px 14px -6px rgba(0,0,0,.45)}
 .side-show svg{width:18px;height:18px}.side-show:hover{border-color:var(--accent)}
-body.side-hidden .side{display:none}
-body.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
-body.side-hidden .side-show{display:inline-flex}
+body.side-hidden .side-show{display:inline-flex;position:fixed;top:20px;left:max(16px,calc((100vw - 1320px) / 2 + 24px));z-index:30;animation:sideShowIn .26s ease both}
+body.side-hidden .strip{padding-left:50px}
+@keyframes sideShowIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+body.m-off .shell,body.m-off .side{transition:none}body.m-off .side-show{animation:none}
+@media (prefers-reduced-motion: reduce){.shell,.side{transition:none!important}.side-show{animation:none!important}}
 @media (max-width:760px){
   .side-hide,body.side-hidden .side-show{display:none}
-  body.side-hidden:not(.focus-mode) .side{display:flex}
+  .side{width:auto}
+  body.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
+  body.side-hidden:not(.focus-mode) .side{transform:none;visibility:visible}
+  body.side-hidden .strip{padding-left:0}
 }
-body.side-hidden .page-title{margin-right:auto}
+body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
+body.side-hidden .toc{top:68px}body.side-hidden .qx-bar{top:66px}@media (max-width:760px){body.side-hidden .qx-bar{top:4px}}
