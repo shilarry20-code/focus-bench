@@ -1137,3 +1137,8 @@ body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
 .mx-q input{width:18px;height:18px;accent-color:var(--accent);flex:none}.mx-q span{flex:1;font-weight:600;min-width:0;overflow-wrap:anywhere}.mx-q small{color:var(--muted);white-space:nowrap}
 .mx-n{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.mx-n input{width:86px;font:inherit;font-size:14.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);padding:7px 10px}
 .mx-n .hint{margin:0}.mx-note{margin:0}
+
+/* single-column views are centered in the page */
+#guidesBody.narrow>*{max-width:860px;margin-left:auto;margin-right:auto;box-sizing:border-box}
+#guidesBody.narrow .qx-list,#guidesBody.narrow .qx-bar,#guidesBody.narrow .qx-res,#guidesBody.narrow .qx-foot,#guidesBody.narrow .qe-set,#guidesBody.narrow .qe-q,#guidesBody.narrow .qe-textcard,#guidesBody.narrow .qe-foot,#guidesBody.narrow .mx-setup,#guidesBody.narrow .mb-group{max-width:860px}
+#guidesBody.narrow>.qx-bar{margin-bottom:16px}#guidesBody.narrow>.qx-res,#guidesBody.narrow>.qe-set{margin-bottom:16px}
