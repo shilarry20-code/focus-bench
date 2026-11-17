@@ -449,8 +449,8 @@ function addStudy(i, add, longest){
    2-hour update after it ends (a 4-hour sitting waits until it's over), against someone near them on the ladder
    whose sitting also ended in that window; the whole sittings are compared and whoever studied longer wins.
    Sittings under 10 minutes aren't rated, and no studying means no match. Each player's last 5 are kept. */
-const M5 = 5, M5_V = 2, BOT_K = 24;    // K-factor for matches between other players, same as yours after placements
-let M5_OPP = null, M5_T = null, M5_A = null, M5_B = null, M5_D = null, M5_R = null, M5_H = null;
+const M5 = 5, M5_V = 3, BOT_K = 24;    // K-factor for matches between other players, same as yours after placements
+let M5_OPP = null, M5_T = null, M5_A = null, M5_B = null, M5_D = null, M5_R = null, M5_O = null, M5_H = null;
 function m5Init(rec){
   const n = ROSTER_N * M5;
   const ok = rec && rec.v === M5_V && rec.opp && rec.opp.byteLength === n * 4 && rec.h && rec.h.byteLength === ROSTER_N;   // older formats start fresh
@@ -460,29 +460,34 @@ function m5Init(rec){
   M5_B = ok ? new Uint16Array(rec.b) : new Uint16Array(n);      // the opponent's sitting
   M5_D = ok ? new Int8Array(rec.d) : new Int8Array(n);          // Elo change
   M5_R = ok ? new Uint16Array(rec.r) : new Uint16Array(n);      // rating after the match
+  M5_O = ok ? new Uint16Array(rec.o) : new Uint16Array(n);      // the opponent's rating going into it
   M5_H = ok ? new Uint8Array(rec.h) : new Uint8Array(ROSTER_N); // next slot to write
 }
-const m5Save = () => ({v: M5_V, opp: M5_OPP.buffer, t: M5_T.buffer, a: M5_A.buffer, b: M5_B.buffer, d: M5_D.buffer, r: M5_R.buffer, h: M5_H.buffer});
+const m5Save = () => ({v: M5_V, opp: M5_OPP.buffer, t: M5_T.buffer, a: M5_A.buffer, b: M5_B.buffer, d: M5_D.buffer, r: M5_R.buffer, o: M5_O.buffer, h: M5_H.buffer});
 // times are kept as (days since 2026-01-01) × 1440 + minute of the day, which survives clock changes
 const M5_EPOCH = new Date(2026, 0, 1);
 const dayIdx = dk => Math.round((new Date(dk + 'T00:00') - M5_EPOCH) / 864e5);   // midnight to midnight; rounding absorbs clock changes
 const tCode = (dk, min) => dayIdx(dk) * 1440 + min;
 const tFromCode = c => { const d = new Date(M5_EPOCH); d.setDate(d.getDate() + Math.floor(c / 1440)); d.setMinutes(c % 1440); return d.getTime(); };
 function m5Count(i){ let c = 0; for (let k = 0; k < M5; k++) if (M5_OPP[i * M5 + k] >= 0) c++; return c; }
-function m5Put(i, opp, code, a, b, d, after){     // a new, newest match
+function m5Put(i, opp, code, a, b, d, after, oppR){     // a new, newest match
   const s = i * M5 + M5_H[i]; M5_H[i] = (M5_H[i] + 1) % M5;
-  M5_OPP[s] = opp; M5_T[s] = code; M5_A[s] = a; M5_B[s] = b; M5_D[s] = d; M5_R[s] = after;
+  M5_OPP[s] = opp; M5_T[s] = code; M5_A[s] = a; M5_B[s] = b; M5_D[s] = d; M5_R[s] = after; M5_O[s] = oppR;
 }
-function m5PutOlder(i, opp, code, a, b, d, after){   // an older match, into the next empty slot behind the ones there
+function m5PutOlder(i, opp, code, a, b, d, after, oppR){   // an older match, into the next empty slot behind the ones there
   const c = m5Count(i); if (c >= M5) return;
   const s = i * M5 + (M5_H[i] - 1 - c + 2 * M5) % M5;
-  M5_OPP[s] = opp; M5_T[s] = code; M5_A[s] = a; M5_B[s] = b; M5_D[s] = d; M5_R[s] = after;
+  M5_OPP[s] = opp; M5_T[s] = code; M5_A[s] = a; M5_B[s] = b; M5_D[s] = d; M5_R[s] = after; M5_O[s] = oppR;
 }
+// matchmaking spread: opponents are usually within about this many points of a player's rating
+const MATCH_SPREAD = 80;
+// in a list of players sorted best-first, where a rating would sit (binary search)
+function posForRating(list, rOf, r){ let lo = 0, hi = list.length; while (lo < hi){ const mid = (lo + hi) >> 1; if (rOf(list[mid]) > r) lo = mid + 1; else hi = mid; } return Math.min(lo, list.length - 1); }
 function m5List(i){      // newest first
   const out = [];
   for (let k = 1; k <= M5; k++){
     const s = i * M5 + (M5_H[i] - k + M5) % M5; if (M5_OPP[s] < 0) continue;
-    const t = tFromCode(M5_T[s]); out.push({opp: M5_OPP[s], t, t0: t - M5_A[s] * 60000, a: M5_A[s], b: M5_B[s], d: M5_D[s], after: M5_R[s], code: M5_T[s]});
+    const t = tFromCode(M5_T[s]); out.push({opp: M5_OPP[s], t, t0: t - M5_A[s] * 60000, a: M5_A[s], b: M5_B[s], d: M5_D[s], after: M5_R[s], oppR: M5_O[s], code: M5_T[s]});
   }
   return out;
 }
@@ -493,25 +498,28 @@ function sitEndingIn(i, e0, e1){
   return best;
 }
 let CAND = null, CSIT = null;
+function shuffledIdx(n, rnd){ const a = new Int32Array(n); for (let k = 0; k < n; k++) a[k] = k; for (let k = n - 1; k > 0; k--){ const j = Math.floor(rnd() * (k + 1)); const t = a[k]; a[k] = a[j]; a[j] = t; } return a; }
 function windowMatches(w0, dk){      // sittings that ended during the window starting at minute w0 of day dk
   if (!CAND){ CAND = new Int32Array(ROSTER_N); CSIT = new Int32Array(ROSTER_N); }
   let n = 0;
   for (let i = 0; i < ROSTER_N; i++){ if (!planM[i]) continue; const k = sitEndingIn(i, w0, w0 + 120); if (k >= 0){ CAND[n] = i; CSIT[i] = k; n++; } }
   const cand = Array.from(CAND.subarray(0, n)).sort((x, y) => BS[y * BF] - BS[x * BF]);
+  const candR = cand.map(i => BS[i * BF]), rOfK = q => candR[q], ks = Array.from({length: n}, (_, q) => q);
   const used = new Uint8Array(n), rnd = Math.random;
-  for (let k = 0; k < n; k++){
+  for (const k of shuffledIdx(n, rnd)){
     if (used[k]) continue;
-    // someone a few places away on the ladder whose sitting also just ended
-    let j = -1;
-    for (let tries = 0; tries < 4 && j < 0; tries++){ const q = k + 1 + Math.floor(rnd() * 5); if (q < n && !used[q]) j = q; }
+    // someone whose sitting also just ended, usually within ~80 points of their rating
+    const target = candR[k] + Math.round(gaussOf(rnd) * MATCH_SPREAD);
+    let j = -1; const p0 = posForRating(ks, rOfK, target);
+    for (let off = 0; off < 12 && j < 0; off++) for (const q of [p0 + off, p0 - off]) if (q >= 0 && q < n && q !== k && !used[q]){ j = q; break; }
     if (j < 0) continue;
     used[k] = used[j] = 1;
     const a = cand[k], c = cand[j], sa_ = CSIT[a], sc_ = CSIT[c];
     const ma = SCH_B[sa_] - SCH_A[sa_], mc = SCH_B[sc_] - SCH_A[sc_], ra = BS[a * BF], rc = BS[c * BF];
     const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = ma > mc ? 1 : ma < mc ? 0 : .5, dlt = Math.round(BOT_K * (sa - ea));
     BS[a * BF] = clampN(ra + dlt, 300, 5000); BS[c * BF] = clampN(rc - dlt, 300, 5000);
-    m5Put(a, c, tCode(dk, SCH_B[sa_]), ma, mc, BS[a * BF] - ra, BS[a * BF]);
-    m5Put(c, a, tCode(dk, SCH_B[sc_]), mc, ma, BS[c * BF] - rc, BS[c * BF]);
+    m5Put(a, c, tCode(dk, SCH_B[sa_]), ma, mc, BS[a * BF] - ra, BS[a * BF], rc);
+    m5Put(c, a, tCode(dk, SCH_B[sc_]), mc, ma, BS[c * BF] - rc, BS[c * BF], ra);
   }
   botsChanged();
 }
@@ -533,18 +541,21 @@ function m5Backfill(i){
     for (const [a0, b0] of mine){
       if (c >= M5) break;
       const win = Math.floor((b0 - 1) / 120) * 120, rnd = mulberry32(dayIdx(dk) * 1440 + b0 + i * 7919);
-      // look for a nearby player whose sitting ended in the same window
+      // look for a player around their rating (usually within ~80 points) whose sitting ended in the same window
       let opp = -1, om = 0;
-      for (let tries = 0; tries < 10 && opp < 0; tries++){
-        const off = (1 + Math.floor(rnd() * 6)) * (rnd() < .5 ? -1 : 1), q = pos + off; if (q < 0 || q >= order.length) continue;
-        const j = order[q]; if (j === lastOpp) continue;
-        const sj = sitsOf(j, dk).filter(([x, y]) => y > win && y <= win + 120 && y - x >= 10);
-        if (sj.length){ opp = j; om = Math.max(...sj.map(([x, y]) => y - x)); }
+      for (let tries = 0; tries < 6 && opp < 0; tries++){
+        const p0 = posForRating(order, j => BS[j * BF], myNow + Math.round(gaussOf(rnd) * MATCH_SPREAD));
+        for (let off = 0; off < 8 && opp < 0; off++){
+          const q = p0 + (off >> 1) * (off & 1 ? -1 : 1); if (q < 0 || q >= order.length) continue;
+          const j = order[q]; if (j === i || j === lastOpp) continue;
+          const sj = sitsOf(j, dk).filter(([x, y]) => y > win && y <= win + 120 && y - x >= 10);
+          if (sj.length){ opp = j; om = Math.max(...sj.map(([x, y]) => y - x)); }
+        }
       }
       if (opp < 0) continue;
       const mm = b0 - a0, ro = rating + (BS[opp * BF] - myNow), ea = 1 / (1 + Math.pow(10, (ro - rating) / 400));
       const dlt = Math.round(BOT_K * ((mm > om ? 1 : mm < om ? 0 : .5) - ea));
-      m5PutOlder(i, opp, tCode(dk, b0), mm, om, dlt, clampN(rating, 300, 5000));
+      m5PutOlder(i, opp, tCode(dk, b0), mm, om, dlt, clampN(rating, 300, 5000), clampN(Math.round(ro), 300, 5000));
       rating -= dlt; c++; lastOpp = opp;
     }
   }
@@ -1201,7 +1212,7 @@ function profileMatches(w){
     m5Backfill(w);
     const clock = t => new Date(t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'});
     const sim = m5List(w).map(m => ({t: m.t, r: m.a > m.b ? 'W' : m.a < m.b ? 'L' : 'D', d: m.d, after: m.after, opp: m.opp,
-      sub: `${rankOf(botRating(m.opp)).full} · ${botRating(m.opp).toLocaleString()} now`, tm: `${fmtMin(m.a)} <i>vs</i> ${fmtMin(m.b)}`,
+      sub: `${rankOf(m.oppR).full} · ${m.oppR.toLocaleString()} then`, tm: `${fmtMin(m.a)} <i>vs</i> ${fmtMin(m.b)}`,
       when: `${winLabel(m.t0)}, ${clock(m.t0)}–${clock(m.t)}`}));
     const oldest = sim.length ? sim[sim.length - 1].t : 0;
     const vsYou = R.hist.filter(h => h.b === w && (sim.length < 5 || h.t >= oldest)).slice(0, 5).map(h => youRow(h, false));
