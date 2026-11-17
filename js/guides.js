@@ -217,7 +217,8 @@ function renderGuideView(){
         <div class="card"><div class="h first">Progress</div><div class="pf-kv">
           ${p.total ? `<span><b>${p.done}/${p.total}</b><small>checklist done</small></span>` : ''}${r.qn ? `<span><b>${r.qn}</b><small>questions</small></span>` : ''}<span><b>${mins ? fmtMin(mins) : '0m'}</b><small>studied</small></span>${qs.n ? `<span><b>${qs.best != null ? qs.best + '%' : qs.n}</b><small>${qs.best != null ? 'avg best quiz score' : `quiz${qs.n === 1 ? '' : 'zes'}`}</small></span>` : ''}</div>
           ${p.total ? `<span class="bar2 g-bigbar"><i style="width:${p.done / p.total * 100}%"></i></span>` : ''}
-          <div class="g-side-btns">${r.qn ? `<button class="small-btn" data-ga="qa-open">Show all answers</button><button class="small-btn" data-ga="qa-close">Hide all</button>` : ''}${p.total ? `<button class="small-btn" data-ga="uncheck">Uncheck all</button>` : ''}<button class="small-btn" data-ga="top">↑ Back to top</button></div></div>
+          ${r.qn ? `<div class="g-qa-btns"><button class="small-btn" data-ga="qa-open">Show all answers</button><button class="small-btn" data-ga="qa-close">Hide all</button></div>` : ''}
+          ${p.total ? `<button class="link-btn" data-ga="uncheck">Uncheck everything</button>` : ''}<div class="g-top-row"><button class="small-btn" data-ga="top">↑ Back to top</button></div></div>
         ${r.heads.length > 2 ? `<div class="card g-toc-card"><div class="h first">Contents</div><nav class="g-toc">${r.heads.map(h => `<a href="#${h.id}" data-gh="${h.id}" style="--lv:${h.lv}">${esc(h.text)}</a>`).join('')}</nav></div>` : ''}
       </aside>
     </div>`;
