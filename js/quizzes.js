@@ -447,7 +447,7 @@ function qxSummary(g){
   return `<div class="card qx-res"><div class="qz-score ${pending ? '' : pct === 100 ? 'ok' : pct < 60 ? 'bad' : ''}"><b>${right} / ${n}</b><span>${pct}%</span></div>
     <p class="hint qz-score-sub">${sub}</p>
     <div class="qz-row qz-res-btns"><button class="small-btn accent" data-qx="retake">${QR.mode === 'mistakes' ? 'Practice the mistake bank again' : 'Retake with new questions'}</button>${missed.length ? `<button class="small-btn" data-qx="retry">Retry the ${missed.length} missed</button>` : ''}
-      ${missed.length && missed.length < n ? `<button class="small-btn" data-qx="onlymissed" aria-pressed="${QR.onlyMissed}">${QR.onlyMissed ? 'Show all questions' : 'Show only missed'}</button>` : ''}<button class="small-btn" data-qx="copy">Copy results</button><button class="small-btn" data-qx="quit">Back to quizzes</button></div>
+      ${missed.length && missed.length < n ? `<button class="small-btn" data-qx="onlymissed" aria-pressed="${QR.onlyMissed}">${QR.onlyMissed ? 'Show all questions' : 'Show only missed'}</button>` : ''}<button class="small-btn" data-qx="copy">Copy results</button></div>
     <div class="qz-copybox" id="qzCopyBox" hidden><p class="hint">Copying isn't allowed here. Select the text below and copy it yourself.</p><textarea readonly></textarea></div>
     ${reviews.length ? `<div class="qz-revlist"><div class="h">What to review</div><ul>${reviews.map(t => `<li>${qInline(t)}</li>`).join('')}</ul></div>` : ''}
     ${!missed.length && !pending ? '<p class="qz-perfect">Every question right.</p>' : ''}</div>`;
