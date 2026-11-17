@@ -208,8 +208,6 @@ function toggleSide(){
 }
 $('#sideHide').onclick = toggleSide;
 $('#sideShow').onclick = toggleSide;
-// the icon on the edge follows the pointer up and down
-$('#sideShow').addEventListener('pointermove', e => { $('#sideShow').style.setProperty('--y', Math.max(24, Math.min(innerHeight - 24, e.clientY)) + 'px'); });
 applySide();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderLookSound(); });
 
