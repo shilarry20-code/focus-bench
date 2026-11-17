@@ -166,6 +166,8 @@ function renderGuides(){
   if (!guidesReady){ el.innerHTML = '<p class="hint">Loading your guides…</p>'; return; }
   if (QR && (gEdit || gView !== QR.gid)) QR = null;
   if (QR) return renderQuizRun();
+  if (QE && (gEdit || gView !== QE.gid)) QE = null;
+  if (QE) return renderQuizEditor();
   if (gEdit) return renderGuideEditor();
   if (gView && guideById(gView)) return renderGuideView();
   gView = null;
