@@ -50,7 +50,7 @@ function lbRow(k, place, c, val){
     return `<li class="lb-row me${medal}${rk.i === PARAGON_I ? ' para-row' : ''}" data-me tabindex="0"><span class="pl">${place.toLocaleString()}</span>${myAvatar('sm')}<span class="who"><b>${esc(myName())}</b><small>${emblem(rk, 'xs')} ${rk.full}</small></span><span class="val">${lbFmt(c.u, val(k))}</span></li>`;
   }
   const B = BOTS[k], r = BS[k * BF], rk = rkOf(k);
-  return `<li class="lb-row${medal}${rk.i === PARAGON_I ? ' para-row' : ''}" data-bot="${k}" tabindex="0"><span class="pl">${place.toLocaleString()}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)} <i class="bot-tag">bot</i></b><small>${emblem(rk, 'xs')} ${rk.full} · ${B.style}</small></span><span class="val">${lbFmt(c.u, val(k))}</span></li>`;
+  return `<li class="lb-row${medal}${rk.i === PARAGON_I ? ' para-row' : ''}" data-bot="${k}" tabindex="0"><span class="pl">${place.toLocaleString()}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)}</b><small>${emblem(rk, 'xs')} ${rk.full} · ${B.style}</small></span><span class="val">${lbFmt(c.u, val(k))}</span></li>`;
 }
 function renderLeaders(){
   if (!$('#lbList')) return;

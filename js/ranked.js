@@ -771,7 +771,7 @@ function renderMatch(fresh){
   if (!R.on){ slot.innerHTML = ''; return; }
   const c = R.cur, rk = myRk();
   if (!c){
-    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.mmr.toLocaleString()} Elo${R.played < 5 ? ` · placement ${R.played}/5` : ''}</small></span></div><p class="hint">Press Start and you'll be matched with a bot near your rating. Whoever studies longer wins.</p><button class="link-btn" data-go="ranked">Ranked page →</button></div>`;
+    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.mmr.toLocaleString()} Elo${R.played < 5 ? ` · placement ${R.played}/5` : ''}</small></span></div><p class="hint">Press Start and you'll be matched with a player near your rating. Whoever studies longer wins.</p><button class="link-btn" data-go="ranked">Ranked page →</button></div>`;
     return;
   }
   const B = BOTS[c.b], brk = rankOf(c.br), s = stakes(c.br), max = Math.max(c.you, c.tapped ? c.target : c.them, 60000) * 1.08;
@@ -805,7 +805,7 @@ function renderMatch(fresh){
     <div class="m-players">
       <div class="m-p" data-me>${myAvatar()}<span class="m-n"><b>${esc(myName())}</b><small>${emblem(rankOf(c.mmr0), 'xs')} ${rankOf(c.mmr0).full} · ${c.mmr0.toLocaleString()}</small><span class="bdgs">${c.mine.map(id => badgeHtml(id)).join('')}</span></span></div>
       <span class="vs">VS</span>
-      <div class="m-p them" data-bot="${c.b}">${avatar(B)}<span class="m-n"><b>${esc(B.name)} <i class="bot-tag">bot</i></b><small>${emblem(brk, 'xs')} ${brk.full} · ${c.br.toLocaleString()}</small><span class="bdgs">${c.feat.map(id => badgeHtml(id)).join('')}</span></span></div>
+      <div class="m-p them" data-bot="${c.b}">${avatar(B)}<span class="m-n"><b>${esc(B.name)}</b><small>${emblem(brk, 'xs')} ${brk.full} · ${c.br.toLocaleString()}</small><span class="bdgs">${c.feat.map(id => badgeHtml(id)).join('')}</span></span></div>
     </div>
     <div class="m-bars">
       <div class="m-bar"><span>You</span><span class="trk"><i style="width:${c.you / max * 100}%"></i></span><b>${mm(c.you)}</b></div>
@@ -878,7 +878,7 @@ function renderParaCard(){
   const dur = ms => ms >= 864e5 ? `${Math.floor(ms / 864e5)} day${ms >= 1728e5 ? 's' : ''}` : ms >= 36e5 ? `${Math.floor(ms / 36e5)}h` : `${Math.max(1, Math.floor(ms / 6e4))}m`;
   if (h == null){ el.innerHTML = `<div class="h first">Paragon</div><div class="para-in">${emblem(PARAGON, 'md')}<span><b>Vacant</b><small>No one has reached ${LAUREATE_MIN.toLocaleString()} Elo. The first Laureate to lead the ladder claims it.</small></span></div>`; return; }
   const me = h === ME, B = me ? null : BOTS[h], r = me ? R.mmr : botRating(h);
-  el.innerHTML = `<div class="h first">Current Paragon</div><div class="para-in click"${me ? ' data-me' : ` data-bot="${h}"`}>${emblem(PARAGON, 'md')}${me ? myAvatar() : avatar(B)}<span><b>${me ? esc(myName()) : esc(B.name)}${me ? '' : ' <i class="bot-tag">bot</i>'}</b><small>${r.toLocaleString()} Elo · reigning ${dur(since)}</small></span></div><p class="hint">The single highest-rated player of all. Only one player holds it at a time.</p>`;
+  el.innerHTML = `<div class="h first">Current Paragon</div><div class="para-in click"${me ? ' data-me' : ` data-bot="${h}"`}>${emblem(PARAGON, 'md')}${me ? myAvatar() : avatar(B)}<span><b>${me ? esc(myName()) : esc(B.name)}</b><small>${r.toLocaleString()} Elo · reigning ${dur(since)}</small></span></div><p class="hint">The single highest-rated player of all. Only one player holds it at a time.</p>`;
 }
 function renderEloChart(){
   const el = $('#rkChart'), pts = R.hist.slice(0, 100).reverse().map(h => h.m);
@@ -1036,7 +1036,7 @@ function editForm(){
 }
 function profileHead(w, big){
   const rk = rkOf(w), r = w === ME ? R.mmr : botRating(w), B = w === ME ? null : BOTS[w];
-  return `<div class="pf-top">${pAvatar(w, big ? 'xl' : 'lg')}<div><b id="bmName">${esc(pName(w))}${B ? ' <i class="bot-tag">bot</i>' : ''}</b>
+  return `<div class="pf-top">${pAvatar(w, big ? 'xl' : 'lg')}<div><b id="bmName">${esc(pName(w))}</b>
     <span>${emblem(rk, 'xs')} ${esc(rk.full)} · ${r.toLocaleString()} Elo</span>
     <small>${B ? `${B.style} · studies in the ${B.peak.toLowerCase()} · ${esc(B.subject)}` : 'Your profile'}</small></div>
     ${w === ME && !profEditing ? '<button class="small-btn pf-editbtn" data-pf="edit">Edit</button>' : ''}</div>
@@ -1095,14 +1095,14 @@ function renderProfilePage(){
     const rec = R.rec[w], hs = R.hist.filter(h => h.b === w).slice(0, 5), nem = nemesis();
     ranked = rec ? `<div class="pf-kv"><span><b>${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}</b><small>your record vs ${esc(B.name)}${w === nem ? ' · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? ' · rival' : ''}</small></span></div>
       <ul class="rk-hist pf-h2h">${hs.map(h => `<li class="hr-${h.r}"><span class="res">${h.r}</span><span class="who">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span><span class="tm">${matchTimes(h)}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span></li>`).join('')}</ul>`
-      : `<p class="hint">You haven't played ${esc(B.name)} yet. Matches pair you with bots near your rating.</p>`;
+      : `<p class="hint">You haven't played ${esc(B.name)} yet. Matches pair you with players near your rating.</p>`;
   }
   // achievements by tier
   const mine = new Set(ACHS.filter(a => ACH.u[a.id]).map(a => a.id));
   let got = w === ME ? [...mine] : botBadges(w);
   if (w !== ME && profFilter === 'missing') got = got.filter(id => !mine.has(id));
   const tiers = ['legendary', 'platinum', 'gold', 'silver', 'bronze'].map(tr => { const ids = got.filter(id => achById(id).tier === tr); return ids.length ? `<div class="pf-tier"><span style="color:${TIERS[tr].c}">${TIERS[tr].name} · ${ids.length}</span><div class="bdgs wrap">${rareSort(ids).map(id => badgeHtml(id)).join('')}</div></div>` : ''; }).join('');
-  $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button>${w === ME ? '' : `<span class="hint">Bot profile</span>`}</div>
+  $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button>${w === ME ? '' : `<span class="hint">Player profile</span>`}</div>
     <div class="pf-grid">
       <div class="pf-main">
         <div class="card pf-hero">${profileHead(w, true)}<div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('')}</div></div>
