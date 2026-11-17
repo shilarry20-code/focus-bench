@@ -4056,7 +4056,7 @@ function renderMatch(fresh){
   if (!live){
     const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
     const sec = ms => fmtSec(Math.round(ms / 1000));
-    const how = c.res === 'W' ? `${sec(c.you)} vs ${sec(c.target)}. ${esc(B.name)} stopped first.` : c.res === 'L' ? `${mm(c.you)} vs ${mm(c.target)}. ${esc(B.name)} studied longer.` : `${sec(c.you)} vs ${sec(c.target)}. Too close to call.`;
+    const how = c.res === 'L' ? `${mm(c.you)} vs ${mm(c.target)}` : `${sec(c.you)} vs ${sec(c.target)}`;
     result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em></span>
       ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
       <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>
