@@ -171,6 +171,8 @@ function renderGuides(){
   if (QR && (gEdit || gView !== QR.gid)) QR = null;
   if (MBV && (gEdit || gView !== MBV || QR || QE)) MBV = null;
   if (MBV) return renderMistakeList();
+  if (MXV && (gEdit || gView !== MXV || QR || QE)) MXV = null;
+  if (MXV) return renderMixedSetup();
   if (QR) return renderQuizRun();
   if (QE && (gEdit || gView !== QE.gid)) QE = null;
   if (QE) return renderQuizEditor();
