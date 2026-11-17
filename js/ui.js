@@ -203,10 +203,13 @@ document.addEventListener('keydown', e => {
 function applySide(){ document.body.classList.toggle('side-hidden', !!P.sideHidden); }
 function toggleSide(){
   P.sideHidden = !P.sideHidden; saveP(); applySide();
-  const f = P.sideHidden ? $('#sideShow') : $('#sideHide'); if (f && f.offsetParent) f.focus({preventScroll: true});
+  const f = P.sideHidden ? $('#sideShow') : $('#sideHide'); if (f && f.getClientRects().length) f.focus({preventScroll: true});
+  if (P.sideHidden && !P.sideTip){ P.sideTip = 1; saveP(); toast('Hover the left edge or press \\ to bring the panel back.'); }
 }
 $('#sideHide').onclick = toggleSide;
 $('#sideShow').onclick = toggleSide;
+// the icon on the edge follows the pointer up and down
+$('#sideShow').addEventListener('pointermove', e => { $('#sideShow').style.setProperty('--y', Math.max(24, Math.min(innerHeight - 24, e.clientY)) + 'px'); });
 applySide();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderLookSound(); });
 
