@@ -1144,6 +1144,4 @@ body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
 #guidesBody.narrow>.qx-bar{margin-bottom:16px}#guidesBody.narrow>.qx-res,#guidesBody.narrow>.qe-set{margin-bottom:16px}
 
 /* back to the top, from the guide's side panel */
-.g-toc-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.g-top-btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;border-radius:99px;padding:4px 11px;cursor:pointer;white-space:nowrap}
-.g-top-btn:hover{border-color:var(--accent);color:var(--accent)}
+.g-top-row{display:flex;margin-top:4px}
