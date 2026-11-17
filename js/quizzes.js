@@ -216,15 +216,27 @@ function quizSummary(g){
   const qs = guideQuizzes(g), tried = qs.filter(q => q.best != null);
   return {n: qs.length, best: tried.length ? Math.round(tried.reduce((s, q) => s + q.best, 0) / tried.length) : null};
 }
-function quizSection(g){
-  const qs = guideQuizzes(g);
-  const row = qz => `<div class="g-qz-row"><div class="g-qz-info"><b>${esc(qz.title)}</b><small>${[`${qz.questions.length} question${qz.questions.length === 1 ? '' : 's'}`,
-      qz.tries ? `best ${pctText(qz.best)}` : 'not taken yet', qz.tries ? `last ${pctText(qz.last)}` : '', qz.tries ? `${qz.tries} attempt${qz.tries === 1 ? '' : 's'}` : '', qz.lastAt ? agoText(qz.lastAt) : ''].filter(Boolean).join(' · ')}</small>
-      ${qz.tries ? `<span class="bar2 g-qz-bar"><i style="width:${qz.best}%"></i></span>` : ''}</div>
-    <div class="g-qz-btns"><button class="small-btn accent" data-qz="take" data-q="${qz.id}">${qz.tries ? 'Retake' : 'Take'}</button><button class="small-btn" data-qz="export" data-q="${qz.id}">Export</button><button class="small-btn" data-qz="del" data-q="${qz.id}">Delete</button></div></div>`;
-  return `<section class="card g-quizzes" id="gQuizzes"><div class="g-qz-head"><div class="h first">Practice quizzes</div><span class="g-bar-sp"></span><button class="small-btn accent" data-qz="import">Import quiz</button></div>
-    ${qs.length ? `<div class="g-qz-list">${qs.map(row).join('')}</div>`
-      : `<p class="hint">No quizzes for this guide yet. Ask Claude for a practice quiz (Import quiz → “Instructions for Claude” has a prompt you can copy), then import the file or paste the text.</p>`}</section>`;
+// which tab a guide is showing: 'guide' or 'quizzes', remembered per guide
+const guideTab = g => (P.gTabs && P.gTabs[g.id]) === 'quizzes' ? 'quizzes' : 'guide';
+function setGuideTab(id, t){
+  const m = P.gTabs || (P.gTabs = {});
+  if (t === 'quizzes') m[id] = t; else delete m[id];
+  Object.keys(m).forEach(k => { if (!guideById(k)) delete m[k]; });
+  saveP();
+}
+function quizPage(g){
+  const qs = guideQuizzes(g), sm = quizSummary(g), tries = qs.reduce((n, q) => n + (q.tries || 0), 0), qn = qs.reduce((n, q) => n + q.questions.length, 0);
+  const card = qz => `<div class="card g-qz-card"><div class="g-qz-info"><b>${esc(qz.title)}</b>
+      <small>${[`${qz.questions.length} question${qz.questions.length === 1 ? '' : 's'}`, qz.tries ? `${qz.tries} attempt${qz.tries === 1 ? '' : 's'}` : 'not taken yet', qz.lastAt ? `last taken ${agoText(qz.lastAt)}` : ''].filter(Boolean).join(' · ')}</small></div>
+    ${qz.tries ? `<div class="g-qz-scores"><span><b class="${qz.best === 100 ? 'pos' : ''}">${pctText(qz.best)}</b><small>best</small></span><span><b>${pctText(qz.last)}</b><small>last</small></span></div>
+      <span class="bar2 g-qz-bar"><i style="width:${qz.best}%"></i></span>` : ''}
+    <div class="g-qz-btns"><button class="small-btn accent" data-qz="take" data-q="${qz.id}">${qz.tries ? 'Retake' : 'Take quiz'}</button><span class="g-bar-sp"></span><button class="small-btn" data-qz="export" data-q="${qz.id}">Export</button><button class="small-btn" data-qz="del" data-q="${qz.id}">Delete</button></div></div>`;
+  return `<div class="g-qz-page">
+    <div class="g-qz-top">${qs.length ? `<div class="pf-kv g-qz-sum"><span><b>${qs.length}</b><small>quiz${qs.length === 1 ? '' : 'zes'} · ${qn} questions</small></span><span><b>${sm.best != null ? sm.best + '%' : '–'}</b><small>average best score</small></span><span><b>${tries}</b><small>attempt${tries === 1 ? '' : 's'}</small></span></div>` : '<span class="g-bar-sp"></span>'}
+      <button class="small-btn accent" data-qz="import">Import quiz</button></div>
+    ${qs.length ? `<div class="g-qz-grid">${qs.map(card).join('')}</div>`
+      : `<div class="card g-empty"><b>No practice quizzes yet</b><p>Ask Claude for a practice quiz on this guide's topic, then import the file it gives you or paste the text. <b>Import quiz</b> has instructions you can copy straight to Claude.</p><div class="g-empty-btns"><button class="small-btn accent" data-qz="import">Import quiz</button></div></div>`}
+  </div>`;
 }
 
 /* ---- importing into a guide ---- */
@@ -267,9 +279,8 @@ $('#gImpModal').addEventListener('click', e => {
   if (!e.target.closest('[data-qi="go"]')) return;
   const g = guideById(qImportGuide); if (!g) return;
   const {added, replaced} = addQuizzes(g, qImportFound, $('#gImpReplace').checked);
-  saveGuides(); $('#gImpModal').hidden = true; renderGuides();
+  saveGuides(); $('#gImpModal').hidden = true; setGuideTab(g.id, 'quizzes'); renderGuides(); window.scrollTo(0, 0);
   toast([added ? `Imported ${added} quiz${added === 1 ? '' : 'zes'}` : '', replaced ? `updated ${replaced}` : ''].filter(Boolean).join(', ') + '.');
-  requestAnimationFrame(() => { const s = $('#gQuizzes'); s && s.scrollIntoView({block: 'nearest'}); });
 });
 
 /* ---- taking a quiz ---- */
@@ -307,7 +318,7 @@ function renderQuizRun(){
       ${x.why ? `<p>${qInline(x.why)}</p>` : ''}${!r.ok && x.review ? `<p class="qz-rev"><b>Review:</b> ${qInline(x.review)}</p>` : ''}</div>
       <div class="qz-row"><span class="g-bar-sp"></span><button class="small-btn accent" data-qz="next" id="qzNext">${QR.i + 1 < n ? 'Next question →' : 'See results'}</button></div>`;
   }
-  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-qz="quit">← Back to guide</button><span class="g-bar-sp"></span><span class="qz-count">${right} of ${QR.res.length} right so far</span></div>
+  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-qz="quit">← Back to quizzes</button><span class="g-bar-sp"></span><span class="qz-count">${right} of ${QR.res.length} right so far</span></div>
     <div class="card qz-run"><div class="qz-top"><div><b>${esc(qz.title)}</b><small>${esc(g.title)}${QR.full ? '' : ' · missed questions only'}</small></div><span class="qz-num">${QR.i + 1} / ${n}</span></div>
       <span class="bar2 qz-bar"><i style="width:${(QR.i + (QR.done ? 1 : 0)) / n * 100}%"></i></span>
       <div class="qz-q">${qInline(x.q)}</div>${body}
@@ -357,15 +368,45 @@ function renderQuizResults(g, qz){
   const reviews = [...new Set(missed.map(r => qz.questions[r.k].review).filter(Boolean))];
   const given = (x, r) => x.type === 'short' ? (String(r.given || '').trim() ? esc(r.given) : '<em>no answer</em>') : r.given.map(i => esc(choiceLabel(x, i))).join(', ');
   const correctOf = x => x.type === 'short' ? qInline(x.answer) : x.correct.map(i => esc(choiceLabel(x, i))).join(', ');
-  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-qz="quit">← Back to guide</button></div>
+  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-qz="quit">← Back to quizzes</button></div>
     <div class="card qz-run qz-res"><div class="qz-top"><div><b>${esc(qz.title)}</b><small>${esc(g.title)}${QR.full ? '' : ' · missed questions only'}</small></div></div>
       <div class="qz-score ${pct === 100 ? 'ok' : pct < 60 ? 'bad' : ''}"><b>${right} / ${n}</b><span>${pct}%</span></div>
       <p class="hint qz-score-sub">${QR.full ? [newBest ? 'New best!' : '', `Best ${pctText(qz.best)}`, `${qz.tries} attempt${qz.tries === 1 ? '' : 's'}`].filter(Boolean).join(' · ') : 'Practice round on the ones you missed. It doesn’t change your best score.'}</p>
-      <div class="qz-row qz-res-btns"><button class="small-btn accent" data-qz="retake">Retake the whole quiz</button>${missed.length ? `<button class="small-btn" data-qz="retry">Retry the ${missed.length} missed</button>` : ''}<button class="small-btn" data-qz="quit">Back to guide</button></div>
+      <div class="qz-row qz-res-btns"><button class="small-btn accent" data-qz="retake">Retake the whole quiz</button>${missed.length ? `<button class="small-btn" data-qz="retry">Retry the ${missed.length} missed</button>` : ''}<button class="small-btn" data-qz="copy">Copy results</button><button class="small-btn" data-qz="quit">Back to quizzes</button></div>
+      <div class="qz-copybox" id="qzCopyBox" hidden><p class="hint">Copying isn't allowed here. Select the text below and copy it yourself.</p><textarea readonly></textarea></div>
       ${reviews.length ? `<div class="qz-revlist"><div class="h">What to review</div><ul>${reviews.map(t => `<li>${qInline(t)}</li>`).join('')}</ul></div>` : ''}
       ${missed.length ? `<div class="h">Questions you missed</div>${missed.map(r => { const x = qz.questions[r.k]; return `<div class="qz-miss"><div class="qz-miss-q"><span class="qz-l">${r.k + 1}</span><div>${qInline(x.q)}</div></div>
           <p><span class="neg">Your answer:</span> ${given(x, r)}</p><p><span class="pos">Correct:</span> ${correctOf(x)}</p>${x.why ? `<p class="hint">${qInline(x.why)}</p>` : ''}${x.review ? `<p class="qz-rev"><b>Review:</b> ${qInline(x.review)}</p>` : ''}</div>`; }).join('')}`
         : '<p class="qz-perfect">Every question right.</p>'}</div>`;
+}
+
+/* ---- copying results as plain text, to paste into Claude or anywhere else ---- */
+const plain = s => String(s || '').replace(/\s*\n\s*/g, ' / ').trim();
+function quizResultsText(){
+  const cur = quizNow(); if (!cur) return '';
+  const {g, qz} = cur, right = QR.res.filter(r => r.ok).length, n = QR.res.length;
+  const ansText = (x, r) => x.type === 'short' ? (String(r.given || '').trim() ? plain(r.given) : '(no answer)') : r.given.map(i => plain(choiceLabel(x, i))).join(', ');
+  const correctText = x => x.type === 'short' ? plain(x.answer) : x.correct.map(i => plain(choiceLabel(x, i))).join(', ');
+  const L = [`Practice quiz results: ${qz.title}`, `Study guide: ${g.title}${g.cls ? ` (${g.cls})` : ''}`,
+    `Score: ${right}/${n} (${Math.round(right / n * 100)}%)${QR.full ? ` · best ${pctText(qz.best)} · attempt ${qz.tries}` : ' · retry of missed questions only'}`,
+    `Taken: ${new Date().toLocaleString(undefined, {month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'})}`];
+  const reviews = [...new Set(QR.res.filter(r => !r.ok).map(r => qz.questions[r.k].review).filter(Boolean))];
+  if (reviews.length) L.push('', 'What to review:', ...reviews.map(t => `- ${plain(t)}`));
+  L.push('', 'Questions:');
+  QR.res.forEach((r, k) => {
+    const x = qz.questions[r.k];
+    L.push('', `${k + 1}. [${r.ok ? 'RIGHT' : 'WRONG'}] ${plain(x.q)}`);
+    if (x.type !== 'short' && x.type !== 'tf') L.push(`   Choices: ${x.choices.map((c, i) => `${LETTERS[i]}) ${plain(c)}`).join('  ')}`);
+    L.push(`   My answer: ${ansText(x, r)}`);
+    if (!r.ok) L.push(`   Correct answer: ${correctText(x)}`);
+    if (!r.ok && x.review) L.push(`   Review: ${plain(x.review)}`);
+  });
+  return L.join('\n') + '\n';
+}
+function copyQuizResults(){
+  const t = quizResultsText(); if (!t) return;
+  const fallback = () => { const box = $('#qzCopyBox'); if (!box) return; box.hidden = false; const ta = box.querySelector('textarea'); ta.value = t; ta.focus(); ta.select(); toast('Select the text and copy it.'); };
+  try { navigator.clipboard.writeText(t).then(() => toast('Results copied. Paste them anywhere.'), fallback); } catch(e){ fallback(); }
 }
 
 /* ---- events ---- */
@@ -383,14 +424,24 @@ $('#page-guides').addEventListener('click', e => {
     if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Click again'; b.classList.add('danger'); setTimeout(() => { if (b.isConnected){ delete b.dataset.sure; b.textContent = 'Delete'; b.classList.remove('danger'); } }, 3500); return; }
     g.quizzes = guideQuizzes(g).filter(x => x.id !== qz.id); g.updated = Date.now(); saveGuides(); renderGuides(); toast('Quiz deleted.');
   }
-  else if (a === 'quizzes'){ const s = $('#gQuizzes'); s && s.scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); }
   else if (a === 'pick') quizPick(+b.dataset.i);
   else if (a === 'check') quizCheck();
   else if (a === 'reveal'){ QR.short = ($('#qzShort') || {}).value || ''; QR.reveal = true; renderQuizRun(); }
   else if (a === 'self') quizAnswer(b.dataset.ok === '1', QR.short);
   else if (a === 'next') quizNext();
-  else if (a === 'quit'){ if (QR) gView = QR.gid; QR = null; renderGuides(); requestAnimationFrame(() => { const s = $('#gQuizzes'); s && s.scrollIntoView({block: 'start'}); }); }
+  else if (a === 'quit'){ if (QR){ gView = QR.gid; setGuideTab(QR.gid, 'quizzes'); } QR = null; renderGuides(); window.scrollTo(0, 0); }
+  else if (a === 'copy') copyQuizResults();
   else if (a === 'retake' || a === 'retry'){ const cur = quizNow(); if (cur) startQuiz(cur.g, cur.qz, a === 'retry' ? QR.res.filter(r => !r.ok).map(r => r.k) : null); }
+});
+$('#page-guides').addEventListener('click', e => {
+  const t = e.target.closest('[data-gtab]'); if (!t || !gView) return;
+  setGuideTab(gView, t.dataset.gtab); renderGuides();
+  const b = document.querySelector(`#page-guides [data-gtab="${t.dataset.gtab}"]`); b && b.focus();
+});
+$('#page-guides').addEventListener('keydown', e => {
+  const t = e.target.closest('[data-gtab]'); if (!t || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+  e.preventDefault(); const next = t.dataset.gtab === 'guide' ? 'quizzes' : 'guide';
+  setGuideTab(gView, next); renderGuides(); const b = document.querySelector(`#page-guides [data-gtab="${next}"]`); b && b.focus();
 });
 $('#page-guides').addEventListener('keydown', e => { if (e.target.id === 'qzShort' && e.key === 'Enter'){ e.preventDefault(); quizCheck(); } });
 // While a quiz is on screen, letters/numbers answer and Enter moves on, instead of the timer's shortcuts.
