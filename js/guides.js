@@ -168,6 +168,8 @@ const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, 
 function renderGuides(){
   const el = $('#guidesBody'); if (!el) return;
   if (!guidesReady){ el.innerHTML = '<p class="hint">Loading your guides…</p>'; return; }
+  // single-column views (taking a quiz, the quiz editor, mixed test setup, the mistake bank list) sit centered
+  el.classList.remove('narrow');
   if (QR && (gEdit || gView !== QR.gid)) QR = null;
   if (MBV && (gEdit || gView !== MBV || QR || QE)) MBV = null;
   if (MBV) return renderMistakeList();

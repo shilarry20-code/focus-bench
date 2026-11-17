@@ -430,6 +430,7 @@ function mixedCard(g){
     <div class="g-mb-btns"><button class="small-btn accent" data-mx="setup">${m.tries ? 'New mixed test' : 'Set up a test'}</button></div></div>`;
 }
 function renderMixedSetup(){
+  $('#guidesBody').classList.add('narrow');
   const g = guideById(MXV); if (!g){ MXV = null; return renderGuides(); }
   const m = mixedOf(g), qs = guideQuizzes(g), sel = new Set(mixedSel(g));
   const avail = qs.filter(q => sel.has(q.id)).reduce((a, q) => a + q.questions.length, 0), n = Math.min(m.n || 20, avail);
@@ -510,6 +511,7 @@ function qxSummary(g){
     ${!missed.length && !pending ? '<p class="qz-perfect">Every question right.</p>' : ''}</div>`;
 }
 function renderQuizRun(){
+  $('#guidesBody').classList.add('narrow');
   const g = guideById(QR.gid), qz = QR.mode === 'quiz' ? runQuiz(QR.qid) : null;
   if (!g || (QR.mode === 'quiz' && !qz)){ QR = null; return renderGuides(); }
   const nq = new Set(QR.items.map(it => it.q)).size;
@@ -590,6 +592,7 @@ function copyQuizResults(){
 
 /* ---- the mistake bank list ---- */
 function renderMistakeList(){
+  $('#guidesBody').classList.add('narrow');
   const g = guideById(MBV); if (!g){ MBV = null; return renderGuides(); }
   const groups = guideQuizzes(g).map(qz => ({qz, rows: qz.questions.map((x, k) => ({x, k})).filter(r => inMistakes(r.x))})).filter(gr => gr.rows.length);
   const missedN = mistakePool(g).length;
@@ -686,6 +689,7 @@ function qeFromText(force){
   QE.textWarn = 0; return true;
 }
 function renderQuizEditor(){
+  $('#guidesBody').classList.add('narrow');
   const g = guideById(QE.gid); if (!g){ QE = null; return renderGuides(); }
   const n = QE.qs.length, pickN = QE.pick === 0 ? '' : (QE.pick || 10);
   const bar = `<div class="g-bar"><button class="small-btn" data-qe="cancel">${QE.dirty ? 'Cancel' : '← Back to quizzes'}</button><span class="g-bar-sp"></span><button class="small-btn accent" data-qe="save">Save quiz</button></div>`;
