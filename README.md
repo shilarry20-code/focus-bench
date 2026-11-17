@@ -4,7 +4,7 @@ A customizable study timer: Pomodoro, 52/17, Flowtime, Timebox and custom modes,
 
 Everything you save (settings, history, notes) stays in your own browser.
 
-Study guides can be written in the app or imported as Markdown/JSON, and each guide has a **Practice quizzes** section: import quizzes (the Import quiz dialog has copyable instructions for Claude), take them one question at a time with explanations and "what to review" notes, then retake or retry just the ones you missed.
+Study guides can be written in the app or imported as Markdown/JSON, and each guide has a **Practice quizzes** tab next to the guide itself: import quizzes (the Import quiz dialog has copyable instructions for Claude), take them one question at a time with explanations and "what to review" notes, then retake, retry just the ones you missed, or copy your results to paste somewhere else.
 
 ## Files
 

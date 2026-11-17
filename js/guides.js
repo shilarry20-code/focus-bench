@@ -189,19 +189,23 @@ function renderGuides(){
 }
 function renderGuideView(){
   requestAnimationFrame(fitGuideSide);
-  const g = guideById(gView), r = mdRender(g.body), p = guideProgress(g), mins = guideMinutes(g), ex = examText(g), qs = quizSummary(g);
-  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-ga="back">← All guides</button><span class="g-bar-sp"></span>
+  const g = guideById(gView), r = mdRender(g.body), p = guideProgress(g), mins = guideMinutes(g), ex = examText(g), qs = quizSummary(g), tab = guideTab(g);
+  // the title sits above two tabs: the guide itself, and its practice quizzes
+  const top = `<div class="g-bar"><button class="small-btn" data-ga="back">← All guides</button><span class="g-bar-sp"></span>
       <button class="small-btn accent" data-ga="study">▶ Study this</button><button class="small-btn" data-ga="edit">Edit</button><button class="small-btn" data-ga="export">Export</button><button class="small-btn" data-ga="del">Delete</button></div>
+    <header class="g-head g-top"><h2>${esc(g.title)}</h2><div class="g-sub">${g.cls ? `<span class="g-cls">${esc(g.cls)}</span>` : ''}${ex ? `<span class="g-ex${examSoon(g) ? ' soon' : ''}">${ex}</span>` : ''}${g.tags.map(t => `<i class="g-tag">${esc(t)}</i>`).join('')}</div></header>
+    <div class="g-tabs" role="tablist" aria-label="Guide sections">
+      <button role="tab" data-gtab="guide" aria-selected="${tab === 'guide'}">Guide</button>
+      <button role="tab" data-gtab="quizzes" aria-selected="${tab === 'quizzes'}">Practice quizzes${qs.n ? `<span class="g-tab-n">${qs.n}</span>` : ''}</button></div>`;
+  if (tab === 'quizzes'){ $('#guidesBody').innerHTML = top + quizPage(g); return; }
+  $('#guidesBody').innerHTML = top + `
     <div class="g-view">
-      <div class="g-main"><article class="card g-doc"><header class="g-head"><h2>${esc(g.title)}</h2><div class="g-sub">${g.cls ? `<span class="g-cls">${esc(g.cls)}</span>` : ''}${ex ? `<span class="g-ex${examSoon(g) ? ' soon' : ''}">${ex}</span>` : ''}${g.tags.map(t => `<i class="g-tag">${esc(t)}</i>`).join('')}</div></header>
-        <div class="g-md" data-gid="${g.id}">${r.html || '<p class="hint">This guide is empty. Click Edit to write it.</p>'}</div></article>
-        ${quizSection(g)}</div>
+      <article class="card g-doc"><div class="g-md" data-gid="${g.id}">${r.html || '<p class="hint">This guide is empty. Click Edit to write it.</p>'}</div></article>
       <aside class="g-side">
         <div class="card"><div class="h first">Progress</div><div class="pf-kv">
           ${p.total ? `<span><b>${p.done}/${p.total}</b><small>checklist done</small></span>` : ''}${r.qn ? `<span><b>${r.qn}</b><small>questions</small></span>` : ''}<span><b>${mins ? fmtMin(mins) : '0m'}</b><small>studied</small></span>${qs.n ? `<span><b>${qs.best != null ? qs.best + '%' : qs.n}</b><small>${qs.best != null ? 'avg best quiz score' : `quiz${qs.n === 1 ? '' : 'zes'}`}</small></span>` : ''}</div>
           ${p.total ? `<span class="bar2 g-bigbar"><i style="width:${p.done / p.total * 100}%"></i></span>` : ''}
           ${r.qn ? `<div class="g-qa-btns"><button class="small-btn" data-ga="qa-open">Show all answers</button><button class="small-btn" data-ga="qa-close">Hide all</button></div>` : ''}
-          <div class="g-qa-btns"><button class="small-btn" data-qz="quizzes">Practice quizzes${qs.n ? ` (${qs.n})` : ''} ↓</button></div>
           ${p.total ? `<button class="link-btn" data-ga="uncheck">Uncheck everything</button>` : ''}</div>
         ${r.heads.length > 2 ? `<div class="card g-toc-card"><div class="h first">Contents</div><nav class="g-toc">${r.heads.map(h => `<a href="#${h.id}" data-gh="${h.id}" style="--lv:${h.lv}">${esc(h.text)}</a>`).join('')}</nav></div>` : ''}
       </aside>
