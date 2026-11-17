@@ -245,6 +245,49 @@ body:not(.m-off) .live-dot::before{animation:flicker 1.4s ease-in-out infinite}
   .ladder li .av,.ladder li .bdg{display:none}
   .bm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+/* leaderboards */
+.phone-only{display:none}
+.lb-cats{display:flex;flex-wrap:wrap;gap:6px}
+.lb-cats button{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:7px 13px;font-size:13px;font-weight:600;color:var(--muted)}
+.lb-cats button:hover{color:var(--ink);border-color:var(--muted)}
+.lb-cats button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.lb-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;align-items:start}
+.lb-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.lb-head h2{margin:0;font-family:var(--f-display);font-weight:800;font-size:26px;letter-spacing:.02em;text-transform:uppercase;line-height:1.1}
+.lb-head small{color:var(--muted);font-size:13px}
+.lb-upd{font-size:12px!important;white-space:nowrap}
+.lb-you{margin:10px 0 6px;font-size:14px;color:var(--muted)}
+.lb-you b{color:var(--ink)}
+.lb-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:3px}
+.lb-row{display:grid;grid-template-columns:3.4em auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 10px;border-radius:var(--r-ctl);cursor:pointer;font-variant-numeric:tabular-nums}
+.lb-row:hover{background:var(--soft)}
+.lb-row .pl{font-weight:700;color:var(--muted);text-align:center}
+.lb-row .who{display:flex;flex-direction:column;min-width:0}
+.lb-row .who b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-row .who small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-row .val{font-weight:700;text-align:right;white-space:nowrap}
+.lb-row.m1,.lb-row.m2,.lb-row.m3{background:color-mix(in srgb,var(--mc) 12%,transparent)}
+.lb-row.m1{--mc:#d4a11a}.lb-row.m2{--mc:#8d99aa}.lb-row.m3{--mc:#b87333}
+.lb-row.m1 .pl,.lb-row.m2 .pl,.lb-row.m3 .pl{color:#fff;background:var(--mc);border-radius:99px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;justify-self:center;font-size:13px}
+.lb-row.me{background:color-mix(in srgb,var(--accent) 14%,transparent);cursor:default;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent)}
+.lb-gap{text-align:center;color:var(--muted);letter-spacing:.3em;padding:2px 0}
+.lb-wait{color:var(--muted);padding:14px 4px}
+.lb-actions{display:flex;gap:8px;margin-top:12px}
+.lb-mine{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.lb-mine button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;gap:1px 10px;text-align:left;border:0;background:none;border-radius:var(--r-ctl);padding:8px 10px;color:var(--ink)}
+.lb-mine button:hover{background:var(--soft)}
+.lb-mine button.on{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.lb-mine .nm{font-weight:600;font-size:14px}
+.lb-mine .mv2{font-size:13px;color:var(--muted);grid-column:1;font-variant-numeric:tabular-nums}
+.lb-mine .pl2{grid-column:2;grid-row:1/3;align-self:center;font-weight:700;font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+@media (max-width:1000px){.lb-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  .desk-only{display:none!important}
+  .nav-extra .phone-only{display:flex}
+  .lb-cats{flex-wrap:nowrap;overflow-x:auto;margin:0 -16px;padding:0 16px 4px;scrollbar-width:none}
+  .lb-cats button{flex:none}
+  .lb-row{grid-template-columns:2.6em auto minmax(0,1fr) auto;gap:9px;padding:7px 6px}
+}
 /* streak */
 .streak-wrap{position:relative}
 .streak-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:4px 12px 4px 8px;font-size:13px;color:var(--muted);white-space:nowrap}
@@ -747,13 +790,15 @@ body.m-off .ach-pop{animation:none!important}
     <button class="nav-btn" data-page="focus" data-key="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg><span>Focus</span><kbd>1</kbd></button>
     <button class="nav-btn" data-page="stats" data-key="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Stats</span><kbd>2</kbd></button>
     <button class="nav-btn" data-page="ranked" data-key="3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg><span>Ranked</span><kbd>3</kbd></button>
-    <button class="nav-btn" data-page="awards" data-key="4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><span>Awards</span><kbd>4</kbd></button>
+    <button class="nav-btn desk-only" data-page="leaders" data-key="4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21V11H3v10zM15 21V4h-6v17zM21 21v-7h-6v7z"/></svg><span>Leaderboards</span><kbd>4</kbd></button>
+    <button class="nav-btn" data-page="awards" data-key="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><span>Awards</span><kbd>5</kbd></button>
     <button class="nav-btn more-btn" id="moreBtn" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></button>
     <div class="nav-extra" id="navExtra">
-      <button class="nav-btn" data-page="music" data-key="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Music</span><kbd>5</kbd></button>
-      <button class="nav-btn" data-page="notes" data-key="6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg><span>Notes</span><kbd>6</kbd></button>
+      <button class="nav-btn phone-only" data-page="leaders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21V11H3v10zM15 21V4h-6v17zM21 21v-7h-6v7z"/></svg><span>Leaderboards</span></button>
+      <button class="nav-btn" data-page="music" data-key="6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Music</span><kbd>6</kbd></button>
+      <button class="nav-btn" data-page="notes" data-key="7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg><span>Notes</span><kbd>7</kbd></button>
       <span class="nav-spacer"></span>
-      <button class="nav-btn" data-page="settings" data-key="7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span><kbd>7</kbd></button>
+      <button class="nav-btn" data-page="settings" data-key="8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span><kbd>8</kbd></button>
     </div>
   </nav>
 
@@ -885,11 +930,24 @@ body.m-off .ach-pop{animation:none!important}
           <div class="card"><div class="h first">Match history</div><ul class="rk-hist" id="rkHist"></ul><button class="small-btn" id="rkMore" hidden>Show more</button></div>
         </div>
         <div class="rk-side">
-          <div class="card"><div class="h first ladder-h"><span>Ladder</span><span id="rkLadderPos"></span></div><ol class="ladder" id="rkLadder"></ol><p class="hint">▲▼ show who gained or lost Elo since yesterday. Click a bot to see its profile.</p></div>
+          <div class="card"><div class="h first ladder-h"><span>Ladder</span><span id="rkLadderPos"></span></div><ol class="ladder" id="rkLadder"></ol><p class="hint">▲▼ show who gained or lost Elo since the start of today. Bots update every 2 hours. Click a bot to see its profile.</p></div>
           <div class="card"><div class="h first">Ranks</div><ul class="rk-ranks" id="rkRanks"></ul></div>
           <div class="card"><div class="row"><label for="rkOn">Ranked matches<span class="sub">Get matched with a bot each time you start studying</span></label><input type="checkbox" class="switch" id="rkOn"></div>
             <p class="hint">Only running focus time counts. Breaks pause both clocks. Sittings under 10 minutes aren't rated, and a match ends after 30 minutes away.</p></div>
         </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-leaders" data-title="Leaderboards" hidden>
+      <div class="lb-cats" id="lbCats" role="group" aria-label="Leaderboard category"></div>
+      <div class="lb-grid">
+        <div class="card lb-main">
+          <div class="lb-head"><div><h2 id="lbTitle"></h2><small id="lbDesc"></small></div><small class="lb-upd" id="lbUpdated"></small></div>
+          <p class="lb-you" id="lbYou"></p>
+          <ol class="lb-list" id="lbList"></ol>
+          <div class="lb-actions"><button class="small-btn" id="lbMore">Show more</button><button class="small-btn" id="lbJump">Jump to me</button></div>
+        </div>
+        <div class="card lb-side"><div class="h first">Your standings</div><ul class="lb-mine" id="lbMine"></ul><p class="hint">Out of 5,001 players: you and 5,000 bots. Bots update every 2 hours; your numbers update as you study.</p></div>
       </div>
     </section>
 
@@ -1044,7 +1102,7 @@ body.m-off .ach-pop{animation:none!important}
         <section class="card set" id="set-keys"><h2>Keyboard shortcuts</h2>
           <ul class="keylist">
             <li><kbd>Space</kbd><span>Start or pause</span></li><li><kbd>R</kbd><span>Reset</span></li><li><kbd>S</kbd><span>Skip, or Done in Stopwatch</span></li>
-            <li><kbd>M</kbd><span>Mini clock</span></li><li><kbd>F</kbd><span>Focus mode</span></li><li><kbd>1</kbd>–<kbd>7</kbd><span>Switch pages</span></li>
+            <li><kbd>M</kbd><span>Mini clock</span></li><li><kbd>F</kbd><span>Focus mode</span></li><li><kbd>1</kbd>–<kbd>8</kbd><span>Switch pages</span></li>
           </ul>
         </section>
       </div>
@@ -3013,7 +3071,7 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || t.matches('input, textarea, select')) return;
   const k = e.key.toLowerCase();
   if (' rsmf'.includes(k) && k) achBump('keys');
-  if (/^[1-7]$/.test(k)){ const b = document.querySelector(`.nav-btn[data-key="${k}"]`); if (b) showPage(b.dataset.page); return; }
+  if (/^[1-8]$/.test(k)){ const b = document.querySelector(`.nav-btn[data-key="${k}"]`); if (b) showPage(b.dataset.page); return; }
   if (k === 'escape') $('#nav').classList.remove('more-open');
   if (k === ' '){ if (t.closest('button')) return; e.preventDefault(); toggle(); }
   else if (k === 'r') reset();
@@ -3026,8 +3084,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { re
 /* ---------- Ranked: 5,000 bots, Elo, ranks, badges ---------- */
 // The roster is rebuilt from a fixed seed on every load (names, looks, styles, habits), so only the
 // numbers that change are saved: each bot's rating and study totals, packed into a typed array.
-const ROSTER_N = 5000, ROSTER_SEED = 20261113, BF = 12;   // fields per bot in the packed array
-const F = {rating:0, total:1, sessions:2, days:3, cur:4, best:5, maxSess:6, maxDay:7, maxWeek:8, maxMonth:9, week:10, month:11};
+const ROSTER_N = 5000, ROSTER_SEED = 20261113, BF = 13;   // fields per bot in the packed array
+const F = {rating:0, total:1, sessions:2, days:3, cur:4, best:5, maxSess:6, maxDay:7, maxWeek:8, maxMonth:9, week:10, month:11, today:12};
 function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const gaussOf = rnd => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
 const pick = (rnd, a) => a[Math.floor(rnd() * a.length)];
@@ -3107,7 +3165,7 @@ function initBotStats(arr){
     arr[o+F.maxDay] = Math.round(perDay * (1.8 + rnd() * 1.2));
     arr[o+F.maxWeek] = Math.round(Math.min(arr[o+F.maxDay] * 7, perDay * 7 * p * (1.3 + rnd() * .4)));
     arr[o+F.maxMonth] = Math.round(Math.min(arr[o+F.maxWeek] * 4.4, perDay * 30 * p * (1.15 + rnd() * .3)));
-    arr[o+F.week] = Math.round(perDay * p * new Date().getDay()); arr[o+F.month] = Math.round(perDay * p * (new Date().getDate() - 1));
+    arr[o+F.week] = Math.round(perDay * p * new Date().getDay()); arr[o+F.month] = Math.round(perDay * p * (new Date().getDate() - 1)); arr[o+F.today] = 0;
   });
 }
 const b64 = a => { let s = ''; const u = new Uint8Array(a.buffer); for (let k = 0; k < u.length; k += 0x8000) s += String.fromCharCode.apply(null, u.subarray(k, k + 0x8000)); return btoa(s); };
@@ -3117,10 +3175,19 @@ const unb64 = (s, T) => { const bin = atob(s), u = new Uint8Array(bin.length); f
 var R = null, BS = null, PREV = null;     // BS: packed bot stats, PREV: ratings at the last daily update
 function loadRanked(){
   buildRoster();
-  R = merge({v:1, on:true, mmr:1000, best:1000, played:0, w:0, l:0, d:0, ws:0, bestWs:0, bestUpset:0, revenge:0, profWins:0, hist:[], rec:{}, last:-1, showcase:null, cur:null, lastSim:null, rar:null}, store.get('fb.ranked', {}));
-  try { if (R.bots){ BS = unb64(R.bots, Int32Array); if (BS.length !== ROSTER_N * BF) BS = null; } } catch(e){ BS = null; }
+  R = merge({v:1, on:true, mmr:1000, best:1000, played:0, w:0, l:0, d:0, ws:0, bestWs:0, bestUpset:0, revenge:0, profWins:0, hist:[], rec:{}, last:-1, showcase:null, cur:null, lastSim:null, lastSlice:null, rar:null}, store.get('fb.ranked', {}));
+  try {
+    if (R.bots){
+      BS = unb64(R.bots, Int32Array);
+      if (BS.length === ROSTER_N * 12){       // older saves had 12 fields per bot; add "today"
+        const old = BS; BS = new Int32Array(ROSTER_N * BF);
+        for (let i = 0; i < ROSTER_N; i++) for (let k = 0; k < 12; k++) BS[i * BF + k] = old[i * 12 + k];
+        R.lastSlice = sliceStartOf(Date.now());   // those saves already counted today in full
+      } else if (BS.length !== ROSTER_N * BF) BS = null;
+    }
+  } catch(e){ BS = null; }
   try { if (R.prev){ PREV = unb64(R.prev, Int16Array); if (PREV.length !== ROSTER_N) PREV = null; } } catch(e){ PREV = null; }
-  if (!BS){ BS = new Int32Array(ROSTER_N * BF); initBotStats(BS); R.lastSim = dayKey(Date.now()); }
+  if (!BS){ BS = new Int32Array(ROSTER_N * BF); initBotStats(BS); const d0 = new Date(); d0.setHours(0, 0, 0, 0); R.lastSlice = d0.getTime() - SLICE; R.lastSim = dayKey(Date.now()); }
   if (!PREV){ PREV = new Int16Array(ROSTER_N); for (let i = 0; i < ROSTER_N; i++) PREV[i] = BS[i * BF]; }
   dailySim();
 }
@@ -3131,44 +3198,79 @@ function saveRanked(now){
 }
 const botRating = i => BS[i * BF];
 
-/* the daily update: bots study and play each other; at most 7 days of catch-up */
-function dailySim(){
-  const today = dayKey(Date.now());
-  if (!R.lastSim){ R.lastSim = today; return; }
-  let days = Math.round((new Date(today + 'T12:00') - new Date(R.lastSim + 'T12:00')) / 864e5);
-  if (days <= 0) return;
-  days = Math.min(days, 7);
-  for (let k = 0; k < ROSTER_N; k++) PREV[k] = BS[k * BF];
-  const rnd = Math.random;
-  for (let dd = days; dd >= 1; dd--){
-    const day = new Date(); day.setDate(day.getDate() - dd + 1);
-    for (const b of BOTS){
-      const o = b.i * BF, r = BS[o], p = activity(b, r);
-      if (day.getDay() === 0) BS[o+F.week] = 0;
-      if (day.getDate() === 1) BS[o+F.month] = 0;
-      if (rnd() < p){
-        const L = typical(r) * b.sitMul, sits = Math.max(1, Math.round(sittingsPerDay(b) * (.6 + rnd() * .8)));
-        let m = 0, longest = 0; for (let s = 0; s < sits; s++){ const x = L * Math.exp(.3 * gaussOf(rnd)); m += x; longest = Math.max(longest, x); }
-        m = Math.round(m);
-        BS[o+F.total] += m; BS[o+F.sessions] += Math.max(1, Math.round(m / blockLen(b, r))); BS[o+F.days]++;
-        BS[o+F.cur]++; BS[o+F.best] = Math.max(BS[o+F.best], BS[o+F.cur]);
-        BS[o+F.maxDay] = Math.max(BS[o+F.maxDay], m); BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], Math.round(longest));
-        BS[o+F.week] += m; BS[o+F.month] += m;
-        BS[o+F.maxWeek] = Math.max(BS[o+F.maxWeek], BS[o+F.week]); BS[o+F.maxMonth] = Math.max(BS[o+F.maxMonth], BS[o+F.month]);
-      } else BS[o+F.cur] = 0;
+/* bot updates every 2 hours. Each bot has a plan for each day (study or not, how long), worked out
+   from the seed so nothing extra is saved. The plan's minutes are spread across the day's twelve
+   2-hour slices, weighted toward the bot's peak hours. Streaks and days studied roll over at midnight.
+   Catch-up after time away is capped at 7 days. */
+const SLICE = 2 * 3600e3;
+function sliceStartOf(t){ const d = new Date(t); d.setMinutes(0, 0, 0); d.setHours(d.getHours() - d.getHours() % 2); return d.getTime(); }
+const SLICE_W = {};      // per peak: share of the day's minutes in each of the 12 slices (cumulative)
+Object.keys(PEAKS).forEach(pk => {
+  const [a, z] = PEAKS[pk], w = [];
+  for (let k = 0; k < 12; k++){
+    const h = k * 2 + 1, hh = h < 5 ? h + 24 : h;
+    w.push(hh >= a && hh < z ? 3 : (hh >= a - 2 && hh < z + 2) ? 1.5 : (h >= 2 && h < 7) ? .1 : 1);
+  }
+  const sum = w.reduce((x, y) => x + y, 0); let c = 0;
+  SLICE_W[pk] = w.map(x => (c += x / sum));
+});
+const dayNum = dk => +dk.replace(/-/g, '');
+function dayPlan(i, dk){
+  const b = BOTS[i], r = PREV[i] || BS[i * BF], rnd = mulberry32(dayNum(dk) * 7 + i * 2654435761);
+  const active = rnd() < activity(b, r);
+  if (!active) return {active: false, m: 0, longest: 0};
+  const L = typical(r) * b.sitMul, sits = Math.max(1, Math.round(sittingsPerDay(b) * (.6 + rnd() * .8)));
+  let m = 0, longest = 0; for (let s = 0; s < sits; s++){ const x = L * Math.exp(.3 * gaussOf(rnd)); m += x; longest = Math.max(longest, x); }
+  return {active: true, m: Math.round(m), longest: Math.round(longest)};
+}
+function runSlice(t){
+  const d = new Date(t), slot = d.getHours() / 2, dk = dayKey(t);
+  if (slot === 0){
+    // midnight: close out yesterday, then start today
+    const y = new Date(t - 12 * 3600e3), yk = dayKey(y);
+    for (let i = 0; i < ROSTER_N; i++){
+      const o = i * BF;
+      if (dayPlan(i, yk).active){ BS[o+F.days]++; BS[o+F.cur]++; BS[o+F.best] = Math.max(BS[o+F.best], BS[o+F.cur]); } else BS[o+F.cur] = 0;
     }
-    // bot-vs-bot matches between neighbors on the ladder, zero-sum so ratings stay centered
-    const order = sortedBots();
-    for (let k = 0; k < order.length; k++){
-      if (rnd() > .5) continue;
-      const j = clampN(k + Math.round(gaussOf(rnd) * 4) || 1, 0, order.length - 1); if (j === k) continue;
-      const a = order[k], c = order[j], ra = BS[a * BF], rc = BS[c * BF];
-      const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = rnd() < ea ? 1 : 0, dlt = Math.round(12 * (sa - ea));
-      BS[a * BF] = clampN(ra + dlt, 300, 3200); BS[c * BF] = clampN(rc - dlt, 300, 3200);
+    for (let i = 0; i < ROSTER_N; i++){
+      const o = i * BF; PREV[i] = BS[o]; BS[o+F.today] = 0;
+      if (d.getDay() === 0) BS[o+F.week] = 0;
+      if (d.getDate() === 1) BS[o+F.month] = 0;
     }
   }
-  R.lastSim = today; R.rar = null; sortedCache = null; badgeCache.clear();
+  for (let i = 0; i < ROSTER_N; i++){
+    const plan = dayPlan(i, dk); if (!plan.active) continue;
+    const b = BOTS[i], o = i * BF, W = SLICE_W[b.peak];
+    const add = Math.round(plan.m * W[slot]) - (slot ? Math.round(plan.m * W[slot - 1]) : 0);
+    if (add <= 0) continue;
+    const before = BS[o+F.today], today = before + add, bl = blockLen(b, BS[o]);
+    BS[o+F.today] = today; BS[o+F.total] += add; BS[o+F.week] += add; BS[o+F.month] += add;
+    BS[o+F.sessions] += Math.max(0, Math.round(today / bl) - Math.round(before / bl)) || (before === 0 ? 1 : 0);
+    BS[o+F.maxDay] = Math.max(BS[o+F.maxDay], today);
+    BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], Math.min(plan.longest, today));
+    BS[o+F.maxWeek] = Math.max(BS[o+F.maxWeek], BS[o+F.week]); BS[o+F.maxMonth] = Math.max(BS[o+F.maxMonth], BS[o+F.month]);
+  }
+  // a few bot-vs-bot matches between ladder neighbors, zero-sum so ratings stay centered
+  const order = sortedBots(), rnd = Math.random, busy = slot >= 3 && slot <= 11 ? .2 : .05;
+  for (let k = 0; k < order.length; k++){
+    if (rnd() > busy) continue;
+    const j = clampN(k + Math.round(gaussOf(rnd) * 4) || 1, 0, order.length - 1); if (j === k) continue;
+    const a = order[k], c = order[j], ra = BS[a * BF], rc = BS[c * BF];
+    const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = rnd() < ea ? 1 : 0, dlt = Math.round(12 * (sa - ea));
+    BS[a * BF] = clampN(ra + dlt, 300, 3200); BS[c * BF] = clampN(rc - dlt, 300, 3200);
+  }
+  sortedCache = null;
+}
+function dailySim(){
+  const now = sliceStartOf(Date.now());
+  if (!R.lastSlice) R.lastSlice = now;
+  if (now <= R.lastSlice) return false;
+  let t = Math.max(R.lastSlice + SLICE, now - 7 * 864e5);
+  for (; t <= now; t += SLICE) runSlice(t);
+  R.lastSlice = now; R.lastSim = dayKey(now);
+  badgeCache.clear(); lbPts = null;
   saveRanked(true);
+  return true;
 }
 let sortedCache = null;
 function sortedBots(){ if (!sortedCache){ sortedCache = [...Array(ROSTER_N).keys()].sort((a, b) => BS[b * BF] - BS[a * BF]); } return sortedCache; }
@@ -3548,12 +3650,109 @@ $('#pane-awards').addEventListener('click', e => {
 });
 $('#pane-awards').addEventListener('click', e => { if (e.target.closest('[data-act="sc-auto"]')){ R.showcase = null; saveRanked(); renderAwards(); } });
 function onPageShown(name){
+  if (name === 'leaders'){ renderLeaders(); if (!lbPts) ensureBotPoints(() => { if (!$('#page-leaders').hidden) renderLeaders(); }); }
   if (name === 'ranked'){ renderRanked(); computeRarity(() => { if (!$('#page-ranked').hidden) renderRanked(); }); }
   if (name === 'awards') computeRarity(() => { if (!$('#page-awards').hidden) renderAwards(); });
 }
 
+let lbPts = null;
 loadRanked();
 setTimeout(() => computeRarity(), 3000);
+setInterval(() => {
+  if (document.hidden || !dailySim()) return;
+  if (!$('#page-ranked').hidden) renderRanked();
+  if (typeof renderLeaders === 'function' && !$('#page-leaders').hidden) renderLeaders();
+}, 60000);
+
+/* ---------- leaderboards: you and all 5,000 bots, in 11 categories ---------- */
+function myTotals(){
+  const wk = startOfWeek(new Date()).getTime(), m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0);
+  const byDay = {}; let total = 0, week = 0, month = 0, maxSess = 0;
+  LOG.forEach(s => { total += s.min; if (s.t >= wk) week += s.min; if (s.t >= m0.getTime()) month += s.min; maxSess = Math.max(maxSess, s.min); const k = dayKey(s.t); byDay[k] = (byDay[k] || 0) + s.min; });
+  const si = streakInfo();
+  return {total, week, month, maxSess, maxDay: Math.max(0, ...Object.values(byDay)), days: Object.values(byDay).filter(m => m >= 10).length, cur: si.cur, best: si.best, sessions: LOG.length,
+    pts: ACHS.filter(a => ACH.u[a.id]).reduce((n, a) => n + TIERS[a.tier].pts, 0)};
+}
+const LB = [
+  {id:'elo',   name:'Highest Elo',            desc:'Current ranked rating',                 u:'elo', f:F.rating,   me:t => R.mmr},
+  {id:'hours', name:'Most hours studied',     desc:'All-time study time',                   u:'min', f:F.total,    me:t => t.total},
+  {id:'week',  name:'Hours this week',        desc:'Since Sunday · resets every week',      u:'min', f:F.week,     me:t => t.week},
+  {id:'month', name:'Hours this month',       desc:'Since the 1st · resets every month',    u:'min', f:F.month,    me:t => t.month},
+  {id:'cur',   name:'Current streak',         desc:'Days in a row with 10+ minutes, still going', u:'d', f:F.cur, me:t => t.cur},
+  {id:'best',  name:'Best streak ever',       desc:'Longest run of days in a row',          u:'d',   f:F.best,     me:t => t.best},
+  {id:'days',  name:'Most days studied',      desc:'Days with 10+ minutes, all time',       u:'d',   f:F.days,     me:t => t.days},
+  {id:'sess',  name:'Longest single session', desc:'The longest one sitting',               u:'min', f:F.maxSess,  me:t => t.maxSess},
+  {id:'day',   name:'Biggest single day',     desc:'Most study time in one day',            u:'min', f:F.maxDay,   me:t => t.maxDay},
+  {id:'count', name:'Most sessions',          desc:'Focus sessions logged, all time',       u:'n',   f:F.sessions, me:t => t.sessions},
+  {id:'pts',   name:'Achievement points',     desc:'Points from unlocked achievements',     u:'pts', f:null,       me:t => t.pts}
+];
+const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : v.toLocaleString();
+// achievement points for every bot, worked out in idle chunks once per update
+let lbPtsRunning = false;
+function ensureBotPoints(done){
+  if (lbPts){ done && done(); return; }
+  if (lbPtsRunning) return; lbPtsRunning = true;
+  const arr = new Int32Array(ROSTER_N), idle = window.requestIdleCallback || (f => setTimeout(f, 16)); let i = 0;
+  const step = () => { const end = Math.min(ROSTER_N, i + 300); for (; i < end; i++) arr[i] = botBadges(i).reduce((n, id) => n + TIERS[achById(id).tier].pts, 0);
+    if (i < ROSTER_N) idle(step); else { lbPts = arr; lbPtsRunning = false; done && done(); } };
+  idle(step);
+}
+const botVal = (c, i) => c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f];
+function lbRanking(c, t){
+  const me = c.me(t), idx = new Int32Array(ROSTER_N + 1).map((_, k) => k);
+  const val = k => k === ROSTER_N ? me : botVal(c, k), elo = k => k === ROSTER_N ? R.mmr : BS[k * BF];
+  idx.sort((a, b) => (val(b) - val(a)) || (elo(b) - elo(a)) || (a === ROSTER_N ? -1 : b === ROSTER_N ? 1 : a - b));
+  return {idx, val, me};
+}
+function myPlace(c, t){   // 1 + how many bots are ahead of you (ties go to you)
+  const me = c.me(t); let ahead = 0;
+  for (let i = 0; i < ROSTER_N; i++) if (botVal(c, i) > me) ahead++;
+  return ahead + 1;
+}
+const topPct = place => { const p = place / (ROSTER_N + 1) * 100; return p < 1 ? 'top 1%' : `top ${Math.ceil(p)}%`; };
+let lbShown = 10, lbJump = false;
+function lbRow(k, place, c, val){
+  const medal = place <= 3 ? ` m${place}` : '';
+  if (k === ROSTER_N){
+    const rk = rankOf(R.mmr);
+    return `<li class="lb-row me${medal}"><span class="pl">${place.toLocaleString()}</span>${myAvatar('sm')}<span class="who"><b>You</b><small>${emblem(rk, 'xs')} ${rk.full}</small></span><span class="val">${lbFmt(c.u, val(k))}</span></li>`;
+  }
+  const B = BOTS[k], r = BS[k * BF], rk = rankOf(r);
+  return `<li class="lb-row${medal}" data-bot="${k}" tabindex="0"><span class="pl">${place.toLocaleString()}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)} <i class="bot-tag">bot</i></b><small>${emblem(rk, 'xs')} ${rk.full} · ${B.style}</small></span><span class="val">${lbFmt(c.u, val(k))}</span></li>`;
+}
+function renderLeaders(){
+  if (!$('#lbList')) return;
+  const c = LB.find(x => x.id === P.lbCat) || LB[0], t = myTotals();
+  $('#lbCats').innerHTML = LB.map(x => `<button data-v="${x.id}" aria-pressed="${x.id === c.id}">${x.name}</button>`).join('');
+  $('#lbTitle').textContent = c.name; $('#lbDesc').textContent = c.desc;
+  const tm = x => new Date(x).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  $('#lbUpdated').textContent = R.lastSlice ? `Bots updated ${tm(R.lastSlice)} · next ${tm(R.lastSlice + SLICE)}` : '';
+  if (c.f == null && !lbPts){ $('#lbList').innerHTML = '<li class="lb-wait">Adding up everyone\'s achievement points…</li>'; ensureBotPoints(() => { if (!$('#page-leaders').hidden) renderLeaders(); }); }
+  else {
+    const {idx, val} = lbRanking(c, t), mine = idx.indexOf(ROSTER_N);
+    let from = 0, to = lbShown;
+    if (lbJump){ from = Math.max(0, mine - 5); to = Math.min(idx.length, mine + 6); }
+    let h = '';
+    if (lbJump && from > 0) h += lbRow(idx[0], 1, c, val) + '<li class="lb-gap">⋯</li>';
+    for (let k = from; k < to; k++) h += lbRow(idx[k], k + 1, c, val);
+    if (!lbJump && mine >= to) h += '<li class="lb-gap">⋯</li>' + lbRow(ROSTER_N, mine + 1, c, val).replace('class="lb-row me', 'class="lb-row me pinned');
+    $('#lbList').innerHTML = h;
+    $('#lbYou').innerHTML = `You're <b>#${(mine + 1).toLocaleString()}</b> of ${(ROSTER_N + 1).toLocaleString()} · ${topPct(mine + 1)} · ${lbFmt(c.u, val(ROSTER_N))}`;
+    $('#lbMore').hidden = lbJump || lbShown >= 50;
+    $('#lbJump').textContent = lbJump ? 'Back to the top' : 'Jump to me';
+  }
+  // your place in every category
+  $('#lbMine').innerHTML = LB.map(x => {
+    const ready = x.f != null || lbPts, place = ready ? myPlace(x, t) : null;
+    return `<li><button class="${x.id === c.id ? 'on' : ''}" data-v="${x.id}"><span class="nm">${x.name}</span><span class="mv2">${lbFmt(x.u, x.me(t))}</span><span class="pl2">${place ? `#${place.toLocaleString()} · ${topPct(place)}` : '…'}</span></button></li>`;
+  }).join('');
+}
+function lbPick(e){ const b = e.target.closest('[data-v]'); if (!b) return; P.lbCat = b.dataset.v; saveP(); lbShown = 10; lbJump = false; renderLeaders(); }
+$('#lbCats').onclick = lbPick; $('#lbMine').onclick = lbPick;
+$('#lbMore').onclick = () => { lbShown = lbShown < 25 ? 25 : 50; renderLeaders(); };
+$('#lbJump').onclick = () => { lbJump = !lbJump; renderLeaders(); };
+$('#lbList').addEventListener('click', e => { const r = e.target.closest('[data-bot]'); if (r && !e.target.closest('.bdg')) openBot(+r.dataset.bot); });
+$('#lbList').addEventListener('keydown', e => { if (e.key === 'Enter'){ const r = e.target.closest('[data-bot]'); if (r) openBot(+r.dataset.bot); } });
 
 /* ---------- study streak ---------- */
 // A day counts toward your streak once you've logged at least 10 minutes on it.
@@ -3602,7 +3801,7 @@ function showPage(name, sec){
     p.hidden = !on;
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.dataset.page === name ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
-  $('#moreBtn').classList.toggle('on', ['music','notes','settings'].includes(name));
+  $('#moreBtn').classList.toggle('on', ['music','notes','settings'].includes(name) || (name === 'leaders' && matchMedia('(max-width:760px)').matches));
   $('#nav').classList.remove('more-open');
   $('#pageTitle').textContent = el.dataset.title;
   document.body.dataset.page = name;
