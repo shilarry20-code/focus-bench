@@ -167,6 +167,86 @@ button{cursor:pointer}
 .pf-ach-h .seg{letter-spacing:0;text-transform:none}
 .pf-tier{margin-top:12px}.pf-tier>span{font-size:12px;font-weight:700;display:block;margin-bottom:6px}
 .pf-lb button{cursor:pointer}
+.g-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.g-bar-sp{flex:1}
+.g-bar input[type=search],.g-bar select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);padding:6px 10px}
+.g-bar input[type=search]{min-width:240px}
+.g-group{margin-bottom:18px}.g-group .h{margin-top:4px}
+.g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:8px}
+.g-card{display:flex;flex-direction:column;gap:8px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:14px 16px;color:var(--ink);cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.g-card:hover{border-color:var(--muted);box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.g-card-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.g-card-top b{font-size:16px;line-height:1.25}
+.g-card-top em,.g-ex{font-style:normal;font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.g-card-top em.soon,.g-ex.soon{color:#d64545}
+.g-tags{display:flex;flex-wrap:wrap;gap:4px}.g-tags i,.g-tag{font-style:normal;font-size:11px;font-weight:600;background:var(--soft);color:var(--muted);border-radius:99px;padding:2px 8px}
+.g-prog{display:flex;align-items:center;gap:8px}.g-prog .bar2{flex:1}.g-prog small{font-size:12px;color:var(--muted);white-space:nowrap}
+.g-meta{font-size:12px;color:var(--muted)}
+.g-empty{max-width:640px}.g-empty b{font-size:18px}.g-empty p{color:var(--muted)}.g-empty-btns{display:flex;gap:8px;flex-wrap:wrap}
+.g-view{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.g-side{display:flex;flex-direction:column;gap:18px;position:sticky;top:16px}
+.g-head h2{margin:0 0 6px;font-size:28px;line-height:1.2}
+.g-sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
+.g-cls{font-size:13px;font-weight:700;color:var(--accent)}
+.g-md{font-size:15px;line-height:1.6;overflow-wrap:anywhere}
+.g-md h2{font-size:22px;margin:22px 0 8px}.g-md h3{font-size:18px;margin:18px 0 6px}.g-md h4,.g-md h5{font-size:15px;margin:14px 0 4px}
+.g-md p{margin:8px 0}.g-md hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+.g-md mark{background:color-mix(in srgb,#ffd84d 55%,transparent);color:inherit;border-radius:3px;padding:0 2px}
+.g-md code{font-family:var(--f-mono);font-size:.88em;background:var(--soft);border-radius:5px;padding:1px 5px}
+.g-md pre{background:var(--soft);border-radius:var(--r-ctl);padding:12px 14px;overflow:auto}.g-md pre code{background:none;padding:0}
+.g-md blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);border-radius:0 var(--r-ctl) var(--r-ctl) 0}
+.g-md blockquote p{margin:4px 0}
+.g-md a{color:var(--accent)}
+.g-list{list-style:none;margin:6px 0;padding:0}
+.g-list li{padding:2px 0 2px calc(var(--ind,0) * 22px + 20px);position:relative}
+.g-list li.g-ul::before{content:"";position:absolute;left:calc(var(--ind,0) * 22px + 6px);top:.72em;width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.g-list li.g-ol::before{content:attr(data-n) ".";position:absolute;left:calc(var(--ind,0) * 22px);color:var(--muted);font-variant-numeric:tabular-nums;font-size:.92em}
+.g-list li.g-chk{padding-left:calc(var(--ind,0) * 22px)}
+.g-chk label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;padding:3px 6px;border-radius:6px}
+.g-chk label:hover{background:var(--soft)}
+.g-chk input{margin-top:5px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.g-chk.on span{color:var(--muted);text-decoration:line-through}
+.g-tbl{overflow-x:auto;margin:10px 0}.g-md table{border-collapse:collapse;font-size:14px;min-width:50%}
+.g-md th,.g-md td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}.g-md th{background:var(--soft)}
+.qa{border:1px solid var(--line);border-radius:var(--r-ctl);margin:8px 0;background:var(--surface)}
+.qa summary{display:flex;gap:10px;align-items:baseline;padding:10px 12px;cursor:pointer;list-style:none}
+.qa summary::-webkit-details-marker{display:none}
+.qa-q{font-size:11px;font-weight:800;color:var(--accent);flex:none}
+.qa summary>span:nth-child(2){flex:1;font-weight:600}
+.qa-tap{font-size:12px;color:var(--muted);flex:none}.qa[open] .qa-tap{visibility:hidden}
+.qa-a{padding:0 12px 12px 40px;border-top:1px dashed var(--line);padding-top:10px}
+.qa[open]{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.g-bigbar{margin-top:10px;display:block}
+.g-prog .bar2 i,.g-bigbar i{background:var(--accent)}
+.g-qa-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.g-toc{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.g-toc a{font-size:13px;color:var(--ink);text-decoration:none;padding:4px 8px 4px calc((var(--lv) - 1) * 12px + 8px);border-radius:6px}
+.g-toc a:hover{background:var(--soft)}
+.g-ed-meta{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+.g-ed-meta label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
+.g-ed-meta .g-f-tags{grid-column:1/-1}
+.g-ed-meta input,.g-imp textarea,#geBody{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);padding:7px 10px}
+.g-tools{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 8px}
+.g-ed-split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#geBody{min-height:440px;resize:vertical;font-family:var(--f-mono);font-size:13px;line-height:1.55}
+.g-prev{border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);padding:6px 14px;max-height:640px;overflow:auto;background:var(--bg)}
+.g-help{margin-top:12px;font-size:13px;color:var(--muted)}.g-help summary{cursor:pointer;font-weight:600}
+.g-help code{background:var(--soft);border-radius:4px;padding:1px 5px;margin:2px;display:inline-block;font-size:12px}
+.g-help pre{background:var(--soft);border-radius:var(--r-ctl);padding:10px 12px;font-size:12px;overflow:auto;color:var(--ink)}
+.g-imp{width:min(640px,100%)!important}.g-imp h3{margin:0 0 4px}
+.g-imp-row{display:flex;align-items:center;gap:10px;margin:12px 0 8px}
+.g-file{cursor:pointer}
+.g-imp textarea{width:100%;min-height:170px;font-family:var(--f-mono);font-size:12.5px;resize:vertical;box-sizing:border-box}
+.g-imp-chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:10px 0}
+.g-imp-found ul{list-style:none;margin:6px 0;padding:0;max-height:180px;overflow:auto}
+.g-imp-found li{display:flex;flex-direction:column;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}.g-imp-found small{color:var(--muted)}
+.g-imp-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.g-slot{margin-top:18px}
+.g-slot-head{display:flex;align-items:center;gap:10px}.g-slot-head .h{flex:1;margin:0}
+.g-slot-head .x{border:0;background:none;font-size:20px;color:var(--muted);width:28px;height:28px;border-radius:6px}.g-slot-head .x:hover{background:var(--soft)}
+.g-slot-title{display:block;font-size:17px;margin:6px 0}
+.g-slot-md{max-height:420px;overflow:auto;margin-top:8px;font-size:14px;padding-right:4px}
+@media (max-width:1000px){.g-view{grid-template-columns:1fr}.g-side{position:static}.g-ed-split{grid-template-columns:1fr}}
 .hm.pick,.hm-strip .hm[data-pk]{cursor:pointer}.hm.pick:hover,.hm-strip .hm[data-pk]:hover{outline:2px solid var(--ink);outline-offset:-1px}
 .pc-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .pc-head{margin-top:10px}.pc-head b{order:0}.pc-head [data-pc="prev"]{order:-1}
@@ -882,10 +962,11 @@ body.m-off .ach-pop{animation:none!important}
     <button class="nav-btn more-btn" id="moreBtn" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></button>
     <div class="nav-extra" id="navExtra">
       <button class="nav-btn phone-only" data-page="leaders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21V11H3v10zM15 21V4h-6v17zM21 21v-7h-6v7z"/></svg><span>Leaderboards</span></button>
-      <button class="nav-btn" data-page="music" data-key="6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Music</span><kbd>6</kbd></button>
-      <button class="nav-btn" data-page="notes" data-key="7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg><span>Notes</span><kbd>7</kbd></button>
+      <button class="nav-btn" data-page="guides" data-key="6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6.5A2.5 2.5 0 0 0 4 20.5 2.5 2.5 0 0 0 6.5 23H19v-5"/><path d="M8 7h7M8 11h5"/></svg><span>Guides</span><kbd>6</kbd></button>
+      <button class="nav-btn" data-page="music" data-key="7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Music</span><kbd>7</kbd></button>
+      <button class="nav-btn" data-page="notes" data-key="8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg><span>Notes</span><kbd>8</kbd></button>
       <span class="nav-spacer"></span>
-      <button class="nav-btn" data-page="settings" data-key="8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span><kbd>8</kbd></button>
+      <button class="nav-btn" data-page="settings" data-key="9"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span><kbd>9</kbd></button>
     </div>
   </nav>
 
@@ -953,6 +1034,7 @@ body.m-off .ach-pop{animation:none!important}
 
         <aside class="fcol fcol-right">
           <div id="matchSlot"></div>
+          <div id="guideSlot"></div>
           <div class="card">
             <div class="h first">Parking lot</div>
             <div class="addrow"><input id="qNoteIn" placeholder="Jot a stray thought…" maxlength="140"><button class="small-btn" id="qNoteAdd">Park</button></div>
@@ -1100,6 +1182,8 @@ body.m-off .ach-pop{animation:none!important}
       </div>
     </section>
 
+    <section class="page" id="page-guides" data-title="Study guides" hidden><div id="guidesBody"></div></section>
+
     <section class="page" id="page-notes" data-title="Notes" hidden>
       <div class="card narrow" id="pane-notes">
 
@@ -1203,6 +1287,7 @@ body.m-off .ach-pop{animation:none!important}
 <canvas id="fxFront" class="fx front" aria-hidden="true"></canvas>
 <div class="toast" id="toast" hidden></div>
 <div class="bdg-tip" id="bdgTip" role="tooltip" hidden></div>
+<div class="modal" id="gImpModal" hidden><div class="modal-card g-imp" role="dialog" aria-modal="true" aria-labelledby="gImpTitle"><button class="x" aria-label="Close">×</button><div id="gImpBody"></div></div></div>
 <div class="modal" id="botModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bmName"><button class="x" aria-label="Close">×</button><div id="botModalBody"></div></div></div>
 <button class="ach-pop" id="achPop" hidden></button>
 <div class="vtip" id="vtip" role="tooltip" hidden></div>
@@ -2241,7 +2326,7 @@ requestAnimationFrame(function frame(){
 });
 
 /* ---------- backup & restore ---------- */
-function backupText(){ return JSON.stringify({app:'focus-bench', version:1, exported:new Date().toISOString(), log:LOG, notes:NOTES, settings:P, achievements:ACH, ranked:R}); }
+function backupText(){ return JSON.stringify({app:'focus-bench', version:1, exported:new Date().toISOString(), log:LOG, notes:NOTES, settings:P, achievements:ACH, ranked:R, guides:GUIDES}); }
 $('#bkCopy').onclick = () => {
   achBump('backup');
   const txt = backupText(), out = $('#bkOut');
@@ -2280,6 +2365,10 @@ function restoreBackup(raw){
     Object.entries(A.c || {}).forEach(([k, v]) => { ACH.c[k] = Math.max(ACH.c[k] || 0, +v || 0); });
     Object.entries(A.s || {}).forEach(([k, v]) => { ACH.s[k] = [...new Set([...(ACH.s[k] || []), ...(v || [])])]; });
     ACH.seeded = true; saveAch();
+  }
+  if (Array.isArray(data.guides)){
+    data.guides.forEach(g => { if (!g || !g.id) return; const cur = guideById(g.id); if (!cur) GUIDES.push(g); else if ((g.updated || 0) > (cur.updated || 0)) Object.assign(cur, g); });
+    saveGuides(); renderGuides(); renderGuideSlot();
   }
   if (data.ranked && typeof data.ranked === 'object' && (data.ranked.played || 0) > R.played){ store.set('fb.ranked', data.ranked); loadRanked(); renderMatch(); renderRankChip(); }
   applyLook(); renderTimerPane(); renderLookSound(); renderNotes(); renderAll(); renderMusic(); renderLog();
@@ -2465,6 +2554,10 @@ const ACHS = [
   ['accent','explore','bronze','Your Colors','Pick your own custom accent color.', s => s.set.accentUsed, 1],
   ['dj','explore','bronze','DJ','Add some music in the Music tab.', s => s.c.music, 1],
   ['backup','explore','bronze','Safety First','Make a backup of your data.', s => s.c.backup, 1],
+  ['guide1','explore','bronze','Study Guide','Write or import your first study guide.', s => s.c.guides, 1],
+  ['guidestudy','explore','bronze','By the Book','Start studying from a study guide.', s => s.c.guideStudy, 1],
+  ['guide5','explore','silver','Librarian','Write or import 5 study guides.', s => s.c.guides, 5],
+  ['guidedone','explore','gold','Covered Everything','Check off every item on a study guide.', s => s.c.guideDone, 1],
   ['edit','explore','bronze','Revisionist','Edit a logged session.', s => s.c.edits, 1],
   ['del','explore','bronze','Clean Slate','Delete a logged session.', s => s.c.deletes, 1],
   ['bigpic','explore','bronze','The Big Picture','Open the monthly calendar.', s => s.c.calMonth, 1],
@@ -3167,7 +3260,7 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || t.matches('input, textarea, select')) return;
   const k = e.key.toLowerCase();
   if (' rsmf'.includes(k) && k) achBump('keys');
-  if (/^[1-8]$/.test(k)){ const b = document.querySelector(`.nav-btn[data-key="${k}"]`); if (b) showPage(b.dataset.page); return; }
+  if (/^[1-9]$/.test(k)){ const b = document.querySelector(`.nav-btn[data-key="${k}"]`); if (b) showPage(b.dataset.page); return; }
   if (k === 'escape') $('#nav').classList.remove('more-open');
   if (k === ' '){ if (t.closest('button')) return; e.preventDefault(); toggle(); }
   else if (k === 'r') reset();
@@ -3938,9 +4031,7 @@ function rankedTick(){
 const fmtSec = sec => { const m = Math.floor(sec / 60), x = sec % 60; return `${fmtMin(m)} ${String(x).padStart(2, '0')}s`; };
 function matchTimes(h){
   if (h.ys == null){   // older matches saved minutes only
-    if (h.r === 'W') return `${fmtMin(h.you)} <i>·</i> they tapped out`;
-    if (h.r === 'L') return `${fmtMin(h.you)} <i>·</i> they kept going`;
-    return `${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}`;
+    return h.r === 'D' ? `${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}` : fmtMin(h.you);
   }
   const close = Math.abs(h.ys - h.ts) < 120, f = x => close ? fmtSec(x) : fmtMin(Math.round(x / 60));
   return `${f(h.ys)} <i>vs</i> ${f(h.ts)}`;
@@ -3965,7 +4056,7 @@ function renderMatch(fresh){
   if (!live){
     const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
     const sec = ms => fmtSec(Math.round(ms / 1000));
-    const how = c.res === 'W' ? `${esc(B.name)} tapped out at ${sec(c.target)}. You outlasted them at ${sec(c.you)}.` : c.res === 'L' ? `You stopped at ${mm(c.you)}. ${esc(B.name)} kept going to ${mm(c.target)}${c.target - c.you >= 60000 ? `, ${mm(c.target - c.you)} more` : ''}.` : `You stopped at ${sec(c.you)}, just short of ${esc(B.name)}'s ${sec(c.target)}.`;
+    const how = c.res === 'W' ? `${esc(B.name)} stopped at ${sec(c.target)}. You were still going at ${sec(c.you)}.` : c.res === 'L' ? `You stopped at ${mm(c.you)}. ${esc(B.name)} kept going to ${mm(c.target)}${c.target - c.you >= 60000 ? `, ${mm(c.target - c.you)} more` : ''}.` : `You stopped at ${sec(c.you)}, just short of ${esc(B.name)}'s ${sec(c.target)}.`;
     result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em></span>
       ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
       <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>
@@ -4403,6 +4494,398 @@ function renderMeBtn(){ const b = $('#meBtn'); if (b){ b.innerHTML = myAvatar('s
 $('#meBtn').onclick = () => openProfile(ME);
 renderMeBtn();
 
+/* ---------- study guides: write them, or import ones made elsewhere (Markdown, text or JSON) ---------- */
+// A guide is Markdown with a few extras: "- [ ]" checklists, and "Q:" / "A:" pairs that hide the answer
+// until clicked. Guides live in IndexedDB (falling back to localStorage) and are part of backups.
+let GUIDES = [], guidesReady = false, gView = null, gEdit = null, gImportFound = [];
+const GF = {q: '', cls: 'all'};
+const gid = () => 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function loadGuides(){
+  const fromLS = () => { GUIDES = store.get('fb.guides', []); };
+  return IDB.get('guides').then(v => { if (Array.isArray(v)) GUIDES = v; else fromLS(); }, fromLS)
+    .then(() => { guidesReady = true; if (!$('#page-guides').hidden) renderGuides(); renderGuideSlot(); });
+}
+let gSaveT = null;
+function saveGuides(){
+  clearTimeout(gSaveT);
+  gSaveT = setTimeout(() => IDB.set('guides', GUIDES).catch(() => { try { store.set('fb.guides', GUIDES); } catch(e){ toast('Could not save your guides.'); } }), 300);
+}
+const guideById = id => GUIDES.find(g => g.id === id);
+
+/* ---- Markdown → HTML (the parts study guides use) ---- */
+function mdInline(t){
+  const codes = [];
+  let s = esc(t).replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+  s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/__(.+?)__/g, '<b>$1</b>')
+       .replace(/(^|[^*\w])\*(?!\s)(.+?)\*(?!\w)/g, '$1<i>$2</i>').replace(/(^|[^_\w])_(?!\s)(.+?)_(?!\w)/g, '$1<i>$2</i>')
+       .replace(/~~(.+?)~~/g, '<s>$1</s>').replace(/==(.+?)==/g, '<mark>$1</mark>')
+       .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return s.replace(/\u0000(\d+)\u0000/g, (_, k) => `<code>${codes[+k]}</code>`);
+}
+function mdRender(src, opts){
+  const L = String(src || '').replace(/\r\n?/g, '\n').split('\n'), out = [], heads = [];
+  let i = 0, qn = 0;
+  const listRe = /^(\s*)([-*+]|\d+[.)])\s+(\[( |x|X)\]\s+)?(.*)$/;
+  while (i < L.length){
+    const line = L[i];
+    if (/^\s*$/.test(line)){ i++; continue; }
+    let m;
+    if ((m = line.match(/^\s*```(.*)$/))){                       // code block
+      const buf = []; i++;
+      while (i < L.length && !/^\s*```/.test(L[i])) buf.push(L[i++]);
+      i++; out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`); continue;
+    }
+    if ((m = line.match(/^(#{1,4})\s+(.*)$/))){                  // heading
+      const lv = m[1].length, id = 'gh' + heads.length; heads.push({lv, text: m[2].replace(/[*_`=~]/g, ''), id});
+      out.push(`<h${lv + 1} id="${id}">${mdInline(m[2])}</h${lv + 1}>`); i++; continue;
+    }
+    if (/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)){ out.push('<hr>'); i++; continue; }
+    if ((m = line.match(/^\s*Q[:.)]\s*(.*)$/i))){                // flashcard: Q: … A: …
+      const q = [m[1]], a = []; i++;
+      while (i < L.length && !/^\s*A[:.)]/i.test(L[i]) && !/^\s*$/.test(L[i])) q.push(L[i++].trim());
+      if (i < L.length && (m = L[i].match(/^\s*A[:.)]\s*(.*)$/i))){ a.push(m[1]); i++; while (i < L.length && !/^\s*$/.test(L[i]) && !/^\s*Q[:.)]/i.test(L[i])) a.push(L[i++].trim()); }
+      qn++;
+      out.push(`<details class="qa"><summary><span class="qa-q">Q${qn}</span><span>${q.map(mdInline).join('<br>')}</span><span class="qa-tap">Show answer</span></summary><div class="qa-a">${a.length ? a.map(mdInline).join('<br>') : '<em>No answer written.</em>'}</div></details>`);
+      continue;
+    }
+    if (/^\s*>/.test(line)){                                     // quote / tip box
+      const buf = []; while (i < L.length && /^\s*>/.test(L[i])) buf.push(L[i++].replace(/^\s*>\s?/, ''));
+      out.push(`<blockquote>${mdRender(buf.join('\n'), {inner: true}).html}</blockquote>`); continue;
+    }
+    if (/^\s*\|/.test(line) && i + 1 < L.length && /^\s*\|?\s*:?-{2,}/.test(L[i + 1])){   // table
+      const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const head = cells(line); i += 2; const rows = [];
+      while (i < L.length && /^\s*\|/.test(L[i])) rows.push(cells(L[i++]));
+      out.push(`<div class="g-tbl"><table><thead><tr>${head.map(c => `<th>${mdInline(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${mdInline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+      continue;
+    }
+    if (listRe.test(line)){                                      // lists and checklists
+      let h = '';
+      while (i < L.length && (m = L[i].match(listRe))){
+        const ind = Math.min(4, Math.floor(m[1].replace(/\t/g, '  ').length / 2)), ord = /\d/.test(m[2]);
+        if (m[3] && !opts?.inner){
+          const on = m[4] !== ' ';
+          h += `<li class="g-chk${on ? ' on' : ''}" style="--ind:${ind}"><label><input type="checkbox" data-gl="${i}" ${on ? 'checked' : ''}><span>${mdInline(m[5])}</span></label></li>`;
+        } else h += `<li class="${ord ? 'g-ol' : 'g-ul'}" style="--ind:${ind}"${ord ? ` data-n="${m[2].replace(/\D/g, '')}"` : ''}><span>${mdInline(m[5])}</span></li>`;
+        i++;
+        while (i < L.length && /^\s{2,}\S/.test(L[i]) && !listRe.test(L[i])){ h = h.replace(/<\/span><\/(label><\/)?li>$/, ` ${mdInline(L[i].trim())}</span></$1li>`); i++; }
+      }
+      out.push(`<ul class="g-list">${h}</ul>`); continue;
+    }
+    const buf = [line]; i++;                                     // paragraph
+    while (i < L.length && !/^\s*$/.test(L[i]) && !/^(#{1,4}\s|\s*```|\s*>|\s*\||\s*Q[:.)]|\s*(---+|\*\*\*+)\s*$)/i.test(L[i]) && !listRe.test(L[i])) buf.push(L[i++]);
+    out.push(`<p>${buf.map(x => mdInline(x.trim())).join('<br>')}</p>`);
+  }
+  return {html: out.join('\n'), heads, qn};
+}
+function guideProgress(g){
+  let total = 0, done = 0, qa = 0;
+  String(g.body || '').split('\n').forEach(l => { const m = l.match(/^\s*([-*+]|\d+[.)])\s+\[( |x|X)\]/); if (m){ total++; if (m[2] !== ' ') done++; } if (/^\s*Q[:.)]/i.test(l)) qa++; });
+  return {total, done, qa};
+}
+const guideTask = g => g.title.trim();
+const guideMinutes = g => { const t = guideTask(g).toLowerCase(); return LOG.reduce((n, s) => n + ((s.task || '').trim().toLowerCase() === t ? s.min : 0), 0); };
+function examText(g){
+  if (!g.exam) return '';
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+  const d = new Date(g.exam + 'T00:00'), n = Math.round((d - d0) / 864e5);
+  if (isNaN(n)) return '';
+  return n === 0 ? 'Exam today' : n === 1 ? 'Exam tomorrow' : n > 1 ? `Exam in ${n} days` : `Exam was ${d.toLocaleDateString(undefined, {month:'short', day:'numeric'})}`;
+}
+const examSoon = g => { if (!g.exam) return false; const d0 = new Date(); d0.setHours(0, 0, 0, 0); const n = Math.round((new Date(g.exam + 'T00:00') - d0) / 864e5); return n >= 0 && n <= 7; };
+
+/* ---- importing: Markdown with optional front matter, plain text, or JSON ---- */
+function normDate(v){
+  if (!v) return '';
+  const s = String(v).trim(); if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const t = Date.parse(s); return isNaN(t) ? '' : dayKey(t);
+}
+const normTags = v => (Array.isArray(v) ? v : String(v || '').replace(/^\[|\]$/g, '').split(',')).map(x => String(x).trim().replace(/^["']|["']$/g, '')).filter(Boolean).slice(0, 12);
+function makeGuide(o){
+  const now = Date.now();
+  return {id: gid(), title: String(o.title || 'Untitled guide').trim().slice(0, 120), cls: String(o.cls || o.class || o.course || '').trim().slice(0, 60),
+    exam: normDate(o.exam || o.exam_date || o.examDate || o.due), tags: normTags(o.tags), body: String(o.body || o.content || o.markdown || o.text || ''), created: now, updated: now};
+}
+function parseFront(block){
+  const o = {};
+  block.split('\n').forEach(l => { const m = l.match(/^\s*([A-Za-z_ ]+?)\s*:\s*(.*)$/); if (m) o[m[1].trim().toLowerCase().replace(/\s+/g, '_')] = m[2].trim().replace(/^["']|["']$/g, ''); });
+  return o;
+}
+function parseGuides(text, fileName){
+  text = String(text || '').replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  const base = (fileName || '').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+  // JSON: one guide, a list, or {guides: [...]}
+  if (/^\s*[\[{]/.test(text)){
+    try {
+      const j = JSON.parse(text), arr = Array.isArray(j) ? j : Array.isArray(j.guides) ? j.guides : [j];
+      const out = arr.filter(x => x && typeof x === 'object' && (x.body || x.content || x.markdown || x.text || x.title)).map(makeGuide);
+      if (out.length) return out;
+    } catch(e){}
+  }
+  // Markdown: each "---" front-matter block that names a title starts a new guide
+  const fm = /(^|\n)---[ \t]*\n([\s\S]*?)\n---[ \t]*(\n|$)/g, starts = [];
+  let m; while ((m = fm.exec(text))){ if (/^\s*title\s*:/mi.test(m[2])) starts.push({at: m.index + m[1].length, end: fm.lastIndex, meta: parseFront(m[2])}); }
+  const pieces = starts.length ? starts.map((s, k) => ({meta: s.meta, body: text.slice(s.end, k + 1 < starts.length ? starts[k + 1].at : text.length)}))
+    : [{meta: {}, body: text}];
+  if (starts.length && starts[0].at > 0 && text.slice(0, starts[0].at).trim()) pieces.unshift({meta: {}, body: text.slice(0, starts[0].at)});
+  return pieces.map(p => {
+    let body = p.body.replace(/^\n+|\s+$/g, ''), title = p.meta.title;
+    const h1 = body.match(/^#\s+(.+)\n?/);
+    if (!title && h1) title = h1[1].trim();
+    if (h1 && title && h1[1].trim().toLowerCase() === title.toLowerCase()) body = body.slice(h1[0].length).replace(/^\n+/, '');
+    return makeGuide({...p.meta, title: title || base || 'Imported guide', body});
+  }).filter(g => g.body.trim() || g.title !== 'Imported guide');
+}
+function importGuides(list, replace){
+  let added = 0, replaced = 0;
+  list.forEach(g => {
+    const same = replace && GUIDES.find(x => x.title.toLowerCase() === g.title.toLowerCase() && (x.cls || '').toLowerCase() === (g.cls || '').toLowerCase());
+    if (same){ Object.assign(same, {body: g.body, exam: g.exam || same.exam, tags: g.tags.length ? g.tags : same.tags, updated: Date.now()}); replaced++; }
+    else { GUIDES.push(g); added++; }
+  });
+  saveGuides(); if (added) achBump('guides', added);
+  return {added, replaced};
+}
+function guideToMd(g){
+  const fm = ['---', `title: ${g.title}`]; if (g.cls) fm.push(`class: ${g.cls}`); if (g.exam) fm.push(`exam: ${g.exam}`); if (g.tags.length) fm.push(`tags: ${g.tags.join(', ')}`); fm.push('---', '');
+  return fm.join('\n') + g.body.replace(/\s+$/, '') + '\n';
+}
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'guide';
+
+/* ---- the page: list → one guide → editor ---- */
+function renderGuides(){
+  const el = $('#guidesBody'); if (!el) return;
+  if (!guidesReady){ el.innerHTML = '<p class="hint">Loading your guides…</p>'; return; }
+  if (gEdit) return renderGuideEditor();
+  if (gView && guideById(gView)) return renderGuideView();
+  gView = null;
+  const classes = [...new Set(GUIDES.map(g => g.cls).filter(Boolean))].sort();
+  const q = GF.q.trim().toLowerCase();
+  const shown = GUIDES.filter(g => (GF.cls === 'all' || (GF.cls === '' ? !g.cls : g.cls === GF.cls)) && (!q || (g.title + ' ' + g.cls + ' ' + g.tags.join(' ') + ' ' + g.body).toLowerCase().includes(q)));
+  const groups = {}; shown.forEach(g => (groups[g.cls || ''] || (groups[g.cls || ''] = [])).push(g));
+  const order = Object.keys(groups).sort((a, b) => (a === '') - (b === '') || a.localeCompare(b));
+  const card = g => {
+    const p = guideProgress(g), mins = guideMinutes(g), ex = examText(g);
+    return `<button class="g-card" data-gopen="${g.id}"><span class="g-card-top"><b>${esc(g.title)}</b>${ex ? `<em class="${examSoon(g) ? 'soon' : ''}">${ex}</em>` : ''}</span>
+      ${g.tags.length ? `<span class="g-tags">${g.tags.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}
+      ${p.total ? `<span class="g-prog"><span class="bar2"><i style="width:${p.done / p.total * 100}%"></i></span><small>${p.done}/${p.total} checked</small></span>` : ''}
+      <small class="g-meta">${[p.qa ? `${p.qa} question${p.qa === 1 ? '' : 's'}` : '', mins ? `${fmtMin(mins)} studied` : '', `edited ${new Date(g.updated).toLocaleDateString(undefined, {month:'short', day:'numeric'})}`].filter(Boolean).join(' · ')}</small></button>`;
+  };
+  el.innerHTML = `<div class="g-bar"><input id="gSearch" type="search" placeholder="Search guides" value="${esc(GF.q)}" aria-label="Search guides">
+      <select id="gClass" aria-label="Class"><option value="all">All classes</option>${classes.map(c => `<option ${GF.cls === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}${GUIDES.some(g => !g.cls) ? `<option value="" ${GF.cls === '' ? 'selected' : ''}>No class</option>` : ''}</select>
+      <span class="g-bar-sp"></span><button class="small-btn" data-ga="import">Import</button><button class="small-btn accent" data-ga="new">+ New guide</button></div>
+    ${GUIDES.length ? (shown.length ? order.map(c => `<div class="g-group"><div class="h">${c ? esc(c) : 'No class'} <small class="pf-sub">${groups[c].length}</small></div><div class="g-grid">${groups[c].sort((a, b) => (a.exam || '9') .localeCompare(b.exam || '9') || b.updated - a.updated).map(card).join('')}</div></div>`).join('') : '<p class="hint">No guides match.</p>')
+      : `<div class="card g-empty"><b>No study guides yet</b><p>Write one here, or import guides as Markdown, text or JSON files. Ask Claude to “make a Focus Bench study guide” on any topic, then import the file it gives you.</p><div class="g-empty-btns"><button class="small-btn accent" data-ga="new">+ New guide</button><button class="small-btn" data-ga="import">Import</button><button class="small-btn" data-ga="sample">Add a sample guide</button></div></div>`}`;
+}
+function renderGuideView(){
+  const g = guideById(gView), r = mdRender(g.body), p = guideProgress(g), mins = guideMinutes(g), ex = examText(g);
+  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-ga="back">← All guides</button><span class="g-bar-sp"></span>
+      <button class="small-btn accent" data-ga="study">▶ Study this</button><button class="small-btn" data-ga="edit">Edit</button><button class="small-btn" data-ga="export">Export</button><button class="small-btn" data-ga="del">Delete</button></div>
+    <div class="g-view">
+      <article class="card g-doc"><header class="g-head"><h2>${esc(g.title)}</h2><div class="g-sub">${g.cls ? `<span class="g-cls">${esc(g.cls)}</span>` : ''}${ex ? `<span class="g-ex${examSoon(g) ? ' soon' : ''}">${ex}</span>` : ''}${g.tags.map(t => `<i class="g-tag">${esc(t)}</i>`).join('')}</div></header>
+        <div class="g-md" data-gid="${g.id}">${r.html || '<p class="hint">This guide is empty. Click Edit to write it.</p>'}</div></article>
+      <aside class="g-side">
+        <div class="card"><div class="h first">Progress</div><div class="pf-kv">
+          ${p.total ? `<span><b>${p.done}/${p.total}</b><small>checklist done</small></span>` : ''}${r.qn ? `<span><b>${r.qn}</b><small>questions</small></span>` : ''}<span><b>${mins ? fmtMin(mins) : '0m'}</b><small>studied</small></span></div>
+          ${p.total ? `<span class="bar2 g-bigbar"><i style="width:${p.done / p.total * 100}%"></i></span>` : ''}
+          ${r.qn ? `<div class="g-qa-btns"><button class="small-btn" data-ga="qa-open">Show all answers</button><button class="small-btn" data-ga="qa-close">Hide all</button></div>` : ''}
+          ${p.total ? `<button class="link-btn" data-ga="uncheck">Uncheck everything</button>` : ''}</div>
+        ${r.heads.length > 2 ? `<div class="card"><div class="h first">Contents</div><nav class="g-toc">${r.heads.map(h => `<a href="#${h.id}" data-gh="${h.id}" style="--lv:${h.lv}">${esc(h.text)}</a>`).join('')}</nav></div>` : ''}
+      </aside>
+    </div>`;
+}
+const MD_HELP = `<details class="g-help"><summary>Formatting help</summary><div><code># Heading</code> <code>**bold**</code> <code>*italic*</code> <code>==highlight==</code> <code>- bullet</code> <code>1. numbered</code> <code>- [ ] checklist item</code> <code>&gt; tip box</code> <code>\`code\`</code> <code>| table | row |</code><br>Flashcards: a line starting <code>Q:</code> followed by a line starting <code>A:</code>. The answer stays hidden until clicked.</div></details>`;
+function renderGuideEditor(){
+  const g = gEdit;
+  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-ga="cancel">Cancel</button><span class="g-bar-sp"></span><button class="small-btn accent" data-ga="save">Save guide</button></div>
+    <div class="card g-ed">
+      <div class="g-ed-meta"><label class="g-f-title">Title<input id="geTitle" maxlength="120" value="${esc(g.title)}" placeholder="ACCT 200 · Exam 2 review"></label>
+        <label>Class<input id="geCls" maxlength="60" value="${esc(g.cls)}" placeholder="ACCT 200" list="geClsList"><datalist id="geClsList">${[...new Set(GUIDES.map(x => x.cls).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join('')}</datalist></label>
+        <label>Exam date<input id="geExam" type="date" value="${esc(g.exam)}"></label>
+        <label class="g-f-tags">Tags<input id="geTags" value="${esc(g.tags.join(', '))}" placeholder="chapters 4–7, formulas"></label></div>
+      <div class="g-tools" role="toolbar" aria-label="Formatting">${[['h','H','Heading'],['b','<b>B</b>','Bold'],['i','<i>I</i>','Italic'],['hl','<mark>H</mark>','Highlight'],['ul','• List','Bullet list'],['ol','1. List','Numbered list'],['chk','☐ Checklist','Checklist item'],['qa','Q&amp;A','Flashcard question'],['quote','❝ Tip','Tip box'],['tbl','Table','Table']].map(([k, l, t]) => `<button class="small-btn" data-gt="${k}" title="${t}">${l}</button>`).join('')}</div>
+      <div class="g-ed-split"><textarea id="geBody" spellcheck="true" placeholder="Write your guide here.">${esc(g.body)}</textarea><div class="g-md g-prev" id="gePrev"></div></div>
+      ${MD_HELP}
+    </div>`;
+  geUpdatePreview();
+  $('#geTitle').focus();
+}
+function geUpdatePreview(){ const b = $('#geBody'), pv = $('#gePrev'); if (b && pv) pv.innerHTML = mdRender(b.value).html || '<p class="hint">Preview shows up here.</p>'; }
+function geWrap(kind){
+  const ta = $('#geBody'), a = ta.selectionStart, b = ta.selectionEnd, v = ta.value, sel = v.slice(a, b);
+  const lineStart = v.lastIndexOf('\n', a - 1) + 1;
+  const wrap = (l, r, ph) => { const t = sel || ph; ta.setRangeText(l + t + r, a, b, 'end'); if (!sel){ ta.selectionStart = a + l.length; ta.selectionEnd = a + l.length + t.length; } };
+  const prefix = p => { const lines = (sel || 'Item').split('\n'), out = lines.map((x, k) => (typeof p === 'function' ? p(k) : p) + x).join('\n'); ta.setRangeText((a === lineStart ? '' : '\n') + out, a, b, 'end'); };
+  ({h: () => prefix('## '), b: () => wrap('**', '**', 'bold text'), i: () => wrap('*', '*', 'italic text'), hl: () => wrap('==', '==', 'key term'),
+    ul: () => prefix('- '), ol: () => prefix(k => `${k + 1}. `), chk: () => prefix('- [ ] '), quote: () => prefix('> '),
+    qa: () => ta.setRangeText(`${a === lineStart ? '' : '\n'}\nQ: ${sel || 'Question?'}\nA: Answer\n`, a, b, 'end'),
+    tbl: () => ta.setRangeText(`${a === lineStart ? '' : '\n'}\n| Term | Meaning |\n| --- | --- |\n| | |\n`, a, b, 'end')})[kind]();
+  ta.focus(); geUpdatePreview();
+}
+function gEditorSave(){
+  const t = $('#geTitle').value.trim();
+  if (!t){ toast('Give the guide a title.'); $('#geTitle').focus(); return; }
+  const isNew = !guideById(gEdit.id);
+  Object.assign(gEdit, {title: t, cls: $('#geCls').value.trim(), exam: $('#geExam').value, tags: normTags($('#geTags').value), body: $('#geBody').value, updated: Date.now()});
+  if (isNew){ GUIDES.push(gEdit); achBump('guides'); }
+  else Object.assign(guideById(gEdit.id), gEdit);
+  saveGuides(); gView = gEdit.id; gEdit = null; renderGuides(); renderGuideSlot(); toast('Guide saved');
+}
+function toggleCheck(g, lineNo, on){
+  const L = g.body.split('\n'); if (!L[lineNo]) return;
+  L[lineNo] = L[lineNo].replace(/\[( |x|X)\]/, on ? '[x]' : '[ ]');
+  g.body = L.join('\n'); g.updated = Date.now(); saveGuides();
+  const p = guideProgress(g);
+  if (on && p.total && p.done === p.total){ if (!g.doneOnce){ g.doneOnce = 1; achBump('guideDone'); } toast(`Everything checked off in “${g.title}”.`); fx.burst(); }
+}
+function downloadText(name, text){
+  const url = URL.createObjectURL(new Blob([text], {type: 'text/markdown'}));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function studyGuide(g){
+  const t = $('#task'); t.value = guideTask(g); t.dispatchEvent(new Event('input', {bubbles: true})); t.dispatchEvent(new Event('change', {bubbles: true}));
+  P.focusGuide = g.id; saveP(); achBump('guideStudy');
+  showPage('focus'); renderGuideSlot();
+  toast(`Task set to “${guideTask(g)}”. Press Start when you're ready.`);
+}
+const SAMPLE_GUIDE = `---
+title: How study guides work
+class: Focus Bench
+tags: example
+---
+Study guides are written in **Markdown**. Import them as files, or write them here.
+
+## Checklists
+- [x] Open this sample
+- [ ] Check off a box (it saves right away)
+- [ ] Press **Study this** to time a session for this guide
+
+## Flashcards
+Q: What does a line starting with Q: make?
+A: A flashcard. The answer stays hidden until you click it.
+
+Q: Where do answers go?
+A: On the line right after the question, starting with A:
+
+## Everything else
+> Tip boxes start with >, and ==highlights== use double equals signs.
+
+| Syntax | Result |
+| --- | --- |
+| \`**bold**\` | **bold** |
+| \`- [ ] item\` | a checklist item |
+`;
+
+/* ---- import dialog ---- */
+function openImport(){
+  gImportFound = [];
+  $('#gImpBody').innerHTML = `<h3 id="gImpTitle">Import study guides</h3>
+    <p class="hint">Markdown (.md), plain text (.txt) or JSON (.json). One file can hold several guides: start each with its own front matter block.</p>
+    <div class="g-imp-row"><label class="small-btn accent g-file">Choose files<input type="file" id="gImpFile" accept=".md,.markdown,.txt,.json,text/markdown,text/plain,application/json" multiple hidden></label><span class="hint">or paste below</span></div>
+    <textarea id="gImpText" placeholder="---\ntitle: ACCT 200 · Exam 2 review\nclass: ACCT 200\nexam: 2026-11-20\ntags: chapters 4–7\n---\n## Chapter 4\n- [ ] Know the accrual basis\nQ: What is an adjusting entry?\nA: …"></textarea>
+    <label class="g-imp-chk"><input type="checkbox" id="gImpReplace" checked> Update guides with the same title and class instead of adding copies</label>
+    <div id="gImpFound" class="g-imp-found"></div>
+    <div class="g-imp-btns"><button class="small-btn" data-gi="cancel">Cancel</button><button class="small-btn accent" data-gi="go" disabled>Import</button></div>
+    <details class="g-help"><summary>The format, for writing guides elsewhere</summary><pre>${esc(`---
+title: Guide title            (required)
+class: ACCT 200               (optional)
+exam: 2026-11-20              (optional, YYYY-MM-DD)
+tags: chapter 4, formulas     (optional, comma separated)
+---
+## Section heading
+Normal text, **bold**, *italic*, ==highlight==
+- bullet            1. numbered
+- [ ] checklist item (- [x] for already done)
+> tip box
+| table | header |
+| --- | --- |
+Q: Flashcard question
+A: Its answer`)}</pre></details>`;
+  $('#gImpModal').hidden = false;
+  const show = () => {
+    const n = gImportFound.length, btn = $('#gImpModal [data-gi="go"]');
+    $('#gImpFound').innerHTML = n ? `<b>${n} guide${n === 1 ? '' : 's'} found</b><ul>${gImportFound.map(g => { const p = guideProgress(g), ex = GUIDES.some(x => x.title.toLowerCase() === g.title.toLowerCase() && (x.cls || '').toLowerCase() === (g.cls || '').toLowerCase());
+      return `<li><b>${esc(g.title)}</b>${g.cls ? ` · ${esc(g.cls)}` : ''}${g.exam ? ` · exam ${esc(g.exam)}` : ''}<small>${[p.total ? `${p.total} checklist items` : '', p.qa ? `${p.qa} questions` : '', ex ? 'already exists' : 'new'].filter(Boolean).join(' · ')}</small></li>`; }).join('')}</ul>` : '';
+    btn.disabled = !n; btn.textContent = n ? `Import ${n} guide${n === 1 ? '' : 's'}` : 'Import';
+  };
+  $('#gImpText').oninput = () => { gImportFound = $('#gImpText').value.trim() ? parseGuides($('#gImpText').value) : []; show(); };
+  $('#gImpFile').onchange = e => {
+    const files = [...e.target.files]; if (!files.length) return;
+    Promise.all(files.map(f => f.text().then(t => parseGuides(t, f.name)))).then(lists => { gImportFound = lists.flat(); $('#gImpText').value = ''; show(); if (!gImportFound.length) toast("Couldn't find a guide in that file."); });
+  };
+  setTimeout(() => $('#gImpText').focus(), 30);
+}
+$('#gImpModal').addEventListener('click', e => {
+  if (e.target === $('#gImpModal') || e.target.closest('.x') || e.target.closest('[data-gi="cancel"]')){ $('#gImpModal').hidden = true; return; }
+  if (e.target.closest('[data-gi="go"]')){
+    const {added, replaced} = importGuides(gImportFound, $('#gImpReplace').checked);
+    $('#gImpModal').hidden = true; gView = gImportFound.length === 1 ? (guideById(gImportFound[0].id) ? gImportFound[0].id : (GUIDES.find(x => x.title === gImportFound[0].title) || {}).id) : null;
+    renderGuides(); renderGuideSlot();
+    toast([added ? `Imported ${added} guide${added === 1 ? '' : 's'}` : '', replaced ? `updated ${replaced}` : ''].filter(Boolean).join(', ') + '.');
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#gImpModal').hidden = true; });
+
+/* ---- events on the page ---- */
+$('#page-guides').addEventListener('click', e => {
+  const open = e.target.closest('[data-gopen]'); if (open){ gView = open.dataset.gopen; renderGuides(); window.scrollTo(0, 0); return; }
+  const th = e.target.closest('[data-gh]'); if (th){ e.preventDefault(); const t = document.getElementById(th.dataset.gh); t && t.scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); return; }
+  const tool = e.target.closest('[data-gt]'); if (tool){ geWrap(tool.dataset.gt); return; }
+  const b = e.target.closest('[data-ga]'); if (!b) return;
+  const a = b.dataset.ga, g = gView && guideById(gView);
+  if (a === 'new'){ gEdit = makeGuide({title: '', body: ''}); gEdit.title = ''; renderGuides(); }
+  else if (a === 'import') openImport();
+  else if (a === 'sample'){ importGuides(parseGuides(SAMPLE_GUIDE), false); renderGuides(); }
+  else if (a === 'back'){ gView = null; renderGuides(); }
+  else if (a === 'edit' && g){ gEdit = {...g, tags: [...g.tags]}; renderGuides(); }
+  else if (a === 'cancel'){ gEdit = null; renderGuides(); }
+  else if (a === 'save') gEditorSave();
+  else if (a === 'study' && g) studyGuide(g);
+  else if (a === 'export' && g){
+    const md = guideToMd(g);
+    if (window.top !== window){ try { navigator.clipboard.writeText(md).then(() => toast('Guide copied as Markdown.'), () => toast("Couldn't copy here.")); } catch(err){} }
+    else { downloadText(`${slug(g.title)}.md`, md); toast(`Saved ${slug(g.title)}.md`); }
+  }
+  else if (a === 'del' && g){
+    if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Click again to delete'; b.classList.add('danger'); setTimeout(() => { if (b.isConnected){ delete b.dataset.sure; b.textContent = 'Delete'; b.classList.remove('danger'); } }, 3500); return; }
+    GUIDES = GUIDES.filter(x => x.id !== g.id); if (P.focusGuide === g.id){ P.focusGuide = null; saveP(); }
+    saveGuides(); gView = null; renderGuides(); renderGuideSlot(); toast('Guide deleted.');
+  }
+  else if ((a === 'qa-open' || a === 'qa-close')) document.querySelectorAll('#page-guides details.qa').forEach(d => d.open = a === 'qa-open');
+  else if (a === 'uncheck' && g){ g.body = g.body.replace(/^(\s*([-*+]|\d+[.)])\s+)\[(x|X)\]/gm, '$1[ ]'); g.updated = Date.now(); saveGuides(); renderGuides(); }
+});
+$('#page-guides').addEventListener('input', e => {
+  if (e.target.id === 'geBody'){ clearTimeout(geUpdatePreview.t); geUpdatePreview.t = setTimeout(geUpdatePreview, 150); }
+  if (e.target.id === 'gSearch'){ GF.q = e.target.value; const pos = e.target.selectionStart; renderGuides(); const s = $('#gSearch'); s.focus(); s.setSelectionRange(pos, pos); }
+});
+$('#page-guides').addEventListener('change', e => {
+  if (e.target.id === 'gClass'){ GF.cls = e.target.value; renderGuides(); }
+  const c = e.target.closest('[data-gl]'); if (c){ const g = guideById(c.closest('[data-gid]').dataset.gid); if (g){ toggleCheck(g, +c.dataset.gl, c.checked); renderGuides(); } }
+});
+$('#page-guides').addEventListener('keydown', e => { if (e.target.id === 'geBody' && (e.ctrlKey || e.metaKey) && e.key === 's'){ e.preventDefault(); gEditorSave(); } });
+
+/* ---- the guide you're studying, on the Focus page ---- */
+function renderGuideSlot(){
+  const el = $('#guideSlot'); if (!el) return;
+  const g = P.focusGuide && guideById(P.focusGuide);
+  if (!g){ el.innerHTML = ''; return; }
+  const p = guideProgress(g), r = mdRender(g.body);
+  el.innerHTML = `<div class="card g-slot"><div class="g-slot-head"><span class="h first">Study guide</span><button class="link-btn" data-gs="open">Open</button><button class="x" data-gs="close" aria-label="Close the guide">×</button></div>
+    <b class="g-slot-title">${esc(g.title)}</b>${p.total ? `<span class="g-prog"><span class="bar2"><i style="width:${p.done / p.total * 100}%"></i></span><small>${p.done}/${p.total}</small></span>` : ''}
+    <div class="g-md g-slot-md" data-gid="${g.id}">${r.html}</div></div>`;
+}
+$('#guideSlot').addEventListener('click', e => {
+  const b = e.target.closest('[data-gs]'); if (!b) return;
+  if (b.dataset.gs === 'close'){ P.focusGuide = null; saveP(); renderGuideSlot(); }
+  else { gView = P.focusGuide; gEdit = null; showPage('guides'); }
+});
+$('#guideSlot').addEventListener('change', e => {
+  const c = e.target.closest('[data-gl]'); if (!c) return;
+  const g = guideById(c.closest('[data-gid]').dataset.gid); if (g){ toggleCheck(g, +c.dataset.gl, c.checked); renderGuideSlot(); }
+});
+loadGuides();
+
 /* showcase picking on the Awards page */
 $('#pane-awards').addEventListener('click', e => {
   const s = e.target.closest('[data-star]'); if (!s) return;
@@ -4412,6 +4895,7 @@ $('#pane-awards').addEventListener('click', e => {
 });
 $('#pane-awards').addEventListener('click', e => { if (e.target.closest('[data-act="sc-auto"]')){ R.showcase = null; saveRanked(); renderAwards(); } });
 function onPageShown(name){
+  if (name === 'guides') renderGuides();
   if (name === 'profile'){ if (profWho == null){ showPage('ranked'); return; } renderProfilePage(); }
   if (name === 'leaders'){ renderLeaders(); if (!lbPts) ensureBotPoints(() => { if (!$('#page-leaders').hidden) renderLeaders(); }); }
   if (name === 'ranked'){ renderRanked(); computeRarity(() => { if (!$('#page-ranked').hidden) renderRanked(); }); }
@@ -4565,7 +5049,7 @@ function showPage(name, sec){
     p.hidden = !on;
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.dataset.page === name ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
-  $('#moreBtn').classList.toggle('on', ['music','notes','settings'].includes(name) || (name === 'leaders' && matchMedia('(max-width:760px)').matches));
+  $('#moreBtn').classList.toggle('on', ['guides','music','notes','settings'].includes(name) || (name === 'leaders' && matchMedia('(max-width:760px)').matches));
   $('#nav').classList.remove('more-open');
   $('#pageTitle').textContent = el.dataset.title;
   document.body.dataset.page = name;
