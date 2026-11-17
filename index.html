@@ -115,6 +115,59 @@ button{cursor:pointer}
 .av.sm{width:28px;height:28px;font-size:11px}.av.lg{width:60px;height:60px;font-size:22px}
 .av.me{background:var(--accent);color:var(--on-accent);font-size:11px}
 .av.me.sm{font-size:9px}
+.av.me.hue{background:hsl(var(--h) 52% 44%);color:#fff}.av.me.named{font-size:14px}.av.me.named.sm{font-size:11px}.av.me.named.lg{font-size:22px}
+.av.xl{width:84px;height:84px;font-size:30px}.av.me.named.xl{font-size:30px}.av.me.xl:not(.named){font-size:22px}
+.me-btn{border:0;background:none;padding:0;border-radius:50%;display:inline-flex;cursor:pointer}
+.me-btn:hover .av{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+.m-p[data-me]{cursor:pointer}
+.small-btn.accent{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+#botModal .modal-card{width:min(580px,100%)}
+.pf-top{display:flex;gap:14px;align-items:center}
+.pf-top>div{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.pf-top b{font-size:19px}.pf-top small{color:var(--muted)}
+.pf-hero .pf-top b{font-size:26px}
+.pf-editbtn{align-self:flex-start}
+.pf-para{display:flex;align-items:center;gap:6px;margin:10px 0 0;font-size:13px;font-weight:600;color:#c48a00}
+.pf-sub{font-size:11px;letter-spacing:0;text-transform:none;color:var(--muted);font-weight:500;margin-left:6px}
+.pf-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+.pf-edit{display:flex;flex-direction:column;gap:10px;margin:14px 0 6px;padding:12px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--bg)}
+.pf-edit label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
+.pf-edit input{font:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:calc(var(--r-ctl) * .75);padding:7px 10px}
+.pf-hues{display:flex;gap:7px;flex-wrap:wrap}
+.pf-hues button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;padding:0;cursor:pointer;box-shadow:inset 0 0 0 2px var(--surface)}
+.pf-hues button[aria-checked="true"]{border-color:var(--ink)}
+.pf-edit-btns{display:flex;gap:8px}
+.hm{display:block;border-radius:3px;background:var(--soft)}
+.hm.l-1{background:transparent}
+.hm.l1{background:color-mix(in srgb,var(--accent) 30%,var(--soft))}
+.hm.l2{background:color-mix(in srgb,var(--accent) 62%,var(--soft))}
+.hm.l3{background:var(--accent)}
+.hm-strip{display:grid;grid-template-columns:repeat(28,1fr);gap:3px;margin-top:8px}
+.hm-strip .hm{aspect-ratio:1}
+.pf-bar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.pf-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+.pf-main,.pf-side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.pf-hero .bdgs.lg{margin-top:14px}
+.pf-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:10px}
+.pf-stats span,.pf-kv span{display:flex;flex-direction:column;background:var(--bg);border-radius:var(--r-ctl);padding:10px 12px}
+.pf-stats b,.pf-kv b{font-size:18px;font-variant-numeric:tabular-nums}.pf-stats small,.pf-kv small{font-size:12px;color:var(--muted)}
+.pf-kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:10px}
+.hm-cal{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;gap:4px 6px;margin-top:12px}
+.hm-months{grid-column:2;display:grid;grid-template-columns:repeat(26,1fr);gap:3px;font-size:11px;color:var(--muted);white-space:nowrap}
+.hm-days{grid-row:2;display:grid;grid-template-rows:repeat(7,1fr);gap:3px;font-size:10px;color:var(--muted);align-items:center}
+.hm-grid{grid-row:2;grid-column:2;display:grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;grid-auto-columns:1fr;gap:3px}
+.hm-grid .hm{aspect-ratio:1}
+.hm-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+.hm-legend{display:inline-flex;align-items:center;gap:5px}.hm-legend .hm{width:11px;height:11px;margin-left:6px}.hm-legend .hm:first-child{margin-left:0}
+.pf-dots{display:flex;gap:5px;margin-top:12px;flex-wrap:wrap}
+.pf-dots i{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:11px;font-weight:700;color:#fff}
+.pf-dots .d-W{background:#1f9d55}.pf-dots .d-L{background:#d64545}.pf-dots .d-D{background:#8a919e}
+.pf-h2h li{grid-template-columns:22px minmax(0,1fr) auto 3em!important}
+.pf-ach-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pf-ach-h .seg{letter-spacing:0;text-transform:none}
+.pf-tier{margin-top:12px}.pf-tier>span{font-size:12px;font-weight:700;display:block;margin-bottom:6px}
+.pf-lb button{cursor:pointer}
+@media (max-width:1000px){.pf-grid{grid-template-columns:1fr}}
 .bot-tag{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 4px;vertical-align:2px}
 .bdgs{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
 .bdg{display:inline-flex;cursor:help;border-radius:50%}
@@ -224,7 +277,7 @@ body:not(.m-off) .live-dot::before{animation:flicker 1.4s ease-in-out infinite}
 .ladder{list-style:none;margin:8px 0 0;padding:0}
 .ladder li{display:grid;grid-template-columns:5.4em 1em auto minmax(0,1fr) 24px 16px 3.2em;gap:8px;align-items:center;padding:6px 6px;border-radius:8px;font-size:13px;cursor:pointer}
 .ladder li:hover{background:var(--soft)}
-.ladder li.me{background:color-mix(in srgb,var(--accent) 13%,transparent);cursor:default;font-weight:700}
+.ladder li.me{background:color-mix(in srgb,var(--accent) 13%,transparent);cursor:pointer;font-weight:700}
 .ladder .pl{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
 .ladder .mv{font-size:9px}.mv.up{color:#1f9d55}.mv.dn{color:#d64545}
 .ladder .who{display:flex;flex-direction:column;min-width:0}
@@ -296,7 +349,7 @@ body:not(.m-off) .live-dot::before{animation:flicker 1.4s ease-in-out infinite}
 .lb-row.m1,.lb-row.m2,.lb-row.m3{background:color-mix(in srgb,var(--mc) 12%,transparent)}
 .lb-row.m1{--mc:#d4a11a}.lb-row.m2{--mc:#8d99aa}.lb-row.m3{--mc:#b87333}
 .lb-row.m1 .pl,.lb-row.m2 .pl,.lb-row.m3 .pl{color:#fff;background:var(--mc);border-radius:99px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;justify-self:center;font-size:13px}
-.lb-row.me{background:color-mix(in srgb,var(--accent) 14%,transparent);cursor:default;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent)}
+.lb-row.me{background:color-mix(in srgb,var(--accent) 14%,transparent);cursor:pointer;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent)}
 .lb-gap{text-align:center;color:var(--muted);letter-spacing:.3em;padding:2px 0}
 .lb-wait{color:var(--muted);padding:14px 4px}
 .lb-actions{display:flex;gap:8px;margin-top:12px}
@@ -838,7 +891,7 @@ body.m-off .ach-pop{animation:none!important}
           <div class="sw-row" id="streakWeek"></div>
           <p id="streakMsg"></p>
           <small>A day counts once you've studied 10 minutes.</small>
-        </div></div><span class="today-min"><b id="todayMin">0m</b> today</span><span class="dots" id="goalDots" title="Daily goal"></span><button class="rank-chip" id="rankChip" data-go="ranked" hidden></button><button class="ach-btn" id="achBtn" title="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><b>0</b><span>/0</span></button></div>
+        </div></div><span class="today-min"><b id="todayMin">0m</b> today</span><span class="dots" id="goalDots" title="Daily goal"></span><button class="rank-chip" id="rankChip" data-go="ranked" hidden></button><button class="me-btn" id="meBtn" title="Your profile" aria-label="Your profile"></button><button class="ach-btn" id="achBtn" title="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><b>0</b><span>/0</span></button></div>
     </header>
 
     <section class="page page-focus" id="page-focus" data-title="Focus">
@@ -978,6 +1031,8 @@ body.m-off .ach-pop{animation:none!important}
         <div class="card lb-side"><div class="h first">Your standings</div><ul class="lb-mine" id="lbMine"></ul><p class="hint">Out of 250,000 players: you and 249,999 bots. Your numbers update as you study.</p></div>
       </div>
     </section>
+
+    <section class="page" id="page-profile" data-title="Profile" hidden><div id="profBody"></div></section>
 
     <section class="page" id="page-awards" data-title="Awards" hidden>
       <div class="card" id="pane-awards">
@@ -3666,7 +3721,9 @@ document.addEventListener('focusout', e => { if (e.target.closest && e.target.cl
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideBadgeTip(); });
 addEventListener('scroll', hideBadgeTip, true);
 function avatar(b, cls){ return `<span class="av ${cls || ''}" style="--h:${b.hue}" aria-hidden="true">${esc(b.ini)}</span>`; }
-const myAvatar = cls => `<span class="av me ${cls || ''}" aria-hidden="true">You</span>`;
+const myName = () => ((P.myName || '').trim() || 'You');
+const myIni = () => { const n = (P.myName || '').trim(); if (!n) return 'You'; const w = n.replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/).filter(Boolean); return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || n).slice(0, 2)).toUpperCase(); };
+const myAvatar = cls => `<span class="av me ${cls || ''}${P.myHue != null ? ' hue' : ''}${(P.myName || '').trim() ? ' named' : ''}"${P.myHue != null ? ` style="--h:${P.myHue}"` : ''} aria-hidden="true">${esc(myIni())}</span>`;
 
 /* matchmaking */
 function findOpponent(){
@@ -3802,7 +3859,7 @@ function renderMatch(fresh){
   slot.innerHTML = `<div class="card match${fresh ? ' found' : ''}${live ? '' : ' over'}">
     <div class="m-head"><span class="h first">${c.pl ? `Placement match ${c.pl} of 5` : 'Ranked match'}</span>${live ? '<span class="live-dot">Live</span>' : ''}</div>
     <div class="m-players">
-      <div class="m-p">${myAvatar()}<span class="m-n"><b>You</b><small>${emblem(rankOf(c.mmr0), 'xs')} ${rankOf(c.mmr0).full} · ${c.mmr0.toLocaleString()}</small><span class="bdgs">${c.mine.map(id => badgeHtml(id)).join('')}</span></span></div>
+      <div class="m-p" data-me>${myAvatar()}<span class="m-n"><b>${esc(myName())}</b><small>${emblem(rankOf(c.mmr0), 'xs')} ${rankOf(c.mmr0).full} · ${c.mmr0.toLocaleString()}</small><span class="bdgs">${c.mine.map(id => badgeHtml(id)).join('')}</span></span></div>
       <span class="vs">VS</span>
       <div class="m-p them" data-bot="${c.b}">${avatar(B)}<span class="m-n"><b>${esc(B.name)} <i class="bot-tag">bot</i></b><small>${emblem(brk, 'xs')} ${brk.full} · ${c.br.toLocaleString()}</small><span class="bdgs">${c.feat.map(id => badgeHtml(id)).join('')}</span></span></div>
     </div>
@@ -3854,7 +3911,7 @@ function renderRanked(){
     return `<li data-bot="${i}"${para ? ' class="para-row"' : ''}><span class="pl">#${place.toLocaleString()}</span><span class="mv ${mv > 0 ? 'up' : mv < 0 ? 'dn' : ''}">${mv > 0 ? '▲' : mv < 0 ? '▼' : ''}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)}</b><small>${B.style}${rec ? ` · ${i === nem ? 'nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'rival' : 'played'} ${rec[0]}–${rec[1]}` : ''}</small></span>${feat ? badgeHtml(feat) : '<span></span>'}${emblem(rkOf(i), 'xs')}<span class="rt">${r.toLocaleString()}</span></li>`; };
   let lad = '';
   for (let k = from; k < pos; k++) lad += row(order[k], k + 1);
-  lad += `<li class="me"><span class="pl">#${(pos + 1).toLocaleString()}</span><span class="mv"></span>${myAvatar('sm')}<span class="who"><b>You</b><small>${rk.sh}</small></span>${myFeatured()[0] ? badgeHtml(myFeatured()[0]) : '<span></span>'}${emblem(rk, 'xs')}<span class="rt">${R.mmr.toLocaleString()}</span></li>`;
+  lad += `<li class="me" data-me><span class="pl">#${(pos + 1).toLocaleString()}</span><span class="mv"></span>${myAvatar('sm')}<span class="who"><b>${esc(myName())}</b><small>${rk.sh}</small></span>${myFeatured()[0] ? badgeHtml(myFeatured()[0]) : '<span></span>'}${emblem(rk, 'xs')}<span class="rt">${R.mmr.toLocaleString()}</span></li>`;
   for (let k = pos; k < to; k++) lad += row(order[k], k + 2);
   $('#rkLadder').innerHTML = lad;
   $('#rkLadderPos').textContent = `#${(pos + 1).toLocaleString()} of ${(ROSTER_N + 1).toLocaleString()}`;
@@ -3877,7 +3934,7 @@ function renderParaCard(){
   const dur = ms => ms >= 864e5 ? `${Math.floor(ms / 864e5)} day${ms >= 1728e5 ? 's' : ''}` : ms >= 36e5 ? `${Math.floor(ms / 36e5)}h` : `${Math.max(1, Math.floor(ms / 6e4))}m`;
   if (h == null){ el.innerHTML = `<div class="h first">Paragon</div><div class="para-in">${emblem(PARAGON, 'md')}<span><b>Vacant</b><small>No one has reached ${LAUREATE_MIN.toLocaleString()} Elo. The first Laureate to lead the ladder claims it.</small></span></div>`; return; }
   const me = h === ME, B = me ? null : BOTS[h], r = me ? R.mmr : botRating(h);
-  el.innerHTML = `<div class="h first">Current Paragon</div><div class="para-in${me ? '' : ' click'}"${me ? '' : ` data-bot="${h}"`}>${emblem(PARAGON, 'md')}${me ? myAvatar() : avatar(B)}<span><b>${me ? 'You' : esc(B.name)}${me ? '' : ' <i class="bot-tag">bot</i>'}</b><small>${r.toLocaleString()} Elo · reigning ${dur(since)}</small></span></div><p class="hint">The single highest-rated player of all. Only one player holds it at a time.</p>`;
+  el.innerHTML = `<div class="h first">Current Paragon</div><div class="para-in click"${me ? ' data-me' : ` data-bot="${h}"`}>${emblem(PARAGON, 'md')}${me ? myAvatar() : avatar(B)}<span><b>${me ? esc(myName()) : esc(B.name)}${me ? '' : ' <i class="bot-tag">bot</i>'}</b><small>${r.toLocaleString()} Elo · reigning ${dur(since)}</small></span></div><p class="hint">The single highest-rated player of all. Only one player holds it at a time.</p>`;
 }
 function renderEloChart(){
   const el = $('#rkChart'), pts = R.hist.slice(0, 100).reverse().map(h => h.m);
@@ -3912,21 +3969,175 @@ $('#rkOn').onchange = e => {
 };
 document.addEventListener('click', e => { const b = e.target.closest('#page-ranked [data-bot], .lnk[data-bot]'); if (b && !e.target.closest('.bdg')) openBot(+b.dataset.bot); });
 
-/* bot profile */
-function openBot(i){
-  const B = BOTS[i], r = botRating(i), rk = rkOf(i), rec = R.rec[i], got = rareSort(botBadges(i)), feat = botFeatured(i), o = i * BF;
-  const lastM = R.hist.find(h => h.b === i), nem = nemesis();
-  $('#botModalBody').innerHTML = `<div class="bm-top">${avatar(B, 'lg')}<div><b id="bmName">${esc(B.name)} <i class="bot-tag">bot</i></b><span>${emblem(rk, 'xs')} ${rk.full} · ${r.toLocaleString()} Elo</span><small>${B.style} · ${B.peak} · ${esc(B.subject)}</small></div></div>
-    <p class="bm-bio">“${esc(B.bio)}”</p>
-    <div class="bm-grid"><span><b>~${fmtMin(Math.round(typical(r) * B.sitMul))}</b><small>typical sitting</small></span><span><b>${fmtMin(BS[o+F.total]).replace(/ \d+m$/, '')}</b><small>studied in total</small></span><span><b>${BS[o+F.best]}</b><small>best streak (days)</small></span>
-      <span><b>${rec ? `${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}` : '–'}</b><small>${rec ? (i === nem ? 'your record · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'your record · rival' : 'your record') : 'not played yet'}</small></span></div>
-    ${lastM ? `<p class="hint">Last match: ${{W:'you won', L:'you lost', D:'draw'}[lastM.r]}, ${fmtMin(lastM.you)} vs ${fmtMin(lastM.them)}, ${new Date(lastM.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}.</p>` : ''}
-    <div class="h">Featured badges</div><div class="bdgs lg">${feat.map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('')}</div>
-    <div class="h">All achievements · ${got.length}/${ACHS.length}</div><div class="bdgs wrap">${got.map(id => badgeHtml(id)).join('')}</div>`;
-  $('#botModal').hidden = false; $('#botModal .x').focus();
+/* ---------- profiles: a popup for anyone, which opens into a full page ---------- */
+let profPrev = 'ranked', profWho = null, profFilter = 'all', profEditing = false;
+const PROFILE_HUES = [null, 0, 22, 42, 95, 150, 180, 205, 228, 262, 292, 330];
+const isBotW = w => w !== ME;
+function pName(w){ return w === ME ? myName() : BOTS[w].name; }
+function pAvatar(w, cls){ return w === ME ? myAvatar(cls) : avatar(BOTS[w], cls); }
+// study numbers for anyone, in one shape
+function pStats(w){
+  if (w === ME){
+    const t = myTotals(), wk = {}, mo = {};
+    LOG.forEach(x => { const d = new Date(x.t), w0 = dayKey(startOfWeek(d)), m0 = dayKey(d).slice(0, 7); wk[w0] = (wk[w0] || 0) + x.min; mo[m0] = (mo[m0] || 0) + x.min; });
+    return {total: t.total, sessions: t.sessions, days: t.days, cur: t.cur, best: t.best, maxSess: t.maxSess, maxDay: t.maxDay, week: t.week, month: t.month,
+      maxWeek: Math.max(0, ...Object.values(wk)), maxMonth: Math.max(0, ...Object.values(mo)), pts: t.pts, ach: ACHS.filter(a => ACH.u[a.id]).length};
+  }
+  const o = w * BF, got = botBadges(w);
+  return {total: BS[o+F.total], sessions: BS[o+F.sessions], days: BS[o+F.days], cur: BS[o+F.cur], best: BS[o+F.best], maxSess: BS[o+F.maxSess], maxDay: BS[o+F.maxDay],
+    week: BS[o+F.week], month: BS[o+F.month], maxWeek: BS[o+F.maxWeek], maxMonth: BS[o+F.maxMonth], pts: got.reduce((n, id) => n + TIERS[achById(id).tier].pts, 0), ach: got.length,
+    sit: Math.round(typical(botRating(w)) * BOTS[w].sitMul)};
 }
-$('#botModal').addEventListener('click', e => { if (e.target === $('#botModal') || e.target.closest('.x')) $('#botModal').hidden = true; });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#botModal').hidden = true; });
+// minutes on a given day: yours from the log; a bot's from its daily plan (only shown as a level)
+function pDayFn(w){
+  if (w === ME){ const by = {}; LOG.forEach(x => { const k = dayKey(x.t); by[k] = (by[k] || 0) + x.min; }); return dk => by[dk] || 0; }
+  const B = BOTS[w], joined = Date.now() - B.age * 864e5, today = dayKey(Date.now());
+  return dk => dk === today ? BS[w * BF + F.today] : new Date(dk + 'T12:00').getTime() < joined ? 0 : dayPlan(w, dk).m;
+}
+const LEVELS = ['No study', 'Light', 'Medium', 'Heavy'];
+const levelOf = m => m <= 0 ? 0 : m < 60 ? 1 : m < 180 ? 2 : 3;
+function pPlace(c, w, t){
+  if (w === ME) return myPlace(c, t);
+  const vi = botVal(c, w), ei = BS[w * BF]; let n = 0;
+  for (let j = 0; j < ROSTER_N; j++){ const v = botVal(c, j); if (v > vi || (v === vi && (BS[j * BF] > ei || (BS[j * BF] === ei && j < w)))) n++; }
+  const me = c.me(t); if (me > vi || (me === vi && R.mmr >= ei)) n++;
+  return n + 1;
+}
+const durTxt = ms => ms >= 864e5 ? `${Math.floor(ms / 864e5)} day${ms >= 1728e5 ? 's' : ''}` : ms >= 36e5 ? `${Math.floor(ms / 36e5)} hour${ms >= 72e5 ? 's' : ''}` : `${Math.max(1, Math.floor(ms / 6e4))} min`;
+function paraLine(w){ const tot = R.para ? reignTotal(w) : 0; if (!tot) return ''; return `<p class="pf-para">${emblem(PARAGON, 'xs')} ${R.para.h === w ? `Paragon now · reigning ${durTxt(Date.now() - R.para.since)}` : 'Former Paragon'} · ${durTxt(tot)} as Paragon in total</p>`; }
+function weekStrip(w, weeks){
+  const f = pDayFn(w), d = startOfWeek(new Date()); d.setDate(d.getDate() - 7 * (weeks - 1));
+  const today = dayKey(Date.now()); let h = '', active = 0;
+  for (let k = 0; k < weeks * 7; k++){
+    const dk = dayKey(d), future = dk > today, lv = future ? -1 : levelOf(f(dk)); if (lv > 0) active++;
+    h += `<i class="hm l${lv}" title="${future ? '' : `${d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})} · ${LEVELS[lv]}`}"></i>`;
+    d.setDate(d.getDate() + 1);
+  }
+  return {h, active};
+}
+function editForm(){
+  return `<div class="pf-edit"><label>Display name<input id="pfName" maxlength="20" placeholder="You" value="${esc(P.myName || '')}"></label>
+    <div class="pf-hues" role="radiogroup" aria-label="Avatar color">${PROFILE_HUES.map(hh => `<button data-hue="${hh == null ? '' : hh}" role="radio" aria-checked="${(P.myHue ?? null) === hh}" title="${hh == null ? 'Accent color' : ''}" style="${hh == null ? 'background:var(--accent)' : `background:hsl(${hh} 52% 44%)`}"></button>`).join('')}</div>
+    <div class="pf-edit-btns"><button class="small-btn accent" data-pf="save">Save</button><button class="small-btn" data-pf="cancel">Cancel</button></div></div>`;
+}
+function profileHead(w, big){
+  const rk = rkOf(w), r = w === ME ? R.mmr : botRating(w), B = w === ME ? null : BOTS[w];
+  return `<div class="pf-top">${pAvatar(w, big ? 'xl' : 'lg')}<div><b id="bmName">${esc(pName(w))}${B ? ' <i class="bot-tag">bot</i>' : ''}</b>
+    <span>${emblem(rk, 'xs')} ${esc(rk.full)} · ${r.toLocaleString()} Elo</span>
+    <small>${B ? `${B.style} · studies in the ${B.peak.toLowerCase()} · ${esc(B.subject)}` : 'Your profile'}</small></div>
+    ${w === ME && !profEditing ? '<button class="small-btn pf-editbtn" data-pf="edit">Edit</button>' : ''}</div>
+    ${w === ME && profEditing ? editForm() : ''}
+    ${B ? `<p class="bm-bio">“${esc(B.bio)}”</p>` : ''}${paraLine(w)}`;
+}
+// the popup
+function openProfile(w){
+  if (!RK_READY) return;
+  profWho = w; hideBadgeTip();
+  const st = pStats(w), feat = w === ME ? myFeatured() : botFeatured(w), rec = w === ME ? null : R.rec[w], nem = nemesis(), strip = weekStrip(w, 4);
+  const games = R.w + R.l + R.d;
+  const tiles = w === ME
+    ? [[fmtMin(st.total).replace(/ \d+m$/, ''), 'studied in total'], [st.cur, 'day streak'], [st.best, 'best streak (days)'], [`${R.w}–${R.l}${R.d ? '–' + R.d : ''}`, games ? `ranked · ${Math.round(R.w / games * 100)}% wins` : 'ranked record']]
+    : [[`~${fmtMin(st.sit)}`, 'typical sitting'], [fmtMin(st.total).replace(/ \d+m$/, ''), 'studied in total'], [st.best, 'best streak (days)'],
+       [rec ? `${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}` : '–', rec ? (w === nem ? 'your record · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'your record · rival' : 'your record') : 'not played yet']];
+  $('#botModalBody').innerHTML = `${profileHead(w)}
+    <div class="bm-grid">${tiles.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div>
+    <div class="h">Last 4 weeks <small class="pf-sub">${strip.active} active day${strip.active === 1 ? '' : 's'}</small></div><div class="hm-strip">${strip.h}</div>
+    <div class="h">Featured badges</div><div class="bdgs lg">${feat.length ? feat.map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('') : '<span class="hint">No badges yet.</span>'}</div>
+    <div class="pf-actions"><span class="hint">${st.ach} of ${ACHS.length} achievements · ${st.pts.toLocaleString()} pts</span><button class="small-btn accent" data-pf="full">⤢ Open full profile</button></div>`;
+  $('#botModal').hidden = false;
+  const f = w === ME && profEditing ? $('#pfName') : $('#botModal .x'); f && f.focus();
+}
+const openBot = i => openProfile(i);
+// the full page
+function renderProfilePage(){
+  const w = profWho; if (w == null || !RK_READY) return;
+  const st = pStats(w), t = myTotals(), B = w === ME ? null : BOTS[w];
+  const stats = [[fmtMin(st.total), 'Studied in total'], [st.sessions.toLocaleString(), 'Sessions'], [st.days.toLocaleString(), 'Days studied'], [`${st.cur} day${st.cur === 1 ? '' : 's'}`, 'Current streak'],
+    [`${st.best} day${st.best === 1 ? '' : 's'}`, 'Best streak'], [fmtMin(st.maxSess), 'Longest session'], [fmtMin(st.maxDay), 'Biggest day'], [fmtMin(st.week), 'This week'],
+    [fmtMin(st.month), 'This month'], [fmtMin(st.maxWeek), 'Best week'], [fmtMin(st.maxMonth), 'Best month'], ...(B ? [[`~${fmtMin(st.sit)}`, 'Typical sitting']] : []), [`${st.ach}/${ACHS.length}`, `Achievements · ${st.pts.toLocaleString()} pts`]];
+  // leaderboard places
+  const ptsReady = !!lbPts;
+  const lbs = LB.map(c => { const ready = c.f != null || ptsReady, pl = ready ? pPlace(c, w, t) : null, v = w === ME ? c.me(t) : botVal(c, w);
+    return `<li><button data-lb="${c.id}"><span class="nm">${c.name}</span><span class="mv2">${ready || c.f != null ? lbFmt(c.u, v) : '…'}</span><span class="pl2">${pl ? `#${pl.toLocaleString()} · ${topPct(pl)}` : '…'}</span></button></li>`; }).join('');
+  if (!ptsReady) ensureBotPoints(() => { if (!$('#page-profile').hidden && profWho === w) renderProfilePage(); });
+  // 6-month activity
+  const f = pDayFn(w), weeks = 26, d0 = startOfWeek(new Date()); d0.setDate(d0.getDate() - 7 * (weeks - 1));
+  const today = dayKey(Date.now()), mNow = today.slice(0, 7), dow = [0, 0, 0, 0, 0, 0, 0];
+  let cells = '', months = '', activeMonth = 0, daysMonth = 0, activeAll = 0, lastM = '';
+  for (let k = 0, d = new Date(d0); k < weeks * 7; k++, d.setDate(d.getDate() + 1)){
+    const dk = dayKey(d), future = dk > today, m = future ? 0 : f(dk), lv = future ? -1 : levelOf(m);
+    if (k % 7 === 0){ const mk = dk.slice(0, 7), show = mk !== lastM && (k > 0 || d.getDate() <= 14); months += `<span>${show ? d.toLocaleDateString(undefined, {month:'short'}) : ''}</span>`; if (show || k > 0) lastM = mk; }
+    if (!future){ dow[d.getDay()] += m; if (lv > 0) activeAll++; if (dk.slice(0, 7) === mNow){ daysMonth++; if (lv > 0) activeMonth++; } }
+    cells += `<i class="hm l${lv}" title="${future ? '' : `${d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})} · ${LEVELS[lv]}`}"></i>`;
+  }
+  const busiest = Math.max(...dow) > 0 ? new Date(2026, 0, 4 + dow.indexOf(Math.max(...dow))).toLocaleDateString(undefined, {weekday:'long'}) + 's' : '–';
+  // ranked
+  let ranked;
+  if (w === ME){
+    const games = R.w + R.l + R.d, last = R.hist.slice(0, 10);
+    ranked = `<div class="pf-kv"><span><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><small>wins–losses${R.d ? '–draws' : ''}</small></span><span><b>${games ? Math.round(R.w / games * 100) : 0}%</b><small>win rate</small></span><span><b>${R.best.toLocaleString()}</b><small>best Elo</small></span><span><b>${R.bestWs}</b><small>best win streak</small></span></div>
+      <div class="pf-dots">${last.length ? last.map(h => `<i class="d-${h.r}" title="${{W:'Win', L:'Loss', D:'Draw'}[h.r]} vs ${esc(BOTS[h.b].name)}">${h.r}</i>`).join('') : '<span class="hint">No matches yet.</span>'}</div>${last.length ? '<small class="pf-sub">Last 10 matches, newest first</small>' : ''}`;
+  } else {
+    const rec = R.rec[w], hs = R.hist.filter(h => h.b === w).slice(0, 5), nem = nemesis();
+    ranked = rec ? `<div class="pf-kv"><span><b>${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}</b><small>your record vs ${esc(B.name)}${w === nem ? ' · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? ' · rival' : ''}</small></span></div>
+      <ul class="rk-hist pf-h2h">${hs.map(h => `<li class="hr-${h.r}"><span class="res">${h.r}</span><span class="who">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span><span class="tm">${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}${h.tap ? '' : '+'}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span></li>`).join('')}</ul>`
+      : `<p class="hint">You haven't played ${esc(B.name)} yet. Matches pair you with bots near your rating.</p>`;
+  }
+  // achievements by tier
+  const mine = new Set(ACHS.filter(a => ACH.u[a.id]).map(a => a.id));
+  let got = w === ME ? [...mine] : botBadges(w);
+  if (w !== ME && profFilter === 'missing') got = got.filter(id => !mine.has(id));
+  const tiers = ['legendary', 'platinum', 'gold', 'silver', 'bronze'].map(tr => { const ids = got.filter(id => achById(id).tier === tr); return ids.length ? `<div class="pf-tier"><span style="color:${TIERS[tr].c}">${TIERS[tr].name} · ${ids.length}</span><div class="bdgs wrap">${rareSort(ids).map(id => badgeHtml(id)).join('')}</div></div>` : ''; }).join('');
+  $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button>${w === ME ? '' : `<span class="hint">Bot profile</span>`}</div>
+    <div class="pf-grid">
+      <div class="pf-main">
+        <div class="card pf-hero">${profileHead(w, true)}<div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('')}</div></div>
+        <div class="card"><div class="h first">Study stats</div><div class="pf-stats">${stats.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div></div>
+        <div class="card"><div class="h first">Activity · last 6 months</div>
+          <div class="hm-cal"><div class="hm-months">${months}</div><div class="hm-days"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div><div class="hm-grid">${cells}</div></div>
+          <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
+        <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>
+      </div>
+      <div class="pf-side">
+        <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of 250,000 players. Click one to open that leaderboard.</p></div>
+        <div class="card"><div class="h first">Ranked</div>${ranked}</div>
+      </div>
+    </div>`;
+  $('#pageTitle').textContent = w === ME ? (P.myName ? myName() : 'Your profile') : B.name;
+}
+function openFullProfile(w){ profWho = w; $('#botModal').hidden = true; showPage('profile'); }
+function saveProfileEdit(){
+  const n = ($('#pfName').value || '').trim().slice(0, 20), on = document.querySelector('.pf-hues [aria-checked="true"]');
+  P.myName = n; P.myHue = on && on.dataset.hue !== '' ? +on.dataset.hue : null; saveP(); profEditing = false;
+  renderMeBtn(); renderMatch(); renderRankChip();
+  if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders();
+  toast('Profile saved');
+}
+function profClick(e){
+  const b = e.target.closest('[data-pf]'), hue = e.target.closest('[data-hue]');
+  if (hue){ hue.parentNode.querySelectorAll('[data-hue]').forEach(x => x.setAttribute('aria-checked', x === hue)); return; }
+  if (!b) return;
+  const a = b.dataset.pf, inPage = !!e.target.closest('#page-profile'), redraw = () => inPage ? renderProfilePage() : openProfile(profWho);
+  if (a === 'full') openFullProfile(profWho);
+  else if (a === 'back') showPage(profPrev || 'ranked');
+  else if (a === 'edit'){ profEditing = true; redraw(); setTimeout(() => { const f = $('#pfName'); f && f.focus(); }, 0); }
+  else if (a === 'cancel'){ profEditing = false; redraw(); }
+  else if (a === 'save'){ saveProfileEdit(); redraw(); }
+}
+$('#botModal').addEventListener('click', e => { if (e.target === $('#botModal') || e.target.closest('.x')){ $('#botModal').hidden = true; profEditing = false; return; } profClick(e); });
+$('#botModal').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pfName'){ saveProfileEdit(); openProfile(ME); } });
+$('#page-profile').addEventListener('click', e => {
+  profClick(e);
+  const lb = e.target.closest('[data-lb]'); if (lb){ P.lbCat = lb.dataset.lb; saveP(); lbShown = 10; lbJump = profWho === ME; showPage('leaders'); return; }
+  const fl = e.target.closest('#pfFilter [data-v]'); if (fl){ profFilter = fl.dataset.v; renderProfilePage(); }
+});
+$('#page-profile').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pfName'){ saveProfileEdit(); renderProfilePage(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape'){ $('#botModal').hidden = true; profEditing = false; } });
+// clicking yourself anywhere opens your profile
+document.addEventListener('click', e => { const m = e.target.closest('[data-me]'); if (m && !e.target.closest('.bdg') && !e.target.closest('#botModal')) openProfile(ME); });
+function renderMeBtn(){ const b = $('#meBtn'); if (b){ b.innerHTML = myAvatar('sm'); b.title = `${myName() === 'You' ? 'Your' : myName() + "'s"} profile`; } }
+$('#meBtn').onclick = () => openProfile(ME);
+renderMeBtn();
 
 /* showcase picking on the Awards page */
 $('#pane-awards').addEventListener('click', e => {
@@ -3937,6 +4148,7 @@ $('#pane-awards').addEventListener('click', e => {
 });
 $('#pane-awards').addEventListener('click', e => { if (e.target.closest('[data-act="sc-auto"]')){ R.showcase = null; saveRanked(); renderAwards(); } });
 function onPageShown(name){
+  if (name === 'profile'){ if (profWho == null){ showPage('ranked'); return; } renderProfilePage(); }
   if (name === 'leaders'){ renderLeaders(); if (!lbPts) ensureBotPoints(() => { if (!$('#page-leaders').hidden) renderLeaders(); }); }
   if (name === 'ranked'){ renderRanked(); computeRarity(() => { if (!$('#page-ranked').hidden) renderRanked(); }); }
   if (name === 'awards') computeRarity(() => { if (!$('#page-awards').hidden) renderAwards(); });
@@ -4003,7 +4215,7 @@ function lbRow(k, place, c, val){
   const medal = place <= 3 ? ` m${place}` : '';
   if (k === ROSTER_N){
     const rk = myRk();
-    return `<li class="lb-row me${medal}${rk.i === PARAGON_I ? ' para-row' : ''}"><span class="pl">${place.toLocaleString()}</span>${myAvatar('sm')}<span class="who"><b>You</b><small>${emblem(rk, 'xs')} ${rk.full}</small></span><span class="val">${lbFmt(c.u, val(k))}</span></li>`;
+    return `<li class="lb-row me${medal}${rk.i === PARAGON_I ? ' para-row' : ''}" data-me tabindex="0"><span class="pl">${place.toLocaleString()}</span>${myAvatar('sm')}<span class="who"><b>${esc(myName())}</b><small>${emblem(rk, 'xs')} ${rk.full}</small></span><span class="val">${lbFmt(c.u, val(k))}</span></li>`;
   }
   const B = BOTS[k], r = BS[k * BF], rk = rkOf(k);
   return `<li class="lb-row${medal}${rk.i === PARAGON_I ? ' para-row' : ''}" data-bot="${k}" tabindex="0"><span class="pl">${place.toLocaleString()}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)} <i class="bot-tag">bot</i></b><small>${emblem(rk, 'xs')} ${rk.full} · ${B.style}</small></span><span class="val">${lbFmt(c.u, val(k))}</span></li>`;
@@ -4093,7 +4305,8 @@ function showPage(name, sec){
   $('#nav').classList.remove('more-open');
   $('#pageTitle').textContent = el.dataset.title;
   document.body.dataset.page = name;
-  if (P.page !== name){ P.page = name; saveP(); }
+  if (P.page !== name && name !== 'profile'){ P.page = name; saveP(); }
+  if (name !== 'profile') profPrev = name;
   if (name === 'stats'){ renderLog(); const w = $('#week'); w.classList.remove('grow'); void w.offsetWidth; w.classList.add('grow'); }
   if (name === 'awards'){ achBump('awards'); renderAwards(); }
   if (typeof onPageShown === 'function') onPageShown(name);
