@@ -292,6 +292,7 @@ async function loadBots(){
   if (rec && rec.n === ROSTER_N && rec.bs && rec.bs.byteLength === ROSTER_N * BF * 4){
     BS = new Int32Array(rec.bs); PREV = new Int16Array(rec.prev);
     R.lastSlice = rec.lastSlice; R.lastSim = rec.lastSim;
+    m5Init(rec.m5);
   } else {
     // first run with the big roster: keep the original 5,000 bots from the old save, add the rest
     let old = null, oldPrev = null;
@@ -321,6 +322,7 @@ async function loadBots(){
     botsDirty = true;
   }
   R.rv = 3; delete R.bots; delete R.prev;
+  if (!M5_OPP) m5Init(null);
 }
 let rkSaveT = null;
 function saveRanked(now){
@@ -333,7 +335,8 @@ function saveBots(){
   clearTimeout(botsSaveT);
   botsSaveT = setTimeout(() => {
     botsDirty = false;
-    IDB.set('bots', {n: ROSTER_N, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now()}).catch(e => { console.error(e); botsDirty = true; });
+    IDB.set('bots', {n: ROSTER_N, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(),
+      m5: {opp: M5_OPP.buffer, t: M5_T.buffer, a: M5_A.buffer, b: M5_B.buffer, d: M5_D.buffer, r: M5_R.buffer, h: M5_H.buffer}}).catch(e => { console.error(e); botsDirty = true; });
   }, 600);
 }
 addEventListener('pagehide', () => { if (botsDirty && RK_READY && idbOk){ clearTimeout(botsSaveT); botsDirty = false; IDB.set('bots', {n: ROSTER_N, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now()}).catch(() => {}); } });
@@ -378,13 +381,46 @@ function dayPlan(i, dk, out){
   out.m = Math.round(m); out.longest = Math.round(longest);
   return out;
 }
-// every bot's plan for one day, worked out once and reused by that day's twelve updates
-let planDay = null, planM = null, planL = null;
+// When each sitting of a player's day happens (minutes after midnight). The calendar, the 2-hour updates and
+// ranked matches all use this one function, so a player's calendar, today's minutes and matches always agree.
+const ST_A = new Int32Array(64), ST_B = new Int32Array(64), ST_LEN = new Int32Array(64), ST_GAP = new Float64Array(64);
+function sitTimes(i, dk, xs){      // fills ST_A / ST_B, returns the count and the random stream the calendar continues with
+  const n = Math.min(xs.length, 64), rnd = mulberry32(dayNum(dk) * 131 + i * 977 + 7);
+  if (!n) return {n: 0, rnd};
+  let total = 0, sumL = 0; for (let k = 0; k < n; k++){ total += xs[k]; ST_LEN[k] = Math.max(5, Math.round(xs[k])); sumL += ST_LEN[k]; }
+  total = Math.round(total);
+  ST_LEN[0] = Math.max(5, ST_LEN[0] + total - sumL);
+  sumL = 0; for (let k = 0; k < n; k++) sumL += ST_LEN[k];
+  let sumG = 0; for (let k = 0; k < n - 1; k++){ ST_GAP[k] = 15 + Math.floor(rnd() * 100); sumG += ST_GAP[k]; }
+  if (sumL + sumG > 1435){ const f = Math.max(0, 1435 - sumL) / (sumG || 1); sumG = 0; for (let k = 0; k < n - 1; k++){ ST_GAP[k] = Math.floor(ST_GAP[k] * f); sumG += ST_GAP[k]; } }
+  const span = sumL + sumG, pa = PEAKS[PEAK_NAMES[T_PK[i]]][0];
+  let at = clampN(Math.min(pa, 22) * 60 + Math.floor(rnd() * 100) - 30, 0, Math.max(0, 1438 - span));
+  for (let k = 0; k < n; k++){ ST_A[k] = at; ST_B[k] = at + ST_LEN[k]; at += ST_LEN[k] + (k < n - 1 ? ST_GAP[k] : 0); }
+  return {n, rnd};
+}
+// every bot's plan for one day, worked out once and reused by that day's twelve updates:
+// total and longest sitting, plus when each sitting happens (SCH_*: player i's sittings are SCH_O[i] .. SCH_O[i+1])
+let planDay = null, planM = null, planL = null, SCH_O = null, SCH_A = new Uint16Array(1 << 20), SCH_B = new Uint16Array(1 << 20);
 function plansFor(dk){
   if (planDay === dk) return;
-  if (!planM){ planM = new Int32Array(ROSTER_N); planL = new Int32Array(ROSTER_N); }
-  for (let i = 0; i < ROSTER_N; i++){ dayPlan(i, dk, PLAN); planM[i] = PLAN.active ? Math.max(1, PLAN.m) : 0; planL[i] = PLAN.longest; }
+  if (!planM){ planM = new Int32Array(ROSTER_N); planL = new Int32Array(ROSTER_N); SCH_O = new Int32Array(ROSTER_N + 1); }
+  let c = 0;
+  for (let i = 0; i < ROSTER_N; i++){
+    daySits(i, dk, SITS);
+    let m = 0, longest = 0; for (const x of SITS){ m += x; if (x > longest) longest = x; }
+    planM[i] = SITS.length ? Math.max(1, Math.round(m)) : 0; planL[i] = Math.round(longest);
+    SCH_O[i] = c;
+    const {n} = sitTimes(i, dk, SITS);
+    if (c + n > SCH_A.length){ const a = new Uint16Array(SCH_A.length * 2), b = new Uint16Array(SCH_B.length * 2); a.set(SCH_A); b.set(SCH_B); SCH_A = a; SCH_B = b; }
+    for (let k = 0; k < n; k++){ SCH_A[c] = ST_A[k]; SCH_B[c] = ST_B[k]; c++; }
+  }
+  SCH_O[ROSTER_N] = c;
   planDay = dk;
+}
+// minutes player i studied between minute w0 and w1 of the planned day
+function windowMin(i, w0, w1){
+  let m = 0; for (let k = SCH_O[i], e = SCH_O[i + 1]; k < e; k++){ const a = Math.max(SCH_A[k], w0), b = Math.min(SCH_B[k], w1); if (b > a) m += b - a; }
+  return m;
 }
 function rollover(t){
   // midnight: close out yesterday, then start today
@@ -409,34 +445,71 @@ function addStudy(i, add, longest){
   if (BS[o+F.week] > BS[o+F.maxWeek]) BS[o+F.maxWeek] = BS[o+F.week];
   if (BS[o+F.month] > BS[o+F.maxMonth]) BS[o+F.maxMonth] = BS[o+F.month];
 }
-// bot-vs-bot matches between ladder neighbors, zero-sum so ratings stay centered
-function botMatches(busy){
-  const order = sortedBots(), rnd = Math.random, n = order.length;
+/* Ranked matches between players. Each 2-hour update looks at the window that just ended: everyone who
+   studied 10+ minutes in it (the same rule as your matches) may be paired with someone close to them on
+   the ladder who also studied, and whoever studied longer wins. Each player's last 5 matches are kept. */
+const M5 = 5;
+let M5_OPP = null, M5_T = null, M5_A = null, M5_B = null, M5_D = null, M5_R = null, M5_H = null;
+function m5Init(rec){
+  const n = ROSTER_N * M5;
+  const ok = rec && rec.opp && rec.opp.byteLength === n * 4 && rec.h && rec.h.byteLength === ROSTER_N;
+  M5_OPP = ok ? new Int32Array(rec.opp) : new Int32Array(n).fill(-1);
+  M5_T = ok && rec.t.byteLength === n * 2 ? new Uint16Array(rec.t) : new Uint16Array(n);  // which 2-hour window: day since 2026-01-01 × 12 + window
+  M5_A = ok ? new Uint8Array(rec.a) : new Uint8Array(n);        // this player's minutes in the window
+  M5_B = ok ? new Uint8Array(rec.b) : new Uint8Array(n);        // the opponent's minutes
+  M5_D = ok ? new Int8Array(rec.d) : new Int8Array(n);          // Elo change
+  M5_R = ok ? new Uint16Array(rec.r) : new Uint16Array(n);      // rating after the match
+  M5_H = ok ? new Uint8Array(rec.h) : new Uint8Array(ROSTER_N); // next slot to write
+}
+// a window is stored as (days since 2026-01-01) × 12 + (its start hour / 2), which survives clock changes
+const M5_EPOCH = new Date(2026, 0, 1);
+const winCode = t => { const d = new Date(t); const day = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - M5_EPOCH) / 864e5); return day * 12 + Math.floor(d.getHours() / 2); };
+const winStart = c => { const d = new Date(M5_EPOCH); d.setDate(d.getDate() + Math.floor(c / 12)); d.setHours((c % 12) * 2); return d.getTime(); };
+function m5Put(i, opp, w0t, a, b, d, after){
+  const s = i * M5 + M5_H[i]; M5_H[i] = (M5_H[i] + 1) % M5;
+  M5_OPP[s] = opp; M5_T[s] = winCode(w0t); M5_A[s] = a; M5_B[s] = b; M5_D[s] = d; M5_R[s] = after;
+}
+function m5List(i){      // newest first
+  const out = [];
+  for (let k = 1; k <= M5; k++){
+    const s = i * M5 + (M5_H[i] - k + M5) % M5; if (M5_OPP[s] < 0) continue;
+    const w0 = winStart(M5_T[s]); out.push({opp: M5_OPP[s], w0, t: w0 + SLICE, a: M5_A[s], b: M5_B[s], d: M5_D[s], after: M5_R[s]});
+  }
+  return out;
+}
+let WM = null, CAND = null;
+function windowMatches(w0, wt){      // w0: the window's first minute of the day; wt: when it started
+  if (!WM){ WM = new Uint8Array(ROSTER_N); CAND = new Int32Array(ROSTER_N); }
+  let n = 0;
+  for (let i = 0; i < ROSTER_N; i++){ const m = windowMin(i, w0, w0 + 120); WM[i] = m; if (m >= 10) CAND[n++] = i; }
+  const cand = Array.from(CAND.subarray(0, n)).sort((x, y) => BS[y * BF] - BS[x * BF]);
+  const used = new Uint8Array(n), rnd = Math.random;
   for (let k = 0; k < n; k++){
-    if (rnd() > busy) continue;
-    const j = clampN(k + Math.round(gaussOf(rnd) * 4) || 1, 0, n - 1); if (j === k) continue;
-    const a = order[k], c = order[j], ra = BS[a * BF], rc = BS[c * BF];
-    const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = rnd() < ea ? 1 : 0, dlt = Math.round(12 * (sa - ea));
+    if (used[k]) continue;
+    // someone a few places away on the ladder who also studied and isn't already playing
+    let j = -1;
+    for (let tries = 0; tries < 4 && j < 0; tries++){ const q = k + 1 + Math.floor(rnd() * 5); if (q < n && !used[q]) j = q; }
+    if (j < 0) continue;
+    used[k] = used[j] = 1;
+    const a = cand[k], c = cand[j], ra = BS[a * BF], rc = BS[c * BF], ma = WM[a], mc = WM[c];
+    const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = ma > mc ? 1 : ma < mc ? 0 : .5, dlt = Math.round(12 * (sa - ea));
     BS[a * BF] = clampN(ra + dlt, 300, 5000); BS[c * BF] = clampN(rc - dlt, 300, 5000);
+    m5Put(a, c, wt, ma, mc, BS[a * BF] - ra, BS[a * BF]);
+    m5Put(c, a, wt, mc, ma, BS[c * BF] - rc, BS[c * BF]);
   }
   botsChanged();
 }
-function runSlice(t){
-  const slot = new Date(t).getHours() / 2, dk = dayKey(t);
-  if (slot === 0) rollover(t);
+// one window [t, t + 2h): everyone's study minutes from their real session times, then that window's matches
+function runWindow(t, addMinutes){
+  const dk = dayKey(t), w0 = new Date(t).getHours() * 60;
   plansFor(dk);
-  for (let i = 0; i < ROSTER_N; i++){
-    const m = planM[i]; if (!m) continue;
-    const W = SLICE_W[T_PK[i]], add = Math.round(m * W[slot]) - (slot ? Math.round(m * W[slot - 1]) : 0);
-    if (add > 0) addStudy(i, add, planL[i]);
-  }
-  botMatches(slot >= 3 && slot <= 11 ? .2 : .05);
+  if (addMinutes) for (let i = 0; i < ROSTER_N; i++){ if (!planM[i]) continue; const m = windowMin(i, w0, w0 + 120); if (m > 0) addStudy(i, m, planL[i]); }
+  windowMatches(w0, t);
 }
-function runDay(t){    // a whole missed day in one step
-  rollover(t);
-  const dk = dayKey(t); plansFor(dk);
-  for (let i = 0; i < ROSTER_N; i++) if (planM[i]) addStudy(i, planM[i], planL[i]);
-  botMatches(.95); botMatches(1);
+// the update at time t handles the 2 hours that just ended; at midnight that's yesterday's last window, then the new day starts
+function runSlice(t, addMinutes = true){
+  runWindow(t - SLICE, addMinutes);
+  if (new Date(t).getHours() === 0) rollover(t);
 }
 // runs one update (or one whole missed day) at a time, letting the page breathe in between;
 // resolves to true if anything changed
@@ -447,16 +520,12 @@ function dailySim(){
   const now = sliceStartOf(Date.now());
   if (!R.lastSlice) R.lastSlice = now;
   if (now <= R.lastSlice) return Promise.resolve(false);
-  // a queue of small jobs: each 2-hour update, or a whole missed day split into a few parts
+  // a queue of small jobs, one per 2-hour update (a missed day is twelve of them)
   const jobs = [];
   let t = Math.max(R.lastSlice + SLICE, now - 7 * 864e5);
   while (t <= now){
-    const d = new Date(t), next = new Date(d); next.setDate(d.getDate() + 1);
-    if (d.getHours() === 0 && sliceStartOf(next.getTime() - 1) <= now){
-      const tt = t, dk = dayKey(t), last = sliceStartOf(next.getTime() - 1);
-      jobs.push(() => rollover(tt), () => plansFor(dk), () => { for (let i = 0; i < ROSTER_N; i++) if (planM[i]) addStudy(i, planM[i], planL[i]); botMatches(.95); }, () => { botMatches(1); R.lastSlice = last; });
-      t = next.getTime();
-    } else { const tt = t; jobs.push(() => { runSlice(tt); R.lastSlice = tt; }); t += SLICE; }
+    const tt = t, first = !jobs.length && R.simV !== 2;   // updates before this change had already counted this window's minutes
+    jobs.push(() => { runSlice(tt, !first); R.lastSlice = tt; R.simV = 2; }); t += SLICE;
   }
   let res; const prom = simBusy = new Promise(r => res = r);
   const step = () => {
@@ -952,22 +1021,15 @@ function botDay(i, dk){
   if (dk >= botJoinKey(i) && dk <= todayK){
     const xs = daySits(i, dk, []);
     if (xs.length){
-      const B = bot(i), d = new Date(dk + 'T12:00'), rnd = mulberry32(dayNum(dk) * 131 + i * 977 + 7), sem = semesterOf(d), cls = botClasses(i);
-      const total = Math.round(xs.reduce((a, b) => a + b, 0)), lens = xs.map(x => Math.max(5, Math.round(x)));
-      lens[0] = Math.max(5, lens[0] + total - lens.reduce((a, b) => a + b, 0));
-      let gaps = lens.slice(1).map(() => 15 + Math.floor(rnd() * 100));
-      const sumL = lens.reduce((a, b) => a + b, 0), sumG = gaps.reduce((a, b) => a + b, 0);
-      if (sumL + sumG > 1435) gaps = gaps.map(g => Math.floor(g * Math.max(0, 1435 - sumL) / (sumG || 1)));
-      const span = sumL + gaps.reduce((a, b) => a + b, 0), [pa] = PEAKS[B.peak];
-      let at = clampN(Math.min(pa, 22) * 60 + Math.floor(rnd() * 100) - 30, 0, Math.max(0, 1438 - span));
+      const B = bot(i), d = new Date(dk + 'T12:00'), sem = semesterOf(d), cls = botClasses(i);
+      const {n, rnd} = sitTimes(i, dk, xs), starts = Array.from(ST_A.subarray(0, n)), lens = Array.from(ST_LEN.subarray(0, n));
       const sessions = [];
-      lens.forEach((len, k) => {
+      lens.forEach((len, k) => { const at = starts[k];
         const subj = k === 0 ? (rnd() < .6 ? cls[0] : pick(rnd, cls)) : pick(rnd, cls);
         const w = rnd(), kind = sem.exam ? (w < .5 ? 'Exam prep' : w < .7 ? 'Review' : w < .85 ? 'Homework' : 'Reading')
           : (w < .35 ? 'Homework' : w < .55 ? 'Reading' : w < .7 ? 'Review' : w < .85 ? 'Project' : 'Exam prep');
         const mode = rnd() < .8 ? B.fav : pick(rnd, FAV_NAMES);
         sessions.push({a: at, b: at + len, min: len, subj, task: botTask(rnd, subj, kind, sem, d, k), tag: kind, mode});
-        at += len + (gaps[k] || 0);
       });
       out = {sessions};
     }
@@ -985,7 +1047,7 @@ function botDay(i, dk){
 const MODE_NAMES = {pomodoro:'Pomodoro', fifty:'52/17', custom:'Custom', timebox:'Timebox', stopwatch:'Stopwatch', flow:'Flow'};
 
 /* ---------- profiles: a popup for anyone, which opens into a full page ---------- */
-let profPrev = 'ranked', profWho = null, profFilter = 'all', profEditing = false;
+let profPrev = 'ranked', profWho = null, profFilter = 'all', profEditing = false, profMatchN = 15;
 const PROFILE_HUES = [null, 0, 22, 42, 95, 150, 180, 205, 228, 262, 292, 330];
 const isBotW = w => w !== ME;
 function pName(w){ return w === ME ? myName() : BOTS[w].name; }
@@ -1063,6 +1125,38 @@ function openProfile(w){
 }
 const openBot = i => openProfile(i);
 // the full page
+/* ranked matches on a profile: your real history, or another player's last 5 matches plus any against you */
+function winLabel(t){
+  const d = new Date(t), today = dayKey(Date.now()), dk = dayKey(t), y = new Date(); y.setDate(y.getDate() - 1);
+  return dk === today ? 'Today' : dk === dayKey(y.getTime()) ? 'Yesterday' : d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+}
+const hr12 = h => `${h % 12 || 12} ${h % 24 < 12 ? 'AM' : 'PM'}`;
+function profileMatches(w){
+  const res = (r, d) => r === 'W' ? 'Win' : r === 'L' ? 'Loss' : 'Draw';
+  const row = m => `<li class="hr-${m.r}"><span class="res" title="${res(m.r)}">${m.r}</span>${m.you ? myAvatar('sm') : avatar(BOTS[m.opp], 'sm')}
+    <span class="who">${m.you ? `<b>You</b>` : `<button class="lnk" data-bot="${m.opp}">${esc(BOTS[m.opp].name)}</button>`}${m.vsYou ? ' <i class="pf-vs">vs you</i>' : ''}<small>${m.sub}</small></span>
+    <span class="tm">${m.tm}</span><span class="dl ${m.d >= 0 ? 'pos' : 'neg'}">${m.d > 0 ? '+' : ''}${m.d}${m.after != null ? `<small>${m.after.toLocaleString()}</small>` : ''}</span><span class="when">${m.when}</span></li>`;
+  const youRow = (h, mine) => {      // one of your real matches, from your side or theirs
+    const B = BOTS[h.b], r = mine ? h.r : ({W: 'L', L: 'W', D: 'D'})[h.r], swap = !mine;
+    const tm = h.ys == null ? `${fmtMin(swap ? h.them : h.you)} <i>vs</i> ${fmtMin(swap ? h.you : h.them)}` : (x => swap ? x.split(' <i>vs</i> ').reverse().join(' <i>vs</i> ') : x)(matchTimes(h));
+    return {t: h.t, r, d: mine ? h.d : -h.d, after: mine ? h.m : null, opp: h.b, you: !mine, vsYou: false,
+      sub: mine ? `${rankOf(h.br).full} · ${h.br.toLocaleString()} then` : `${rankOf(R.mmr).full}`, tm, when: `${winLabel(h.t)}, ${new Date(h.t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'})}`};
+  };
+  let rows, more = false;
+  if (w === ME){
+    rows = R.hist.slice(0, profMatchN).map(h => youRow(h, true)); more = R.hist.length > profMatchN;
+    if (!rows.length) return '<p class="hint">No matches yet. Turn on Ranked and start a focus block to get matched.</p>';
+  } else {
+    const sim = m5List(w).map(m => ({t: m.t, r: m.a > m.b ? 'W' : m.a < m.b ? 'L' : 'D', d: m.d, after: m.after, opp: m.opp,
+      sub: `${rankOf(botRating(m.opp)).full} · ${botRating(m.opp).toLocaleString()} now`, tm: `${fmtMin(m.a)} <i>vs</i> ${fmtMin(m.b)}`,
+      when: `${winLabel(m.w0)}, ${hr12(new Date(m.w0).getHours())}–${hr12(new Date(m.w0).getHours() + 2)}`}));
+    const oldest = sim.length ? sim[sim.length - 1].t : 0;
+    const vsYou = R.hist.filter(h => h.b === w && (sim.length < 5 || h.t >= oldest)).slice(0, 5).map(h => youRow(h, false));
+    rows = [...sim, ...vsYou].sort((a, b) => b.t - a.t);
+    if (!rows.length) return '<p class="hint">No ranked matches yet.</p>';
+  }
+  return `<ul class="rk-hist pf-matches">${rows.map(row).join('')}</ul>${more ? '<button class="link-btn" data-pf="moreMatches">Show more</button>' : ''}`;
+}
 function renderProfilePage(){
   const w = profWho; if (w == null || !RK_READY) return;
   const st = pStats(w), t = myTotals(), B = w === ME ? null : BOTS[w];
@@ -1111,6 +1205,7 @@ function renderProfilePage(){
           <div class="hm-cal"><div class="hm-months">${months}</div><div class="hm-days"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div><div class="hm-grid">${cells}</div></div>
           <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
         <div class="card" id="pfCal"></div>
+        <div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>
         <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>
       </div>
       <div class="pf-side">
@@ -1181,7 +1276,7 @@ function pcAct(a, dk){
   else if (a === 'today') pcReset();
   renderProfileCal();
 }
-function openFullProfile(w){ if (profWho !== w || !pc) pcReset(); profWho = w; $('#botModal').hidden = true; showPage('profile'); }
+function openFullProfile(w){ if (profWho !== w || !pc) pcReset(); if (profWho !== w) profMatchN = 15; profWho = w; $('#botModal').hidden = true; showPage('profile'); }
 function saveProfileEdit(){
   const n = ($('#pfName').value || '').trim().slice(0, 20), on = document.querySelector('.pf-hues [aria-checked="true"]');
   P.myName = n; P.myHue = on && on.dataset.hue !== '' ? +on.dataset.hue : null; saveP(); profEditing = false;
@@ -1197,6 +1292,7 @@ function profClick(e){
   if (a === 'full') openFullProfile(profWho);
   else if (b.dataset.pk){ /* handled below */ }
   else if (a === 'back') showPage(profPrev || 'ranked');
+  else if (a === 'moreMatches'){ profMatchN += 15; renderProfilePage(); }
   else if (a === 'edit'){ profEditing = true; redraw(); setTimeout(() => { const f = $('#pfName'); f && f.focus(); }, 0); }
   else if (a === 'cancel'){ profEditing = false; redraw(); }
   else if (a === 'save'){ saveProfileEdit(); redraw(); }
