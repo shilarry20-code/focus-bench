@@ -336,7 +336,7 @@ function saveBots(){
   botsSaveT = setTimeout(() => {
     botsDirty = false;
     IDB.set('bots', {n: ROSTER_N, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(),
-      m5: {opp: M5_OPP.buffer, t: M5_T.buffer, a: M5_A.buffer, b: M5_B.buffer, d: M5_D.buffer, r: M5_R.buffer, h: M5_H.buffer}}).catch(e => { console.error(e); botsDirty = true; });
+      m5: m5Save()}).catch(e => { console.error(e); botsDirty = true; });
   }, 600);
 }
 addEventListener('pagehide', () => { if (botsDirty && RK_READY && idbOk){ clearTimeout(botsSaveT); botsDirty = false; IDB.set('bots', {n: ROSTER_N, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now()}).catch(() => {}); } });
@@ -445,66 +445,118 @@ function addStudy(i, add, longest){
   if (BS[o+F.week] > BS[o+F.maxWeek]) BS[o+F.maxWeek] = BS[o+F.week];
   if (BS[o+F.month] > BS[o+F.maxMonth]) BS[o+F.maxMonth] = BS[o+F.month];
 }
-/* Ranked matches between players. Each 2-hour update looks at the window that just ended: everyone who
-   studied 10+ minutes in it (the same rule as your matches) may be paired with someone close to them on
-   the ladder who also studied, and whoever studied longer wins. Each player's last 5 matches are kept. */
-const M5 = 5;
+/* Ranked matches between players: one match per study sitting, like yours. A sitting is matched at the first
+   2-hour update after it ends (a 4-hour sitting waits until it's over), against someone near them on the ladder
+   whose sitting also ended in that window; the whole sittings are compared and whoever studied longer wins.
+   Sittings under 10 minutes aren't rated, and no studying means no match. Each player's last 5 are kept. */
+const M5 = 5, M5_V = 2;
 let M5_OPP = null, M5_T = null, M5_A = null, M5_B = null, M5_D = null, M5_R = null, M5_H = null;
 function m5Init(rec){
   const n = ROSTER_N * M5;
-  const ok = rec && rec.opp && rec.opp.byteLength === n * 4 && rec.h && rec.h.byteLength === ROSTER_N;
+  const ok = rec && rec.v === M5_V && rec.opp && rec.opp.byteLength === n * 4 && rec.h && rec.h.byteLength === ROSTER_N;   // older formats start fresh
   M5_OPP = ok ? new Int32Array(rec.opp) : new Int32Array(n).fill(-1);
-  M5_T = ok && rec.t.byteLength === n * 2 ? new Uint16Array(rec.t) : new Uint16Array(n);  // which 2-hour window: day since 2026-01-01 × 12 + window
-  M5_A = ok ? new Uint8Array(rec.a) : new Uint8Array(n);        // this player's minutes in the window
-  M5_B = ok ? new Uint8Array(rec.b) : new Uint8Array(n);        // the opponent's minutes
+  M5_T = ok ? new Uint32Array(rec.t) : new Uint32Array(n);      // when the sitting ended: day since 2026-01-01 × 1440 + minute
+  M5_A = ok ? new Uint16Array(rec.a) : new Uint16Array(n);      // this player's sitting, in minutes
+  M5_B = ok ? new Uint16Array(rec.b) : new Uint16Array(n);      // the opponent's sitting
   M5_D = ok ? new Int8Array(rec.d) : new Int8Array(n);          // Elo change
   M5_R = ok ? new Uint16Array(rec.r) : new Uint16Array(n);      // rating after the match
   M5_H = ok ? new Uint8Array(rec.h) : new Uint8Array(ROSTER_N); // next slot to write
 }
-// a window is stored as (days since 2026-01-01) × 12 + (its start hour / 2), which survives clock changes
+const m5Save = () => ({v: M5_V, opp: M5_OPP.buffer, t: M5_T.buffer, a: M5_A.buffer, b: M5_B.buffer, d: M5_D.buffer, r: M5_R.buffer, h: M5_H.buffer});
+// times are kept as (days since 2026-01-01) × 1440 + minute of the day, which survives clock changes
 const M5_EPOCH = new Date(2026, 0, 1);
-const winCode = t => { const d = new Date(t); const day = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - M5_EPOCH) / 864e5); return day * 12 + Math.floor(d.getHours() / 2); };
-const winStart = c => { const d = new Date(M5_EPOCH); d.setDate(d.getDate() + Math.floor(c / 12)); d.setHours((c % 12) * 2); return d.getTime(); };
-function m5Put(i, opp, w0t, a, b, d, after){
+const dayIdx = dk => Math.round((new Date(dk + 'T00:00') - M5_EPOCH) / 864e5);   // midnight to midnight; rounding absorbs clock changes
+const tCode = (dk, min) => dayIdx(dk) * 1440 + min;
+const tFromCode = c => { const d = new Date(M5_EPOCH); d.setDate(d.getDate() + Math.floor(c / 1440)); d.setMinutes(c % 1440); return d.getTime(); };
+function m5Count(i){ let c = 0; for (let k = 0; k < M5; k++) if (M5_OPP[i * M5 + k] >= 0) c++; return c; }
+function m5Put(i, opp, code, a, b, d, after){     // a new, newest match
   const s = i * M5 + M5_H[i]; M5_H[i] = (M5_H[i] + 1) % M5;
-  M5_OPP[s] = opp; M5_T[s] = winCode(w0t); M5_A[s] = a; M5_B[s] = b; M5_D[s] = d; M5_R[s] = after;
+  M5_OPP[s] = opp; M5_T[s] = code; M5_A[s] = a; M5_B[s] = b; M5_D[s] = d; M5_R[s] = after;
+}
+function m5PutOlder(i, opp, code, a, b, d, after){   // an older match, into the next empty slot behind the ones there
+  const c = m5Count(i); if (c >= M5) return;
+  const s = i * M5 + (M5_H[i] - 1 - c + 2 * M5) % M5;
+  M5_OPP[s] = opp; M5_T[s] = code; M5_A[s] = a; M5_B[s] = b; M5_D[s] = d; M5_R[s] = after;
 }
 function m5List(i){      // newest first
   const out = [];
   for (let k = 1; k <= M5; k++){
     const s = i * M5 + (M5_H[i] - k + M5) % M5; if (M5_OPP[s] < 0) continue;
-    const w0 = winStart(M5_T[s]); out.push({opp: M5_OPP[s], w0, t: w0 + SLICE, a: M5_A[s], b: M5_B[s], d: M5_D[s], after: M5_R[s]});
+    const t = tFromCode(M5_T[s]); out.push({opp: M5_OPP[s], t, t0: t - M5_A[s] * 60000, a: M5_A[s], b: M5_B[s], d: M5_D[s], after: M5_R[s], code: M5_T[s]});
   }
   return out;
 }
-let WM = null, CAND = null;
-function windowMatches(w0, wt){      // w0: the window's first minute of the day; wt: when it started
-  if (!WM){ WM = new Uint8Array(ROSTER_N); CAND = new Int32Array(ROSTER_N); }
+// the sitting that ended in (e0, e1] for player i on the planned day: its index in SCH_*, or -1
+function sitEndingIn(i, e0, e1){
+  let best = -1;
+  for (let k = SCH_O[i], e = SCH_O[i + 1]; k < e; k++) if (SCH_B[k] > e0 && SCH_B[k] <= e1 && SCH_B[k] - SCH_A[k] >= 10 && (best < 0 || SCH_B[k] - SCH_A[k] > SCH_B[best] - SCH_A[best])) best = k;
+  return best;
+}
+let CAND = null, CSIT = null;
+function windowMatches(w0, dk){      // sittings that ended during the window starting at minute w0 of day dk
+  if (!CAND){ CAND = new Int32Array(ROSTER_N); CSIT = new Int32Array(ROSTER_N); }
   let n = 0;
-  for (let i = 0; i < ROSTER_N; i++){ const m = windowMin(i, w0, w0 + 120); WM[i] = m; if (m >= 10) CAND[n++] = i; }
+  for (let i = 0; i < ROSTER_N; i++){ if (!planM[i]) continue; const k = sitEndingIn(i, w0, w0 + 120); if (k >= 0){ CAND[n] = i; CSIT[i] = k; n++; } }
   const cand = Array.from(CAND.subarray(0, n)).sort((x, y) => BS[y * BF] - BS[x * BF]);
   const used = new Uint8Array(n), rnd = Math.random;
   for (let k = 0; k < n; k++){
     if (used[k]) continue;
-    // someone a few places away on the ladder who also studied and isn't already playing
+    // someone a few places away on the ladder whose sitting also just ended
     let j = -1;
     for (let tries = 0; tries < 4 && j < 0; tries++){ const q = k + 1 + Math.floor(rnd() * 5); if (q < n && !used[q]) j = q; }
     if (j < 0) continue;
     used[k] = used[j] = 1;
-    const a = cand[k], c = cand[j], ra = BS[a * BF], rc = BS[c * BF], ma = WM[a], mc = WM[c];
+    const a = cand[k], c = cand[j], sa_ = CSIT[a], sc_ = CSIT[c];
+    const ma = SCH_B[sa_] - SCH_A[sa_], mc = SCH_B[sc_] - SCH_A[sc_], ra = BS[a * BF], rc = BS[c * BF];
     const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = ma > mc ? 1 : ma < mc ? 0 : .5, dlt = Math.round(12 * (sa - ea));
     BS[a * BF] = clampN(ra + dlt, 300, 5000); BS[c * BF] = clampN(rc - dlt, 300, 5000);
-    m5Put(a, c, wt, ma, mc, BS[a * BF] - ra, BS[a * BF]);
-    m5Put(c, a, wt, mc, ma, BS[c * BF] - rc, BS[c * BF]);
+    m5Put(a, c, tCode(dk, SCH_B[sa_]), ma, mc, BS[a * BF] - ra, BS[a * BF]);
+    m5Put(c, a, tCode(dk, SCH_B[sc_]), mc, ma, BS[c * BF] - rc, BS[c * BF]);
   }
   botsChanged();
+}
+// Profiles that don't have 5 matches yet are filled from the player's past sittings, newest first, under the
+// same rules: a sitting of 10+ minutes, against a nearby player whose sitting ended in the same 2-hour window.
+// Ratings are walked back from their oldest saved match (or today's rating), so the chain still ends where it is now.
+const sitsOf = (i, dk) => { if (dk < botJoinKey(i)) return []; const xs = daySits(i, dk, []); const {n} = sitTimes(i, dk, xs); const out = []; for (let k = 0; k < n; k++) out.push([ST_A[k], ST_B[k]]); return out; };
+function m5Backfill(i){
+  let c = m5Count(i); if (c >= M5 || !BS) return false;
+  const have = m5List(i), oldest = have.length ? have[have.length - 1] : null;
+  // only sittings that ended before anything already saved (and before the last update, which handled the rest)
+  const limit = oldest ? oldest.code : tCode(dayKey(R.lastSlice), new Date(R.lastSlice).getHours() * 60) - 1;
+  let rating = oldest ? oldest.after - oldest.d : BS[i * BF];
+  const order = sortedBots(), pos = posOf(i), myNow = BS[i * BF];
+  let lastOpp = oldest ? oldest.opp : -1;
+  for (let back = 0; back < 60 && c < M5; back++){
+    const d = new Date(tFromCode(limit)); d.setDate(d.getDate() - back); const dk = dayKey(d.getTime());
+    const mine = sitsOf(i, dk).filter(([a, b]) => b - a >= 10 && tCode(dk, b) < limit).reverse();   // newest first
+    for (const [a0, b0] of mine){
+      if (c >= M5) break;
+      const win = Math.floor((b0 - 1) / 120) * 120, rnd = mulberry32(dayIdx(dk) * 1440 + b0 + i * 7919);
+      // look for a nearby player whose sitting ended in the same window
+      let opp = -1, om = 0;
+      for (let tries = 0; tries < 10 && opp < 0; tries++){
+        const off = (1 + Math.floor(rnd() * 6)) * (rnd() < .5 ? -1 : 1), q = pos + off; if (q < 0 || q >= order.length) continue;
+        const j = order[q]; if (j === lastOpp) continue;
+        const sj = sitsOf(j, dk).filter(([x, y]) => y > win && y <= win + 120 && y - x >= 10);
+        if (sj.length){ opp = j; om = Math.max(...sj.map(([x, y]) => y - x)); }
+      }
+      if (opp < 0) continue;
+      const mm = b0 - a0, ro = rating + (BS[opp * BF] - myNow), ea = 1 / (1 + Math.pow(10, (ro - rating) / 400));
+      const dlt = Math.round(12 * ((mm > om ? 1 : mm < om ? 0 : .5) - ea));
+      m5PutOlder(i, opp, tCode(dk, b0), mm, om, dlt, clampN(rating, 300, 5000));
+      rating -= dlt; c++; lastOpp = opp;
+    }
+  }
+  markBots(); saveBots();
+  return true;
 }
 // one window [t, t + 2h): everyone's study minutes from their real session times, then that window's matches
 function runWindow(t, addMinutes){
   const dk = dayKey(t), w0 = new Date(t).getHours() * 60;
   plansFor(dk);
   if (addMinutes) for (let i = 0; i < ROSTER_N; i++){ if (!planM[i]) continue; const m = windowMin(i, w0, w0 + 120); if (m > 0) addStudy(i, m, planL[i]); }
-  windowMatches(w0, t);
+  windowMatches(w0, dk);
 }
 // the update at time t handles the 2 hours that just ended; at midnight that's yesterday's last window, then the new day starts
 function runSlice(t, addMinutes = true){
@@ -1130,7 +1182,6 @@ function winLabel(t){
   const d = new Date(t), today = dayKey(Date.now()), dk = dayKey(t), y = new Date(); y.setDate(y.getDate() - 1);
   return dk === today ? 'Today' : dk === dayKey(y.getTime()) ? 'Yesterday' : d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
 }
-const hr12 = h => `${h % 12 || 12} ${h % 24 < 12 ? 'AM' : 'PM'}`;
 function profileMatches(w){
   const res = (r, d) => r === 'W' ? 'Win' : r === 'L' ? 'Loss' : 'Draw';
   const row = m => `<li class="hr-${m.r}"><span class="res" title="${res(m.r)}">${m.r}</span>${m.you ? myAvatar('sm') : avatar(BOTS[m.opp], 'sm')}
@@ -1147,9 +1198,11 @@ function profileMatches(w){
     rows = R.hist.slice(0, profMatchN).map(h => youRow(h, true)); more = R.hist.length > profMatchN;
     if (!rows.length) return '<p class="hint">No matches yet. Turn on Ranked and start a focus block to get matched.</p>';
   } else {
+    m5Backfill(w);
+    const clock = t => new Date(t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'});
     const sim = m5List(w).map(m => ({t: m.t, r: m.a > m.b ? 'W' : m.a < m.b ? 'L' : 'D', d: m.d, after: m.after, opp: m.opp,
       sub: `${rankOf(botRating(m.opp)).full} · ${botRating(m.opp).toLocaleString()} now`, tm: `${fmtMin(m.a)} <i>vs</i> ${fmtMin(m.b)}`,
-      when: `${winLabel(m.w0)}, ${hr12(new Date(m.w0).getHours())}–${hr12(new Date(m.w0).getHours() + 2)}`}));
+      when: `${winLabel(m.t0)}, ${clock(m.t0)}–${clock(m.t)}`}));
     const oldest = sim.length ? sim[sim.length - 1].t : 0;
     const vsYou = R.hist.filter(h => h.b === w && (sim.length < 5 || h.t >= oldest)).slice(0, 5).map(h => youRow(h, false));
     rows = [...sim, ...vsYou].sort((a, b) => b.t - a.t);
