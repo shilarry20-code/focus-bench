@@ -222,7 +222,7 @@ body:not(.m-off) .live-dot::before{animation:flicker 1.4s ease-in-out infinite}
 .empty-li{color:var(--muted);padding:12px 0}
 .ladder-h{display:flex;justify-content:space-between}
 .ladder{list-style:none;margin:8px 0 0;padding:0}
-.ladder li{display:grid;grid-template-columns:3.6em 1em auto minmax(0,1fr) 24px 16px 3.2em;gap:8px;align-items:center;padding:6px 6px;border-radius:8px;font-size:13px;cursor:pointer}
+.ladder li{display:grid;grid-template-columns:5.4em 1em auto minmax(0,1fr) 24px 16px 3.2em;gap:8px;align-items:center;padding:6px 6px;border-radius:8px;font-size:13px;cursor:pointer}
 .ladder li:hover{background:var(--soft)}
 .ladder li.me{background:color-mix(in srgb,var(--accent) 13%,transparent);cursor:default;font-weight:700}
 .ladder .pl{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
@@ -975,7 +975,7 @@ body.m-off .ach-pop{animation:none!important}
           <ol class="lb-list" id="lbList"></ol>
           <div class="lb-actions"><button class="small-btn" id="lbMore">Show more</button><button class="small-btn" id="lbJump">Jump to me</button></div>
         </div>
-        <div class="card lb-side"><div class="h first">Your standings</div><ul class="lb-mine" id="lbMine"></ul><p class="hint">Out of 5,001 players: you and 5,000 bots. Your numbers update as you study.</p></div>
+        <div class="card lb-side"><div class="h first">Your standings</div><ul class="lb-mine" id="lbMine"></ul><p class="hint">Out of 250,000 players: you and 249,999 bots. Your numbers update as you study.</p></div>
       </div>
     </section>
 
@@ -3115,10 +3115,11 @@ document.addEventListener('keydown', e => {
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderLookSound(); });
 
-/* ---------- Ranked: 5,000 bots, Elo, ranks, badges ---------- */
-// The roster is rebuilt from a fixed seed on every load (names, looks, styles, habits), so only the
-// numbers that change are saved: each bot's rating and study totals, packed into a typed array.
-const ROSTER_N = 5000, ROSTER_SEED = 20261113, BF = 13;   // fields per bot in the packed array
+/* ---------- Ranked: 249,999 bots, Elo, ranks, badges ---------- */
+// Each bot is generated from a fixed seed (name, look, style, habits), so only the numbers that
+// change are saved: each bot's rating and study totals, packed into a typed array kept in IndexedDB.
+// The first 5,000 bots are the original roster and keep their names; the rest came later.
+const ROSTER_N = 249999, OLD_N = 5000, ROSTER_SEED = 20261113, ROSTER_V = 2, BF = 13;   // BF: fields per bot
 const F = {rating:0, total:1, sessions:2, days:3, cur:4, best:5, maxSess:6, maxDay:7, maxWeek:8, maxMonth:9, week:10, month:11, today:12};
 function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const gaussOf = rnd => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
@@ -3153,8 +3154,9 @@ const ME = -1;
 // a player's rank with the two place-based ranks: the Paragon, and Laureates numbered by place
 function rkOf(who){
   if (R && R.para && R.para.h === who) return PARAGON;
+  if (who !== ME && !BS) return rankOf(1000);
   const k = rankOf(who === ME ? R.mmr : botRating(who));
-  if (k.i === LAUREATE){ const n = placeOf(who); return {...k, n, full:`Laureate #${n}`, sh:`Laureate #${n}`}; }
+  if (k.i === LAUREATE && BS){ const n = placeOf(who); return {...k, n, full:`Laureate #${n}`, sh:`Laureate #${n}`}; }
   return k;
 }
 const myRk = () => rkOf(ME);
@@ -3207,12 +3209,41 @@ const BIOS = ['one more chapter, then sleep (lie)','powered by iced coffee','lib
 const PEAKS = {Morning:[5,12], Afternoon:[12,17], Evening:[17,22], 'Late night':[22,29]};
 const CHAT = ['halfway through problem set 3','coffee #2','flashcards time','this chapter is long','ok locking in','rewriting my notes','lab report grind','one more practice exam','reading the slides again','on question 14','music up, phone down','outlining the essay','reviewing lecture 9','almost through the reading','doing the hard problems first'];
 const TAPS = ['ok brain is fried, gg','calling it here, gg','dinner time, good match','need a nap, gg','that\'s enough for today','gg, nice sitting','out of coffee, done','my eyes hurt, gg','going to the gym, gg','gg, see you next time'];
-let BOTS = [];
+const NM_D = ['owl','fox','bear','wolf','hawk','lynx','otter','panda','koala','raven','finch','heron','moth','bee','crow','seal','tiger','orca','yak','crane','gecko','badger','robin','sparrow','falcon'];
+const NM_E = ['math','lit','code','econ','hist','phys','bio','chem','art','music','law','med','stats','eng','arch','psych','nurse','pre_med','cs','design'];
+function newName(i){
+  // the later bots draw from a much bigger pool so names rarely repeat
+  const rnd = mulberry32((ROSTER_SEED ^ 0x5bd1e995) + i * 40503), cap = x => x[0].toUpperCase() + x.slice(1);
+  const a = pick(rnd, NM_A), b = pick(rnd, NM_B), c = pick(rnd, NM_C), d = pick(rnd, NM_D), e = pick(rnd, NM_E), n2 = 1 + Math.floor(rnd() * 99), n3 = 1 + Math.floor(rnd() * 999), yr = String(Math.floor(rnd() * 12) + 98).slice(-2);
+  return [`${b}_${a}${n2}`, `${a}${cap(d)}${n2}`, `${b}.${c}${n3}`, `${cap(b)}${cap(a)}`, `${e}_${b}${yr}`, `${a}_${d}_${n2}`, `Dr.${cap(b)}${cap(d)}`, `${b}${n3}`, `${cap(d)}${cap(c)}${n2}`, `${b}_${e}`, `${a}.${b}`, `${cap(a)}${cap(d)}`][Math.floor(rnd() * 12)];
+}
+const PEAK_NAMES = Object.keys(PEAKS), STYLE_NAMES = ['Steady','Sprinter','Grinder','Wildcard','Night Owl','Early Bird'], FAV_NAMES = ['pomodoro','fifty','custom','timebox','stopwatch','flow'];
+// compact per-bot data used in the hot loops (built once, cached in IndexedDB)
+let T_STY = null, T_PK = null, T_FAV = null, T_SIT = null, T_PACT = null, T_SUF = null, RK_READY = false;
+const botCache = new Map();
+function bot(i){
+  let b = botCache.get(i); if (b) return b;
+  b = genBot(i); const suf = T_SUF ? T_SUF[i] : 0; if (suf) b.name += '_' + suf;
+  if (botCache.size > 4000) botCache.clear();
+  botCache.set(i, b); return b;
+}
+const BOTS = new Proxy({}, {get: (_, k) => typeof k === 'string' && /^\d+$/.test(k) && +k < ROSTER_N ? bot(+k) : undefined});
+function buildRosterArrays(){
+  T_STY = new Uint8Array(ROSTER_N); T_PK = new Uint8Array(ROSTER_N); T_FAV = new Uint8Array(ROSTER_N);
+  T_SIT = new Float32Array(ROSTER_N); T_PACT = new Float32Array(ROSTER_N); T_SUF = new Int32Array(ROSTER_N);
+  const seen = new Map();
+  for (let i = 0; i < ROSTER_N; i++){
+    const b = genBot(i), n = seen.get(b.name) || 0; seen.set(b.name, n + 1); if (n) T_SUF[i] = n + 1;
+    T_STY[i] = STYLE_NAMES.indexOf(b.style); T_PK[i] = PEAK_NAMES.indexOf(b.peak); T_FAV[i] = FAV_NAMES.indexOf(b.fav);
+    T_SIT[i] = b.sitMul; T_PACT[i] = b.pAct;
+  }
+}
 function genBot(i){
   const rnd = mulberry32(ROSTER_SEED + i * 7919);
   const pat = Math.floor(rnd() * 7), a = pick(rnd, NM_A), b = pick(rnd, NM_B), c = pick(rnd, NM_C), num = 1 + Math.floor(rnd() * 99);
   const cap = x => x[0].toUpperCase() + x.slice(1);
   let name = [`${b}_${a}`, `${a}${cap(b)}`, `${b}.${c}`, `${cap(b)}${num}`, `Dr.${cap(a)}`, `${a}_${num}`, `${cap(b)}${cap(c)}`][pat];
+  if (i >= OLD_N) name = newName(i);
   const style = pick(rnd, STYLES);
   const peak = style === 'Night Owl' ? 'Late night' : style === 'Early Bird' ? 'Morning' : pick(rnd, ['Morning','Afternoon','Evening','Evening','Late night']);
   const hi = rnd() < .08;   // a thin elite group sits on top of the main bell curve
@@ -3222,16 +3253,19 @@ function genBot(i){
     hue: Math.floor(rnd() * 360), style, peak, subject: pick(rnd, SUBJECTS), bio: pick(rnd, BIOS), base, fav,
     sitMul: .85 + rnd() * .3, age: 20 + Math.floor(Math.pow(rnd(), 1.3) * 500), pAct: rnd(), x: [rnd(), rnd(), rnd(), rnd(), rnd(), rnd(), rnd(), rnd()]};
 }
-function buildRoster(){
-  const seen = new Map();
-  BOTS = [...Array(ROSTER_N)].map((_, i) => { const b = genBot(i); const n = seen.get(b.name) || 0; seen.set(b.name, n + 1); if (n) b.name += '_' + (n + 1); return b; });
-}
 const activity = (b, r) => clampN(.35 + (unstretchR(r) - 800) / 2600 + b.pAct * .25, .2, .97);
 const blockLen = (b, r) => b.fav === 'pomodoro' ? 25 : b.fav === 'fifty' ? 52 : b.fav === 'custom' ? 45 : typical(r) * b.sitMul;
 const sittingsPerDay = b => b.style === 'Sprinter' ? 2.4 : b.style === 'Grinder' ? 1.3 : 1.7;
-function initBotStats(arr){
-  BOTS.forEach(b => {
-    const o = b.i * BF, rnd = mulberry32(ROSTER_SEED ^ (b.i * 104729)), r = b.base, p = activity(b, r);
+// the same three, from the compact arrays (for the loops over every bot)
+let ACT_R = null, TYP_R = null;     // per whole rating 0–5,000: activity base and typical sitting
+function rTables(){ ACT_R = new Float32Array(5001); TYP_R = new Float32Array(5001); for (let r = 0; r <= 5000; r++){ ACT_R[r] = .35 + (unstretchR(r) - 800) / 2600; TYP_R[r] = typical(r); } }
+const rIdx = r => r < 0 ? 0 : r > 5000 ? 5000 : r | 0;
+const activityI = (i, r) => clampN(ACT_R[rIdx(r)] + T_PACT[i] * .25, .2, .97);
+const blockLenI = (i, r) => { const f = T_FAV[i]; return f === 0 ? 25 : f === 1 ? 52 : f === 2 ? 45 : TYP_R[rIdx(r)] * T_SIT[i]; };
+const sittingsI = i => T_STY[i] === 1 ? 2.4 : T_STY[i] === 2 ? 1.3 : 1.7;
+function initBotStats(arr, from){
+  for (let i = from || 0; i < ROSTER_N; i++){
+    const b = genBot(i), o = i * BF, rnd = mulberry32(ROSTER_SEED ^ (i * 104729)), r = b.base, p = activity(b, r);
     const L = typical(r) * b.sitMul, perDay = L * sittingsPerDay(b), days = Math.max(1, Math.round(b.age * p));
     const total = Math.round(days * perDay * (.85 + rnd() * .3));
     const best = Math.max(1, Math.min(days, Math.round(Math.log(Math.max(2, b.age * (1 - p))) / Math.log(1 / p) * (.7 + rnd() * .6))));
@@ -3242,124 +3276,224 @@ function initBotStats(arr){
     arr[o+F.maxWeek] = Math.round(Math.min(arr[o+F.maxDay] * 7, perDay * 7 * p * (1.3 + rnd() * .4)));
     arr[o+F.maxMonth] = Math.round(Math.min(arr[o+F.maxWeek] * 4.4, perDay * 30 * p * (1.15 + rnd() * .3)));
     arr[o+F.week] = Math.round(perDay * p * new Date().getDay()); arr[o+F.month] = Math.round(perDay * p * (new Date().getDate() - 1)); arr[o+F.today] = 0;
-  });
+  }
 }
 const b64 = a => { let s = ''; const u = new Uint8Array(a.buffer); for (let k = 0; k < u.length; k += 0x8000) s += String.fromCharCode.apply(null, u.subarray(k, k + 0x8000)); return btoa(s); };
 const unb64 = (s, T) => { const bin = atob(s), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); return new T(u.buffer); };
 
+/* IndexedDB: the bots' numbers are about 13 MB, far past what localStorage holds */
+const IDB = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try { const r = indexedDB.open('focus-bench', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked')); }
+    catch(e){ rej(e); }
+  }));
+  const tx = (mode, fn) => open().then(db => new Promise((res, rej) => {
+    const t = db.transaction('kv', mode), req = fn(t.objectStore('kv'));
+    t.oncomplete = () => res(req && mode === 'readonly' ? req.result : undefined); t.onerror = t.onabort = () => rej(t.error);
+  }));
+  return {get: k => tx('readonly', st => st.get(k)), set: (k, v) => tx('readwrite', st => st.put(v, k)), del: k => tx('readwrite', st => st.delete(k))};
+})();
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
+
 /* saved state */
-var R = null, BS = null, PREV = null;     // BS: packed bot stats, PREV: ratings at the last daily update
+var R = null, BS = null, PREV = null;     // BS: packed bot stats, PREV: ratings at the start of today
+let idbOk = true, botsDirty = false, botsSaveT = null;
 function loadRanked(){
-  buildRoster();
   R = merge({v:1, on:true, mmr:1000, best:1000, played:0, w:0, l:0, d:0, ws:0, bestWs:0, bestUpset:0, revenge:0, profWins:0, hist:[], rec:{}, last:-1, showcase:null, cur:null, lastSim:null, lastSlice:null, rar:null, rv:0, para:null}, store.get('fb.ranked', {}));
-  try {
-    if (R.bots){
-      BS = unb64(R.bots, Int32Array);
-      if (BS.length === ROSTER_N * 12){       // older saves had 12 fields per bot; add "today"
-        const old = BS; BS = new Int32Array(ROSTER_N * BF);
-        for (let i = 0; i < ROSTER_N; i++) for (let k = 0; k < 12; k++) BS[i * BF + k] = old[i * 12 + k];
-        R.lastSlice = sliceStartOf(Date.now());   // those saves already counted today in full
-      } else if (BS.length !== ROSTER_N * BF) BS = null;
-    }
-  } catch(e){ BS = null; }
-  try { if (R.prev){ PREV = unb64(R.prev, Int16Array); if (PREV.length !== ROSTER_N) PREV = null; } } catch(e){ PREV = null; }
-  if (!BS){ BS = new Int32Array(ROSTER_N * BF); initBotStats(BS); const d0 = new Date(); d0.setHours(0, 0, 0, 0); R.lastSlice = d0.getTime() - SLICE; R.lastSim = dayKey(Date.now()); }
-  if (!PREV){ PREV = new Int16Array(ROSTER_N); for (let i = 0; i < ROSTER_N; i++) PREV[i] = BS[i * BF]; }
-  if (R.rv < 2){
-    // saves from before 100-Elo divisions: stretch the bots' ratings onto the new ladder (yours stays)
-    if (R.bots){ for (let i = 0; i < ROSTER_N; i++){ BS[i * BF] = stretchR(BS[i * BF]); PREV[i] = stretchR(PREV[i]); } }
-    R.hist.forEach(h => h.br = stretchR(h.br)); if (R.cur) R.cur.br = stretchR(R.cur.br);
-    R.rv = 2; sortedCache = null;
-  }
   if (!R.para) R.para = {h: null, since: 0, reign: {}, long: {}};
-  dailySim();
-  updateParagon(true);
+  RK_READY = false;
+  return loadBots().catch(e => { console.error(e); }).then(() => {
+    rTables(); RK_READY = true; botsChanged();
+    updateParagon(true);
+    saveRanked(true);
+    const show = () => { renderRankChip(); renderMatch(); if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders(); };
+    show();
+    return dailySim().then(ch => { if (ch) show(); setTimeout(() => badgePass(), 1500); });
+  });
+}
+async function loadBots(){
+  let rec = null, ros = null;
+  try { [rec, ros] = await Promise.all([IDB.get('bots'), IDB.get('roster')]); } catch(e){ idbOk = false; }
+  if (ros && ros.v === ROSTER_V && ros.n === ROSTER_N){
+    T_STY = new Uint8Array(ros.sty); T_PK = new Uint8Array(ros.pk); T_FAV = new Uint8Array(ros.fav);
+    T_SIT = new Float32Array(ros.sit); T_PACT = new Float32Array(ros.pact); T_SUF = new Int32Array(ros.suf);
+  } else {
+    buildRosterArrays(); botCache.clear();
+    if (idbOk) IDB.set('roster', {v: ROSTER_V, n: ROSTER_N, sty: T_STY.buffer, pk: T_PK.buffer, fav: T_FAV.buffer, sit: T_SIT.buffer, pact: T_PACT.buffer, suf: T_SUF.buffer}).catch(() => {});
+  }
+  if (rec && rec.n === ROSTER_N && rec.bs && rec.bs.byteLength === ROSTER_N * BF * 4){
+    BS = new Int32Array(rec.bs); PREV = new Int16Array(rec.prev);
+    R.lastSlice = rec.lastSlice; R.lastSim = rec.lastSim;
+  } else {
+    // first run with the big roster: keep the original 5,000 bots from the old save, add the rest
+    let old = null, oldPrev = null;
+    try { if (R.bots) old = unb64(R.bots, Int32Array); } catch(e){}
+    try { if (R.prev) oldPrev = unb64(R.prev, Int16Array); } catch(e){}
+    const oldF = old && old.length === OLD_N * BF ? BF : old && old.length === OLD_N * 12 ? 12 : 0;
+    BS = new Int32Array(ROSTER_N * BF); PREV = new Int16Array(ROSTER_N);
+    initBotStats(BS, oldF ? OLD_N : 0);
+    if (oldF){
+      for (let i = 0; i < OLD_N; i++) for (let k = 0; k < oldF; k++) BS[i * BF + k] = old[i * oldF + k];
+      if (oldF === 12) R.lastSlice = sliceStartOf(Date.now());   // those saves already counted today in full
+      if (R.rv < 2) for (let i = 0; i < OLD_N; i++) BS[i * BF] = stretchR(BS[i * BF]);
+    } else { const d0 = new Date(); d0.setHours(0, 0, 0, 0); R.lastSlice = d0.getTime() - SLICE; R.lastSim = dayKey(Date.now()); }
+    for (let i = 0; i < ROSTER_N; i++) PREV[i] = BS[i * BF];
+    if (oldPrev && oldPrev.length === OLD_N) for (let i = 0; i < OLD_N; i++) PREV[i] = R.rv < 2 ? stretchR(oldPrev[i]) : oldPrev[i];
+    botsDirty = true;
+  }
+  if (R.rv < 2){ R.hist.forEach(h => h.br = stretchR(h.br)); if (R.cur) R.cur.br = stretchR(R.cur.br); }
+  R.rv = 2; delete R.bots; delete R.prev;
 }
 let rkSaveT = null;
 function saveRanked(now){
-  const doSave = () => { R.bots = b64(BS); R.prev = b64(PREV); store.set('fb.ranked', R); };
+  const doSave = () => { store.set('fb.ranked', R); if (botsDirty) saveBots(); };
   clearTimeout(rkSaveT); now ? doSave() : rkSaveT = setTimeout(doSave, 800);
 }
+const markBots = () => { botsDirty = true; };
+function saveBots(){
+  if (!idbOk || !RK_READY || !BS) return;
+  clearTimeout(botsSaveT);
+  botsSaveT = setTimeout(() => {
+    botsDirty = false;
+    IDB.set('bots', {n: ROSTER_N, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now()}).catch(e => { console.error(e); botsDirty = true; });
+  }, 600);
+}
+addEventListener('pagehide', () => { if (botsDirty && RK_READY && idbOk){ clearTimeout(botsSaveT); botsDirty = false; IDB.set('bots', {n: ROSTER_N, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now()}).catch(() => {}); } });
 const botRating = i => BS[i * BF];
 
-/* bot updates every 2 hours. Each bot has a plan for each day (study or not, how long), worked out
+/* bots update every 2 hours. Each bot has a plan for each day (study or not, how long), worked out
    from the seed so nothing extra is saved. The plan's minutes are spread across the day's twelve
    2-hour slices, weighted toward the bot's peak hours. Streaks and days studied roll over at midnight.
-   Catch-up after time away is capped at 7 days. */
+   Catch-up after time away covers up to 7 days, with whole missed days done in one step. */
 const SLICE = 2 * 3600e3;
 function sliceStartOf(t){ const d = new Date(t); d.setMinutes(0, 0, 0); d.setHours(d.getHours() - d.getHours() % 2); return d.getTime(); }
-const SLICE_W = {};      // per peak: share of the day's minutes in each of the 12 slices (cumulative)
-Object.keys(PEAKS).forEach(pk => {
+const SLICE_W = [];      // per peak: share of the day's minutes in each of the 12 slices (cumulative)
+PEAK_NAMES.forEach(pk => {
   const [a, z] = PEAKS[pk], w = [];
   for (let k = 0; k < 12; k++){
     const h = k * 2 + 1, hh = h < 5 ? h + 24 : h;
     w.push(hh >= a && hh < z ? 3 : (hh >= a - 2 && hh < z + 2) ? 1.5 : (h >= 2 && h < 7) ? .1 : 1);
   }
   const sum = w.reduce((x, y) => x + y, 0); let c = 0;
-  SLICE_W[pk] = w.map(x => (c += x / sum));
+  SLICE_W.push(w.map(x => (c += x / sum)));
 });
 const dayNum = dk => +dk.replace(/-/g, '');
-function dayPlan(i, dk){
-  const b = BOTS[i], r = PREV[i] || BS[i * BF], rnd = mulberry32(dayNum(dk) * 7 + i * 2654435761);
-  const active = rnd() < activity(b, r);
-  if (!active) return {active: false, m: 0, longest: 0};
-  const L = typical(r) * b.sitMul, sits = Math.max(1, Math.round(sittingsPerDay(b) * (.6 + rnd() * .8)));
+const PLAN = {active: false, m: 0, longest: 0};    // reused to avoid making 250,000 objects per update
+function dayPlan(i, dk, out){
+  out = out || {active: false, m: 0, longest: 0};
+  const r = PREV[i] || BS[i * BF], rnd = mulberry32(dayNum(dk) * 7 + i * 2654435761);
+  out.active = rnd() < activityI(i, r); out.m = 0; out.longest = 0;
+  if (!out.active) return out;
+  const L = TYP_R[rIdx(r)] * T_SIT[i], sits = Math.max(1, Math.round(sittingsI(i) * (.6 + rnd() * .8)));
   let m = 0, longest = 0; for (let s = 0; s < sits; s++){ const x = L * Math.exp(.3 * gaussOf(rnd)); m += x; longest = Math.max(longest, x); }
-  return {active: true, m: Math.round(m), longest: Math.round(longest)};
+  out.m = Math.round(m); out.longest = Math.round(longest);
+  return out;
 }
-function runSlice(t){
-  const d = new Date(t), slot = d.getHours() / 2, dk = dayKey(t);
-  if (slot === 0){
-    // midnight: close out yesterday, then start today
-    const y = new Date(t - 12 * 3600e3), yk = dayKey(y);
-    for (let i = 0; i < ROSTER_N; i++){
-      const o = i * BF;
-      if (dayPlan(i, yk).active){ BS[o+F.days]++; BS[o+F.cur]++; BS[o+F.best] = Math.max(BS[o+F.best], BS[o+F.cur]); } else BS[o+F.cur] = 0;
-    }
-    for (let i = 0; i < ROSTER_N; i++){
-      const o = i * BF; PREV[i] = BS[o]; BS[o+F.today] = 0;
-      if (d.getDay() === 0) BS[o+F.week] = 0;
-      if (d.getDate() === 1) BS[o+F.month] = 0;
-    }
-  }
+// every bot's plan for one day, worked out once and reused by that day's twelve updates
+let planDay = null, planM = null, planL = null;
+function plansFor(dk){
+  if (planDay === dk) return;
+  if (!planM){ planM = new Int32Array(ROSTER_N); planL = new Int32Array(ROSTER_N); }
+  for (let i = 0; i < ROSTER_N; i++){ dayPlan(i, dk, PLAN); planM[i] = PLAN.active ? Math.max(1, PLAN.m) : 0; planL[i] = PLAN.longest; }
+  planDay = dk;
+}
+function rollover(t){
+  // midnight: close out yesterday, then start today
+  const d = new Date(t), yk = dayKey(new Date(t - 12 * 3600e3)), sun = d.getDay() === 0, first = d.getDate() === 1;
+  const cached = planDay === yk;
   for (let i = 0; i < ROSTER_N; i++){
-    const plan = dayPlan(i, dk); if (!plan.active) continue;
-    const b = BOTS[i], o = i * BF, W = SLICE_W[b.peak];
-    const add = Math.round(plan.m * W[slot]) - (slot ? Math.round(plan.m * W[slot - 1]) : 0);
-    if (add <= 0) continue;
-    const before = BS[o+F.today], today = before + add, bl = blockLen(b, BS[o]);
-    BS[o+F.today] = today; BS[o+F.total] += add; BS[o+F.week] += add; BS[o+F.month] += add;
-    BS[o+F.sessions] += Math.max(0, Math.round(today / bl) - Math.round(before / bl)) || (before === 0 ? 1 : 0);
-    BS[o+F.maxDay] = Math.max(BS[o+F.maxDay], today);
-    BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], Math.min(plan.longest, today));
-    BS[o+F.maxWeek] = Math.max(BS[o+F.maxWeek], BS[o+F.week]); BS[o+F.maxMonth] = Math.max(BS[o+F.maxMonth], BS[o+F.month]);
+    const o = i * BF;
+    if (cached ? planM[i] > 0 : dayPlan(i, yk, PLAN).active){ BS[o+F.days]++; BS[o+F.cur]++; if (BS[o+F.cur] > BS[o+F.best]) BS[o+F.best] = BS[o+F.cur]; } else BS[o+F.cur] = 0;
+    PREV[i] = BS[o]; BS[o+F.today] = 0;
+    if (sun) BS[o+F.week] = 0;
+    if (first) BS[o+F.month] = 0;
   }
-  // a few bot-vs-bot matches between ladder neighbors, zero-sum so ratings stay centered
-  const order = sortedBots(), rnd = Math.random, busy = slot >= 3 && slot <= 11 ? .2 : .05;
-  for (let k = 0; k < order.length; k++){
+  planDay = null;      // plans depend on the start-of-day ratings, which just changed
+}
+function addStudy(i, add, longest){
+  const o = i * BF, before = BS[o+F.today], today = before + add, bl = blockLenI(i, BS[o]);
+  BS[o+F.today] = today; BS[o+F.total] += add; BS[o+F.week] += add; BS[o+F.month] += add;
+  BS[o+F.sessions] += Math.max(0, Math.round(today / bl) - Math.round(before / bl)) || (before === 0 ? 1 : 0);
+  if (today > BS[o+F.maxDay]) BS[o+F.maxDay] = today;
+  BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], Math.min(longest, today));
+  if (BS[o+F.week] > BS[o+F.maxWeek]) BS[o+F.maxWeek] = BS[o+F.week];
+  if (BS[o+F.month] > BS[o+F.maxMonth]) BS[o+F.maxMonth] = BS[o+F.month];
+}
+// bot-vs-bot matches between ladder neighbors, zero-sum so ratings stay centered
+function botMatches(busy){
+  const order = sortedBots(), rnd = Math.random, n = order.length;
+  for (let k = 0; k < n; k++){
     if (rnd() > busy) continue;
-    const j = clampN(k + Math.round(gaussOf(rnd) * 4) || 1, 0, order.length - 1); if (j === k) continue;
+    const j = clampN(k + Math.round(gaussOf(rnd) * 4) || 1, 0, n - 1); if (j === k) continue;
     const a = order[k], c = order[j], ra = BS[a * BF], rc = BS[c * BF];
     const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = rnd() < ea ? 1 : 0, dlt = Math.round(12 * (sa - ea));
     BS[a * BF] = clampN(ra + dlt, 300, 5000); BS[c * BF] = clampN(rc - dlt, 300, 5000);
   }
-  sortedCache = null;
+  botsChanged();
 }
+function runSlice(t){
+  const slot = new Date(t).getHours() / 2, dk = dayKey(t);
+  if (slot === 0) rollover(t);
+  plansFor(dk);
+  for (let i = 0; i < ROSTER_N; i++){
+    const m = planM[i]; if (!m) continue;
+    const W = SLICE_W[T_PK[i]], add = Math.round(m * W[slot]) - (slot ? Math.round(m * W[slot - 1]) : 0);
+    if (add > 0) addStudy(i, add, planL[i]);
+  }
+  botMatches(slot >= 3 && slot <= 11 ? .2 : .05);
+}
+function runDay(t){    // a whole missed day in one step
+  rollover(t);
+  const dk = dayKey(t); plansFor(dk);
+  for (let i = 0; i < ROSTER_N; i++) if (planM[i]) addStudy(i, planM[i], planL[i]);
+  botMatches(.95); botMatches(1);
+}
+// runs one update (or one whole missed day) at a time, letting the page breathe in between;
+// resolves to true if anything changed
+let simBusy = null;
 function dailySim(){
+  if (!RK_READY) return Promise.resolve(false);
+  if (simBusy) return simBusy;
   const now = sliceStartOf(Date.now());
   if (!R.lastSlice) R.lastSlice = now;
-  if (now <= R.lastSlice) return false;
+  if (now <= R.lastSlice) return Promise.resolve(false);
+  // a queue of small jobs: each 2-hour update, or a whole missed day split into a few parts
+  const jobs = [];
   let t = Math.max(R.lastSlice + SLICE, now - 7 * 864e5);
-  for (; t <= now; t += SLICE) runSlice(t);
-  R.lastSlice = now; R.lastSim = dayKey(now);
-  badgeCache.clear(); lbPts = null;
-  updateParagon();
-  saveRanked(true);
-  return true;
+  while (t <= now){
+    const d = new Date(t), next = new Date(d); next.setDate(d.getDate() + 1);
+    if (d.getHours() === 0 && sliceStartOf(next.getTime() - 1) <= now){
+      const tt = t, dk = dayKey(t), last = sliceStartOf(next.getTime() - 1);
+      jobs.push(() => rollover(tt), () => plansFor(dk), () => { for (let i = 0; i < ROSTER_N; i++) if (planM[i]) addStudy(i, planM[i], planL[i]); botMatches(.95); }, () => { botMatches(1); R.lastSlice = last; });
+      t = next.getTime();
+    } else { const tt = t; jobs.push(() => { runSlice(tt); R.lastSlice = tt; }); t += SLICE; }
+  }
+  let res; const prom = simBusy = new Promise(r => res = r);
+  const step = () => {
+    jobs.shift()();
+    if (jobs.length){ setTimeout(step, 25); return; }
+    R.lastSlice = now; R.lastSim = dayKey(now);
+    lbPts = null; markBots(); simBusy = null;
+    updateParagon();
+    saveRanked(true);
+    res(true);
+  };
+  step();
+  return prom;
 }
-let sortedCache = null, posCache = null;
-function sortedBots(){ if (!sortedCache){ sortedCache = [...Array(ROSTER_N).keys()].sort((a, b) => BS[b * BF] - BS[a * BF] || a - b); posCache = null; } return sortedCache; }
-function posOf(i){ if (!posCache || !sortedCache){ const o = sortedBots(); posCache = new Int32Array(ROSTER_N); o.forEach((b, k) => posCache[b] = k); } return posCache[i]; }
+/* sorted by rating (counting sort: ratings are whole numbers from 0 to 5,000), ties by bot number */
+let sortedCache = null, posCache = null, botsVer = 0, rankCountCache = null;
+function botsChanged(){ sortedCache = null; posCache = null; rankCountCache = null; botsVer++; badgeCache.clear(); }
+function sortedBots(){
+  if (sortedCache) return sortedCache;
+  const MAXR = 5000, cnt = new Int32Array(MAXR + 2), out = new Int32Array(ROSTER_N);
+  for (let i = 0; i < ROSTER_N; i++) cnt[MAXR - clampN(BS[i * BF], 0, MAXR) + 1]++;
+  for (let k = 1; k <= MAXR + 1; k++) cnt[k] += cnt[k - 1];
+  for (let i = 0; i < ROSTER_N; i++) out[cnt[MAXR - clampN(BS[i * BF], 0, MAXR)]++] = i;
+  return (sortedCache = out);
+}
+function posOf(i){ if (!posCache){ const o = sortedBots(); posCache = new Int32Array(ROSTER_N); for (let k = 0; k < o.length; k++) posCache[o[k]] = k; } return posCache[i]; }
 // overall place by Elo among everyone (you win ties)
 function placeOf(who){
   if (who === ME){ const o = sortedBots(); let lo = 0, hi = o.length; while (lo < hi){ const m = (lo + hi) >> 1; if (BS[o[m] * BF] > R.mmr) lo = m + 1; else hi = m; } return lo + 1; }
@@ -3441,10 +3575,13 @@ function earnedFor(st){
 }
 function botBadges(i){
   if (badgeCache.has(i)) return badgeCache.get(i);
-  const got = earnedFor(botStats(i)); badgeCache.set(i, got); return got;
+  const got = earnedFor(botStats(i));
+  if (badgeCache.size > 5000) badgeCache.clear();
+  badgeCache.set(i, got); return got;
 }
 const TIER_RANK = {legendary:0, platinum:1, gold:2, silver:3, bronze:4};
-const achById = id => ACHS.find(a => a.id === id);
+let ACH_MAP = null;
+const achById = id => (ACH_MAP || (ACH_MAP = new Map(ACHS.map(a => [a.id, a])))).get(id);
 function rarityOf(id){ return R.rar && R.rar.counts[id] != null ? (R.rar.counts[id] + (ACH.u[id] ? 1 : 0)) / (ROSTER_N + 1) : null; }
 function rareSort(ids){
   return ids.slice().sort((p, q) => { const a = rarityOf(p), b = rarityOf(q); if (a != null && b != null && a !== b) return a - b; return TIER_RANK[achById(p).tier] - TIER_RANK[achById(q).tier]; });
@@ -3462,22 +3599,34 @@ function myFeatured(){
   const chosen = (R.showcase || []).filter(id => ACH.u[id]);
   return chosen.length ? chosen.slice(0, 3) : featured(mine);
 }
-// rarity across all 5,000 bots, worked out in small chunks while idle, once per daily update
-let rarityRunning = false;
-function computeRarity(done){
-  if (R.rar && R.rar.day === R.lastSim){ done && done(); return; }
-  if (rarityRunning) return; rarityRunning = true;
-  const counts = {}; ACHS.forEach(a => counts[a.id] = 0);
+/* one pass over every bot, in small idle chunks: how many bots hold each achievement (rarity, kept
+   for the day) and each bot's achievement points (for the leaderboard, redone after each update).
+   Badge lists aren't kept for every bot, only for the few on screen. */
+let passGen = 0, passRunning = false, passWait = [];
+function badgePass(done){
+  if (done) passWait.push(done);
+  if (!RK_READY) return;
+  const needRar = !(R.rar && R.rar.day === R.lastSim);
+  if (!needRar && lbPts){ const w = passWait; passWait = []; w.forEach(f => f()); return; }
+  if (passRunning) return; passRunning = true;
+  const gen = botsVer, counts = {}, pts = new Int32Array(ROSTER_N), PT = {}; ACHS.forEach(a => { counts[a.id] = 0; PT[a.id] = TIERS[a.tier].pts; });
   let i = 0;
   const idle = window.requestIdleCallback || (f => setTimeout(() => f({timeRemaining: () => 8}), 16));
   const step = dl => {
-    const end = Math.min(ROSTER_N, i + 250);
-    for (; i < end; i++) botBadges(i).forEach(id => counts[id]++);
-    if (i < ROSTER_N) idle(step);
-    else { R.rar = {day: R.lastSim, counts}; rarityRunning = false; saveRanked(); done && done(); }
+    if (botsVer !== gen){ passRunning = false; setTimeout(() => badgePass(), 500); return; }     // bots changed mid-way: start over
+    const t0 = performance.now();
+    while (i < ROSTER_N && performance.now() - t0 < 12){
+      const end = Math.min(ROSTER_N, i + 100);
+      for (; i < end; i++){ const got = badgeCache.get(i) || earnedFor(botStats(i)); let n = 0; for (const id of got){ counts[id]++; n += PT[id]; } pts[i] = n; }
+    }
+    if (i < ROSTER_N){ idle(step); return; }
+    R.rar = {day: R.lastSim, counts}; lbPts = pts; passRunning = false; saveRanked();
+    const w = passWait; passWait = []; w.forEach(f => f());
   };
   idle(step);
 }
+const computeRarity = done => badgePass(done);
+const ensureBotPoints = done => badgePass(done);
 function badgeHtml(id, size){
   const a = achById(id); if (!a) return '';
   return `<span class="bdg ${size || ''}" data-ach="${a.id}" tabindex="0" role="button" aria-label="${esc(a.name)}, ${TIERS[a.tier].name} achievement. Show details">${achIcon(a)}</span>`;
@@ -3527,7 +3676,7 @@ function findOpponent(){
   for (const w of [75, 150, 300, 2000]){
     const cand = order.filter(i => i !== R.last && Math.abs(botRating(i) - me) <= w);
     if (cand.length >= (w < 2000 ? 5 : 1)){
-      const weighted = []; cand.forEach(i => { const [a, z] = PEAKS[BOTS[i].peak], hh = h < 5 ? h + 24 : h; weighted.push(i); if (hh >= a && hh < z) weighted.push(i); });
+      const weighted = []; cand.forEach(i => { const [a, z] = PEAKS[PEAK_NAMES[T_PK[i]]], hh = h < 5 ? h + 24 : h; weighted.push(i); if (hh >= a && hh < z) weighted.push(i); });
       return pick(Math.random, weighted);
     }
   }
@@ -3569,7 +3718,7 @@ function finalize(res, why){
   const s = stakes(c.br), delta = res === 'W' ? s.win : res === 'D' ? s.draw : -s.loss;
   const before = rankOf(R.mmr);
   R.mmr = clampN(R.mmr + delta, 100, 5000); R.best = Math.max(R.best, R.mmr); R.played++;
-  BS[c.b * BF] = clampN(BS[c.b * BF] - delta, 300, 5000); sortedCache = null;
+  BS[c.b * BF] = clampN(BS[c.b * BF] - delta, 300, 5000); botsChanged(); markBots();
   // the bot studied too
   const o = c.b * BF; BS[o+F.total] += themMin; BS[o+F.sessions]++; BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], themMin);
   const rec = R.rec[c.b] || (R.rec[c.b] = [0, 0, 0]);
@@ -3596,7 +3745,7 @@ function endMatch(why){
 // runs inside the timer loop
 let rkLastRender = 0, rkLastSave = 0, rkFresh = true;
 function rankedTick(){
-  if (!R || !R.on) return;
+  if (!R || !R.on || !RK_READY) return;
   const now = Date.now(), running = S.running && S.phase === 'focus';
   if (!running) rkFresh = true;                       // a new match needs a fresh start (Start, or the next focus block)
   if (running && rkFresh && (!R.cur || R.cur.state === 'done')){ rkFresh = false; startMatch(); }
@@ -3618,7 +3767,7 @@ function rankedTick(){
 /* match card on the Focus page */
 const mm = ms => fmtMin(Math.floor(ms / 60000));
 function renderMatch(fresh){
-  const slot = $('#matchSlot'); if (!slot) return;
+  const slot = $('#matchSlot'); if (!slot || !RK_READY) return;
   if (!R.on){ slot.innerHTML = ''; return; }
   const c = R.cur, rk = myRk();
   if (!c){
@@ -3684,6 +3833,7 @@ function renderRankChip(){
 /* Ranked page */
 let rkHistShown = 30;
 function renderRanked(){
+  if (!RK_READY){ $('#rkHero').innerHTML = '<p class="hint">Loading 250,000 players…</p>'; return; }
   const rk = myRk(), next = rk.hi ? rankOf(rk.hi) : null, prog = rk.hi ? (R.mmr - rk.lo) / (rk.hi - rk.lo) : 1;
   const games = R.w + R.l + R.d, wr = games ? Math.round(R.w / games * 100) : 0;
   $('#rkHero').innerHTML = `${emblem(rk, 'xl')}<div class="rk-hero-tx"><small>${R.played < 5 ? `Placement ${R.played}/5 · your rank firms up after 5 matches` : 'Your rank'}</small><b style="color:${rk.c}">${rk.full}</b>
@@ -3709,8 +3859,9 @@ function renderRanked(){
   $('#rkLadder').innerHTML = lad;
   $('#rkLadderPos').textContent = `#${(pos + 1).toLocaleString()} of ${(ROSTER_N + 1).toLocaleString()}`;
   // rank list with how many players hold each
-  const counts = RANKS.map(() => 0), N1 = ROSTER_N + 1;
-  for (let i = 0; i < ROSTER_N; i++) counts[rankOf(botRating(i)).i]++; counts[rankOf(R.mmr).i]++;
+  const N1 = ROSTER_N + 1;
+  if (!rankCountCache){ rankCountCache = RANKS.map(() => 0); for (let i = 0; i < ROSTER_N; i++){ const r = BS[i * BF]; let k = RANKS.length - 2; while (k > 0 && r < RANKS[k].lo) k--; rankCountCache[k]++; } }
+  const counts = rankCountCache.slice(); counts[rankOf(R.mmr).i]++;
   if (R.para.h != null){ counts[LAUREATE]--; counts[PARAGON_I] = 1; }
   const range = k => k === 0 ? 'under 900 Elo' : k === LAUREATE ? '3,600+ Elo' : k === PARAGON_I ? 'The highest-rated Laureate' : `${RANKS[k].lo.toLocaleString()}–${(RANKS[k + 1].lo - 1).toLocaleString()} Elo`;
   const share = n => n === 0 ? 'none' : n / N1 < .001 ? `${n.toLocaleString()} player${n === 1 ? '' : 's'}` : `${(n / N1 * 100).toFixed(n / N1 < .01 ? 1 : 0)}%`;
@@ -3793,14 +3944,17 @@ function onPageShown(name){
 
 let lbPts = null;
 loadRanked();
-setTimeout(() => computeRarity(), 3000);
 setInterval(() => {
-  if (document.hidden || !dailySim()) return;
-  if (!$('#page-ranked').hidden) renderRanked();
-  if (typeof renderLeaders === 'function' && !$('#page-leaders').hidden) renderLeaders();
+  if (document.hidden) return;
+  dailySim().then(ch => {
+    if (!ch) return;
+    if (!$('#page-ranked').hidden) renderRanked();
+    if (!$('#page-leaders').hidden) renderLeaders();
+    renderRankChip();
+  });
 }, 60000);
 
-/* ---------- leaderboards: you and all 5,000 bots, in 11 categories ---------- */
+/* ---------- leaderboards: you and all 249,999 bots, in 11 categories ---------- */
 function myTotals(){
   const wk = startOfWeek(new Date()).getTime(), m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0);
   const byDay = {}; let total = 0, week = 0, month = 0, maxSess = 0;
@@ -3823,28 +3977,26 @@ const LB = [
   {id:'pts',   name:'Achievement points',     desc:'Points from unlocked achievements',     u:'pts', f:null,       me:t => t.pts}
 ];
 const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : v.toLocaleString();
-// achievement points for every bot, worked out in idle chunks once per update
-let lbPtsRunning = false;
-function ensureBotPoints(done){
-  if (lbPts){ done && done(); return; }
-  if (lbPtsRunning) return; lbPtsRunning = true;
-  const arr = new Int32Array(ROSTER_N), idle = window.requestIdleCallback || (f => setTimeout(f, 16)); let i = 0;
-  const step = () => { const end = Math.min(ROSTER_N, i + 300); for (; i < end; i++) arr[i] = botBadges(i).reduce((n, id) => n + TIERS[achById(id).tier].pts, 0);
-    if (i < ROSTER_N) idle(step); else { lbPts = arr; lbPtsRunning = false; done && done(); } };
-  idle(step);
-}
 const botVal = (c, i) => c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f];
+// each category's bots sorted best first, kept until the bots next change (a native typed-array sort
+// on one packed number per bot: value, then Elo, then bot number)
+const lbOrders = {};
+function lbOrder(c){
+  const hit = lbOrders[c.id]; if (hit && hit.ver === botsVer && (c.f != null || hit.pts === lbPts)) return hit.order;
+  const keys = new Float64Array(ROSTER_N), SH = 262144;
+  for (let i = 0; i < ROSTER_N; i++){ const v = clampN(botVal(c, i), 0, 4e6), e = clampN(BS[i * BF], 0, 8191); keys[i] = -((v * 8192 + e) * SH) + i; }
+  keys.sort();
+  const order = new Int32Array(ROSTER_N); for (let k = 0; k < ROSTER_N; k++) order[k] = ((keys[k] % SH) + SH) % SH;
+  lbOrders[c.id] = {ver: botsVer, pts: lbPts, order}; return order;
+}
+const lbAhead = (c, me) => { let n = 0; for (let i = 0; i < ROSTER_N; i++){ const v = botVal(c, i); if (v > me || (v === me && BS[i * BF] > R.mmr)) n++; } return n; };
 function lbRanking(c, t){
-  const me = c.me(t), idx = new Int32Array(ROSTER_N + 1).map((_, k) => k);
-  const val = k => k === ROSTER_N ? me : botVal(c, k), elo = k => k === ROSTER_N ? R.mmr : BS[k * BF];
-  idx.sort((a, b) => (val(b) - val(a)) || (elo(b) - elo(a)) || (a === ROSTER_N ? -1 : b === ROSTER_N ? 1 : a - b));
-  return {idx, val, me};
+  const me = c.me(t), order = lbOrder(c), mine = lbAhead(c, me);
+  const at = k => k < mine ? order[k] : k === mine ? ROSTER_N : order[k - 1];
+  const val = k => k === ROSTER_N ? me : botVal(c, k);
+  return {at, mine, val, me};
 }
-function myPlace(c, t){   // 1 + how many bots are ahead of you (ties go to you)
-  const me = c.me(t); let ahead = 0;
-  for (let i = 0; i < ROSTER_N; i++) if (botVal(c, i) > me) ahead++;
-  return ahead + 1;
-}
+const myPlace = (c, t) => lbAhead(c, c.me(t)) + 1;
 const topPct = place => { const p = place / (ROSTER_N + 1) * 100; return p < 1 ? 'top 1%' : `top ${Math.ceil(p)}%`; };
 let lbShown = 10, lbJump = false;
 function lbRow(k, place, c, val){
@@ -3858,18 +4010,19 @@ function lbRow(k, place, c, val){
 }
 function renderLeaders(){
   if (!$('#lbList')) return;
+  if (!RK_READY){ $('#lbList').innerHTML = '<li class="lb-wait">Loading 250,000 players…</li>'; return; }
   const c = LB.find(x => x.id === P.lbCat) || LB[0], t = myTotals();
   $('#lbCats').innerHTML = LB.map(x => `<button data-v="${x.id}" aria-pressed="${x.id === c.id}">${x.name}</button>`).join('');
   $('#lbTitle').textContent = c.name; $('#lbDesc').textContent = c.desc;
   const tm = x => new Date(x).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
   if (c.f == null && !lbPts){ $('#lbList').innerHTML = '<li class="lb-wait">Adding up everyone\'s achievement points…</li>'; ensureBotPoints(() => { if (!$('#page-leaders').hidden) renderLeaders(); }); }
   else {
-    const {idx, val} = lbRanking(c, t), mine = idx.indexOf(ROSTER_N);
+    const {at, val, mine} = lbRanking(c, t);
     let from = 0, to = lbShown;
-    if (lbJump){ from = Math.max(0, mine - 5); to = Math.min(idx.length, mine + 6); }
+    if (lbJump){ from = Math.max(0, mine - 5); to = Math.min(ROSTER_N + 1, mine + 6); }
     let h = '';
-    if (lbJump && from > 0) h += lbRow(idx[0], 1, c, val) + '<li class="lb-gap">⋯</li>';
-    for (let k = from; k < to; k++) h += lbRow(idx[k], k + 1, c, val);
+    if (lbJump && from > 0) h += lbRow(at(0), 1, c, val) + '<li class="lb-gap">⋯</li>';
+    for (let k = from; k < to; k++) h += lbRow(at(k), k + 1, c, val);
     if (!lbJump && mine >= to) h += '<li class="lb-gap">⋯</li>' + lbRow(ROSTER_N, mine + 1, c, val).replace('class="lb-row me', 'class="lb-row me pinned');
     $('#lbList').innerHTML = h;
     $('#lbYou').innerHTML = `You're <b>#${(mine + 1).toLocaleString()}</b> of ${(ROSTER_N + 1).toLocaleString()} · ${topPct(mine + 1)} · ${lbFmt(c.u, val(ROSTER_N))}`;
