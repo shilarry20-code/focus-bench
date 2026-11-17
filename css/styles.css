@@ -1145,3 +1145,4 @@ body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
 
 /* back to the top, from the guide's side panel */
 .g-top-row{display:flex;margin-top:4px}
+.g-toc-h{display:flex;align-items:center;justify-content:space-between;gap:8px}.g-toc-h .small-btn{letter-spacing:normal;text-transform:none;font-family:inherit;color:var(--ink);font-weight:600}
