@@ -167,6 +167,13 @@ button{cursor:pointer}
 .pf-ach-h .seg{letter-spacing:0;text-transform:none}
 .pf-tier{margin-top:12px}.pf-tier>span{font-size:12px;font-weight:700;display:block;margin-bottom:6px}
 .pf-lb button{cursor:pointer}
+.hm.pick,.hm-strip .hm[data-pk]{cursor:pointer}.hm.pick:hover,.hm-strip .hm[data-pk]:hover{outline:2px solid var(--ink);outline-offset:-1px}
+.pc-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pc-head{margin-top:10px}.pc-head b{order:0}.pc-head [data-pc="prev"]{order:-1}
+.pc-sess .task em{display:inline-flex;align-items:center;gap:5px}
+.pc-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.pc-live{color:#1f9d55;font-weight:700}
+#pfCal .cal-week,#pfCal .cal-grid{margin-top:10px}
 @media (max-width:1000px){.pf-grid{grid-template-columns:1fr}}
 .bot-tag{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 4px;vertical-align:2px}
 .bdgs{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
@@ -3174,7 +3181,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { re
 // Each bot is generated from a fixed seed (name, look, style, habits), so only the numbers that
 // change are saved: each bot's rating and study totals, packed into a typed array kept in IndexedDB.
 // The first 5,000 bots are the original roster and keep their names; the rest came later.
-const ROSTER_N = 249999, OLD_N = 5000, ROSTER_SEED = 20261113, ROSTER_V = 2, BF = 13;   // BF: fields per bot
+const ROSTER_N = 249999, OLD_N = 5000, ROSTER_SEED = 20261113, ROSTER_V = 3, BF = 13;   // BF: fields per bot
 const F = {rating:0, total:1, sessions:2, days:3, cur:4, best:5, maxSess:6, maxDay:7, maxWeek:8, maxMonth:9, week:10, month:11, today:12};
 function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const gaussOf = rnd => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
@@ -3274,7 +3281,7 @@ function newName(i){
 }
 const PEAK_NAMES = Object.keys(PEAKS), STYLE_NAMES = ['Steady','Sprinter','Grinder','Wildcard','Night Owl','Early Bird'], FAV_NAMES = ['pomodoro','fifty','custom','timebox','stopwatch','flow'];
 // compact per-bot data used in the hot loops (built once, cached in IndexedDB)
-let T_STY = null, T_PK = null, T_FAV = null, T_SIT = null, T_PACT = null, T_SUF = null, RK_READY = false;
+let T_STY = null, T_PK = null, T_FAV = null, T_SIT = null, T_PACT = null, T_SUF = null, T_BASE = null, RK_READY = false;
 const botCache = new Map();
 function bot(i){
   let b = botCache.get(i); if (b) return b;
@@ -3285,12 +3292,12 @@ function bot(i){
 const BOTS = new Proxy({}, {get: (_, k) => typeof k === 'string' && /^\d+$/.test(k) && +k < ROSTER_N ? bot(+k) : undefined});
 function buildRosterArrays(){
   T_STY = new Uint8Array(ROSTER_N); T_PK = new Uint8Array(ROSTER_N); T_FAV = new Uint8Array(ROSTER_N);
-  T_SIT = new Float32Array(ROSTER_N); T_PACT = new Float32Array(ROSTER_N); T_SUF = new Int32Array(ROSTER_N);
+  T_SIT = new Float32Array(ROSTER_N); T_PACT = new Float32Array(ROSTER_N); T_SUF = new Int32Array(ROSTER_N); T_BASE = new Int16Array(ROSTER_N);
   const seen = new Map();
   for (let i = 0; i < ROSTER_N; i++){
     const b = genBot(i), n = seen.get(b.name) || 0; seen.set(b.name, n + 1); if (n) T_SUF[i] = n + 1;
     T_STY[i] = STYLE_NAMES.indexOf(b.style); T_PK[i] = PEAK_NAMES.indexOf(b.peak); T_FAV[i] = FAV_NAMES.indexOf(b.fav);
-    T_SIT[i] = b.sitMul; T_PACT[i] = b.pAct;
+    T_SIT[i] = b.sitMul; T_PACT[i] = b.pAct; T_BASE[i] = b.base;
   }
 }
 function genBot(i){
@@ -3327,7 +3334,8 @@ function initBotStats(arr, from){
     arr[o+F.rating] = r; arr[o+F.total] = total; arr[o+F.sessions] = Math.max(1, Math.round(total / blockLen(b, r)));
     arr[o+F.days] = days; arr[o+F.best] = best; arr[o+F.cur] = rnd() < p ? Math.floor(rnd() * best) : 0;
     arr[o+F.maxSess] = Math.round(L * (b.style === 'Grinder' ? 2.3 : b.style === 'Wildcard' ? 2 : 1.5) * (.9 + rnd() * .3));
-    arr[o+F.maxDay] = Math.round(perDay * (1.8 + rnd() * 1.2));
+    arr[o+F.maxDay] = Math.min(DAY_MAX, Math.round(perDay * (1.8 + rnd() * 1.2)));
+    arr[o+F.maxSess] = Math.min(arr[o+F.maxSess], arr[o+F.maxDay]);
     arr[o+F.maxWeek] = Math.round(Math.min(arr[o+F.maxDay] * 7, perDay * 7 * p * (1.3 + rnd() * .4)));
     arr[o+F.maxMonth] = Math.round(Math.min(arr[o+F.maxWeek] * 4.4, perDay * 30 * p * (1.15 + rnd() * .3)));
     arr[o+F.week] = Math.round(perDay * p * new Date().getDay()); arr[o+F.month] = Math.round(perDay * p * (new Date().getDate() - 1)); arr[o+F.today] = 0;
@@ -3372,10 +3380,10 @@ async function loadBots(){
   try { [rec, ros] = await Promise.all([IDB.get('bots'), IDB.get('roster')]); } catch(e){ idbOk = false; }
   if (ros && ros.v === ROSTER_V && ros.n === ROSTER_N){
     T_STY = new Uint8Array(ros.sty); T_PK = new Uint8Array(ros.pk); T_FAV = new Uint8Array(ros.fav);
-    T_SIT = new Float32Array(ros.sit); T_PACT = new Float32Array(ros.pact); T_SUF = new Int32Array(ros.suf);
+    T_SIT = new Float32Array(ros.sit); T_PACT = new Float32Array(ros.pact); T_SUF = new Int32Array(ros.suf); T_BASE = new Int16Array(ros.base);
   } else {
     buildRosterArrays(); botCache.clear();
-    if (idbOk) IDB.set('roster', {v: ROSTER_V, n: ROSTER_N, sty: T_STY.buffer, pk: T_PK.buffer, fav: T_FAV.buffer, sit: T_SIT.buffer, pact: T_PACT.buffer, suf: T_SUF.buffer}).catch(() => {});
+    if (idbOk) IDB.set('roster', {v: ROSTER_V, n: ROSTER_N, sty: T_STY.buffer, pk: T_PK.buffer, fav: T_FAV.buffer, sit: T_SIT.buffer, pact: T_PACT.buffer, suf: T_SUF.buffer, base: T_BASE.buffer}).catch(() => {});
   }
   if (rec && rec.n === ROSTER_N && rec.bs && rec.bs.byteLength === ROSTER_N * BF * 4){
     BS = new Int32Array(rec.bs); PREV = new Int16Array(rec.prev);
@@ -3398,7 +3406,17 @@ async function loadBots(){
     botsDirty = true;
   }
   if (R.rv < 2){ R.hist.forEach(h => h.br = stretchR(h.br)); if (R.cur) R.cur.br = stretchR(R.cur.br); }
-  R.rv = 2; delete R.bots; delete R.prev;
+  if (R.rv < 3){
+    // no bot's day can top 24 hours: pull back the few records that did, and keep sessions inside their day
+    for (let i = 0; i < ROSTER_N; i++){
+      const o = i * BF;
+      if (BS[o+F.maxDay] > DAY_MAX) BS[o+F.maxDay] = 1150 + (i * 37) % 260;
+      if (BS[o+F.maxSess] > BS[o+F.maxDay]) BS[o+F.maxSess] = Math.round(BS[o+F.maxDay] * .6);
+      if (BS[o+F.today] > DAY_MAX) BS[o+F.today] = DAY_MAX;
+    }
+    botsDirty = true;
+  }
+  R.rv = 3; delete R.bots; delete R.prev;
 }
 let rkSaveT = null;
 function saveRanked(now){
@@ -3434,14 +3452,25 @@ PEAK_NAMES.forEach(pk => {
   SLICE_W.push(w.map(x => (c += x / sum)));
 });
 const dayNum = dk => +dk.replace(/-/g, '');
+// A bot's day is fixed by its seed, the date and its long-term base rating, so past days never change
+// and its calendar can be rebuilt exactly at any time. No day tops 23 hours of study.
+const DAY_MAX = 1440, DAY_CAP = 1380;
 const PLAN = {active: false, m: 0, longest: 0};    // reused to avoid making 250,000 objects per update
+function daySits(i, dk, out){     // the day's sitting lengths in minutes (empty if the bot skipped the day)
+  const r = T_BASE[i], rnd = mulberry32(dayNum(dk) * 7 + i * 2654435761);
+  out = out || [];  out.length = 0;
+  if (!(rnd() < activityI(i, r))) return out;
+  const L = TYP_R[rIdx(r)] * T_SIT[i], sits = Math.max(1, Math.round(sittingsI(i) * (.6 + rnd() * .8)));
+  let m = 0; for (let s = 0; s < sits; s++){ const x = L * Math.exp(.3 * gaussOf(rnd)); out.push(x); m += x; }
+  if (m > DAY_CAP) for (let s = 0; s < out.length; s++) out[s] *= DAY_CAP / m;
+  return out;
+}
+const SITS = [];
 function dayPlan(i, dk, out){
   out = out || {active: false, m: 0, longest: 0};
-  const r = PREV[i] || BS[i * BF], rnd = mulberry32(dayNum(dk) * 7 + i * 2654435761);
-  out.active = rnd() < activityI(i, r); out.m = 0; out.longest = 0;
-  if (!out.active) return out;
-  const L = TYP_R[rIdx(r)] * T_SIT[i], sits = Math.max(1, Math.round(sittingsI(i) * (.6 + rnd() * .8)));
-  let m = 0, longest = 0; for (let s = 0; s < sits; s++){ const x = L * Math.exp(.3 * gaussOf(rnd)); m += x; longest = Math.max(longest, x); }
+  daySits(i, dk, SITS);
+  out.active = SITS.length > 0; out.m = 0; out.longest = 0;
+  let m = 0, longest = 0; for (const x of SITS){ m += x; if (x > longest) longest = x; }
   out.m = Math.round(m); out.longest = Math.round(longest);
   return out;
 }
@@ -3467,7 +3496,8 @@ function rollover(t){
   planDay = null;      // plans depend on the start-of-day ratings, which just changed
 }
 function addStudy(i, add, longest){
-  const o = i * BF, before = BS[o+F.today], today = before + add, bl = blockLenI(i, BS[o]);
+  const o = i * BF, before = BS[o+F.today]; add = Math.min(add, DAY_MAX - before); if (add <= 0) return;
+  const today = before + add, bl = blockLenI(i, BS[o]);
   BS[o+F.today] = today; BS[o+F.total] += add; BS[o+F.week] += add; BS[o+F.month] += add;
   BS[o+F.sessions] += Math.max(0, Math.round(today / bl) - Math.round(before / bl)) || (before === 0 ? 1 : 0);
   if (today > BS[o+F.maxDay]) BS[o+F.maxDay] = today;
@@ -3969,6 +3999,77 @@ $('#rkOn').onchange = e => {
 };
 document.addEventListener('click', e => { const b = e.target.closest('#page-ranked [data-bot], .lnk[data-bot]'); if (b && !e.target.closest('.bdg')) openBot(+b.dataset.bot); });
 
+
+/* ---------- bot calendars: every session a bot studied, rebuilt from its seed (nothing stored) ---------- */
+const ROSTER_EPOCH = new Date(2026, 10, 13).getTime();       // bots' join dates count back from here
+const botJoinKey = i => dayKey(ROSTER_EPOCH - bot(i).age * 864e5);
+const BOT_TAGS = ['Homework', 'Exam prep', 'Reading', 'Project', 'Review'];
+const botTagColor = t => { const k = BOT_TAGS.indexOf(t), pal = SERIES[isDark() ? 'dark' : 'light']; return k >= 0 ? pal[k] : actColor(t); };
+const LANGS = ['Spanish', 'Japanese'], WRITING = ['Literature', 'World history', 'Philosophy', 'Art history', 'Political science', 'Psychology'];
+function botClasses(i){
+  const B = bot(i), rr = mulberry32(ROSTER_SEED * 3 + i * 613), list = [B.subject], n = 2 + (rr() < .5 ? 1 : 0);
+  while (list.length < n + 1){ const x = pick(rr, SUBJECTS); if (!list.includes(x)) list.push(x); }
+  return list;
+}
+function semesterOf(d){
+  const y = d.getFullYear(), m = d.getMonth();
+  const start = m >= 7 ? new Date(y, 7, 20) : m <= 4 ? new Date(y, 0, 10) : new Date(y, 4, 20);
+  const wk = Math.max(0, Math.floor((d - start) / (7 * 864e5)));
+  return {wk, summer: m === 5 || m === 6 || (m === 4 && d.getDate() > 15), exam: wk === 6 || wk === 7 ? 'Midterm' : wk >= 14 ? 'Final' : null};
+}
+function botTask(rnd, subj, kind, sem, d, k){
+  const ps = sem.wk + 1 + k % 2, ch = 1 + Math.floor(sem.wk * 1.15), lec = 1 + Math.floor(sem.wk * 2.6) + (d.getDay() >= 3 ? 1 : 0), lab = 1 + Math.floor(sem.wk / 2);
+  const lang = LANGS.includes(subj), writ = WRITING.includes(subj);
+  const T = {
+    'Homework': lang ? [`Workbook unit ${ch}`, `Vocab set ${ps}`, 'Translation practice'] : writ ? [`Response paper ${lab}`, `Discussion post ${ps}`, `Reading questions ${ch}`] : [`Problem set ${ps}`, `Homework ${ps}`, `Worksheet ${ps}`],
+    'Reading': [`Chapter ${ch} reading`, `Reading: chapter ${ch}`, `Chapter ${ch} notes`],
+    'Exam prep': sem.exam ? [`${sem.exam} prep`, `${sem.exam} practice exam`, `${sem.exam} flashcards`, `${sem.exam} review sheet`] : ['Quiz prep', 'Practice problems', 'Flashcards', `Exam ${1 + Math.floor(sem.wk / 5)} review`],
+    'Project': lang ? ['Oral presentation', 'Conversation prep'] : writ ? ['Essay draft', 'Term paper', 'Essay outline', 'Editing essay'] : [`Lab report ${lab}`, 'Group project', 'Project write-up', `Lab ${lab} prep`],
+    'Review': [`Lecture ${lec} notes`, 'Rewriting notes', 'Review session', `Lecture ${lec} review`]
+  };
+  return sem.summer ? pick(rnd, ['Summer review', 'Getting ahead', `Chapter ${1 + Math.floor(sem.wk / 2)} reading`, 'Practice problems']) : pick(rnd, T[kind]);
+}
+// one bot day in full: its sessions with times, class, task, activity and timer style
+const botDayCache = new Map();
+function botDay(i, dk){
+  const key = i + '|' + dk, todayK = dayKey(Date.now());
+  if (dk !== todayK && botDayCache.has(key)) return botDayCache.get(key);
+  let out = null;
+  if (dk >= botJoinKey(i) && dk <= todayK){
+    const xs = daySits(i, dk, []);
+    if (xs.length){
+      const B = bot(i), d = new Date(dk + 'T12:00'), rnd = mulberry32(dayNum(dk) * 131 + i * 977 + 7), sem = semesterOf(d), cls = botClasses(i);
+      const total = Math.round(xs.reduce((a, b) => a + b, 0)), lens = xs.map(x => Math.max(5, Math.round(x)));
+      lens[0] = Math.max(5, lens[0] + total - lens.reduce((a, b) => a + b, 0));
+      let gaps = lens.slice(1).map(() => 15 + Math.floor(rnd() * 100));
+      const sumL = lens.reduce((a, b) => a + b, 0), sumG = gaps.reduce((a, b) => a + b, 0);
+      if (sumL + sumG > 1435) gaps = gaps.map(g => Math.floor(g * Math.max(0, 1435 - sumL) / (sumG || 1)));
+      const span = sumL + gaps.reduce((a, b) => a + b, 0), [pa] = PEAKS[B.peak];
+      let at = clampN(Math.min(pa, 22) * 60 + Math.floor(rnd() * 100) - 30, 0, Math.max(0, 1438 - span));
+      const sessions = [];
+      lens.forEach((len, k) => {
+        const subj = k === 0 ? (rnd() < .6 ? cls[0] : pick(rnd, cls)) : pick(rnd, cls);
+        const w = rnd(), kind = sem.exam ? (w < .5 ? 'Exam prep' : w < .7 ? 'Review' : w < .85 ? 'Homework' : 'Reading')
+          : (w < .35 ? 'Homework' : w < .55 ? 'Reading' : w < .7 ? 'Review' : w < .85 ? 'Project' : 'Exam prep');
+        const mode = rnd() < .8 ? B.fav : pick(rnd, FAV_NAMES);
+        sessions.push({a: at, b: at + len, min: len, subj, task: botTask(rnd, subj, kind, sem, d, k), tag: kind, mode});
+        at += len + (gaps[k] || 0);
+      });
+      out = {sessions};
+    }
+  }
+  if (out && dk === todayK){
+    // today: only what's happened so far; a session going on right now is cut at the current minute
+    const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+    const ss = out.sessions.filter(x => x.a < nowM).map(x => x.b > nowM ? {...x, b: nowM, min: nowM - x.a, live: true} : x).filter(x => x.min > 0);
+    out = ss.length ? {sessions: ss} : null;
+  }
+  if (out){ out.min = out.sessions.reduce((n, x) => n + x.min, 0); out.n = out.sessions.length; out.by = {}; out.sessions.forEach(x => out.by[x.tag] = (out.by[x.tag] || 0) + x.min); }
+  if (dk !== todayK){ if (botDayCache.size > 3000) botDayCache.clear(); botDayCache.set(key, out); }
+  return out;
+}
+const MODE_NAMES = {pomodoro:'Pomodoro', fifty:'52/17', custom:'Custom', timebox:'Timebox', stopwatch:'Stopwatch', flow:'Flow'};
+
 /* ---------- profiles: a popup for anyone, which opens into a full page ---------- */
 let profPrev = 'ranked', profWho = null, profFilter = 'all', profEditing = false;
 const PROFILE_HUES = [null, 0, 22, 42, 95, 150, 180, 205, 228, 262, 292, 330];
@@ -3991,8 +4092,7 @@ function pStats(w){
 // minutes on a given day: yours from the log; a bot's from its daily plan (only shown as a level)
 function pDayFn(w){
   if (w === ME){ const by = {}; LOG.forEach(x => { const k = dayKey(x.t); by[k] = (by[k] || 0) + x.min; }); return dk => by[dk] || 0; }
-  const B = BOTS[w], joined = Date.now() - B.age * 864e5, today = dayKey(Date.now());
-  return dk => dk === today ? BS[w * BF + F.today] : new Date(dk + 'T12:00').getTime() < joined ? 0 : dayPlan(w, dk).m;
+  return dk => { const r = botDay(w, dk); return r ? r.min : 0; };
 }
 const LEVELS = ['No study', 'Light', 'Medium', 'Heavy'];
 const levelOf = m => m <= 0 ? 0 : m < 60 ? 1 : m < 180 ? 2 : 3;
@@ -4010,7 +4110,7 @@ function weekStrip(w, weeks){
   const today = dayKey(Date.now()); let h = '', active = 0;
   for (let k = 0; k < weeks * 7; k++){
     const dk = dayKey(d), future = dk > today, lv = future ? -1 : levelOf(f(dk)); if (lv > 0) active++;
-    h += `<i class="hm l${lv}" title="${future ? '' : `${d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})} · ${LEVELS[lv]}`}"></i>`;
+    h += `<i class="hm l${lv}"${future ? '' : ` data-pk="${dk}"`} title="${future ? '' : `${d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})} · ${lv > 0 ? fmtMin(f(dk)) : 'no study'}`}"></i>`;
     d.setDate(d.getDate() + 1);
   }
   return {h, active};
@@ -4068,7 +4168,7 @@ function renderProfilePage(){
     const dk = dayKey(d), future = dk > today, m = future ? 0 : f(dk), lv = future ? -1 : levelOf(m);
     if (k % 7 === 0){ const mk = dk.slice(0, 7), show = mk !== lastM && (k > 0 || d.getDate() <= 14); months += `<span>${show ? d.toLocaleDateString(undefined, {month:'short'}) : ''}</span>`; if (show || k > 0) lastM = mk; }
     if (!future){ dow[d.getDay()] += m; if (lv > 0) activeAll++; if (dk.slice(0, 7) === mNow){ daysMonth++; if (lv > 0) activeMonth++; } }
-    cells += `<i class="hm l${lv}" title="${future ? '' : `${d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})} · ${LEVELS[lv]}`}"></i>`;
+    cells += `<i class="hm l${lv}${future ? '' : ' pick'}"${future ? '' : ` data-pk="${dk}"`} title="${future ? '' : `${d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})} · ${m > 0 ? fmtMin(m) : 'no study'}`}"></i>`;
   }
   const busiest = Math.max(...dow) > 0 ? new Date(2026, 0, 4 + dow.indexOf(Math.max(...dow))).toLocaleDateString(undefined, {weekday:'long'}) + 's' : '–';
   // ranked
@@ -4096,6 +4196,7 @@ function renderProfilePage(){
         <div class="card"><div class="h first">Activity · last 6 months</div>
           <div class="hm-cal"><div class="hm-months">${months}</div><div class="hm-days"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div><div class="hm-grid">${cells}</div></div>
           <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
+        <div class="card" id="pfCal"></div>
         <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>
       </div>
       <div class="pf-side">
@@ -4104,8 +4205,69 @@ function renderProfilePage(){
       </div>
     </div>`;
   $('#pageTitle').textContent = w === ME ? (P.myName ? myName() : 'Your profile') : B.name;
+  renderProfileCal();
 }
-function openFullProfile(w){ profWho = w; $('#botModal').hidden = true; showPage('profile'); }
+// calendar on a profile: week by default, month on request; click a day to see its sessions
+let pc = null;
+function pcReset(){ const d = new Date(); pc = {view: P.calView === 'month' ? 'month' : 'week', week: startOfWeek(d), month: new Date(d.getFullYear(), d.getMonth(), 1), day: dayKey(d)}; }
+function pcDayInfo(w, dk){
+  if (w !== ME) return botDay(w, dk);
+  const ss = LOG.filter(x => dayKey(x.t) === dk).map(x => ({a: null, t0: x.t - x.min * 60000, t1: x.t, min: x.min, subj: '', task: (x.task || '').trim() || 'Untitled session', tag: x.tag || 'General', mode: x.mode})).sort((p, q) => p.t0 - q.t0);
+  if (!ss.length) return null;
+  const by = {}; ss.forEach(x => by[x.tag] = (by[x.tag] || 0) + x.min);
+  return {sessions: ss, min: ss.reduce((n, x) => n + x.min, 0), n: ss.length, by};
+}
+const hm12 = m => { const h = Math.floor(m / 60) % 24, mm = m % 60; return `${h % 12 || 12}:${String(mm).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+function renderProfileCal(){
+  const el = $('#pfCal'); if (!el || profWho == null) return;
+  if (!pc) pcReset();
+  const w = profWho, me = w === ME, today = dayKey(Date.now()), week = pc.view === 'week', col = me ? actColor : botTagColor;
+  const segs = r => Object.entries(r.by).sort((a, b) => b[1] - a[1]).map(([t, mm]) => `<i style="flex:${mm};background:${col(t)}" title="${esc(t)} · ${fmtMin(mm)}"></i>`).join('');
+  const tip = (d, r) => `${d.toLocaleDateString(undefined, {weekday:'long', month:'short', day:'numeric'})} · ${r ? `${fmtMin(r.min)} · ` + Object.entries(r.by).sort((a, b) => b[1] - a[1]).map(([t, mm]) => `${t} ${fmtMin(mm)}`).join(', ') : 'no study'}`;
+  let body = '', title = '', sum = '';
+  if (week){
+    const days = [...Array(7)].map((_, k) => { const d = new Date(pc.week); d.setDate(d.getDate() + k); return d; }), rs = days.map(d => pcDayInfo(w, dayKey(d)));
+    const a = days[0], b = days[6], maxMin = Math.max(60, ...rs.map(r => r ? r.min : 0));
+    title = `${a.toLocaleDateString(undefined, {month:'short', day:'numeric'})} – ${b.toLocaleDateString(undefined, a.getMonth() === b.getMonth() ? {day:'numeric'} : {month:'short', day:'numeric'})}, ${b.getFullYear()}`;
+    body = `<div class="cal-week">${days.map((d, k) => { const dk = dayKey(d), r = rs[k];
+      return `<button class="wk-row${r ? ' has' : ''}${dk === today ? ' today' : ''}${dk === pc.day ? ' on' : ''}${dk > today ? ' future' : ''}" data-pk="${dk}" title="${esc(tip(d, r))}" aria-pressed="${dk === pc.day}">
+        <span class="wd"><b>${d.toLocaleDateString(undefined, {weekday:'short'})}</b><span class="dn">${d.getDate()}</span></span>
+        <span class="wk-bar">${r ? `<span class="fill" style="width:${r.min / maxMin * 100}%">${segs(r)}</span>` : ''}</span>
+        <span class="wk-m">${r ? fmtMin(r.min) : '–'}</span></button>`; }).join('')}</div>`;
+    const tot = rs.reduce((n, r) => n + (r ? r.min : 0), 0), nd = rs.filter(Boolean).length;
+    sum = tot ? `${fmtMin(tot)} studied on ${nd} day${nd === 1 ? '' : 's'} this week` : 'No study this week.';
+  } else {
+    const y = pc.month.getFullYear(), m = pc.month.getMonth(), lead = new Date(y, m, 1).getDay(), daysIn = new Date(y, m + 1, 0).getDate();
+    title = pc.month.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+    const rs = []; let maxMin = 0, tot = 0, nd = 0;
+    for (let d = 1; d <= daysIn; d++){ const r = pcDayInfo(w, dayKey(new Date(y, m, d, 12))); rs.push(r); if (r){ maxMin = Math.max(maxMin, r.min); tot += r.min; nd++; } }
+    let h = ''; for (let k = 0; k < lead; k++) h += '<span class="cal-cell pad" aria-hidden="true"></span>';
+    rs.forEach((r, k) => { const dd = new Date(y, m, k + 1, 12), dk = dayKey(dd), heat = r ? .25 + .75 * r.min / maxMin : 0;
+      h += `<button class="cal-cell${r ? ' has' : ''}${dk === today ? ' today' : ''}${dk === pc.day ? ' on' : ''}${dk > today ? ' future' : ''}" data-pk="${dk}" style="--heat:${heat}" title="${esc(tip(dd, r))}" aria-pressed="${dk === pc.day}"><span class="n">${k + 1}</span>${r ? `<span class="m">${fmtMin(r.min)}</span><span class="segs">${segs(r)}</span>` : ''}</button>`; });
+    body = `<div class="cal-dow" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="cal-grid">${h}</div>`;
+    sum = tot ? `${fmtMin(tot)} studied on ${nd} day${nd === 1 ? '' : 's'} this month` : 'No study this month.';
+  }
+  // the selected day
+  const r = pcDayInfo(w, pc.day), dTitle = pc.day === today ? 'Today' : new Date(pc.day + 'T12:00').toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+  let dayH = `<div class="h">${dTitle}</div>`;
+  if (r){
+    const rows = Object.entries(r.by).sort((a, b) => b[1] - a[1]), top = rows[0][1];
+    dayH += `<p class="cal-total"><b>${fmtMin(r.min)}</b> across ${r.n} session${r.n === 1 ? '' : 's'}</p>
+      <div class="tagbars">${rows.map(([t, mm]) => `<div class="tagbar" style="--c:${col(t)}"><span class="name"><i></i><b>${esc(t)}</b></span><span class="track2"><i style="width:${mm / top * 100}%"></i></span><span class="m">${fmtMin(mm)}</span></div>`).join('')}</div>
+      <ul class="sessions pc-sess">${r.sessions.map(x => `<li><span class="t">${me ? hmRange(x.t0, x.t1) : `${hm12(x.a)}–${hm12(x.b)}`}</span><span class="task"><span class="nm">${x.subj ? `<b>${esc(x.subj)}</b> · ` : ''}${esc(x.task)}</span><em><i class="pc-dot" style="background:${col(x.tag)}"></i>${esc(x.tag)}${x.mode ? ` · ${MODE_NAMES[x.mode] || esc(x.mode)}` : ''}${x.live ? ' · <span class="pc-live">studying now</span>' : ''}</em></span><span class="min">${fmtMin(x.min)}</span></li>`).join('')}</ul>`;
+  } else dayH += `<p class="hint">${pc.day > today ? "This day hasn't happened yet." : !me && pc.day < botJoinKey(w) ? `${esc(pName(w))} hadn't started studying here yet.` : 'No study on this day.'}</p>`;
+  el.innerHTML = `<div class="pc-top"><div class="h first">Calendar</div><div class="seg" role="group" aria-label="Calendar view"><button data-pc="week" aria-pressed="${week}">Week</button><button data-pc="month" aria-pressed="${!week}">Month</button></div></div>
+    <div class="cal-head pc-head"><button class="small-btn" data-pc="prev" aria-label="Previous ${pc.view}">‹</button><b>${title}</b><button class="small-btn" data-pc="next" aria-label="Next ${pc.view}">›</button><button class="small-btn" data-pc="today">Today</button></div>
+    ${body}<p class="cal-month">${sum}</p>${dayH}`;
+}
+function pcAct(a, dk){
+  if (dk){ pc.day = dk; const d = new Date(dk + 'T12:00'); pc.week = startOfWeek(d); pc.month = new Date(d.getFullYear(), d.getMonth(), 1); }
+  else if (a === 'week' || a === 'month'){ pc.view = a; const d = new Date(pc.day + 'T12:00'); pc.week = startOfWeek(d); pc.month = new Date(d.getFullYear(), d.getMonth(), 1); }
+  else if (a === 'prev' || a === 'next'){ const n = a === 'prev' ? -1 : 1; if (pc.view === 'month') pc.month = new Date(pc.month.getFullYear(), pc.month.getMonth() + n, 1); else { pc.week = new Date(pc.week); pc.week.setDate(pc.week.getDate() + 7 * n); } }
+  else if (a === 'today') pcReset();
+  renderProfileCal();
+}
+function openFullProfile(w){ if (profWho !== w || !pc) pcReset(); profWho = w; $('#botModal').hidden = true; showPage('profile'); }
 function saveProfileEdit(){
   const n = ($('#pfName').value || '').trim().slice(0, 20), on = document.querySelector('.pf-hues [aria-checked="true"]');
   P.myName = n; P.myHue = on && on.dataset.hue !== '' ? +on.dataset.hue : null; saveP(); profEditing = false;
@@ -4119,15 +4281,22 @@ function profClick(e){
   if (!b) return;
   const a = b.dataset.pf, inPage = !!e.target.closest('#page-profile'), redraw = () => inPage ? renderProfilePage() : openProfile(profWho);
   if (a === 'full') openFullProfile(profWho);
+  else if (b.dataset.pk){ /* handled below */ }
   else if (a === 'back') showPage(profPrev || 'ranked');
   else if (a === 'edit'){ profEditing = true; redraw(); setTimeout(() => { const f = $('#pfName'); f && f.focus(); }, 0); }
   else if (a === 'cancel'){ profEditing = false; redraw(); }
   else if (a === 'save'){ saveProfileEdit(); redraw(); }
 }
-$('#botModal').addEventListener('click', e => { if (e.target === $('#botModal') || e.target.closest('.x')){ $('#botModal').hidden = true; profEditing = false; return; } profClick(e); });
+$('#botModal').addEventListener('click', e => {
+  if (e.target === $('#botModal') || e.target.closest('.x')){ $('#botModal').hidden = true; profEditing = false; return; }
+  const pk = e.target.closest('.hm-strip [data-pk]'); if (pk){ const w = profWho; pcReset(); pc.day = pk.dataset.pk; const d = new Date(pc.day + 'T12:00'); pc.week = startOfWeek(d); profWho = w; $('#botModal').hidden = true; showPage('profile'); setTimeout(() => $('#pfCal') && $('#pfCal').scrollIntoView({block: 'start'}), 30); return; }
+  profClick(e);
+});
 $('#botModal').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pfName'){ saveProfileEdit(); openProfile(ME); } });
 $('#page-profile').addEventListener('click', e => {
   profClick(e);
+  const pcb = e.target.closest('[data-pc]'); if (pcb){ pcAct(pcb.dataset.pc); return; }
+  const pk = e.target.closest('[data-pk]'); if (pk){ pcAct(null, pk.dataset.pk); if (pk.classList.contains('hm')) $('#pfCal').scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); return; }
   const lb = e.target.closest('[data-lb]'); if (lb){ P.lbCat = lb.dataset.lb; saveP(); lbShown = 10; lbJump = profWho === ME; showPage('leaders'); return; }
   const fl = e.target.closest('#pfFilter [data-v]'); if (fl){ profFilter = fl.dataset.v; renderProfilePage(); }
 });
