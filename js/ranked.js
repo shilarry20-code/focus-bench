@@ -449,7 +449,7 @@ function addStudy(i, add, longest){
    2-hour update after it ends (a 4-hour sitting waits until it's over), against someone near them on the ladder
    whose sitting also ended in that window; the whole sittings are compared and whoever studied longer wins.
    Sittings under 10 minutes aren't rated, and no studying means no match. Each player's last 5 are kept. */
-const M5 = 5, M5_V = 2;
+const M5 = 5, M5_V = 2, BOT_K = 24;    // K-factor for matches between other players, same as yours after placements
 let M5_OPP = null, M5_T = null, M5_A = null, M5_B = null, M5_D = null, M5_R = null, M5_H = null;
 function m5Init(rec){
   const n = ROSTER_N * M5;
@@ -508,7 +508,7 @@ function windowMatches(w0, dk){      // sittings that ended during the window st
     used[k] = used[j] = 1;
     const a = cand[k], c = cand[j], sa_ = CSIT[a], sc_ = CSIT[c];
     const ma = SCH_B[sa_] - SCH_A[sa_], mc = SCH_B[sc_] - SCH_A[sc_], ra = BS[a * BF], rc = BS[c * BF];
-    const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = ma > mc ? 1 : ma < mc ? 0 : .5, dlt = Math.round(12 * (sa - ea));
+    const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = ma > mc ? 1 : ma < mc ? 0 : .5, dlt = Math.round(BOT_K * (sa - ea));
     BS[a * BF] = clampN(ra + dlt, 300, 5000); BS[c * BF] = clampN(rc - dlt, 300, 5000);
     m5Put(a, c, tCode(dk, SCH_B[sa_]), ma, mc, BS[a * BF] - ra, BS[a * BF]);
     m5Put(c, a, tCode(dk, SCH_B[sc_]), mc, ma, BS[c * BF] - rc, BS[c * BF]);
@@ -543,7 +543,7 @@ function m5Backfill(i){
       }
       if (opp < 0) continue;
       const mm = b0 - a0, ro = rating + (BS[opp * BF] - myNow), ea = 1 / (1 + Math.pow(10, (ro - rating) / 400));
-      const dlt = Math.round(12 * ((mm > om ? 1 : mm < om ? 0 : .5) - ea));
+      const dlt = Math.round(BOT_K * ((mm > om ? 1 : mm < om ? 0 : .5) - ea));
       m5PutOlder(i, opp, tCode(dk, b0), mm, om, dlt, clampN(rating, 300, 5000));
       rating -= dlt; c++; lastOpp = opp;
     }
