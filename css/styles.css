@@ -1104,7 +1104,7 @@ body.side-hidden .side{transform:translateX(-100%);visibility:hidden;transition:
 .side-edge:hover,.side-edge:focus-visible{width:24px;outline:none}
 body.side-hidden .side-edge{display:block}
 .side-edge-glow{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);opacity:0;box-shadow:0 0 22px 7px color-mix(in srgb,var(--accent) 50%,transparent);transition:opacity .2s ease}
-.side-edge-chev{position:absolute;left:7px;top:14px;bottom:14px;width:12px;height:calc(100% - 28px);color:var(--accent);opacity:0;transform:translateX(-4px);transition:opacity .2s ease,transform .2s ease}
+.side-edge-chev{position:absolute;left:7px;top:14px;bottom:14px;width:12px;height:calc(100% - 28px);color:var(--muted);opacity:0;transform:translateX(-4px);transition:opacity .2s ease,transform .2s ease}
 .side-edge:hover .side-edge-glow,.side-edge:focus-visible .side-edge-glow{opacity:.95}
 .side-edge:hover .side-edge-chev,.side-edge:focus-visible .side-edge-chev{opacity:1;transform:none}
 @media (hover:none){body.side-hidden .side-edge .side-edge-glow{opacity:.45}body.side-hidden .side-edge .side-edge-chev{opacity:.6;transform:none}}
