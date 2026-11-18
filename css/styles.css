@@ -1206,3 +1206,4 @@ body:not(.m-off) .mq-vs .vs{animation:mqVs .5s .3s cubic-bezier(.2,1.6,.4,1) bot
 @keyframes mqRight{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
 @keyframes mqVs{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
 .rk-find{margin-left:auto;align-self:center}
+.sync-push{margin-top:10px;display:flex;flex-direction:column;gap:2px;align-items:flex-start}
