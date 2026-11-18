@@ -1265,3 +1265,5 @@ body:not(.m-off) .chat-pop.in{animation:chatPopIn .35s cubic-bezier(.2,1.2,.4,1)
 .ch-replying span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ch-replying b{color:var(--ink)}
 .ch-x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px}
+.ch-msg{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ch-msg.picked{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
