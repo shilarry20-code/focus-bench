@@ -678,8 +678,8 @@ input[type="range"]{width:150px;accent-color:var(--accent)}
 .tagbar .m{color:var(--muted);font-variant-numeric:tabular-nums}
 .sessions{list-style:none;margin:8px 0 0;padding:0}
 .sessions li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:baseline}
-.sessions .t{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:13ch;white-space:nowrap}
-.sessions.all .t{min-width:20ch}
+.sessions .t{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:17ch;white-space:nowrap}
+.sessions.all .t{min-width:25ch}
 @media (max-width:520px){.sessions .t{min-width:0;font-size:11px}.sessions .task em{display:none}}
 .sessions .task{display:flex;align-items:center;gap:6px;min-width:0}
 .sessions .task .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -692,6 +692,7 @@ input[type="range"]{width:150px;accent-color:var(--accent)}
 .sessions input[type="checkbox"]{width:17px;height:17px;margin:0;accent-color:var(--accent);cursor:pointer}
 .sessions li.grp .badge{font-size:11px;font-weight:700;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:99px;padding:1px 7px;white-space:nowrap}
 .sessions .exp{border:0;background:none;color:var(--muted);width:20px;height:20px;padding:0;margin-right:4px;border-radius:5px;font-size:11px;vertical-align:1px}
+.sessions .exp-sp{flex:none;width:20px;margin-right:4px}
 .sessions .exp:hover{background:var(--soft);color:var(--ink)}
 .sessions li{grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center}
 .sessions.selecting li{grid-template-columns:auto auto minmax(0,1fr) auto}
