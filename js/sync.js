@@ -54,12 +54,17 @@ const SECTIONS = {
     items: () => { const o = {}; Object.keys(R || {}).forEach(k => { if (!RANKED_LOCAL.has(k)) o[k] = R[k]; }); return o; },
     put: o => { Object.keys(o).forEach(k => { if (!RANKED_LOCAL.has(k)) R[k] = o[k]; }); store.set('fb.ranked', R); }
   },
+  chat: {           // the global chat room: messages never change, so it's just the newest CHAT_MAX from every device
+    items: () => { const o = {}; if (typeof CHATS !== 'undefined') CHATS.msgs.forEach(m => { if (m && m.id && chatKeep(m)) o[m.id] = m; }); return o; },
+    put: o => { CHATS.msgs = Object.values(o).filter(chatKeep).sort((a, b) => a.t - b.t).slice(-CHAT_MAX); saveChat(); }
+  },
   guides: {
     items: () => { const o = {}; GUIDES.forEach(g => { if (g && g.id) o[g.id] = g; }); return o; },
     put: o => { const order = GUIDES.map(g => g.id); GUIDES.length = 0; Object.values(o).sort((a, b) => (order.indexOf(a.id) + 1 || 1e9) - (order.indexOf(b.id) + 1 || 1e9)).forEach(g => GUIDES.push(g)); saveGuidesRaw(); }
   }
 };
-const STORE_SECTION = {'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked'};
+const STORE_SECTION = {'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked', 'fb.chat': 'chat'};
+let syncFirstDone = false;     // the chat waits for the first sync before filling in a catch-up
 
 // what each section looked like last time, to see which items changed
 function takeSnap(sec){ const m = new Map(); Object.entries(SECTIONS[sec].items()).forEach(([k, v]) => m.set(k, JSON.stringify(v))); return m; }
@@ -72,7 +77,7 @@ function noteChange(sec){
   const st = SMETA.stamps[sec] || (SMETA.stamps[sec] = {}), dd = SMETA.dead[sec] || (SMETA.dead[sec] = {});
   let changed = false;
   after.forEach((v, k) => { if (before.get(k) !== v){ st[k] = now; delete dd[k]; changed = true; } });
-  before.forEach((_, k) => { if (!after.has(k)){ dd[k] = now; delete st[k]; changed = true; } });
+  before.forEach((_, k) => { if (!after.has(k)){ if (sec !== 'chat') dd[k] = now; delete st[k]; changed = true; } });
   if (changed){ saveMeta(); markDirty(); }
 }
 // watch every save
@@ -147,6 +152,11 @@ function mergePayload(L, Rm){
       if (dt && dt >= t) return;               // deleted after its last change
       items[k] = v; if (t) st[k] = t; delete dd[k];
     });
+    if (sec === 'chat'){                       // keep the newest messages only, and only Gemini's and yours
+      Object.keys(items).forEach(k => { if (!chatKeep(items[k])){ delete items[k]; delete st[k]; } });
+      const keep = Object.values(items).sort((x, y) => y.t - x.t).slice(0, CHAT_MAX), ids = new Set(keep.map(m => m.id));
+      Object.keys(items).forEach(k => { if (!ids.has(k)){ delete items[k]; delete st[k]; } });
+    }
     out.data[sec] = items; out.stamps[sec] = st; out.dead[sec] = dd;
   });
   out.ach = mergeAch(L.ach, Rm.ach);
@@ -172,7 +182,8 @@ function syncRerender(){
   [() => applyLook(), () => renderTimerPane(), () => renderLookSound(), () => renderNotes(), () => renderAll(), () => renderMusic(), () => renderLog(),
    () => { if ($('#task') && document.activeElement !== $('#task')) $('#task').value = P.task || ''; },
    () => renderGuides(), () => renderGuideSlot(), () => renderMatch(), () => renderRankChip(), () => { if (!$('#page-ranked').hidden) renderRanked(); },
-   () => { if (typeof renderAwards === 'function' && !$('#page-awards').hidden) renderAwards(); }]
+   () => { if (typeof renderAwards === 'function' && !$('#page-awards').hidden) renderAwards(); },
+   () => { renderChat(); chatBadge(); }]
     .forEach(f => { try { f(); } catch(e){} });
 }
 
@@ -246,13 +257,14 @@ async function syncNow(manual){
     else if (manual) toast(e.message);
     if (e.kind === 'offline' || e.kind === 'limit') syncTimer = setTimeout(() => syncNow(), 5 * 60000);
   } finally {
-    saveSync(); syncBusy = false; renderSyncPanel();
+    saveSync(); syncBusy = false; syncFirstDone = true; renderSyncPanel();
     if (syncAgain){ syncAgain = false; syncTimer = setTimeout(() => syncNow(), 2000); }
   }
 }
 // start once guides have loaded (they come from IndexedDB a moment after the page)
 (function syncStart(){
   if (typeof guidesReady === 'undefined' || !guidesReady){ setTimeout(syncStart, 200); return; }
+  if (typeof CHATS === 'undefined'){ setTimeout(syncStart, 200); return; }
   syncSnap = {}; Object.keys(SECTIONS).forEach(sec => { syncSnap[sec] = takeSnap(sec); });
   renderSyncPanel();
   if (SYNC.token) syncNow();
