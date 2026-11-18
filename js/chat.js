@@ -70,20 +70,26 @@ CHATS.msgs = CHATS.msgs.filter(chatKeep); CHATS.q = CHATS.q.filter(chatKeep);
 
 /* ---- Gemini ---- */
 const chatName = w => w === -1 ? myName() : bot(w).name;
+const CHAT_TOPICS = ['dining hall food', 'a show they’re binging', 'music they have on repeat', 'a game they’re playing', 'sports last night', 'the weather', 'weekend plans',
+  'roommate stuff', 'something funny that happened today', 'sleep schedules', 'pets back home', 'a random hot take', 'campus events', 'a meme or trend', 'going home for break',
+  'coffee or boba orders', 'the gym', 'cooking disasters', 'a movie they saw', 'online shopping', 'their phone or laptop dying', 'what to eat tonight', 'a would-you-rather question', 'favorite snacks'];
 function aiPrompt(online, forUser, away){
   const now = new Date(), sem = semesterOf(now), people = online.slice(0, 12);
   if (forUser){ const mine = CHATS.msgs[CHATS.msgs.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re); if (to && to.w !== -1 && !people.includes(to.w)) people.unshift(to.w); }
   const cast = people.map(chatFacts);
   const recent = CHATS.msgs.slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
-This is a general hangout room: people can talk about anything, like any group chat of college students. Food, games, sports, music, shows, weather, classes, roommates, weekend plans, random thoughts, memes, complaining, jokes. Studying, exams and ranked matches come up naturally because of where they are, but most messages don't need to be about studying.
-Write like a real group chat: casual and varied in length (quick reactions to a couple of sentences), with each player keeping their own personality (their style, when they study, what they study). Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
+This is a general hangout room: people can talk about anything, like any group chat of college students. Food, games, sports, music, shows, weather, classes, roommates, weekend plans, random thoughts, memes, complaining, jokes. Studying, classes, work and ranked matches should only come up now and then: in a batch, at most one or two messages touch on them, and plenty of batches have none. Don't tack study talk onto other messages (no "back to studying", "gotta grind", "locking in", "anyway back to work").
+Write like a real group chat: casual and varied in length (quick reactions to a couple of sentences), with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
 Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. "${myName()}" is another player in the room; only talk to them when answering one of their messages.`;
-  const who = cast.map(f => `- ${f.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}${f.last ? `; just ${f.last.won ? 'beat' : 'lost to'} ${f.last.opp} in ranked (${f.last.mine} vs ${f.last.theirs} min)` : ''}`).join('\n');
+  const lastK = Math.floor(Math.random() * cast.length * 3);    // mention one player's last match only sometimes, so ranked isn't always the topic
+  const who = cast.map((f, k) => `- ${f.name}: ${f.rank}, ${f.subj}${f.last && k === lastK ? `; just ${f.last.won ? 'beat' : 'lost to'} ${f.last.opp} in ranked (${f.last.mine} vs ${f.last.theirs} min)` : ''}`).join('\n');
   const hist = recent.map((m, k) => `[m${k + 1}] ${chatName(m.w)}: ${m.text}${m.re && tag.has(m.re) ? ` (replying to ${tag.get(m.re)})` : ''}`).join('\n') || '(the chat is quiet)';
   const user = `It's ${now.toLocaleDateString(undefined, {weekday: 'long'})} ${now.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}, week ${sem.wk + 1} of the semester${sem.exam ? `, ${sem.exam.toLowerCase()} season` : ''}.
-Players online (background, for context; they don't have to talk about it):
+Players online (background only; most messages shouldn't be about it):
 ${who}
+
+Some things people might bring up this time (optional ideas, not about studying): ${CHAT_TOPICS.slice().sort(() => Math.random() - .5).slice(0, 4).join(', ')}.
 
 Recent chat, oldest first:
 ${hist}
