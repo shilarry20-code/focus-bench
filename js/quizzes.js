@@ -54,7 +54,7 @@ const QZ_CLAUDE = `Make a practice quiz I can import into my Focus Bench study a
 ${QZ_FORMAT}
 
 Rules:
-- Write a question bank of about 30 questions (more is fine) covering the whole topic, with a mix of question types and difficulty. Each attempt in the app draws a random set from the bank, so every attempt is different.
+- Write a question bank with as many questions as you can (up to 300) covering the whole topic, with a mix of question types and difficulty. Each attempt in the app draws a random set from the bank, so every attempt is different.
 - Start each quiz with the --- / quiz: Title / pick: 10 / --- block. pick is how many questions each attempt draws (use "all" for every question). Several quizzes can go one after another.
 - Number every question (1. 2. 3.).
 - Multiple choice: letter the choices a) b) c) d) and put * directly in front of the correct letter, like *b). Mark several with * for a "select all" question.
@@ -293,7 +293,7 @@ function openQuizImport(g){
     <label class="g-imp-chk"><input type="checkbox" id="gImpReplace" checked> Update quizzes with the same title instead of adding copies (keeps your scores)</label>
     <div id="gImpFound" class="g-imp-found"></div>
     <div class="g-imp-btns"><button class="small-btn" data-gi="cancel">Cancel</button><button class="small-btn accent" data-qi="go" disabled>Import</button></div>
-    <details class="g-help" open><summary>Instructions for Claude</summary><p>Copy this, add your topic at the end, and send it to Claude. Then import what it gives you.</p>
+    <details class="g-help" open><summary>Instructions for AI</summary><p>Copy this, add your topic at the end, and send it to Claude. Then import what it gives you.</p>
       <button class="small-btn" data-qi="copy">Copy instructions</button></details>
     <details class="g-help"><summary>The format</summary><pre>${esc(QZ_FORMAT)}</pre>
       <p><code>pick:</code> is how many questions each attempt draws from the bank (or <code>all</code>). Leave it out for 10. Put <code>*</code> in front of the right choice's letter. Mark several for a “select all” question. True/false and short-answer questions use an <code>Answer:</code> line instead of choices. <code>Why:</code> and <code>Review:</code> are optional but shown after you answer.</p></details>`;
