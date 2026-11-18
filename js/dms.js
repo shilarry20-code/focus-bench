@@ -37,7 +37,7 @@ const matchBusy = () => !!((R.cur && R.cur.state === 'live') || MQ);
 function dmPrompt(w, task){
   const B = bot(w), f = chatFacts(w), me = myName(), h = lastVs(w), rk = myRk();
   const sys = `You write direct messages that ${B.name}, a player of Focus Bench, sends to another player, ${me}. Focus Bench is a study-timer app for college students; in ranked matches whoever studies longer wins and gains Elo.
-Write like real texting between two college students: casual, short, lowercase is fine, sometimes several short texts in a row. Keep ${B.name}'s own personality. They can talk about anything, not just studying.
+Write like real texting between two college students: casual, short, lowercase is fine, sometimes several short texts in a row. Keep ${B.name}'s own personality. They can talk about anything; most texts shouldn't be about studying or work, and don't tack study talk onto messages.
 Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Don't check in on how ${me} is doing and don't congratulate rank-ups unprompted. Every message is from ${B.name}.`;
   const hist = thread(w).slice(-14).map(m => m.ch ? `(${m.me ? me : B.name} sent a ${m.ch.mode === 'f' ? 'friendly' : 'ranked'} challenge, ${({p: 'pending', a: 'accepted', d: 'declined', x: 'expired'})[m.ch.st]})` : `${m.me ? me : B.name}: ${m.text}`).join('\n') || '(no messages yet)';
   const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}${B.bio ? `. Bio: "${B.bio}"` : ''}.
