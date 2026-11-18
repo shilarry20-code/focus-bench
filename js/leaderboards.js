@@ -1,4 +1,4 @@
-/* ---------- leaderboards: you and all 249,999 bots, in 11 categories ---------- */
+/* ---------- leaderboards: you and all 682,925 bots, in 11 categories ---------- */
 function myTotals(){
   const wk = startOfWeek(new Date()).getTime(), m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0);
   const byDay = {}; let total = 0, week = 0, month = 0, maxSess = 0;
@@ -55,7 +55,7 @@ function lbRow(k, place, c, val){
 }
 function renderLeaders(){
   if (!$('#lbList')) return;
-  if (!RK_READY){ $('#lbList').innerHTML = '<li class="lb-wait">Loading 250,000 players…</li>'; return; }
+  if (!RK_READY){ $('#lbList').innerHTML = `<li class="lb-wait">Loading ${(ROSTER_N + 1).toLocaleString()} players…</li>`; return; }
   const c = LB.find(x => x.id === P.lbCat) || LB[0], t = myTotals();
   $('#lbCats').innerHTML = LB.map(x => `<button data-v="${x.id}" aria-pressed="${x.id === c.id}">${x.name}</button>`).join('');
   $('#lbTitle').textContent = c.name; $('#lbDesc').textContent = c.desc;
