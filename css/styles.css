@@ -1213,3 +1213,44 @@ body:not(.m-off) .mq-vs .vs{animation:mqVs .5s .3s cubic-bezier(.2,1.6,.4,1) bot
 .sync-cmp th{text-align:left;font-weight:500;color:var(--muted);padding:3px 14px 3px 0}
 .sync-cmp td{padding:3px 14px 3px 0;font-variant-numeric:tabular-nums}
 .pf-live{display:block;margin-top:3px;font-size:12px;font-weight:700;color:#1f9d55}
+
+/* global chat */
+.chat-badge{margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.chat-badge[hidden]{display:none}
+.nav-btn .chat-badge + kbd{margin-left:6px}
+.more-btn{position:relative}
+.more-btn .chat-badge{position:absolute;top:2px;right:calc(50% - 22px);min-width:8px;width:8px;height:8px;padding:0;font-size:0}
+.ch-card{display:flex;flex-direction:column;gap:10px;padding:14px 16px}
+.ch-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ch-top > div:first-child{display:flex;flex-direction:column}
+.ch-top small{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+.ch-on{width:8px;height:8px;border-radius:50%;background:#1f9d55;display:inline-block}
+.ch-online{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+.ch-online .av{width:26px;height:26px;font-size:10px}
+.ch-av{border:0;background:none;padding:0;cursor:pointer;border-radius:50%;flex:none}
+.ch-list{height:min(62vh,640px);overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:4px 2px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);overscroll-behavior:contain}
+.ch-msg{display:flex;gap:10px;padding:7px 6px;border-radius:var(--r-ctl)}
+.ch-msg:hover{background:var(--soft)}
+.ch-msg .av{width:32px;height:32px;font-size:12px}
+.ch-msg.mine{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.ch-body{min-width:0;flex:1}
+.ch-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.ch-name{border:0;background:none;padding:0;font:inherit;font-size:14px;font-weight:700;color:var(--ink);cursor:pointer}
+.ch-name:hover{text-decoration:underline}
+.ch-head time{margin-left:auto;font-variant-numeric:tabular-nums}
+.ch-body p{margin:2px 0 0;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.ch-re{margin-top:3px;font-size:12px;color:var(--muted);border-left:2px solid var(--line);padding-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-re b{color:var(--ink);font-weight:600}
+.ch-new{display:flex;align-items:center;gap:8px;margin:6px 0;color:var(--accent);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.ch-new::before,.ch-new::after{content:"";flex:1;height:1px;background:color-mix(in srgb,var(--accent) 50%,transparent)}
+.ch-empty{text-align:center;margin:auto}
+.ch-send{display:flex;gap:8px}
+.ch-send input{flex:1;min-width:0}
+.ch-hint{margin:0}
+.chat-pop{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;gap:10px;align-items:center;max-width:320px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-card);background:var(--surface);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.25);text-align:left;cursor:pointer;font:inherit}
+.chat-pop[hidden]{display:none}
+.chat-pop span{display:flex;flex-direction:column;min-width:0}
+.chat-pop small{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+body:not(.m-off) .chat-pop.in{animation:chatPopIn .35s cubic-bezier(.2,1.2,.4,1)}
+@keyframes chatPopIn{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:760px){.chat-pop{bottom:84px;right:10px;left:10px;max-width:none}.ch-list{height:56vh}}

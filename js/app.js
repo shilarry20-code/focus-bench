@@ -45,7 +45,7 @@ function showPage(name, sec){
     p.hidden = !on;
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.dataset.page === name ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
-  $('#moreBtn').classList.toggle('on', ['guides','music','notes','settings'].includes(name) || (name === 'leaders' && matchMedia('(max-width:760px)').matches));
+  $('#moreBtn').classList.toggle('on', ['guides','music','notes','settings'].includes(name) || (name === 'chat' && matchMedia('(max-width:760px)').matches) || (name === 'leaders' && matchMedia('(max-width:760px)').matches));
   $('#nav').classList.remove('more-open');
   $('#pageTitle').textContent = el.dataset.title;
   document.body.dataset.page = name;
