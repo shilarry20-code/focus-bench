@@ -1151,3 +1151,20 @@ body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
 /* back to the top, from the guide's side panel */
 .g-top-row{display:flex;margin-top:4px}
 .g-toc-h{display:flex;align-items:center;justify-content:space-between;gap:8px}.g-toc-h .small-btn{letter-spacing:normal;text-transform:none;font-family:inherit;color:var(--ink);font-weight:600}
+
+/* quiz attempt history */
+.qh-list{padding:4px 16px}
+.qh-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.qh-row:last-child{border-bottom:0}
+.qh-when{font-size:14px}
+.qh-score{display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums;min-width:96px;justify-content:flex-end}
+.qh-score small{color:var(--muted);font-size:12px}
+.qh-old{min-width:64px;text-align:right}
+.qx-q.gone{opacity:.8}.qx-flag.on{cursor:default}
+/* review notes that link into the guide */
+.qz-revlink{display:inline;border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--accent) 55%,transparent);text-underline-offset:3px}
+.qz-revlink:hover{color:var(--accent);text-decoration-color:var(--accent)}
+.qz-revgo{margin-left:5px;color:var(--accent);text-decoration:none;display:inline-block}
+@keyframes gFlash{0%,35%{background:color-mix(in srgb,var(--accent) 24%,transparent)}100%{background:transparent}}
+.g-flash{animation:gFlash 2.2s ease-out;border-radius:6px}
+body.m-off .g-flash{animation:none;background:color-mix(in srgb,var(--accent) 14%,transparent)}
