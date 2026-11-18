@@ -16,7 +16,7 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 18 · 9';
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 18 · 10';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -58,12 +58,19 @@ const SECTIONS = {
     items: () => { const o = {}; if (typeof CHATS !== 'undefined') CHATS.msgs.forEach(m => { if (m && m.id && chatKeep(m)) o[m.id] = m; }); return o; },
     put: o => { CHATS.msgs = Object.values(o).filter(chatKeep).sort((a, b) => a.t - b.t).slice(-CHAT_MAX); saveChat(); }
   },
+  dms: {            // direct messages (a challenge's status can change, so stamps decide) and how far you've read each chat
+    items: () => { const o = {}; if (typeof DMS === 'undefined') return o;
+      DMS.msgs.forEach(m => { if (m && m.id) o[m.id] = m; }); Object.entries(DMS.read || {}).forEach(([w, t]) => { o['r' + w] = {r: t}; }); return o; },
+    put: o => { const msgs = [], read = {};
+      Object.entries(o).forEach(([k, v]) => { if (/^r\d+$/.test(k) && v && v.r) read[k.slice(1)] = v.r; else if (v && v.id) msgs.push(v); });
+      DMS.msgs = msgs.sort((a, b) => a.t - b.t).slice(-DM_MAX); DMS.read = read; saveDms(); }
+  },
   guides: {
     items: () => { const o = {}; GUIDES.forEach(g => { if (g && g.id) o[g.id] = g; }); return o; },
     put: o => { const order = GUIDES.map(g => g.id); GUIDES.length = 0; Object.values(o).sort((a, b) => (order.indexOf(a.id) + 1 || 1e9) - (order.indexOf(b.id) + 1 || 1e9)).forEach(g => GUIDES.push(g)); saveGuidesRaw(); }
   }
 };
-const STORE_SECTION = {'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked', 'fb.chat': 'chat'};
+const STORE_SECTION = {'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked', 'fb.chat': 'chat', 'fb.dms': 'dms'};
 let syncFirstDone = false;     // the chat waits for the first sync before filling in a catch-up
 
 // what each section looked like last time, to see which items changed
@@ -77,7 +84,7 @@ function noteChange(sec){
   const st = SMETA.stamps[sec] || (SMETA.stamps[sec] = {}), dd = SMETA.dead[sec] || (SMETA.dead[sec] = {});
   let changed = false;
   after.forEach((v, k) => { if (before.get(k) !== v){ st[k] = now; delete dd[k]; changed = true; } });
-  before.forEach((_, k) => { if (!after.has(k)){ if (sec !== 'chat') dd[k] = now; delete st[k]; changed = true; } });
+  before.forEach((_, k) => { if (!after.has(k)){ if (sec !== 'chat' && sec !== 'dms') dd[k] = now; delete st[k]; changed = true; } });
   if (changed){ saveMeta(); markDirty(); }
 }
 // watch every save
