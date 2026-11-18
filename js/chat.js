@@ -106,15 +106,22 @@ async function aiCall(sys, user){
   let last = null;
   for (const model of models){
     for (const extra of configs){
-      let r, raw = '';
-      try {
-        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {method: 'POST',
-          headers: {'Content-Type': 'application/json', 'x-goog-api-key': GEM.key},
-          body: JSON.stringify({systemInstruction: {parts: [{text: sys}]},
-            contents: [{role: 'user', parts: [{text: user + (extra.responseSchema ? '' : '\n\nAnswer with only a JSON object: {"messages":[{"from":"…","text":"…","replyTo":"…"}]}')}]}],
-            generationConfig: {temperature: 1, maxOutputTokens: 4000, ...extra}})});
-        raw = await r.text();
-      } catch(e){ throw {kind: 'offline'}; }
+      let r, raw = '', netErr = null;
+      const body = JSON.stringify({systemInstruction: {parts: [{text: sys}]},
+        contents: [{role: 'user', parts: [{text: user + (extra.responseSchema ? '' : '\n\nAnswer with only a JSON object: {"messages":[{"from":"…","text":"…","replyTo":"…"}]}')}]}],
+        generationConfig: {temperature: 1, maxOutputTokens: 4000, ...extra}});
+      // a dropped connection (waking from sleep, switching networks, a tab in the background) gets two more tries
+      for (let attempt = 0; attempt < 3; attempt++){
+        if (attempt) await new Promise(res => setTimeout(res, attempt === 1 ? 5000 : 15000));
+        const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60000);
+        try {
+          r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {method: 'POST',
+            headers: {'Content-Type': 'application/json', 'x-goog-api-key': GEM.key}, body, signal: ctl.signal});
+          raw = await r.text(); netErr = null; break;
+        } catch(e){ netErr = e.name === 'AbortError' ? 'timed out after 60 s' : `${e.name}: ${e.message}`; }
+        finally { clearTimeout(timer); }
+      }
+      if (netErr) throw {kind: 'offline', msg: `couldn’t reach Gemini (${netErr}${navigator.onLine === false ? ', device offline' : ''})`};
       let j = null; try { j = JSON.parse(raw); } catch(e){}
       const em = j && j.error ? `${j.error.status || r.status}: ${j.error.message || ''}` : `HTTP ${r.status}`;
       if (!r.ok){
@@ -180,10 +187,12 @@ async function chatGenerate(forUser, away){
       CHATS.msgs.sort((a, b) => a.t - b.t); saveChat(); chatBadge(); renderChat();
     } else chatQueue(batch, Date.now(), forUser ? 4 : 10, forUser ? 14 : 50);
   } catch(e){
-    GEM.last = {at: Date.now(), got: 0, used: 0, why: e.kind === 'offline' ? 'couldn’t reach Gemini' : e.msg || e.kind};
+    GEM.last = {at: Date.now(), got: 0, used: 0, why: e.msg || (e.kind === 'offline' ? 'couldn’t reach Gemini' : e.kind)};
     GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? 'Gemini’s free limit is used up for now. The chat is quiet until it resets.' : e.kind === 'offline' ? null : 'Gemini had a problem. The chat is quiet for a bit.';
     if (e.msg) GEM.detail = e.msg;
-    GEM.wait = Date.now() + (e.kind === 'busy' ? 15 : e.kind === 'key' ? 60 * 24 : 5) * 60000; saveAI();
+    GEM.wait = Date.now() + (e.kind === 'busy' ? 15 : e.kind === 'key' ? 60 * 24 : e.kind === 'offline' ? 1 : 5) * 60000;
+    if (e.kind === 'offline') CHATS.next = GEM.wait;
+    saveAI();
   } finally { chatBusy = false; renderChatSettings(); renderChat(); }
 }
 
@@ -330,14 +339,20 @@ function renderChatSettings(){
     <div class="row"><label for="chatPopOn">Message previews<span class="sub">A small pop-up for new messages, only during breaks or with the timer stopped</span></label><input type="checkbox" id="chatPopOn" ${P.chatPop !== false ? 'checked' : ''}></div>
     <div class="confirm"><button class="small-btn" id="chatClear">Clear chat history</button></div>`;
 }
+// "Test it" sends a real, chat-sized request and says how many messages came back
 async function aiTest(){
   const b = $('#aiTest') || $('#aiSave'); if (b){ b.disabled = true; b.textContent = 'Checking…'; }
   try {
-    const out = await aiCall('Reply with JSON only.', 'Return {"messages":[{"from":"test","text":"ok"}]}');
-    GEM.err = null; GEM.wait = 0; GEM.ok = Date.now(); saveAI(); CHATS.next = 0; saveChat(); toast(`Gemini works (${GEM.model}).`); return Array.isArray(out);
+    const online = RK_READY ? chatWhoOnline() : [];
+    let n = 1;
+    if (online.length){ const {sys, user, recent, cast} = aiPrompt(online, false); n = aiToBatch(await aiCall(sys, user), recent, cast).length; }
+    else await aiCall('Reply with JSON only.', 'Return {"messages":[{"from":"test","text":"ok"}]}');
+    GEM.err = null; GEM.wait = 0; GEM.ok = Date.now(); GEM.last = {at: Date.now(), got: n, used: n, model: GEM.model}; saveAI();
+    CHATS.next = 0; saveChat();
+    toast(n ? `Gemini works (${GEM.model}): ${n} messages came back.` : `Gemini answered but sent no usable messages.`); return true;
   } catch(e){
     GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? 'Gemini’s free limit is used up for now.' : e.kind === 'offline' ? 'Couldn’t reach Gemini.' : 'Gemini had a problem.';
-    if (e.msg) GEM.detail = e.msg;
+    if (e.msg){ GEM.detail = e.msg; GEM.last = {at: Date.now(), got: 0, used: 0, why: e.msg}; }
     saveAI(); toast(GEM.err + (e.msg ? ' Details are in Settings → Chat.' : '')); return false;
   } finally { renderChatSettings(); }
 }
@@ -360,3 +375,11 @@ $('#page-settings').addEventListener('click', async e => {
 $('#page-settings').addEventListener('change', e => { if (e.target.id === 'chatPopOn'){ P.chatPop = e.target.checked; saveP(); } });
 $('#page-settings').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'aiKey') $('#aiSave').click(); });
 renderChatSettings(); chatBadge();
+
+addEventListener('online', () => { if (GEM.key && GEM.wait > Date.now()){ GEM.wait = 0; saveAI(); } if (GEM.key){ CHATS.next = Math.min(CHATS.next || 0, Date.now() + 3000); saveChat(); } });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !GEM.key) return;
+  const lastT = CHATS.msgs.length ? CHATS.msgs[CHATS.msgs.length - 1].t : 0;
+  if (GEM.last && GEM.last.why && /reach Gemini/.test(GEM.last.why) && GEM.wait > Date.now()){ GEM.wait = 0; saveAI(); }
+  if (!CHATS.q.length && Date.now() - lastT > 4 * 60000){ CHATS.next = Math.min(CHATS.next || 0, Date.now() + 2000); saveChat(); }
+});
