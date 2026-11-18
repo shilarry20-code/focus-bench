@@ -75,14 +75,14 @@ function aiPrompt(online, forUser, away){
   if (forUser){ const mine = CHATS.msgs[CHATS.msgs.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re); if (to && to.w !== -1 && !people.includes(to.w)) people.unshift(to.w); }
   const cast = people.map(chatFacts);
   const recent = CHATS.msgs.slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
-  const sys = `You write messages for the global chat room of Focus Bench, a study-timer app where college students track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
-Write like a real group chat: casual, mostly lowercase, short (usually 2-16 words), varied, emoji rare. Topics: studying, classes, exams, focus tricks, breaks, ranked matches, streaks, leaderboards.
-The players mostly talk to each other: they answer each other's questions, tease rivals after a match, disagree politely, and continue threads already in the chat. Keep each player's personality (style, when they study, what they study).
-Keep it friendly and school-appropriate: no politics, no romance, no real people. Never mention AI or that anyone is simulated. Only use player names from the list. "${myName()}" is another player in the room; only talk to them when answering one of their messages.`;
+  const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
+This is a general hangout room: people can talk about anything, like any group chat of college students. Food, games, sports, music, shows, weather, classes, roommates, weekend plans, random thoughts, memes, complaining, jokes. Studying, exams and ranked matches come up naturally because of where they are, but most messages don't need to be about studying.
+Write like a real group chat: casual and varied in length (quick reactions to a couple of sentences), with each player keeping their own personality (their style, when they study, what they study). Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
+Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. "${myName()}" is another player in the room; only talk to them when answering one of their messages.`;
   const who = cast.map(f => `- ${f.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}${f.last ? `; just ${f.last.won ? 'beat' : 'lost to'} ${f.last.opp} in ranked (${f.last.mine} vs ${f.last.theirs} min)` : ''}`).join('\n');
   const hist = recent.map((m, k) => `[m${k + 1}] ${chatName(m.w)}: ${m.text}${m.re && tag.has(m.re) ? ` (replying to ${tag.get(m.re)})` : ''}`).join('\n') || '(the chat is quiet)';
   const user = `It's ${now.toLocaleDateString(undefined, {weekday: 'long'})} ${now.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}, week ${sem.wk + 1} of the semester${sem.exam ? `, ${sem.exam.toLowerCase()} season` : ''}.
-Players online:
+Players online (background, for context; they don't have to talk about it):
 ${who}
 
 Recent chat, oldest first:
@@ -90,8 +90,8 @@ ${hist}
 
 ${forUser ? (() => { const mine = recent[recent.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re);
     return `The newest message is from ${myName()} (m${recent.length})${to && to.w !== -1 ? `, replying to ${chatName(to.w)}` : ''}. Write 1 to 4 messages: ${to && to.w !== -1 ? `${chatName(to.w)} answers ${myName()} first (replyTo "m${recent.length}"), and maybe one more player` : `one or two players answer ${myName()} (replyTo "m${recent.length}")`}; others may react or keep their own conversation going.`; })()
-  : away ? `${myName()} was away for ${Math.round((Date.now() - away.from) / 60000)} minutes. Write 6 to 10 messages the room exchanged during that time, continuing the chat above: threads, replies, a new topic or two.`
-  : 'Write 6 to 9 new messages continuing this chat. Mostly continue or answer threads above, and maybe start one new topic.'}
+  : away ? `${myName()} was away for ${Math.round((Date.now() - away.from) / 60000)} minutes. Write 6 to 10 messages the room exchanged during that time, continuing the chat above: threads, replies, and whatever else people brought up.`
+  : 'Write 6 to 9 new messages continuing this chat. Continue or answer threads above, or let someone change the subject to whatever is on their mind.'}
 For replyTo use the id of the message being answered: "m#" from the recent chat, or "n1", "n2"… for the new messages in your list. Leave it out when a message isn't a reply.`;
   return {sys, user, recent, cast};
 }
