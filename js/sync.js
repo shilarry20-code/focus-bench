@@ -16,7 +16,7 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 18 · 16';
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 18 · 17';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -190,7 +190,9 @@ function syncRerender(){
    () => { if ($('#task') && document.activeElement !== $('#task')) $('#task').value = P.task || ''; },
    () => renderGuides(), () => renderGuideSlot(), () => renderMatch(), () => renderRankChip(), () => { if (!$('#page-ranked').hidden) renderRanked(); },
    () => { if (typeof renderAwards === 'function' && !$('#page-awards').hidden) renderAwards(); },
-   () => { renderChat(); chatBadge(); }]
+   () => { renderChat(); chatBadge(); },
+   // matches from your other device change your opponents too: bring the shared world up to date
+   () => dailySim().then(ch => { if (!ch) return; renderRankChip(); renderMatch(); if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders(); })]
     .forEach(f => { try { f(); } catch(e){} });
 }
 
