@@ -241,7 +241,7 @@ function chatMsgHtml(m, byId){
     <div class="ch-body"><div class="ch-head"><button class="ch-name" ${me ? 'data-me="1"' : `data-bot="${m.w}"`}>${esc(chatName(m.w))}</button>${emblem(rk, 'xs')}<span class="ch-rk">${esc(rk.full)}</span>${feat ? badgeHtml(feat) : ''}<time>${chatTime(m.t)}</time></div>
     ${r ? `<div class="ch-re"><b>${esc(chatName(r.w))}</b> ${esc(r.text.length > 70 ? r.text.slice(0, 70) + '…' : r.text)}</div>` : ''}
     <p>${esc(m.text)}</p></div>
-    <button class="ch-reply" data-reply="${m.id}" aria-label="Reply to ${esc(chatName(m.w))}">Reply</button></div>`;
+    <button class="ch-reply" data-reply="${m.id}" aria-label="Reply to ${esc(chatName(m.w))}" title="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/></svg></button></div>`;
 }
 function renderChat(){
   const el = $('#chatBody'); if (!el || $('#page-chat').hidden) return;
