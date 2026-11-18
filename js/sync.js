@@ -16,7 +16,7 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 18 · 4';
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 18 · 6';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -108,23 +108,27 @@ function mergeAch(a, b){
   out.seeded = !!(out.seeded || b.seeded);
   return out;
 }
-// when neither side has a recorded change for an item (data from before sync was turned on), don't just keep
-// this device's copy: a fresh device would push its defaults over your real settings and rank.
-//   settings: a value you've changed beats a default
+// when neither side has a recorded change for an item (data from before sync was turned on):
+//   settings: the side with more of your study history wins (your main device), since a value that happens
+//             to be the default (like the default blue accent) may well be a choice you made; if they're even,
+//             a changed value beats a default
 //   ranked:   the side with more matches played (then the longer match history) wins
 //   guides:   the more recently edited one
-let tieRankedB = false;
+// The winner is then stamped, so the decision can't flip back on a later sync.
+let tieRankedB = false, tieSettingsB = null;
 const isDefault = (k, v) => k in DEFAULTS ? JSON.stringify(DEFAULTS[k]) === JSON.stringify(v) : v == null || v === '' || (Array.isArray(v) && !v.length);
 function tieB(sec, k, va, vb){
   if (JSON.stringify(va) === JSON.stringify(vb)) return false;
-  if (sec === 'settings') return isDefault(k, va) && !isDefault(k, vb);
+  if (sec === 'settings') return tieSettingsB !== null ? tieSettingsB : isDefault(k, va) && !isDefault(k, vb);
   if (sec === 'ranked') return tieRankedB;
   if (sec === 'guides') return (vb.updated || 0) > (va.updated || 0);
   return false;
 }
 function mergePayload(L, Rm){
   { const ra = L.data.ranked || {}, rb = (Rm.data || {}).ranked || {};
-    tieRankedB = (rb.played || 0) > (ra.played || 0) || ((rb.played || 0) === (ra.played || 0) && (rb.hist || []).length > (ra.hist || []).length); }
+    tieRankedB = (rb.played || 0) > (ra.played || 0) || ((rb.played || 0) === (ra.played || 0) && (rb.hist || []).length > (ra.hist || []).length);
+    const na = Object.keys(L.data.log || {}).length, nb = Object.keys((Rm.data || {}).log || {}).length;
+    tieSettingsB = nb !== na ? nb > na : null; }
   const cut = Date.now() - DEAD_DAYS * 864e5, out = {app: 'focus-bench-sync', v: 1, at: Date.now(), data: {}, stamps: {}, dead: {}};
   Object.keys(SECTIONS).forEach(sec => {
     const a = L.data[sec] || {}, b = (Rm.data || {})[sec] || {}, sa = L.stamps[sec] || {}, sb = (Rm.stamps || {})[sec] || {};
@@ -136,6 +140,7 @@ function mergePayload(L, Rm){
       if (inA && inB){
         const useB = tb > ta || (tb === ta && tieB(sec, k, a[k], b[k]));
         v = useB ? b[k] : a[k]; t = Math.max(ta, tb);
+        if (!t && sec !== 'log' && JSON.stringify(a[k]) !== JSON.stringify(b[k])) t = Date.now();   // settle the tie for good
         if (sec === 'guides') v = mergeGuide(v, useB ? a[k] : b[k]);
       } else if (inA){ v = a[k]; t = ta; } else { v = b[k]; t = tb; }
       const dt = Math.max(da[k] || 0, db[k] || 0);
@@ -216,11 +221,11 @@ async function syncNow(manual){
   try {
     if (!SYNC.login){ const u = await gh('/user'); SYNC.login = u.login; }
     if (!SYNC.gist) SYNC.gist = await findGist();
-    const local = buildPayload();
     let remote = null;
     if (SYNC.gist){
       try { remote = await readGist(); } catch(e){ if (e.kind !== 'missing') throw e; SYNC.gist = null; }
     }
+    const local = buildPayload();      // built after the download, so a change made while it ran is included
     syncDirty = false;
     if (remote) syncRemoteSum = syncSummary(remote.data);
     if (!SYNC.gist){ SYNC.gist = await createGist(local); }
@@ -355,3 +360,23 @@ $('#page-settings').addEventListener('click', e => {
 });
 $('#page-settings').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'syncTok') syncConnect(); });
 setInterval(() => { if (SYNC.token && !$('#page-settings').hidden && syncState !== 'busy' && !syncShowQR) renderSyncPanel(); }, 30000);
+
+/* ---- keeping open tabs in step ----
+   Every tab keeps its own copy of your data in memory. Without this, an old tab left open would save its
+   outdated copy over a change made in another tab (pick blue in one tab, and an old tab still showing the
+   custom color writes it back the next time it saves anything). When another tab saves, this one reloads it. */
+addEventListener('storage', e => {
+  if (!e.key || e.newValue == null) return;
+  let v; try { v = JSON.parse(e.newValue); } catch(err){ return; }
+  syncApplying = true;
+  try {
+    if (e.key === 'fb.settings'){ P = merge(clone(DEFAULTS), v); if (syncSnap) syncSnap.settings = takeSnap('settings'); }
+    else if (e.key === 'fb.log'){ LOG = Array.isArray(v) ? v : LOG; if (syncSnap) syncSnap.log = takeSnap('log'); }
+    else if (e.key === 'fb.notes'){ NOTES = Array.isArray(v) ? v : NOTES; if (syncSnap) syncSnap.notes = takeSnap('notes'); }
+    else if (e.key === 'fb.ach'){ Object.keys(v || {}).forEach(k => { ACH[k] = v[k]; }); }
+    else if (e.key === 'fb.syncMeta'){ SMETA = v && v.stamps ? v : SMETA; return; }
+    else if (e.key === 'fb.sync'){ SYNC = v || {}; renderSyncPanel(); return; }
+    else return;
+  } finally { syncApplying = false; }
+  syncRerender();
+});
