@@ -18,7 +18,7 @@ let CHAT_TAB = 'global', DM_OPEN = null, dmChalOpen = false;
 const dmLoadT = Date.now(), dmGenBusy = {};
 
 /* ---- facts the players know ---- */
-const thread = w => DMS.msgs.filter(m => m.w === w);
+const thread = w => DMS.msgs.filter(m => m.w === w && !m.del);
 const dmOnline = w => { try { return chatWhoOnline().includes(w); } catch(e){ return false; } };
 const dmStudying = w => { try { return botLiveNow(w); } catch(e){ return false; } };
 const isRival = w => { const r = R.rec[w]; return w === nemesis() || !!(r && r[0] + r[1] + r[2] >= 3); };
@@ -39,7 +39,7 @@ function dmPrompt(w, task){
   const sys = `You write direct messages that ${B.name}, a player of Focus Bench, sends to another player, ${me}. Focus Bench is a study-timer app for college students; in ranked matches whoever studies longer wins and gains Elo.
 Write like real texting between two college students: casual, short, lowercase is fine, sometimes several short texts in a row. Keep ${B.name}'s own personality. They can talk about anything; most texts shouldn't be about studying or work, and don't tack study talk onto messages.
 Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Don't check in on how ${me} is doing and don't congratulate rank-ups unprompted. Every message is from ${B.name}.`;
-  const hist = thread(w).slice(-14).map(m => m.ch ? `(${m.me ? me : B.name} sent a ${m.ch.mode === 'f' ? 'friendly' : 'ranked'} challenge, ${({p: 'pending', a: 'accepted', d: 'declined', x: 'expired'})[m.ch.st]})` : `${m.me ? me : B.name}: ${m.text}`).join('\n') || '(no messages yet)';
+  const hist = thread(w).filter(m => m.text || m.ch).slice(-14).map(m => m.ch ? `(${m.me ? me : B.name} sent a ${m.ch.mode === 'f' ? 'friendly' : 'ranked'} challenge, ${({p: 'pending', a: 'accepted', d: 'declined', x: 'expired'})[m.ch.st]})` : `${m.me ? me : B.name}: ${m.text}`).join('\n') || '(no messages yet)';
   const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}${B.bio ? `. Bio: "${B.bio}"` : ''}.
 ${me}: ${rk.full} (${R.mmr} Elo).
 Their head-to-head record (${me}'s wins–losses${R.rec[w] && R.rec[w][2] ? '–draws' : ''}): ${recStr(w)}${isRival(w) ? ', they are rivals' : ''}.
@@ -249,7 +249,7 @@ $('#chatPop').addEventListener('click', () => { const w = $('#chatPop').dataset.
 
 /* ---- unread counts ---- */
 const dmUnread = w => thread(w).filter(m => !m.me && m.t > (DMS.read[w] || 0)).length;
-const dmUnreadAll = () => { const s = new Set(DMS.msgs.filter(m => !m.me).map(m => m.w)); let n = 0; s.forEach(w => { if (!(CHAT_TAB === 'dm' && DM_OPEN === w && chatPageOpen())) n += dmUnread(w); }); return n; };
+const dmUnreadAll = () => { const s = new Set(DMS.msgs.filter(m => !m.me && !m.del).map(m => m.w)); let n = 0; s.forEach(w => { if (!(CHAT_TAB === 'dm' && DM_OPEN === w && chatPageOpen())) n += dmUnread(w); }); return n; };
 chatBadge = function(){
   const g = chatPageOpen() && CHAT_TAB === 'global' ? 0 : chatUnread(), n = g + dmUnreadAll(), txt = n > 99 ? '99+' : n ? String(n) : '';
   document.querySelectorAll('.chat-badge').forEach(b => { b.textContent = txt; b.hidden = !n; });
@@ -271,9 +271,9 @@ renderChat = function(){
   if (DM_OPEN == null) return renderDmList(el);
   renderDmThread(el, DM_OPEN);
 };
-function dmStatus(w){ return dmStudying(w) ? '<i class="ch-on busy"></i>Studying now' : dmOnline(w) ? '<i class="ch-on"></i>Online' : 'Offline'; }
+function dmStatus(w){ return dmStudying(w) ? '<i class="ch-on busy"></i> Studying now' : dmOnline(w) ? '<i class="ch-on"></i> Online' : 'Offline'; }
 function renderDmList(el){
-  const ws = [...new Set(DMS.msgs.map(m => m.w))];
+  const ws = [...new Set(DMS.msgs.filter(m => !m.del).map(m => m.w))];
   const rows = ws.map(w => { const t = thread(w), last = t[t.length - 1]; return {w, last}; }).sort((a, b) => b.last.t - a.last.t);
   el.innerHTML = `<div class="card ch-card dm-card"><div class="ch-top"><div><b>Messages</b><small>${rows.length ? `${rows.length} conversation${rows.length === 1 ? '' : 's'}` : 'Direct messages'}</small></div></div>
     <div class="dm-threads">${rows.length ? rows.map(({w, last}) => { const B = bot(w), u = dmUnread(w);
@@ -296,7 +296,7 @@ function renderDmThread(el, w){
   const B = bot(w), rk = rankOf(botRating(w)), list = $('#dmList'), nearBottom = !list || list.scrollHeight - list.scrollTop - list.clientHeight < 80;
   if (dmUnread(w)){ DMS.read[w] = Date.now(); saveDms(); }
   const t = thread(w), lock = focusing();
-  const rows = t.map(m => `<div class="dm-msg${m.me ? ' me' : ''}">${m.ch ? chCard(m) : ''}${m.text ? `<p>${esc(m.text)}</p>` : ''}<time>${chatTime(m.t)}</time></div>`).join('');
+  const rows = t.map(m => `<div class="dm-msg${m.me ? ' me' : ''}">${m.ch ? chCard(m) : ''}${m.text ? `<p>${esc(m.text)}</p>` : ''}<span class="dm-foot">${m.me && m.text && !m.ch ? `<button class="dm-del" data-del="${m.id}" aria-label="Delete message" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>` : ''}<time>${chatTime(m.t)}</time></span></div>`).join('');
   const s = stakes(botRating(w)), pend = pendingCh(w);
   if (!list || list.dataset.w !== String(w)){
     el.innerHTML = `<div class="card ch-card dm-card"><div class="dm-top"><button class="small-btn dm-back" data-back="1" aria-label="Back to messages">←</button>
@@ -345,6 +345,8 @@ $('#page-chat').addEventListener('click', e => {
   if (e.target.closest('[data-chx]')){ dmChalOpen = false; renderChat(); return; }
   const sd = e.target.closest('[data-send]'); if (sd){ dmChallenge(DM_OPEN, sd.dataset.send); return; }
   const r = e.target.closest('[data-ch]'); if (r){ chRespond(r.dataset.ch, !!r.dataset.yes); return; }
+  const dl = e.target.closest('[data-del]');
+  if (dl){ chatDelBtn(dl, () => { const m = DMS.msgs.find(x => x.id === dl.dataset.del); if (m && m.me){ m.del = 1; m.text = ''; saveDms(); renderChat(); } }); return; }
   const g = e.target.closest('[data-go]'); if (g){ showPage(g.dataset.go, g.dataset.sec); return; }
   const b = e.target.closest('[data-bot]'); if (b) openProfile(+b.dataset.bot);
 }, true);
