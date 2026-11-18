@@ -1161,3 +1161,48 @@ body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
 .qh-score small{color:var(--muted);font-size:12px}
 .qh-old{min-width:64px;text-align:right}
 .qx-q.gone{opacity:.8}.qx-flag.on{cursor:default}
+
+/* sync across devices */
+.sync-steps{margin:10px 0 0;padding-left:20px;display:grid;gap:12px}
+.sync-steps li{line-height:1.5}
+.sync-steps .small-btn{margin-left:6px;text-decoration:none;display:inline-block}
+.sync-steps small{display:block;margin-top:4px}
+.sync-row{display:flex;gap:8px;margin-top:6px;max-width:460px}
+.sync-row input{flex:1;min-width:0}
+.sync-status{display:flex;gap:10px;align-items:center;margin:6px 0 4px}
+.sync-status span{display:flex;flex-direction:column}
+.sync-status small{color:var(--muted);font-size:12px}
+.sync-status.bad b{color:#d64545}
+.sync-dot{width:10px;height:10px;border-radius:50%;background:#1f9d55;flex:none}
+.sync-dot.off{background:var(--muted)}
+.sync-dot.busy{background:var(--accent);animation:syncPulse 1s ease-in-out infinite}
+@keyframes syncPulse{50%{opacity:.35}}
+.sync-qr{display:flex;gap:18px;align-items:flex-start;margin-top:12px;flex-wrap:wrap}
+.sync-qr-img{width:168px;height:168px;background:#fff;border-radius:10px;padding:6px;display:flex;align-items:center;justify-content:center;color:#333;font-size:12px;flex:none}
+.sync-qr-img svg{width:100%;height:100%}
+.sync-qr > div:last-child{flex:1;min-width:200px}
+
+/* matchmaking */
+.mi-btns{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mq-time{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mq-radar{position:relative;height:96px;display:flex;align-items:center;justify-content:center}
+.mq-radar > :not(.mq-ring){position:relative;z-index:1}
+.mq-ring{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;border:2px solid var(--accent);opacity:0}
+body:not(.m-off) .mq-ring{animation:mqPulse 2.4s cubic-bezier(.2,.6,.4,1) infinite}
+body:not(.m-off) .mq-ring.r2{animation-delay:.8s}body:not(.m-off) .mq-ring.r3{animation-delay:1.6s}
+body.m-off .mq-ring{opacity:.35}
+@keyframes mqPulse{0%{transform:scale(.9);opacity:.7}100%{transform:scale(2.1);opacity:0}}
+.mq-line{margin:0;text-align:center;font-size:14px}
+.mq-range{display:inline-block;margin-left:4px;font-size:12px;font-weight:700;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:99px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.mq-q{margin:-6px 0 0;text-align:center;font-variant-numeric:tabular-nums}
+.mq-foot{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mq-ok{color:var(--accent)}
+.mq-cd{font-variant-numeric:tabular-nums;color:var(--ink)}
+body:not(.m-off) .mq-found{animation:matchIn .5s cubic-bezier(.2,1.3,.4,1)}
+body:not(.m-off) .mq-vs .m-p:first-child{animation:mqLeft .55s cubic-bezier(.2,1.2,.4,1) both}
+body:not(.m-off) .mq-vs .m-p.them{animation:mqRight .55s .12s cubic-bezier(.2,1.2,.4,1) both}
+body:not(.m-off) .mq-vs .vs{animation:mqVs .5s .3s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes mqLeft{from{transform:translateX(-24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes mqRight{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes mqVs{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+.rk-find{margin-left:auto;align-self:center}
