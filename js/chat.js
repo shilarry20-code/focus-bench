@@ -82,7 +82,7 @@ function aiPrompt(online, forUser, away){
   const recent = CHATS.msgs.filter(m => !m.del && (userHere || m.w !== -1)).slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
 This is a general hangout room: people can talk about anything, like any group chat of college students. Food, games, sports, music, shows, weather, classes, roommates, weekend plans, random thoughts, memes, complaining, jokes. Studying, classes, work and ranked matches should only come up now and then: in a batch, at most one or two messages touch on them, and plenty of batches have none. Don't tack study talk onto other messages (no "back to studying", "gotta grind", "locking in", "anyway back to work").
-Write like a real group chat: casual and varied in length (quick reactions to a couple of sentences), with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
+Write like a real group chat: casual texting style (lowercase is fine, contractions, slang, not formal full sentences), mostly short, with only the odd longer message. A reply is already shown as a reply, so don't start it with the other person's name; use names only now and then, the way people really do. with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
 Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
   const lastK = Math.floor(Math.random() * cast.length * 3);    // mention one player's last match only sometimes, so ranked isn't always the topic
   const who = cast.map((f, k) => `- ${f.name}: ${f.rank}, ${f.subj}${f.last && k === lastK ? `; just ${f.last.won ? 'beat' : 'lost to'} ${f.last.opp} in ranked (${f.last.mine} vs ${f.last.theirs} min)` : ''}`).join('\n');
@@ -156,6 +156,15 @@ async function aiCall(sys, user){
 }
 // turn Gemini's messages into chat messages, checking every name against the room
 const normName = n => String(n || '').toLowerCase().replace(/^@/, '').replace(/[^a-z0-9]/g, '');
+// "NightFox_8, honestly…" → "honestly…": the reply already shows who it's for
+function stripLeadName(text, names){
+  for (const n of names){
+    if (!n || n.length < 3) continue;
+    const re = new RegExp('^@?' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[,:!\\-–—]*\\s+', 'i');
+    if (re.test(text)) return text.replace(re, '') || text;
+  }
+  return text;
+}
 function aiToBatch(list, recent, cast, noYou){
   const out = [], pos = [], keys = cast.map(f => ({i: f.i, k: normName(f.name)}));
   let lastW = null;
@@ -173,6 +182,7 @@ function aiToBatch(list, recent, cast, noYou){
     let text = String((m && (m.text || m.message)) || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
     if (w == null || !text) return;
     if (noYou && youRe && youRe.test(text)) return;
+    text = stripLeadName(text, [...cast.map(f => f.name), myName()]);
     let re = null; const id = String(m.replyTo || m.reply_to || '').trim().replace(/^#/, '');
     if (/^m?\d+$/.test(id) && !/^n/.test(id)){ const x = recent[+id.replace('m', '') - 1]; if (x) re = x.id; }
     else if (/^n\d+$/.test(id)){ const k = pos[+id.slice(1) - 1]; if (k != null && k >= 0) re = k; }
