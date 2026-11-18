@@ -32,7 +32,8 @@ function mdInline(t){
 }
 function mdRender(src, opts){
   const L = String(src || '').replace(/\r\n?/g, '\n').split('\n'), out = [], heads = [];
-  let i = 0, qn = 0;
+  let i = 0, qn = 0, curHead = null;
+  const cards = [];
   const listRe = /^(\s*)([-*+]|\d+[.)])\s+(\[( |x|X)\]\s+)?(.*)$/;
   while (i < L.length){
     const line = L[i];
@@ -44,16 +45,17 @@ function mdRender(src, opts){
       i++; out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`); continue;
     }
     if ((m = line.match(/^(#{1,4})\s+(.*)$/))){                  // heading
-      const lv = m[1].length, id = 'gh' + heads.length; heads.push({lv, text: m[2].replace(/[*_`=~]/g, ''), id});
+      const lv = m[1].length, id = 'gh' + heads.length; heads.push({lv, text: m[2].replace(/[*_`=~]/g, ''), id}); curHead = id;
       out.push(`<h${lv + 1} id="${id}">${mdInline(m[2])}</h${lv + 1}>`); i++; continue;
     }
     if (/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)){ out.push('<hr>'); i++; continue; }
     if ((m = line.match(/^\s*Q[:.)]\s*(.*)$/i))){                // flashcard: Q: … A: …
       const q = [m[1]], a = []; i++;
-      while (i < L.length && !/^\s*A[:.)]/i.test(L[i]) && !/^\s*$/.test(L[i])) q.push(L[i++].trim());
-      if (i < L.length && (m = L[i].match(/^\s*A[:.)]\s*(.*)$/i))){ a.push(m[1]); i++; while (i < L.length && !/^\s*$/.test(L[i]) && !/^\s*Q[:.)]/i.test(L[i])) a.push(L[i++].trim()); }
-      qn++;
-      out.push(`<details class="qa"><summary><span class="qa-q">Q${qn}</span><span>${q.map(mdInline).join('<br>')}</span><span class="qa-tap">Show answer</span></summary><div class="qa-a">${a.length ? a.map(mdInline).join('<br>') : '<em>No answer written.</em>'}</div></details>`);
+      const stop = t => /^\s*$/.test(t) || /^#{1,4}\s/.test(t) || /^\s*```/.test(t);    // a blank line or heading ends the card
+      while (i < L.length && !/^\s*A[:.)]/i.test(L[i]) && !stop(L[i])) q.push(L[i++].trim());
+      if (i < L.length && (m = L[i].match(/^\s*A[:.)]\s*(.*)$/i))){ a.push(m[1]); i++; while (i < L.length && !stop(L[i]) && !/^\s*Q[:.)]/i.test(L[i])) a.push(L[i++].trim()); }
+      qn++; cards.push({n: qn, q: q.join('\n'), a: a.join('\n'), h: curHead});
+      out.push(`<details class="qa" id="fc${qn}"><summary><span class="qa-q">Q${qn}</span><span>${q.map(mdInline).join('<br>')}</span><span class="qa-tap">Show answer</span></summary><div class="qa-a">${a.length ? a.map(mdInline).join('<br>') : '<em>No answer written.</em>'}</div></details>`);
       continue;
     }
     if (/^\s*>/.test(line)){                                     // quote / tip box
@@ -84,7 +86,7 @@ function mdRender(src, opts){
     while (i < L.length && !/^\s*$/.test(L[i]) && !/^(#{1,4}\s|\s*```|\s*>|\s*\||\s*Q[:.)]|\s*(---+|\*\*\*+)\s*$)/i.test(L[i]) && !listRe.test(L[i])) buf.push(L[i++]);
     out.push(`<p>${buf.map(x => mdInline(x.trim())).join('<br>')}</p>`);
   }
-  return {html: out.join('\n'), heads, qn};
+  return {html: out.join('\n'), heads, qn, cards};
 }
 function guideProgress(g){
   let total = 0, done = 0, qa = 0;
@@ -206,7 +208,7 @@ function renderGuideView(){
   const g = guideById(gView), r = mdRender(g.body), p = guideProgress(g), mins = guideMinutes(g), ex = examText(g), qs = quizSummary(g), tab = guideTab(g);
   // the title sits above two tabs: the guide itself, and its practice quizzes
   const top = `<div class="g-bar"><button class="small-btn" data-ga="back">← All guides</button><span class="g-bar-sp"></span>
-      <button class="small-btn accent" data-ga="study">▶ Study this</button><button class="small-btn" data-ga="edit">Edit</button><button class="small-btn" data-ga="export">Export</button><button class="small-btn" data-ga="del">Delete</button></div>
+      <button class="small-btn accent" data-ga="study">▶ Study this</button>${r.cards.length ? `<button class="small-btn" data-ga="fc">Flashcards (${r.cards.length})</button>` : ''}<button class="small-btn" data-ga="edit">Edit</button><button class="small-btn" data-ga="export">Export</button><button class="small-btn" data-ga="del">Delete</button></div>
     <header class="g-head g-top"><h2>${esc(g.title)}</h2><div class="g-sub">${g.cls ? `<span class="g-cls">${esc(g.cls)}</span>` : ''}${ex ? `<span class="g-ex${examSoon(g) ? ' soon' : ''}">${ex}</span>` : ''}${g.tags.map(t => `<i class="g-tag">${esc(t)}</i>`).join('')}</div></header>
     <div class="g-tabs" role="tablist" aria-label="Guide sections">
       <button role="tab" data-gtab="guide" aria-selected="${tab === 'guide'}">Guide</button>
@@ -221,9 +223,11 @@ function renderGuideView(){
           ${p.total ? `<span class="bar2 g-bigbar"><i style="width:${p.done / p.total * 100}%"></i></span>` : ''}
           ${r.qn ? `<div class="g-qa-btns"><button class="small-btn" data-ga="qa-open">Show all answers</button><button class="small-btn" data-ga="qa-close">Hide all</button></div>` : ''}
           ${p.total ? `<button class="link-btn" data-ga="uncheck">Uncheck everything</button>` : ''}${r.heads.length > 2 ? '' : '<div class="g-top-row"><button class="small-btn" data-ga="top">↑ Back to top</button></div>'}</div>
+        ${r.cards.length ? fcSideList(g, r) : ''}
         ${r.heads.length > 2 ? `<div class="card g-toc-card"><div class="h first g-toc-h"><span>Contents</span><button class="small-btn" data-ga="top">↑ Top</button></div><nav class="g-toc">${r.heads.map(h => `<a href="#${h.id}" data-gh="${h.id}" style="--lv:${h.lv}">${esc(h.text)}</a>`).join('')}</nav></div>` : ''}
       </aside>
     </div>`;
+  fcDecorate(g, r);
 }
 // keep the side panel inside the visible window, wherever the page is scrolled
 function fitGuideSide(){
@@ -411,6 +415,7 @@ $('#page-guides').addEventListener('click', e => {
   else if (a === 'cancel'){ gEdit = null; renderGuides(); }
   else if (a === 'save') gEditorSave();
   else if (a === 'study' && g) studyGuide(g);
+  else if (a === 'fc' && g) fcOpen(g);
   else if (a === 'export' && g){
     const md = guideToMd(g);
     if (window.top !== window){ try { navigator.clipboard.writeText(md).then(() => toast('Guide copied as Markdown.'), () => toast("Couldn't copy here.")); } catch(err){} }

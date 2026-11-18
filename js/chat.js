@@ -77,7 +77,7 @@ function aiPrompt(online, forUser, away){
   const now = new Date(), sem = semesterOf(now), people = online.slice(0, 12);
   if (forUser){ const mine = CHATS.msgs[CHATS.msgs.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re); if (to && to.w !== -1 && !people.includes(to.w)) people.unshift(to.w); }
   const cast = people.map(chatFacts);
-  const recent = CHATS.msgs.slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
+  const recent = CHATS.msgs.filter(m => !m.del).slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
 This is a general hangout room: people can talk about anything, like any group chat of college students. Food, games, sports, music, shows, weather, classes, roommates, weekend plans, random thoughts, memes, complaining, jokes. Studying, classes, work and ranked matches should only come up now and then: in a batch, at most one or two messages touch on them, and plenty of batches have none. Don't tack study talk onto other messages (no "back to studying", "gotta grind", "locking in", "anyway back to work").
 Write like a real group chat: casual and varied in length (quick reactions to a couple of sentences), with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
@@ -229,7 +229,7 @@ function chatTick(){
     CHATS.next = now + (180 + Math.random() * 180) * 1000; chatLastReq = now; saveChat();
     chatGenerate(false);
   }
-  if (chatPageOpen() && $('#chatList') && $('#chatList').children.length !== CHATS.msgs.length + ($('#chatList .ch-new') ? 1 : 0) && CHATS.msgs.length) renderChat();
+  if (chatPageOpen() && $('#chatList') && $('#chatList').children.length !== CHATS.msgs.filter(m => !m.del).length + ($('#chatList .ch-new') ? 1 : 0) && CHATS.msgs.length) renderChat();
 }
 let chatLastReq = 0;
 function chatCatchUp(){
@@ -272,9 +272,9 @@ function chatMsgHtml(m, byId){
   return `<div class="ch-msg${me ? ' mine' : ''}" data-id="${m.id}">
     <button class="ch-av" ${me ? 'data-me="1"' : `data-bot="${m.w}"`} aria-label="${esc(chatName(m.w))}'s profile">${me ? myAvatar() : avatar(B)}</button>
     <div class="ch-body"><div class="ch-head"><button class="ch-name" ${me ? 'data-me="1"' : `data-bot="${m.w}"`}>${esc(chatName(m.w))}</button>${emblem(rk, 'xs')}<span class="ch-rk">${esc(rk.full)}</span>${feat ? badgeHtml(feat) : ''}<time>${chatTime(m.t)}</time></div>
-    ${r ? `<div class="ch-re"><b>${esc(chatName(r.w))}</b> ${esc(r.text.length > 70 ? r.text.slice(0, 70) + '…' : r.text)}</div>` : ''}
+    ${r ? `<button class="ch-re" data-jump="${r.id}" title="Go to this message">${r.del ? '<i>Deleted message</i>' : `<b>${esc(chatName(r.w))}</b> ${esc(r.text.length > 70 ? r.text.slice(0, 70) + '…' : r.text)}`}</button>` : ''}
     <p>${esc(m.text)}</p></div>
-    <button class="ch-reply" data-reply="${m.id}" aria-label="Reply to ${esc(chatName(m.w))}" title="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/></svg></button></div>`;
+    <button class="ch-reply" data-reply="${m.id}" aria-label="Reply to ${esc(chatName(m.w))}" title="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/></svg></button>${me ? `<button class="ch-reply ch-del" data-del="${m.id}" aria-label="Delete message" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>` : ''}</div>`;
 }
 function renderChat(){
   const el = $('#chatBody'); if (!el || $('#page-chat').hidden) return;
@@ -282,7 +282,7 @@ function renderChat(){
   const list = $('#chatList'), nearBottom = !list || list.scrollHeight - list.scrollTop - list.clientHeight < 80;
   const online = chatWhoOnline(), byId = new Map(CHATS.msgs.map(m => [m.id, m])), readAt = CHATS._shownRead || CHATS.read || 0;
   let divider = false;
-  const rows = CHATS.msgs.map(m => { let d = ''; if (!divider && m.t > readAt && m.w !== -1 && CHATS.msgs[0] !== m){ divider = true; d = '<div class="ch-new"><span>New</span></div>'; } return d + chatMsgHtml(m, byId); }).join('');
+  const rows = CHATS.msgs.filter(m => !m.del).map(m => { let d = ''; if (!divider && m.t > readAt && m.w !== -1 && CHATS.msgs[0] !== m){ divider = true; d = '<div class="ch-new"><span>New</span></div>'; } return d + chatMsgHtml(m, byId); }).join('');
   if (!list){
     el.innerHTML = `<div class="card ch-card"><div class="ch-top"><div><b>Global chat</b><small><i class="ch-on"></i>${online.length} online</small></div><div class="ch-online" id="chatOnline"></div></div>
       <div class="ch-list" id="chatList"></div>
@@ -328,7 +328,22 @@ $('#page-chat').addEventListener('submit', e => {
   CHATS.q = CHATS.q.filter(m => m.t > Date.now() + 20000);   // the room pauses to answer you
   if (GEM.key) setTimeout(() => chatGenerate(true), 600 + Math.random() * 1200);
 });
+// tapping the quoted message in a reply jumps up to it
+function chatJump(id){
+  const el = document.querySelector(`#chatList .ch-msg[data-id="${id}"]`);
+  if (!el){ toast('That message is no longer in the chat.'); return; }
+  el.scrollIntoView({block: 'center', behavior: motion() === 'off' ? 'auto' : 'smooth'});
+  el.classList.remove('jumped'); void el.offsetWidth; el.classList.add('jumped');
+}
+// deleting your own message: tap the bin, then tap again to confirm
+function chatDelBtn(b, done){
+  if (!b.dataset.sure){ b.dataset.sure = 1; b.classList.add('sure'); b.title = 'Tap again to delete'; setTimeout(() => { if (b.isConnected){ delete b.dataset.sure; b.classList.remove('sure'); b.title = 'Delete'; } }, 3000); return; }
+  done();
+}
 $('#page-chat').addEventListener('click', e => {
+  const j = e.target.closest('[data-jump]'); if (j && !e.target.closest('.dm-card')){ chatJump(j.dataset.jump); return; }
+  const dl = e.target.closest('[data-del]');
+  if (dl && !e.target.closest('.dm-card')){ chatDelBtn(dl, () => { const m = CHATS.msgs.find(x => x.id === dl.dataset.del); if (m && m.w === -1){ m.del = 1; m.text = ''; if (chatReplyTo === m.id) setChatReply(null); saveChat(); renderChat(); } }); return; }
   const r = e.target.closest('[data-reply]'); if (r){ setChatReply(r.dataset.reply); return; }
   if (e.target.closest('[data-unreply]')){ setChatReply(null); return; }
   const b = e.target.closest('[data-bot], [data-me]');
