@@ -249,6 +249,16 @@ function dmTick(){
     const last = fresh.filter(m => !(CHAT_TAB === 'dm' && DM_OPEN === m.w && chatPageOpen())).pop();
     if (last) dmPreview(last);
   }
+  // in the conversation list: "typing…" in place of the last message while someone is writing to you
+  if (CHAT_TAB === 'dm' && DM_OPEN == null && chatPageOpen()){
+    const ty = new Set(typingNow(DMS.q.filter(m => m.text && !(m.hold && focusing()))));
+    document.querySelectorAll('#chatBody .dm-row').forEach(row => {
+      const p = row.querySelector('.dm-p'), on = ty.has(+row.dataset.open); if (!p || p.dataset.ty === String(on)) return;
+      if (p.dataset.orig == null) p.dataset.orig = p.innerHTML;
+      p.dataset.ty = String(on); p.classList.toggle('dm-typing', on);
+      p.innerHTML = on ? 'typing <span class="ty-dots" aria-hidden="true"><i></i><i></i><i></i></span>' : p.dataset.orig;
+    });
+  }
   // live countdowns on open challenge cards
   document.querySelectorAll('#chatBody .cc-left[data-exp]').forEach(el => { const ms = +el.dataset.exp - now; el.textContent = ms > 0 ? `${clock(ms)} left` : 'Expired'; });
   if (CHAT_TAB === 'dm' && DM_OPEN != null && chatPageOpen()){
