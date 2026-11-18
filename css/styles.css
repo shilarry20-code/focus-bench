@@ -1254,3 +1254,4 @@ body:not(.m-off) .mq-vs .vs{animation:mqVs .5s .3s cubic-bezier(.2,1.6,.4,1) bot
 body:not(.m-off) .chat-pop.in{animation:chatPopIn .35s cubic-bezier(.2,1.2,.4,1)}
 @keyframes chatPopIn{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
 @media (max-width:760px){.chat-pop{bottom:84px;right:10px;left:10px;max-width:none}.ch-list{height:56vh}}
+.ai-detail{margin:4px 0 8px;overflow-wrap:anywhere}.ai-detail code{font-size:12px}
