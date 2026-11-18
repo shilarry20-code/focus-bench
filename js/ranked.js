@@ -1,4 +1,4 @@
-/* ---------- Ranked: 249,999 bots, Elo, ranks, badges ---------- */
+/* ---------- Ranked: 682,925 bots, Elo, ranks, badges ---------- */
 // Each bot is generated from a fixed seed (name, look, style, habits), so only the numbers that
 // change are saved: each bot's rating and study totals, packed into a typed array kept in IndexedDB.
 // The first 5,000 bots are the original roster and keep their names; the rest came later.
@@ -426,7 +426,7 @@ const dayNum = dk => +dk.replace(/-/g, '');
 // A bot's day is fixed by its seed, the date and its long-term base rating, so past days never change
 // and its calendar can be rebuilt exactly at any time. No day tops 23 hours of study.
 const DAY_MAX = 1440, DAY_CAP = 1380;
-const PLAN = {active: false, m: 0, longest: 0};    // reused to avoid making 250,000 objects per update
+const PLAN = {active: false, m: 0, longest: 0};    // reused to avoid making 682,925 objects per update
 function daySits(i, dk, out){     // the day's sitting lengths in minutes (empty if the bot skipped the day)
   const r = T_BASE[i], rnd = mulberry32(dayNum(dk) * 7 + i * 2654435761);
   out = out || [];  out.length = 0;
@@ -1107,7 +1107,7 @@ function renderRankChip(){
 /* Ranked page */
 let rkHistShown = 30;
 function renderRanked(){
-  if (!RK_READY){ $('#rkHero').innerHTML = '<p class="hint">Loading 250,000 players…</p>'; return; }
+  if (!RK_READY){ $('#rkHero').innerHTML = `<p class="hint">Loading ${(ROSTER_N + 1).toLocaleString()} players…</p>`; return; }
   const rk = myRk(), next = rk.hi ? rankOf(rk.hi) : null, prog = rk.hi ? (R.mmr - rk.lo) / (rk.hi - rk.lo) : 1;
   const games = R.w + R.l + R.d, wr = games ? Math.round(R.w / games * 100) : 0;
   $('#rkHero').innerHTML = `${emblem(rk, 'xl')}<div class="rk-hero-tx"><small>${R.played < 5 ? `Placement ${R.played}/5 · your rank firms up after 5 matches` : 'Your rank'}</small><b style="color:${rk.c}">${rk.full}</b>
@@ -1446,7 +1446,7 @@ function renderProfilePage(){
         <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>
       </div>
       <div class="pf-side">
-        <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of 250,000 players. Click one to open that leaderboard.</p></div>
+        <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of ${(ROSTER_N + 1).toLocaleString()} players. Click one to open that leaderboard.</p></div>
         <div class="card"><div class="h first">Ranked</div>${ranked}</div>
       </div>
     </div>`;
