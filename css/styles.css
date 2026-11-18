@@ -1417,3 +1417,22 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .fc-tog{font-size:12px;margin-top:4px;padding:0}
 .fc-side .fc-list{max-height:200px}
 .g-side>.g-toc-card{flex:1 1 auto}
+
+/* archived guides */
+.g-cardw{position:relative;display:flex}
+.g-cardw>.g-card{flex:1;padding-bottom:16px}
+.g-arch{position:absolute;right:10px;bottom:10px;z-index:1;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;opacity:.55}
+.g-arch svg{width:17px;height:17px}
+.g-cardw:hover .g-arch,.g-arch:focus-visible{opacity:1}
+.g-arch:hover{background:var(--soft);color:var(--ink)}
+@media (hover:none){.g-arch{opacity:.8}}
+.g-cardw.arch .g-card{opacity:.75}
+.g-arch-btn{display:inline-flex;align-items:center;gap:6px}
+.g-arch-btn svg{width:15px;height:15px}
+.g-archived{margin-top:22px}
+.g-archived>summary{cursor:pointer;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:6px 0;list-style:none}
+.g-archived>summary::-webkit-details-marker{display:none}
+.g-archived>summary::before{content:"▸ ";}
+.g-archived[open]>summary::before{content:"▾ ";}
+.g-arch-note{margin:0 0 8px;padding:8px 12px;border-radius:var(--r-ctl);background:var(--soft);color:var(--muted);font-size:13px}
+.toast-undo{margin-left:10px;border:0;background:none;color:var(--accent);font:inherit;font-weight:800;cursor:pointer;padding:0}

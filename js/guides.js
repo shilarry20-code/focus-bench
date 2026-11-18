@@ -187,20 +187,22 @@ function renderGuides(){
   gView = null;
   const classes = [...new Set(GUIDES.map(g => g.cls).filter(Boolean))].sort();
   const q = GF.q.trim().toLowerCase();
-  const shown = GUIDES.filter(g => (GF.cls === 'all' || (GF.cls === '' ? !g.cls : g.cls === GF.cls)) && (!q || (g.title + ' ' + g.cls + ' ' + g.tags.join(' ') + ' ' + g.body).toLowerCase().includes(q)));
+  const match = g => (GF.cls === 'all' || (GF.cls === '' ? !g.cls : g.cls === GF.cls)) && (!q || (g.title + ' ' + g.cls + ' ' + g.tags.join(' ') + ' ' + g.body).toLowerCase().includes(q));
+  const archived = GUIDES.filter(g => g.archived && match(g));
+  const shown = GUIDES.filter(g => !g.archived && (GF.cls === 'all' || (GF.cls === '' ? !g.cls : g.cls === GF.cls)) && (!q || (g.title + ' ' + g.cls + ' ' + g.tags.join(' ') + ' ' + g.body).toLowerCase().includes(q)));
   const groups = {}; shown.forEach(g => (groups[g.cls || ''] || (groups[g.cls || ''] = [])).push(g));
   const order = Object.keys(groups).sort((a, b) => (a === '') - (b === '') || a.localeCompare(b));
   const card = g => {
     const p = guideProgress(g), mins = guideMinutes(g), ex = examText(g);
-    return `<button class="g-card" data-gopen="${g.id}"><span class="g-card-top"><b>${esc(g.title)}</b>${ex ? `<em class="${examSoon(g) ? 'soon' : ''}">${ex}</em>` : ''}</span>
+    return `<div class="g-cardw${g.archived ? ' arch' : ''}"><button class="g-arch" data-garch="${g.id}" title="${g.archived ? 'Unarchive' : 'Archive'}" aria-label="${g.archived ? 'Unarchive' : 'Archive'} ${esc(g.title)}">${g.archived ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M12 17v-6M9.5 13.5 12 11l2.5 2.5"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M10 12h4"/></svg>'}</button><button class="g-card" data-gopen="${g.id}"><span class="g-card-top"><b>${esc(g.title)}</b>${ex ? `<em class="${examSoon(g) ? 'soon' : ''}">${ex}</em>` : ''}</span>
       ${g.tags.length ? `<span class="g-tags">${g.tags.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}
       ${p.total ? `<span class="g-prog"><span class="bar2"><i style="width:${p.done / p.total * 100}%"></i></span><small>${p.done}/${p.total} checked</small></span>` : ''}
-      <small class="g-meta">${[p.qa ? `${p.qa} question${p.qa === 1 ? '' : 's'}` : '', (qs => qs.n ? `${qs.n} quiz${qs.n === 1 ? '' : 'zes'}${qs.best != null ? ` (avg best ${qs.best}%)` : ''}` : '')(quizSummary(g)), mins ? `${fmtMin(mins)} studied` : '', `edited ${new Date(g.updated).toLocaleDateString(undefined, {month:'short', day:'numeric'})}`].filter(Boolean).join(' · ')}</small></button>`;
+      <small class="g-meta">${[p.qa ? `${p.qa} question${p.qa === 1 ? '' : 's'}` : '', (qs => qs.n ? `${qs.n} quiz${qs.n === 1 ? '' : 'zes'}${qs.best != null ? ` (avg best ${qs.best}%)` : ''}` : '')(quizSummary(g)), mins ? `${fmtMin(mins)} studied` : '', `edited ${new Date(g.updated).toLocaleDateString(undefined, {month:'short', day:'numeric'})}`].filter(Boolean).join(' · ')}</small></button></div>`;
   };
   el.innerHTML = `<div class="g-bar"><input id="gSearch" type="search" placeholder="Search guides" value="${esc(GF.q)}" aria-label="Search guides">
       <select id="gClass" aria-label="Class"><option value="all">All classes</option>${classes.map(c => `<option ${GF.cls === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}${GUIDES.some(g => !g.cls) ? `<option value="" ${GF.cls === '' ? 'selected' : ''}>No class</option>` : ''}</select>
       <span class="g-bar-sp"></span><button class="small-btn" data-ga="import">Import</button><button class="small-btn accent" data-ga="new">+ New guide</button></div>
-    ${GUIDES.length ? (shown.length ? order.map(c => `<div class="g-group"><div class="h">${c ? esc(c) : 'No class'} <small class="pf-sub">${groups[c].length}</small></div><div class="g-grid">${groups[c].sort((a, b) => (a.exam || '9') .localeCompare(b.exam || '9') || b.updated - a.updated).map(card).join('')}</div></div>`).join('') : '<p class="hint">No guides match.</p>')
+    ${GUIDES.length ? (shown.length ? order.map(c => `<div class="g-group"><div class="h">${c ? esc(c) : 'No class'} <small class="pf-sub">${groups[c].length}</small></div><div class="g-grid">${groups[c].sort((a, b) => (a.exam || '9') .localeCompare(b.exam || '9') || b.updated - a.updated).map(card).join('')}</div></div>`).join('') : `<p class="hint">${archived.length ? 'No active guides match.' : 'No guides match.'}</p>`) + (archived.length ? `<details class="g-archived"${GF.archOpen ? ' open' : ''}><summary>Archived <small class="pf-sub">${archived.length}</small></summary><div class="g-grid">${archived.sort((a, b) => (b.archived || 0) - (a.archived || 0)).map(card).join('')}</div></details>` : '')
       : `<div class="card g-empty"><b>No study guides yet</b><p>Write one here, or import guides as Markdown, text or JSON files. Ask Claude to “make a Focus Bench study guide” on any topic, then import the file it gives you.</p><div class="g-empty-btns"><button class="small-btn accent" data-ga="new">+ New guide</button><button class="small-btn" data-ga="import">Import</button><button class="small-btn" data-ga="sample">Add a sample guide</button></div></div>`}`;
 }
 function renderGuideView(){
@@ -208,7 +210,8 @@ function renderGuideView(){
   const g = guideById(gView), r = mdRender(g.body), p = guideProgress(g), mins = guideMinutes(g), ex = examText(g), qs = quizSummary(g), tab = guideTab(g);
   // the title sits above two tabs: the guide itself, and its practice quizzes
   const top = `<div class="g-bar"><button class="small-btn" data-ga="back">← All guides</button><span class="g-bar-sp"></span>
-      <button class="small-btn accent" data-ga="study">▶ Study this</button>${r.cards.length ? `<button class="small-btn" data-ga="fc">Flashcards (${r.cards.length})</button>` : ''}<button class="small-btn" data-ga="edit">Edit</button><button class="small-btn" data-ga="export">Export</button><button class="small-btn" data-ga="del">Delete</button></div>
+      <button class="small-btn accent" data-ga="study">▶ Study this</button>${r.cards.length ? `<button class="small-btn" data-ga="fc">Flashcards (${r.cards.length})</button>` : ''}<button class="small-btn" data-ga="edit">Edit</button><button class="small-btn g-arch-btn" data-garch="${g.id}">${g.archived ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M12 17v-6M9.5 13.5 12 11l2.5 2.5"/></svg> Unarchive' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M10 12h4"/></svg> Archive'}</button><button class="small-btn" data-ga="export">Export</button><button class="small-btn" data-ga="del">Delete</button></div>
+    ${g.archived ? `<p class="g-arch-note">This guide is archived. It’s kept with all its quizzes and history; unarchive it to bring it back to your list.</p>` : ''}
     <header class="g-head g-top"><h2>${esc(g.title)}</h2><div class="g-sub">${g.cls ? `<span class="g-cls">${esc(g.cls)}</span>` : ''}${ex ? `<span class="g-ex${examSoon(g) ? ' soon' : ''}">${ex}</span>` : ''}${g.tags.map(t => `<i class="g-tag">${esc(t)}</i>`).join('')}</div></header>
     <div class="g-tabs" role="tablist" aria-label="Guide sections">
       <button role="tab" data-gtab="guide" aria-selected="${tab === 'guide'}">Guide</button>
@@ -284,6 +287,22 @@ function downloadText(name, text){
   const url = URL.createObjectURL(new Blob([text], {type: 'text/markdown'}));
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+// archive: the guide leaves your list (and stops being the one you're studying) but keeps everything; Undo puts it back
+function setArchived(g, on){
+  const wasFocus = P.focusGuide === g.id;
+  if (on){ g.archived = Date.now(); if (wasFocus){ P.focusGuide = null; saveP(); } } else delete g.archived;
+  saveGuides(); if (gView === g.id && on) gView = null; renderGuides(); renderGuideSlot();
+  undoToast(on ? `Archived “${g.title}”` : `Unarchived “${g.title}”`, () => {
+    if (on){ delete g.archived; if (wasFocus){ P.focusGuide = g.id; saveP(); } } else g.archived = Date.now();
+    saveGuides(); renderGuides(); renderGuideSlot();
+  });
+}
+function undoToast(msg, undo){
+  const t = $('#toast'); clearTimeout(toastT);
+  t.innerHTML = `<span>${esc(msg)}</span> <button class="toast-undo" type="button">Undo</button>`; t.hidden = false;
+  t.querySelector('.toast-undo').onclick = () => { t.hidden = true; undo(); };
+  toastT = setTimeout(() => t.hidden = true, 6000);
 }
 function studyGuide(g){
   const t = $('#task'); t.value = guideTask(g); t.dispatchEvent(new Event('input', {bubbles: true})); t.dispatchEvent(new Event('change', {bubbles: true}));
@@ -401,7 +420,9 @@ $('#gImpModal').addEventListener('click', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#gImpModal').hidden = true; });
 
 /* ---- events on the page ---- */
+$('#page-guides').addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('g-archived')) GF.archOpen = e.target.open; }, true);
 $('#page-guides').addEventListener('click', e => {
+  const ar = e.target.closest('[data-garch]'); if (ar){ const g = guideById(ar.dataset.garch); if (g) setArchived(g, !g.archived); return; }
   const open = e.target.closest('[data-gopen]'); if (open){ gView = open.dataset.gopen; renderGuides(); window.scrollTo(0, 0); return; }
   const th = e.target.closest('[data-gh]'); if (th){ e.preventDefault(); const t = $('#guidesBody').querySelector('#' + CSS.escape(th.dataset.gh)); t && t.scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); return; }
   const tool = e.target.closest('[data-gt]'); if (tool){ geWrap(tool.dataset.gt); return; }
