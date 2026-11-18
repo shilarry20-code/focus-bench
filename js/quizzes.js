@@ -14,7 +14,6 @@ let QE = null;          // the quiz being written or edited (see the editor sect
 let MBV = null;         // id of the guide whose mistake bank list is open
 let MXV = null;         // id of the guide whose mixed test setup is open
 let HV = null;          // {gid, src}: the attempt history list that's open (src = a quiz id or 'mixed')
-let RETQR = null;       // {qr, y}: results you left to read a review section in the guide, for "Back to results"
 // Attempt history: quiz.hist / g.mixed.hist = [{at, r, n, it}] oldest first. it = one entry per question:
 //   {q: quiz id, x: question id, a: your answer, g: 1 if right, f: 1 if flagged, p: the choice order you saw}.
 //   The last HIST_FULL attempts keep it; older ones keep just the date and score.
@@ -66,7 +65,6 @@ Rules:
 - Multiple choice: letter the choices a) b) c) d) and put * directly in front of the correct letter, like *b). Mark several with * for a "select all" question.
 - True/false or short answer: no choices, just an "Answer:" line.
 - Give every question a "Why:" line explaining the answer, and a "Review:" line saying exactly what to review if I get it wrong (chapter, section, or topic).
-- If I've shared my study guide, write each "Review:" line using the guide's exact section heading, so it can link to that section.
 - Don't repeat the same question with different wording; make each question test something distinct.
 - No other text inside the code block.
 
@@ -386,7 +384,7 @@ function beginRun(g, base, items){
   if (!items.length){ toast('No questions to practice.'); return; }
   QR = {gid: g.id, ...base, items: items.map(it => { const qz = quizzes.find(z => z.id === it.q); return {q: it.q, k: it.k, perm: choicePerm(qz, qz.questions[it.k])}; }),
     ans: items.map(() => null), grade: items.map(() => undefined), flags: new Set(), submitted: false, saved: false, cleared: 0, onlyMissed: false};
-  MBV = null; MXV = null; HV = null; RETQR = null; renderGuides(); window.scrollTo(0, 0);
+  MBV = null; MXV = null; HV = null; renderGuides(); window.scrollTo(0, 0);
 }
 function startQuiz(g, qz, retry){
   if (retry) return beginRun(g, {mode: 'quiz', qid: qz.id, full: false, bank: qz.questions.length}, retry);
@@ -483,7 +481,7 @@ function qxCard(i){
     const ans = x.type === 'short' ? qInline(x.answer) : inShownOrder(it, x.correct).map(c => esc(shownLabel(it, x, c))).join(', ');
     if (gr === null) fb = `<div class="qz-fb"><b>The answer:</b> ${ans}<div class="qz-self"><span>Did you get it?</span><button class="small-btn qz-yes" data-qx="self" data-i="${i}" data-ok="1">I got it right</button><button class="small-btn qz-no" data-qx="self" data-i="${i}" data-ok="0">I got it wrong</button></div></div>`;
     else fb = `<div class="qz-fb ${gr ? 'ok' : 'bad'}"><b>${gr ? 'Correct.' : answered ? 'Not quite.' : 'Not answered.'}</b>${gr && x.type !== 'short' ? '' : ` The answer is <b>${ans}</b>.`}
-      ${x.why ? `<p>${qInline(x.why)}</p>` : ''}${!gr && x.review ? `<p class="qz-rev"><b>Review:</b> ${revLink(guideById(QR.gid), x.review)}</p>` : ''}</div>`;
+      ${x.why ? `<p>${qInline(x.why)}</p>` : ''}${!gr && x.review ? `<p class="qz-rev"><b>Review:</b> ${qInline(x.review)}</p>` : ''}</div>`;
   }
   return `<div class="card qx-q${state}${flag ? ' flagged' : ''}" id="qx-${i}" data-i="${i}">
     <div class="qx-qhead"><span class="qz-l">${i + 1}</span>${TYPE_TAG[x.type] ? `<small class="qx-tag">${TYPE_TAG[x.type]}</small>` : ''}${QR.mode !== 'quiz' ? `<small class="hint qx-from">${esc(qz.title)}</small>` : ''}<span class="g-bar-sp"></span>
@@ -517,7 +515,7 @@ function qxSummary(g){
     <div class="qz-row qz-res-btns">${QR.past ? '' : `<button class="small-btn accent" data-qx="retake">${QR.mode === 'mistakes' ? 'Practice the mistake bank again' : QR.mode === 'mixed' ? 'New mixed test' : 'Retake with new questions'}</button>${missed.length ? `<button class="small-btn" data-qx="retry">Retry the ${missed.length} missed</button>` : ''}`}
       ${missed.length && missed.length < n ? `<button class="small-btn" data-qx="onlymissed" aria-pressed="${QR.onlyMissed}">${QR.onlyMissed ? 'Show all questions' : 'Show only missed'}</button>` : ''}<button class="small-btn" data-qx="copy">Copy results</button></div>
     <div class="qz-copybox" id="qzCopyBox" hidden><p class="hint">Copying isn't allowed here. Select the text below and copy it yourself.</p><textarea readonly></textarea></div>
-    ${reviews.length ? `<div class="qz-revlist"><div class="h">What to review</div><ul>${reviews.map(t => `<li>${revLink(g, t)}</li>`).join('')}</ul></div>` : ''}
+    ${reviews.length ? `<div class="qz-revlist"><div class="h">What to review</div><ul>${reviews.map(t => `<li>${qInline(t)}</li>`).join('')}</ul></div>` : ''}
     ${!missed.length && !pending ? '<p class="qz-perfect">Every question right.</p>' : ''}</div>`;
 }
 function renderQuizRun(){
@@ -634,7 +632,7 @@ function openAttempt(g, src, k){
   QR = {gid: g.id, mode: src === 'mixed' ? 'mixed' : 'quiz', qid: src === 'mixed' ? null : src, full: true, bank: 0, items,
     ans: r.it.map(e => e.a), grade: r.it.map(e => e.g === 1), flags: new Set(r.it.map((e, i) => e.f ? i : -1).filter(i => i >= 0)),
     submitted: true, saved: true, cleared: 0, onlyMissed: false, past: {src, k: before + k + 1, at: r.at}};
-  HV = null; MBV = null; MXV = null; RETQR = null; renderGuides(); window.scrollTo(0, 0);
+  HV = null; MBV = null; MXV = null; renderGuides(); window.scrollTo(0, 0);
 }
 $('#page-guides').addEventListener('click', e => {
   const b = e.target.closest('[data-qh]'); if (!b || !HV) return;
@@ -642,107 +640,6 @@ $('#page-guides').addEventListener('click', e => {
   if (b.dataset.qh === 'back'){ HV = null; setGuideTab(g.id, 'quizzes'); renderGuides(); window.scrollTo(0, 0); }
   else if (b.dataset.qh === 'open') openAttempt(g, HV.src, +b.dataset.k);
 });
-
-/* ---- "What to review" notes that jump to the matching part of the guide ---- */
-// Review notes are free text ("SIC Ch 9, Fair Information Practices"). Parts with a chapter or section
-// number ("SIC Ch 9") pick the part of the guide to look in: the heading that names that chapter, down to the next
-// heading at its level. The other parts are the topic, matched against every heading and line in that part of the
-// guide; rarer words count more (in a privacy chapter "privacy" says little, "cookies" says a lot). The closest
-// heading or line wins, so a note can land on a single bullet. No good match anywhere: the note stays plain text.
-const REV_STOP = new Set('a an and are as at be by ch chap chapter for from how in is it of on or page pages pp review reread section sec see study the to topic topics what why with your you lecture slide slides notes unit module part tab vs about this that its their them these those can do does means mean against into over when where which who issues issue problems problem concepts concept basics overview types type examples example things ways key main general intro introduction'.split(' '));
-const revWords = s => String(s || '').toLowerCase().replace(/[*_`=~]/g, '').replace(/(\w)['’](\w)/g, '$1$2').match(/[a-z0-9]+(?:\.[0-9]+)*/g) || [];
-const isNum = w => /^\d/.test(w);
-const wkey = w => w.length >= 6 ? w.slice(0, 6) : w.replace(/s$/, '');    // "anonymized" ~ "anonymity", "cookies" ~ "cookie"
-const topicKeys = s => [...new Set(revWords(s).filter(w => !isNum(w) && !REV_STOP.has(w) && w.length > 1).map(wkey))];
-const cleanLine = l => l.replace(/^\s*(#{1,4}\s+|>\s*|[-*+]\s+(\[[ xX]\]\s+)?|\d+[.)]\s+|[QA]:\s*)/, '').replace(/[*_`=~]/g, '').replace(/\|/g, ' ').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
-let revCache = {body: null};
-function revPrep(g){
-  if (revCache.body === g.body) return revCache;
-  const heads = mdRender(g.body).heads, lines = []; let fence = false, hi = 0;
-  String(g.body).replace(/\r\n?/g, '\n').split('\n').forEach(raw => {
-    if (/^\s*```/.test(raw)){ fence = !fence; return; }
-    if (fence || !raw.trim()) return;
-    const m = raw.match(/^(#{1,4})\s+(.*)$/), text = cleanLine(raw);
-    const c = text.indexOf(':'), label = m ? text.replace(/\([^)]*\d[^)]*\)/g, '') : c > 0 && c <= 70 ? text.slice(0, c) : '';
-    const L = {text, keys: new Set(topicKeys(text)), lkeys: new Set(topicKeys(label)), words: new Set(revWords(text)), nums: revWords(text).filter(isNum), qa: /^\s*[QA]:/.test(raw)};
-    if (m && heads[hi]){ L.head = heads[hi++]; L.lv = m[1].length; }
-    if (L.keys.size || L.head) lines.push(L);
-  });
-  return (revCache = {body: g.body, lines});
-}
-function reviewTarget(g, note){
-  if (!g || !note) return null;
-  const {lines} = revPrep(g), parts = String(note).split(/[,;:\n]|\s[-–—]\s/).map(t => t.trim()).filter(Boolean);
-  const ctx = parts.filter(t => /\d/.test(t)), topic = parts.filter(t => !/\d/.test(t));
-  const nums = ctx.flatMap(t => revWords(t).filter(isNum)), ctxKeys = ctx.flatMap(topicKeys);
-  // where to look: the highest-level heading naming the chapter ("6. Privacy (SIC Ch 9)"), down to its next sibling
-  let lo = 0, hi = lines.length, scopeHead = null;
-  if (nums.length){
-    const cand = lines.map((L, i) => ({L, i})).filter(({L}) => L.head && nums.some(n => L.nums.includes(n)) && (!ctxKeys.length || ctxKeys.some(k => L.keys.has(k))));
-    const pick = cand.sort((x, y) => x.L.lv - y.L.lv || x.i - y.i)[0];
-    if (pick){ scopeHead = pick.L; lo = pick.i; hi = lines.findIndex((L, j) => j > pick.i && L.head && L.lv <= pick.L.lv); if (hi < 0) hi = lines.length; }
-  }
-  let keys = topic.length ? [...new Set(topic.flatMap(topicKeys))] : [];
-  if (!keys.length){
-    const dotted = nums.filter(n => n.includes('.')), byNum = dotted.length && lines.find(L => L.head && dotted.some(n => L.nums.includes(n)));
-    if (byNum) return {id: byNum.head.id};
-    keys = parts.flatMap(topicKeys).filter(k => !ctxKeys.includes(k) || !scopeHead);
-    if (!keys.length) return scopeHead ? {id: scopeHead.head.id} : null;
-  }
-  // the topic is the chapter's own title ("Chapter 4, adjusting entries" → "Chapter 4: Adjusting Entries")
-  if (scopeHead && keys.every(k => scopeHead.keys.has(k))) return {id: scopeHead.head.id};
-  const topicWordsFull = [...new Set(topic.flatMap(revWords).filter(w => !isNum(w) && !REV_STOP.has(w)))];
-  // a line's label is the part before its colon ("Cookies: text files a site stores…"); a label that matches the
-  // topic is the strongest clue, since the guide is written as "Label: explanation" lines
-  const best = (a, b, need, headsOnly) => {
-    const pool = lines.slice(a, b).filter(L => L !== scopeHead && (!headsOnly || L.head)), N = pool.length || 1, df = {};
-    lines.slice(a, b).forEach(L => L.keys.forEach(k => { df[k] = (df[k] || 0) + 1; }));
-    // words the guide never uses can't be found anyway, so they don't count against a line, but at least half
-    // of the topic's words have to appear somewhere in this part of the guide
-    const present = keys.filter(k => df[k]); if (!present.length || present.length * 2 < keys.length) return null;
-    // words from the section's own title ("privacy" inside the privacy chapter) say little about where to go
-    const dull = new Set([...(scopeHead ? scopeHead.keys : []), ...ctxKeys]);
-    const idf = k => Math.log(1 + N / df[k]) * (dull.has(k) ? 0.3 : 1), total = present.reduce((t, k) => t + idf(k), 0);
-    let top = null, topS = 0;
-    pool.forEach(L => {
-      const got = present.filter(k => L.keys.has(k)); if (!got.some(k => !dull.has(k))) return;
-      const cover = got.reduce((t, k) => t + idf(k), 0) / total;
-      const lgot = present.filter(k => L.lkeys.has(k)), lcov = lgot.reduce((t, k) => t + idf(k), 0) / total;
-      const labelFull = L.lkeys.size > 0 && (present.every(k => L.lkeys.has(k)) || ([...L.lkeys].every(k => keys.includes(k)) && lcov >= 0.5));
-      if (!(cover >= need || labelFull)) return;
-      const exact = Math.min(0.15, topicWordsFull.filter(w => L.words.has(w)).length * 0.05);
-      const same = L.lkeys.size === present.length && present.every(k => L.lkeys.has(k));   // "Cookies:" for "cookies"
-      const sc = cover + 0.5 * lcov + (labelFull ? 0.3 : 0) + (same ? 0.25 : 0) + exact + (L.head ? 0.12 : 0) - (L.qa ? 0.6 : 0) - Math.min(0.08, L.text.length / 4000);
-      if (sc > topS){ top = L; topS = sc; }
-    });
-    return top;
-  };
-  // a note that names a chapter only ever lands inside that chapter
-  const L = best(lo, hi, 0.45) || (scopeHead && best(lo, hi, 0.2, true));
-  if (!L) return null;
-  return L.head ? {id: L.head.id} : {find: L.text.toLowerCase().slice(0, 60)};
-}
-const revLink = (g, note) => reviewTarget(g, note) ? `<button class="qz-revlink" data-qrev="${esc(note)}" title="Show this in the guide">${qInline(note)}<span class="qz-revgo" aria-hidden="true">→</span></button>` : qInline(note);
-function goToReview(note){
-  const g = guideById(QR.gid), t = reviewTarget(g, note); if (!t) return;
-  RETQR = {qr: QR, y: scrollY}; QR = null; gView = g.id; setGuideTab(g.id, 'guide'); renderGuides();
-  let el = t.id ? document.getElementById(t.id) : null;
-  if (!el && t.find){
-    const cands = [...document.querySelectorAll('#guidesBody .g-md :is(p, li, td, th, blockquote, h2, h3, h4, h5, summary, dd, pre, details)')];
-    const norm = c => c.textContent.toLowerCase().replace(/[*_`=~|]/g, ' ').replace(/\s+/g, ' ').trim(), probe = t.find.slice(0, 40).trim();
-    el = cands.filter(c => norm(c).includes(probe) || probe.includes(norm(c)) && norm(c).length > 12).sort((a, b) => a.textContent.length - b.textContent.length)[0];
-    const d = el && el.closest('details'); if (d) d.open = true;
-  }
-  if (!el){ window.scrollTo(0, 0); return; }
-  requestAnimationFrame(() => {
-    el.scrollIntoView({block: 'start', behavior: 'auto'}); window.scrollBy(0, -16);
-    el.classList.remove('g-flash'); void el.offsetWidth; el.classList.add('g-flash');
-  });
-}
-$('#page-guides').addEventListener('click', e => {
-  const b = e.target.closest('[data-qrev]'); if (!b || !QR) return;
-  e.stopPropagation(); goToReview(b.dataset.qrev);
-}, true);
 
 /* ---- the mistake bank list ---- */
 function renderMistakeList(){
