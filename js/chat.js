@@ -72,9 +72,9 @@ CHATS.msgs = CHATS.msgs.filter(chatKeep); CHATS.q = CHATS.q.filter(chatKeep);
 
 /* ---- Gemini ---- */
 const chatName = w => w === -1 ? myName() : bot(w).name;
-const CHAT_TOPICS = ['dining hall food', 'a show they’re binging', 'music they have on repeat', 'a game they’re playing', 'sports last night', 'the weather', 'weekend plans',
+const CHAT_TOPICS = ['dining hall food', 'a specific show they’re binging (name it)', 'an artist or album they have on repeat (name it)', 'a video game they’re playing (name it)', 'last night’s game (name the teams)', 'the weather', 'weekend plans',
   'roommate stuff', 'something funny that happened today', 'sleep schedules', 'pets back home', 'a random hot take', 'campus events', 'a meme or trend', 'going home for break',
-  'coffee or boba orders', 'the gym', 'cooking disasters', 'a movie they saw', 'online shopping', 'their phone or laptop dying', 'what to eat tonight', 'a would-you-rather question', 'favorite snacks'];
+  'coffee or boba orders', 'the gym', 'cooking disasters', 'a movie they just saw (name it)', 'a YouTuber or streamer they watch (name them)', 'a hot take about a famous movie, show or song', 'online shopping', 'their phone or laptop dying', 'what to eat tonight', 'a would-you-rather question', 'favorite snacks'];
 let chatWilling = [];      // [{i, mode}] players who'd send you a challenge if you ask, decided for this reply
 function chatChallengeNote(cast){
   chatWilling = [];
@@ -97,6 +97,7 @@ function aiPrompt(online, forUser, away){
   const recent = CHATS.msgs.filter(m => !m.del && (userHere || m.w !== -1)).slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
 This is a general hangout room: people can talk about anything, like any group chat of college students. Food, games, sports, music, shows, weather, classes, roommates, weekend plans, random thoughts, memes, complaining, jokes. Studying, classes, work and ranked matches should only come up now and then: in a batch, at most one or two messages touch on them, and plenty of batches have none. Don't tack study talk onto other messages (no "back to studying", "gotta grind", "locking in", "anyway back to work").
+Be specific like real people: name actual, real shows, movies, artists, songs, albums, video games, YouTubers, sports teams and players, restaurants and brands (for example a real Netflix series, a real album, a real NBA team), and have opinions about them. Never write vague stand-ins like "that show", "the new season of that murder mystery show" or "that album": say which one. Only mention real things you're confident exist, and don't quote song lyrics.
 Write like a real group chat: casual texting style (lowercase is fine, contractions, slang, not formal full sentences), mostly short, with only the odd longer message. A reply is already shown as a reply, so don't start it with the other person's name; use names only now and then, the way people really do. with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
 Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
   const lastK = Math.floor(Math.random() * cast.length * 3);    // mention one player's last match only sometimes, so ranked isn't always the topic
