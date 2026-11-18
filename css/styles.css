@@ -1212,3 +1212,4 @@ body:not(.m-off) .mq-vs .vs{animation:mqVs .5s .3s cubic-bezier(.2,1.6,.4,1) bot
 .sync-cmp table{border-collapse:collapse;margin-top:6px;font-size:13px}
 .sync-cmp th{text-align:left;font-weight:500;color:var(--muted);padding:3px 14px 3px 0}
 .sync-cmp td{padding:3px 14px 3px 0;font-variant-numeric:tabular-nums}
+.pf-live{display:block;margin-top:3px;font-size:12px;font-weight:700;color:#1f9d55}

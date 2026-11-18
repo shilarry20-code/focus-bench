@@ -1177,15 +1177,44 @@ function botDay(i, dk){
       out = {sessions};
     }
   }
+  out = withMatches(i, dk, out);
   if (out && dk === todayK){
     // today: only what's happened so far; a session going on right now is cut at the current minute
     const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-    const ss = out.sessions.filter(x => x.a < nowM).map(x => x.b > nowM ? {...x, b: nowM, min: nowM - x.a, live: true} : x).filter(x => x.min > 0);
+    const ss = out.sessions.filter(x => x.a < nowM || x.match).map(x => x.match ? {...x, b: Math.max(x.a + 1, nowM), min: Math.max(1, nowM - x.a), live: true} : x.b > nowM ? {...x, b: nowM, min: nowM - x.a, live: true} : x).filter(x => x.min > 0);
     out = ss.length ? {sessions: ss} : null;
   }
   if (out){ out.min = out.sessions.reduce((n, x) => n + x.min, 0); out.n = out.sessions.length; out.by = {}; out.sessions.forEach(x => out.by[x.tag] = (out.by[x.tag] || 0) + x.min); }
   if (dk !== todayK){ if (botDayCache.size > 3000) botDayCache.clear(); botDayCache.set(key, out); }
   return out;
+}
+// your ranked matches against this player count as their study time too: the match replaces whatever their
+// schedule had at that hour, and a live match shows them as studying from the moment it started
+function withMatches(i, dk, out){
+  const mins = t => { const d = new Date(t); return d.getHours() * 60 + d.getMinutes(); }, add = [];
+  const c = R.cur;
+  if (c && c.b === i && c.state === 'live' && c.you > 0 && dayKey(c.t0) === dk){
+    const a = mins(c.t0), live = !c.tapped, b = live ? Math.max(a + 1, mins(Date.now()) + 1) : a + Math.max(1, Math.round(c.target / 60000));
+    add.push({a, b, live});
+  }
+  R.hist.forEach(h => {
+    if (h.b !== i || dayKey(h.t) !== dk) return;
+    const len = Math.max(1, h.ts ? Math.round(h.ts / 60) : h.them || 0), a = Math.max(0, mins(h.t - Math.max(h.ys || 0, h.ts || 0) * 1000));
+    add.push({a, b: Math.min(1440, a + len)});
+  });
+  if (!add.length) return out;
+  const B = bot(i), cls = botClasses(i), base = out ? out.sessions : [];
+  const keep = base.filter(x => !add.some(m => x.a < m.b && x.b > m.a));
+  const ms = add.map(m => { const o = base.find(x => x.a < m.b && x.b > m.a);
+    return {a: m.a, b: m.b, min: m.b - m.a, subj: o ? o.subj : cls[0], task: `Ranked match vs ${myName()}`, tag: o ? o.tag : 'Review', mode: B.fav, ...(m.live ? {match: true} : {})}; });
+  return {sessions: [...keep, ...ms].sort((x, y) => x.a - y.a)};
+}
+// is this player studying right now (their schedule, or a live match with you)?
+function botLiveNow(i){
+  const c = R.cur;
+  if (c && c.b === i && c.state === 'live' && c.you > 0 && !c.tapped) return true;
+  const d = botDay(i, dayKey(Date.now()));
+  return !!(d && d.sessions.some(x => x.live));
 }
 const MODE_NAMES = {pomodoro:'Pomodoro', fifty:'52/17', custom:'Custom', timebox:'Timebox', stopwatch:'Stopwatch', flow:'Flow'};
 
@@ -1243,7 +1272,8 @@ function profileHead(w, big){
   const rk = rkOf(w), r = w === ME ? R.mmr : botRating(w), B = w === ME ? null : BOTS[w];
   return `<div class="pf-top">${pAvatar(w, big ? 'xl' : 'lg')}<div><b id="bmName">${esc(pName(w))}</b>
     <span>${emblem(rk, 'xs')} ${esc(rk.full)} · ${r.toLocaleString()} Elo</span>
-    <small>${B ? `${B.style} · studies in the ${B.peak.toLowerCase()} · ${esc(B.subject)}` : 'Your profile'}</small></div>
+    <small>${B ? `${B.style} · studies in the ${B.peak.toLowerCase()} · ${esc(B.subject)}` : 'Your profile'}</small>
+    ${B && botLiveNow(w) ? `<span class="pf-live">● ${R.cur && R.cur.b === w && R.cur.state === 'live' && !R.cur.tapped ? 'Studying now · in a ranked match with you' : 'Studying now'}</span>` : ''}</div>
     ${w === ME && !profEditing ? '<button class="small-btn pf-editbtn" data-pf="edit">Edit</button>' : ''}</div>
     ${w === ME && profEditing ? editForm() : ''}
     ${B ? `<p class="bm-bio">“${esc(B.bio)}”</p>` : ''}${paraLine(w)}`;
