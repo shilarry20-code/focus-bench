@@ -77,11 +77,13 @@ function aiPrompt(online, forUser, away){
   const now = new Date(), sem = semesterOf(now), people = online.slice(0, 12);
   if (forUser){ const mine = CHATS.msgs[CHATS.msgs.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re); if (to && to.w !== -1 && !people.includes(to.w)) people.unshift(to.w); }
   const cast = people.map(chatFacts);
-  const recent = CHATS.msgs.filter(m => !m.del).slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
+  // you're only part of the conversation if you've been talking lately; otherwise your old messages and your name stay out of it
+  const userHere = forUser || CHATS.msgs.some(m => m.w === -1 && !m.del && Date.now() - m.t < 15 * 60000);
+  const recent = CHATS.msgs.filter(m => !m.del && (userHere || m.w !== -1)).slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
 This is a general hangout room: people can talk about anything, like any group chat of college students. Food, games, sports, music, shows, weather, classes, roommates, weekend plans, random thoughts, memes, complaining, jokes. Studying, classes, work and ranked matches should only come up now and then: in a batch, at most one or two messages touch on them, and plenty of batches have none. Don't tack study talk onto other messages (no "back to studying", "gotta grind", "locking in", "anyway back to work").
 Write like a real group chat: casual and varied in length (quick reactions to a couple of sentences), with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
-Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. "${myName()}" is another player in the room; only talk to them when answering one of their messages.`;
+Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
   const lastK = Math.floor(Math.random() * cast.length * 3);    // mention one player's last match only sometimes, so ranked isn't always the topic
   const who = cast.map((f, k) => `- ${f.name}: ${f.rank}, ${f.subj}${f.last && k === lastK ? `; just ${f.last.won ? 'beat' : 'lost to'} ${f.last.opp} in ranked (${f.last.mine} vs ${f.last.theirs} min)` : ''}`).join('\n');
   const hist = recent.map((m, k) => `[m${k + 1}] ${chatName(m.w)}: ${m.text}${m.re && tag.has(m.re) ? ` (replying to ${tag.get(m.re)})` : ''}`).join('\n') || '(the chat is quiet)';
@@ -96,10 +98,10 @@ ${hist}
 
 ${forUser ? (() => { const mine = recent[recent.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re);
     return `The newest message is from ${myName()} (m${recent.length})${to && to.w !== -1 ? `, replying to ${chatName(to.w)}` : ''}. Write 1 to 4 messages: ${to && to.w !== -1 ? `${chatName(to.w)} answers ${myName()} first (replyTo "m${recent.length}"), and maybe one more player` : `one or two players answer ${myName()} (replyTo "m${recent.length}")`}; others may react or keep their own conversation going.`; })()
-  : away ? `${myName()} was away for ${Math.round((Date.now() - away.from) / 60000)} minutes. Write 6 to 10 messages the room exchanged during that time, continuing the chat above: threads, replies, and whatever else people brought up.`
+  : away ? `The room kept going for the last ${Math.round((Date.now() - away.from) / 60000)} minutes. Write 6 to 10 messages the room exchanged during that time, continuing the chat above: threads, replies, and whatever else people brought up.`
   : 'Write 6 to 9 new messages continuing this chat. Continue or answer threads above, or let someone change the subject to whatever is on their mind.'}
 For replyTo use the id of the message being answered: "m#" from the recent chat, or "n1", "n2"… for the new messages in your list. Leave it out when a message isn't a reply.`;
-  return {sys, user, recent, cast};
+  return {sys, user, recent, cast, userHere};
 }
 // Tries the models in order. For each, it first asks for JSON in an exact shape; if Gemini refuses that request
 // (some models or keys don't take a schema), it asks again more loosely and pulls the JSON out of the text.
@@ -154,8 +156,8 @@ async function aiCall(sys, user){
 }
 // turn Gemini's messages into chat messages, checking every name against the room
 const normName = n => String(n || '').toLowerCase().replace(/^@/, '').replace(/[^a-z0-9]/g, '');
-function aiToBatch(list, recent, cast){
-  const out = [], keys = cast.map(f => ({i: f.i, k: normName(f.name)}));
+function aiToBatch(list, recent, cast, noYou){
+  const out = [], pos = [], keys = cast.map(f => ({i: f.i, k: normName(f.name)}));
   let lastW = null;
   const who = from => {
     const k = normName(from); if (!k || !keys.length) return null;
@@ -164,14 +166,18 @@ function aiToBatch(list, recent, cast){
     const others = keys.filter(x => x.i !== lastW);                     // a name Gemini made up: give the line to someone online
     return (others.length ? others : keys)[Math.floor(Math.random() * (others.length || keys.length))].i;
   };
-  (Array.isArray(list) ? list : []).forEach(m => {
+  const nm = (P.myName || '').trim(), youRe = nm.length >= 3 ? new RegExp('(^|[^a-z0-9])@?' + nm.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)', 'i') : null;
+  (Array.isArray(list) ? list : []).forEach((m, gi) => {
+    pos[gi] = -1;
     const w = who(m && (m.from || m.name || m.player));
     let text = String((m && (m.text || m.message)) || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
     if (w == null || !text) return;
+    if (noYou && youRe && youRe.test(text)) return;
     let re = null; const id = String(m.replyTo || m.reply_to || '').trim().replace(/^#/, '');
     if (/^m?\d+$/.test(id) && !/^n/.test(id)){ const x = recent[+id.replace('m', '') - 1]; if (x) re = x.id; }
-    else if (/^n\d+$/.test(id)){ const k = +id.slice(1) - 1; if (k >= 0 && k < out.length) re = k; }
-    out.push({w, text, re}); lastW = w;
+    else if (/^n\d+$/.test(id)){ const k = pos[+id.slice(1) - 1]; if (k != null && k >= 0) re = k; }
+    if (noYou && re != null && typeof re !== 'number' && (recent.find(x => x.id === re) || {}).w === -1) re = null;
+    pos[gi] = out.length; out.push({w, text, re}); lastW = w;
   });
   return out;
 }
@@ -179,8 +185,8 @@ async function chatGenerate(forUser, away){
   if (chatBusy || !GEM.key || GEM.wait > Date.now()) return;
   chatBusy = true;
   try {
-    const {sys, user, recent, cast} = aiPrompt(chatWhoOnline(), forUser, away);
-    const got = await aiCall(sys, user), batch = aiToBatch(got, recent, cast);
+    const {sys, user, recent, cast, userHere} = aiPrompt(chatWhoOnline(), forUser, away);
+    const got = await aiCall(sys, user), batch = aiToBatch(got, recent, cast, !userHere);
     GEM.last = {at: Date.now(), got: Array.isArray(got) ? got.length : 0, used: batch.length, model: GEM.model};
     if (!batch.length){ GEM.last.why = cast.length ? 'Gemini sent no usable messages' : 'nobody is online right now'; saveAI(); return; }
     GEM.err = null; GEM.ok = Date.now(); saveAI();

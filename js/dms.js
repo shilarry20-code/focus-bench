@@ -52,15 +52,23 @@ ${hist}
 ${task}`;
   return {sys, user};
 }
-async function dmWrite(w, task){
-  if (!GEM.key || GEM.wait > Date.now()) return [];
-  try {
-    const {sys, user} = dmPrompt(w, task), got = await aiCall(sys, user);
-    return (Array.isArray(got) ? got : []).map(m => String((m && (m.text || m.message)) || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240)).filter(Boolean).slice(0, 3);
-  } catch(e){
-    if (e.kind === 'busy' || e.kind === 'key') GEM.wait = Date.now() + (e.kind === 'busy' ? 15 : 60 * 24) * 60000;
-    if (e.msg) GEM.detail = e.msg; saveAI(); return [];
+// returns their texts; with withAct, {texts, act}: act is an extra item Gemini adds (from "ACTION") to say what they do
+async function dmWrite(w, task, withAct){
+  let texts = [], act = null;
+  if (GEM.key && !(GEM.wait > Date.now())){
+    try {
+      const {sys, user} = dmPrompt(w, task), got = await aiCall(sys, user);
+      (Array.isArray(got) ? got : []).forEach(m => {
+        const t = String((m && (m.text || m.message)) || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
+        if (/^action$/i.test(String((m && m.from) || '').trim())){ act = t.toLowerCase(); return; }
+        if (t && texts.length < 3) texts.push(t);
+      });
+    } catch(e){
+      if (e.kind === 'busy' || e.kind === 'key') GEM.wait = Date.now() + (e.kind === 'busy' ? 15 : 60 * 24) * 60000;
+      if (e.msg) GEM.detail = e.msg; saveAI();
+    }
   }
+  return withAct ? {texts, act} : texts;
 }
 // put what they wrote in the queue from time t; the first text can carry a card or a status change
 function dmQueue(w, t, texts, first = {}, hold = false){
@@ -89,9 +97,25 @@ function dmSend(w, text){
   dmReplyTimer[w] = setTimeout(async () => {                 // wait a moment in case you send a few texts in a row
     const d = dmDelay(w); if (d == null || dmGenBusy[w]) return;
     dmGenBusy[w] = 1;
-    const texts = await dmWrite(w, `${myName()} just messaged. Write ${bot(w).name}'s reply: 1 to 3 short texts. If ${myName()} asks for a match or rematch, they can say yes or no but the challenge itself is sent with the Challenge button.`);
+    const B = bot(w), me = myName(), pend = pendingCh(w), mine = pend && pend.ch.by === 'me', gap = botRating(w) - R.mmr;
+    let task = `${me} just messaged. Write ${B.name}'s reply: 1 to 3 short texts.`;
+    if (mine){
+      const {yes, fYes} = chDecide(pend), md = pend.ch.mode === 'f' ? 'friendly' : 'ranked';
+      task += ` There's a ${md} challenge from ${me} waiting for ${B.name}'s answer, and ${B.name} ${yes ? 'ACCEPTS it now' : `DECLINES it${pend.ch.mode === 'r' && gap > 150 ? ` (they're ${gap} Elo higher, so a ranked match risks a lot of Elo for little gain${fYes ? '; they would play a friendly instead' : ''})` : ''}`}. The reply must make that answer clear.`;
+    } else if (R.on && !matchBusy() && !pend){
+      const rYes = Math.random() < chAcceptP(w, 'r'), fYes = Math.random() < chAcceptP(w, 'f');
+      task += ` If ${me} is asking to play a match right now: ${B.name} ${rYes ? 'would play ranked' : 'won’t play ranked' + (gap > 150 ? ` (much higher rated, too much Elo to lose)` : '')} and ${fYes ? 'would play a friendly' : 'won’t play a friendly right now'}. If they agree to play, add one more item to the list with "from": "ACTION" and "text": "ranked" or "friendly", and ${B.name} sends the challenge for ${me} to accept. Never say a challenge was sent or accepted without that item. If ${me} isn't asking to play, don't add it.`;
+    }
+    const {texts, act} = await dmWrite(w, task, true);
     dmGenBusy[w] = 0;
-    if (texts.length) dmQueue(w, Math.max(Date.now() + 2500, Date.now() + d - 4000), texts);
+    const t0 = Math.max(Date.now() + 2500, Date.now() + d - 4000);
+    if (mine && pendingCh(w) === pend){
+      DMS.q = DMS.q.filter(q => !(q.upd && q.upd.id === pend.id));          // this reply is their answer
+      dmQueue(w, t0, texts, {upd: {id: pend.id, st: pend.ch.yes ? 'a' : 'd'}});
+    } else if (act && /ranked|friendly/.test(act) && R.on && !matchBusy() && !pendingCh(w)){
+      dmQueue(w, t0, texts.length ? texts : [''], {});
+      dmQueue(w, t0 + 1500 + texts.length * 3500, [''], {ch: {mode: /friendly/.test(act) ? 'f' : 'r', by: 'them'}});
+    } else if (texts.length) dmQueue(w, t0, texts);
   }, 3500);
 }
 
@@ -117,13 +141,17 @@ async function dmChallenge(w, mode){
   let d = dmDelay(w);
   if (d == null && Math.random() < .3) d = (2 + Math.random() * 12) * 60000;
   if (d == null || d >= CH_MINE - 20000) return;                  // it just expires
-  const yes = Math.random() < chAcceptP(w, mode), B = bot(w), gap = botRating(w) - R.mmr;
-  const fYes = mode === 'r' && !yes && gap > 150 && Math.random() < chAcceptP(w, 'f');
+  const B = bot(w), gap = botRating(w) - R.mmr, {yes, fYes} = chDecide(m);
   const why = mode === 'r' && !yes && gap > 150 ? ` They're ${gap} Elo higher, so a ranked match risks a lot of Elo for little gain${fYes ? '; they would play a friendly though' : ''}.` : !yes && dmStudying(w) ? ' They are in the middle of a study session.' : '';
   dmGenBusy[w] = 1;
   const texts = await dmWrite(w, `${myName()} sent ${B.name} a ${mode === 'f' ? 'friendly (no Elo)' : 'ranked'} match challenge${isRival(w) ? ' (they are rivals)' : ''}. ${B.name} ${yes ? 'accepts' : 'declines'}.${why} Write 1 short text ${B.name} sends with that answer.`);
   dmGenBusy[w] = 0;
   dmQueue(w, Math.max(Date.now() + 2500, now + d), texts, {upd: {id: m.id, st: yes ? 'a' : 'd'}});
+}
+// decide once whether they'll take a challenge of yours; kept on the card so later texts agree with it
+function chDecide(m){
+  if (m.ch.yes == null){ const gap = botRating(m.w) - R.mmr; m.ch.yes = Math.random() < chAcceptP(m.w, m.ch.mode); m.ch.fYes = m.ch.mode === 'r' && !m.ch.yes && gap > 150 && Math.random() < chAcceptP(m.w, 'f'); saveDms(); }
+  return {yes: m.ch.yes, fYes: m.ch.fYes};
 }
 // accepted: straight to "Match found" and its countdown, the same as matchmaking
 function chPlay(w, mode, go = true){
