@@ -189,7 +189,7 @@ let T_STY = null, T_PK = null, T_FAV = null, T_SIT = null, T_PACT = null, T_SUF 
 const botCache = new Map();
 function bot(i){
   let b = botCache.get(i); if (b) return b;
-  b = genBot(i); const suf = T_SUF ? T_SUF[i] : 0; if (suf) b.name += '_' + suf;
+  b = genBot(i); b.i = i; const suf = T_SUF ? T_SUF[i] : 0; if (suf) b.name += '_' + suf;
   if (botCache.size > 4000) botCache.clear();
   botCache.set(i, b); return b;
 }
@@ -831,10 +831,10 @@ function rollTarget(i){
 }
 const kFactor = () => R.played < 5 ? 40 : 24;
 function stakes(br){ const E = 1 / (1 + Math.pow(10, (br - R.mmr) / 400)), K = kFactor(); return {E, win: Math.round(K * (1 - E)), loss: Math.round(K * E), draw: Math.round(K * (.5 - E))}; }
-function startMatch(found){
+function startMatch(found, friendly){
   const b = found != null ? found : findOpponent(), br = botRating(b), now = Date.now();
   const lines = [...CHAT].sort(() => Math.random() - .5).slice(0, 6);
-  R.cur = {pl: R.played < 5 ? R.played + 1 : 0, b, br, mmr0: R.mmr, target: rollTarget(b), you: 0, them: 0, t0: now, last: now, tick: now, state: 'live', tapped: false, lines, tap: pick(Math.random, TAPS), feat: botFeatured(b), mine: myFeatured()};
+  R.cur = {pl: R.played < 5 && !friendly ? R.played + 1 : 0, friendly: !!friendly, b, br, mmr0: R.mmr, target: rollTarget(b), you: 0, them: 0, t0: now, last: now, tick: now, state: 'live', tapped: false, lines, tap: pick(Math.random, TAPS), feat: botFeatured(b), mine: myFeatured()};
   R.last = b; saveRanked();
   const B = BOTS[b];
   if ($('#page-focus').hidden) toast(`Match started: ${B.name} (${rankOf(br).full} · ${br.toLocaleString()})`);
@@ -866,7 +866,7 @@ function queueTick(){
   if (!R.on){ cancelSearch(); return; }
   const now = Date.now();
   if (!MQ.found && now - MQ.t0 >= MQ.wait){ MQ.b = findOpponent(); MQ.found = now; try { chime(P.chime); } catch(e){} renderMatch(true); return; }
-  if (MQ.found && now - MQ.found >= 3200){ const b = MQ.b; MQ = null; clearInterval(mqTimer); startMatch(b); return; }
+  if (MQ.found && now - MQ.found >= 3200){ const b = MQ.b, fr = MQ.friendly; MQ = null; clearInterval(mqTimer); startMatch(b, fr); return; }
   renderQueue();
 }
 const clock = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -889,19 +889,23 @@ function finalize(res, why){
     if (why !== 'silent') toast('Match not rated: you studied less than 10 minutes.');
     return;
   }
-  const s = stakes(c.br), delta = res === 'W' ? s.win : res === 'D' ? s.draw : -s.loss;
+  const s = stakes(c.br), delta = c.friendly ? 0 : res === 'W' ? s.win : res === 'D' ? s.draw : -s.loss;
   const before = rankOf(R.mmr);
-  R.mmr = clampN(R.mmr + delta, 100, 5000); R.best = Math.max(R.best, R.mmr); R.played++;
-  BS[c.b * BF] = clampN(BS[c.b * BF] - delta, 300, 5000); botsChanged(); markBots();
+  if (!c.friendly){
+    R.mmr = clampN(R.mmr + delta, 100, 5000); R.best = Math.max(R.best, R.mmr); R.played++;
+    BS[c.b * BF] = clampN(BS[c.b * BF] - delta, 300, 5000);
+  }
+  botsChanged(); markBots();
   // the bot studied too
   const o = c.b * BF; BS[o+F.total] += themMin; BS[o+F.sessions]++; BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], themMin);
   const rec = R.rec[c.b] || (R.rec[c.b] = [0, 0, 0]);
   const nem = nemesis();
-  if (res === 'W'){ R.w++; R.ws++; R.bestWs = Math.max(R.bestWs, R.ws); rec[0]++; R.bestUpset = Math.max(R.bestUpset, c.br - c.mmr0); if (nem === c.b) R.revenge = 1; if (c.mmr0 >= 2400) R.profWins++; }
+  if (c.friendly){ if (res === 'W') rec[0]++; else if (res === 'L') rec[1]++; else rec[2]++; }
+  else if (res === 'W'){ R.w++; R.ws++; R.bestWs = Math.max(R.bestWs, R.ws); rec[0]++; R.bestUpset = Math.max(R.bestUpset, c.br - c.mmr0); if (nem === c.b) R.revenge = 1; if (c.mmr0 >= 2400) R.profWins++; }
   else if (res === 'L'){ R.l++; R.ws = 0; rec[1]++; }
   else { R.d++; rec[2]++; }
   const after = rankOf(R.mmr);
-  R.hist.unshift({t: Date.now(), b: c.b, br: c.br, you: youMin, them: themMin, ys: Math.round(c.you / 1000), ts: Math.round(c.target / 1000), r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0});
+  R.hist.unshift({t: Date.now(), b: c.b, br: c.br, you: youMin, them: themMin, ys: Math.round(c.you / 1000), ts: Math.round(c.target / 1000), r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0, ...(c.friendly ? {f: 1} : {})});
   if (R.hist.length > 500) R.hist.length = 500;
   c.state = 'done'; c.res = res; c.delta = delta; c.promo = after.i > before.i || (after.i === before.i && after.d > before.d) ? after.full : (after.i < before.i || (after.i === before.i && after.d < before.d) ? -1 : 0);
   saveRanked(true);
@@ -966,7 +970,7 @@ function renderMatch(fresh){
     const n = slot.querySelector('.mq-cd');
     if (n && !fresh){ n.textContent = left; return; }
     slot.dataset.key = '';
-    slot.innerHTML = `<div class="card match mq-found"><div class="m-head"><span class="h first mq-ok">Match found</span><span class="hint">Starting in <b class="mq-cd">${left}</b></span></div>
+    slot.innerHTML = `<div class="card match mq-found"><div class="m-head"><span class="h first mq-ok">${MQ.friendly ? 'Friendly match found' : 'Match found'}</span><span class="hint">Starting in <b class="mq-cd">${left}</b></span></div>
       <div class="m-players mq-vs">
         <div class="m-p">${myAvatar()}<span class="m-n"><b>${esc(myName())}</b><small>${emblem(rk, 'xs')} ${rk.full} · ${R.mmr.toLocaleString()}</small></span></div>
         <span class="vs">VS</span>
@@ -990,7 +994,7 @@ function renderMatch(fresh){
     const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
     const sec = ms => fmtSec(Math.round(ms / 1000));
     const how = c.res === 'L' ? `${mm(c.you)} vs ${mm(c.target)}` : `${sec(c.you)} vs ${sec(c.target)}`;
-    result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em></span>
+    result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${c.friendly ? 'Friendly match · no Elo change' : `${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em>`}</span>
       ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
       <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>
       <div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find next match</button><button class="small-btn" data-act="m-dismiss">Close</button></div></div>`;
@@ -1006,7 +1010,7 @@ function renderMatch(fresh){
   }
   slot.dataset.key = key;
   slot.innerHTML = `<div class="card match${fresh ? ' found' : ''}${live ? '' : ' over'}">
-    <div class="m-head"><span class="h first">${c.pl ? `Placement match ${c.pl} of 5` : 'Ranked match'}</span>${live ? '<span class="live-dot">Live</span>' : ''}</div>
+    <div class="m-head"><span class="h first">${c.friendly ? 'Friendly match' : c.pl ? `Placement match ${c.pl} of 5` : 'Ranked match'}</span>${live ? '<span class="live-dot">Live</span>' : ''}</div>
     <div class="m-players">
       <div class="m-p" data-me>${myAvatar()}<span class="m-n"><b>${esc(myName())}</b><small>${emblem(rankOf(c.mmr0), 'xs')} ${rankOf(c.mmr0).full} · ${c.mmr0.toLocaleString()}</small><span class="bdgs">${c.mine.map(id => badgeHtml(id)).join('')}</span></span></div>
       <span class="vs">VS</span>
@@ -1017,7 +1021,7 @@ function renderMatch(fresh){
       <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.tapped ? mm(c.target) : waiting ? 'ready' : live ? 'going…' : '?'}</b></div>
     </div>
     ${live ? `<p class="m-chat">${esc(B.name)}: ${esc(botLine)}</p><p class="m-status">${status}</p>
-    <div class="m-foot"><span class="stakes">Win <b class="pos">+${s.win}</b> · Draw <b>${s.draw > 0 ? '+' : s.draw < 0 ? '−' : ''}${Math.abs(s.draw)}</b> · Loss <b class="neg">−${s.loss}</b></span><button class="small-btn" data-act="m-end">End match</button></div>` : result}
+    <div class="m-foot"><span class="stakes">${c.friendly ? 'Friendly · no Elo change' : `Win <b class="pos">+${s.win}</b> · Draw <b>${s.draw > 0 ? '+' : s.draw < 0 ? '−' : ''}${Math.abs(s.draw)}</b> · Loss <b class="neg">−${s.loss}</b>`}</span><button class="small-btn" data-act="m-end">End match</button></div>` : result}
   </div>`;
 }
 $('#page-ranked').addEventListener('click', e => {
@@ -1057,7 +1061,7 @@ function renderRanked(){
   $('#rkKpis').innerHTML = `<div class="stat"><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><span>wins–losses${R.d ? '–draws' : ''}</span></div><div class="stat"><b>${wr}%</b><span>win rate</span></div><div class="stat"><b>${R.ws}</b><span>win streak · best ${R.bestWs}</span></div><div class="stat"><b>${R.played}</b><span>matches played</span></div>`;
   renderEloChart();
   const hist = R.hist.slice(0, rkHistShown);
-  $('#rkHist').innerHTML = hist.map(h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${matchTimes(h)}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></li>`; }).join('')
+  $('#rkHist').innerHTML = hist.map(h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${matchTimes(h)}</span>${dlCell(h)}<span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></li>`; }).join('')
     || '<li class="empty-li">No matches yet. Start a focus block on the Focus page and you\'ll be matched automatically.</li>';
   $('#rkMore').hidden = R.hist.length <= rkHistShown;
   // ladder: 10 above and 10 below you
@@ -1093,9 +1097,9 @@ function renderParaCard(){
   el.innerHTML = `<div class="h first">Current Paragon</div><div class="para-in click"${me ? ' data-me' : ` data-bot="${h}"`}>${emblem(PARAGON, 'md')}${me ? myAvatar() : avatar(B)}<span><b>${me ? esc(myName()) : esc(B.name)}</b><small>${r.toLocaleString()} Elo · reigning ${dur(since)}</small></span></div><p class="hint">The single highest-rated player of all. Only one player holds it at a time.</p>`;
 }
 function renderEloChart(){
-  const el = $('#rkChart'), pts = R.hist.slice(0, 100).reverse().map(h => h.m);
-  if (!R.hist.length){ el.innerHTML = '<p class="hint">Your Elo line shows up after your first rated match.</p>'; return; }
-  pts.unshift(R.hist.length >= 100 ? R.hist[99].m - R.hist[99].d : 1000);
+  const el = $('#rkChart'), RH = R.hist.filter(h => !h.f), pts = RH.slice(0, 100).reverse().map(h => h.m);
+  if (!RH.length){ el.innerHTML = '<p class="hint">Your Elo line shows up after your first rated match.</p>'; return; }
+  pts.unshift(RH.length >= 100 ? RH[99].m - RH[99].d : 1000);
   const W = 640, H = 200, pl = 8, pr = 74, pt = 14, pb = 14, lo = Math.floor((Math.min(...pts) - 40) / 50) * 50, hi = Math.ceil((Math.max(...pts) + 40) / 50) * 50;
   const X = k => pl + (W - pl - pr) * (pts.length === 1 ? 1 : k / (pts.length - 1)), Y = v => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo));
   let grid = '';
@@ -1106,7 +1110,7 @@ function renderEloChart(){
   }));
   const d = pts.map((v, k) => `${k ? 'L' : 'M'}${X(k).toFixed(1)},${Y(v).toFixed(1)}`).join('');
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Elo over your last ${pts.length - 1} matches">${grid}<path d="${d} L${X(pts.length - 1)},${H - pb} L${X(0)},${H - pb}Z" class="g-area"/><path d="${d}" class="g-line"/><circle cx="${X(pts.length - 1)}" cy="${Y(pts[pts.length - 1])}" r="4.5" class="g-end"/><line class="g-guide" y1="${pt}" y2="${H - pb}" x1="-10" x2="-10"/></svg><div class="g-tip" hidden></div><small class="g-cap">Last ${pts.length - 1} match${pts.length === 2 ? '' : 'es'}</small>`;
-  const svg = el.querySelector('svg'), tip = el.querySelector('.g-tip'), guide = el.querySelector('.g-guide'), hs = R.hist.slice(0, 100).reverse();
+  const svg = el.querySelector('svg'), tip = el.querySelector('.g-tip'), guide = el.querySelector('.g-guide'), hs = RH.slice(0, 100).reverse();
   svg.onpointermove = e => {
     const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, k = clampN(Math.round((x - pl) / (W - pl - pr) * (pts.length - 1)), 1, pts.length - 1), h = hs[k - 1];
     guide.setAttribute('x1', X(k)); guide.setAttribute('x2', X(k));
@@ -1292,13 +1296,14 @@ function openProfile(w){
     <div class="bm-grid">${tiles.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div>
     <div class="h">Last 4 weeks <small class="pf-sub">${strip.active} active day${strip.active === 1 ? '' : 's'}</small></div><div class="hm-strip">${strip.h}</div>
     <div class="h">Featured badges</div><div class="bdgs lg">${feat.length ? feat.map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('') : '<span class="hint">No badges yet.</span>'}</div>
-    <div class="pf-actions"><span class="hint">${st.ach} of ${ACHS.length} achievements · ${st.pts.toLocaleString()} pts</span><button class="small-btn accent" data-pf="full">⤢ Open full profile</button></div>`;
+    <div class="pf-actions"><span class="hint">${st.ach} of ${ACHS.length} achievements · ${st.pts.toLocaleString()} pts</span>${w !== ME && typeof dmButtons === 'function' ? dmButtons(w) : ''}<button class="small-btn accent" data-pf="full">⤢ Open full profile</button></div>`;
   $('#botModal').hidden = false;
   const f = w === ME && profEditing ? $('#pfName') : $('#botModal .x'); f && f.focus();
 }
 const openBot = i => openProfile(i);
 // the full page
 /* ranked matches on a profile: your real history, or another player's last 5 matches plus any against you */
+const dlCell = h => h.f ? '<span class="dl fr">Friendly</span>' : `<span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span>`;
 function winLabel(t){
   const d = new Date(t), today = dayKey(Date.now()), dk = dayKey(t), y = new Date(); y.setDate(y.getDate() - 1);
   return dk === today ? 'Today' : dk === dayKey(y.getTime()) ? 'Yesterday' : d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
@@ -1307,11 +1312,11 @@ function profileMatches(w){
   const res = (r, d) => r === 'W' ? 'Win' : r === 'L' ? 'Loss' : 'Draw';
   const row = m => `<li class="hr-${m.r}"><span class="res" title="${res(m.r)}">${m.r}</span>${m.you ? myAvatar('sm') : avatar(BOTS[m.opp], 'sm')}
     <span class="who">${m.you ? `<b>You</b>` : `<button class="lnk" data-bot="${m.opp}">${esc(BOTS[m.opp].name)}</button>`}${m.vsYou ? ' <i class="pf-vs">vs you</i>' : ''}<small>${m.sub}</small></span>
-    <span class="tm">${m.tm}</span><span class="dl ${m.d >= 0 ? 'pos' : 'neg'}">${m.d > 0 ? '+' : ''}${m.d}${m.after != null ? `<small>${m.after.toLocaleString()}</small>` : ''}</span><span class="when">${m.when}</span></li>`;
+    <span class="tm">${m.tm}</span><span class="dl ${m.f ? 'fr' : m.d >= 0 ? 'pos' : 'neg'}">${m.f ? 'Friendly' : `${m.d > 0 ? '+' : ''}${m.d}`}${m.after != null && !m.f ? `<small>${m.after.toLocaleString()}</small>` : ''}</span><span class="when">${m.when}</span></li>`;
   const youRow = (h, mine) => {      // one of your real matches, from your side or theirs
     const B = BOTS[h.b], r = mine ? h.r : ({W: 'L', L: 'W', D: 'D'})[h.r], swap = !mine;
     const tm = h.ys == null ? `${fmtMin(swap ? h.them : h.you)} <i>vs</i> ${fmtMin(swap ? h.you : h.them)}` : (x => swap ? x.split(' <i>vs</i> ').reverse().join(' <i>vs</i> ') : x)(matchTimes(h));
-    return {t: h.t, r, d: mine ? h.d : -h.d, after: mine ? h.m : null, opp: h.b, you: !mine, vsYou: false,
+    return {t: h.t, r, f: h.f, d: mine ? h.d : -h.d, after: mine ? h.m : null, opp: h.b, you: !mine, vsYou: false,
       sub: mine ? `${rankOf(h.br).full} · ${h.br.toLocaleString()} then` : `${rankOf(R.mmr).full}`, tm, when: `${winLabel(h.t)}, ${new Date(h.t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'})}`};
   };
   let rows, more = false;
@@ -1356,13 +1361,13 @@ function renderProfilePage(){
   // ranked
   let ranked;
   if (w === ME){
-    const games = R.w + R.l + R.d, last = R.hist.slice(0, 10);
+    const games = R.w + R.l + R.d, last = R.hist.filter(h => !h.f).slice(0, 10);
     ranked = `<div class="pf-kv"><span><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><small>wins–losses${R.d ? '–draws' : ''}</small></span><span><b>${games ? Math.round(R.w / games * 100) : 0}%</b><small>win rate</small></span><span><b>${R.best.toLocaleString()}</b><small>best Elo</small></span><span><b>${R.bestWs}</b><small>best win streak</small></span></div>
       <div class="pf-dots">${last.length ? last.map(h => `<i class="d-${h.r}" title="${{W:'Win', L:'Loss', D:'Draw'}[h.r]} vs ${esc(BOTS[h.b].name)}">${h.r}</i>`).join('') : '<span class="hint">No matches yet.</span>'}</div>${last.length ? '<small class="pf-sub">Last 10 matches, newest first</small>' : ''}`;
   } else {
     const rec = R.rec[w], hs = R.hist.filter(h => h.b === w).slice(0, 5), nem = nemesis();
     ranked = rec ? `<div class="pf-kv"><span><b>${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}</b><small>your record vs ${esc(B.name)}${w === nem ? ' · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? ' · rival' : ''}</small></span></div>
-      <ul class="rk-hist pf-h2h">${hs.map(h => `<li class="hr-${h.r}"><span class="res">${h.r}</span><span class="who">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span><span class="tm">${matchTimes(h)}</span><span class="dl ${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span></li>`).join('')}</ul>`
+      <ul class="rk-hist pf-h2h">${hs.map(h => `<li class="hr-${h.r}"><span class="res">${h.r}</span><span class="who">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span><span class="tm">${matchTimes(h)}</span>${dlCell(h)}</li>`).join('')}</ul>`
       : `<p class="hint">You haven't played ${esc(B.name)} yet. Matches pair you with players near your rating.</p>`;
   }
   // achievements by tier
@@ -1370,7 +1375,7 @@ function renderProfilePage(){
   let got = w === ME ? [...mine] : botBadges(w);
   if (w !== ME && profFilter === 'missing') got = got.filter(id => !mine.has(id));
   const tiers = ['legendary', 'platinum', 'gold', 'silver', 'bronze'].map(tr => { const ids = got.filter(id => achById(id).tier === tr); return ids.length ? `<div class="pf-tier"><span style="color:${TIERS[tr].c}">${TIERS[tr].name} · ${ids.length}</span><div class="bdgs wrap">${rareSort(ids).map(id => badgeHtml(id)).join('')}</div></div>` : ''; }).join('');
-  $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button>${w === ME ? '' : `<span class="hint">Player profile</span>`}</div>
+  $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button>${w === ME ? '' : `<span class="hint">Player profile</span>${typeof dmButtons === 'function' ? dmButtons(w) : ''}`}</div>
     <div class="pf-grid">
       <div class="pf-main">
         <div class="card pf-hero">${profileHead(w, true)}<div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('')}</div></div>

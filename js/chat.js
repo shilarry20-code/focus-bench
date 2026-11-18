@@ -208,7 +208,7 @@ function chatTick(){
   while (CHATS.q.length && CHATS.q[0].t <= now){ const m = CHATS.q.shift(); CHATS.msgs.push(m); fresh.push(m); }
   if (fresh.length){
     CHATS.msgs.sort((a, b) => a.t - b.t); saveChat();
-    if (chatPageOpen()){ CHATS.read = now; renderChat(); } else chatPreview(fresh.filter(m => m.w !== -1).pop());
+    if (chatPageOpen() && (typeof CHAT_TAB === 'undefined' || CHAT_TAB !== 'dm')){ CHATS.read = now; renderChat(); } else chatPreview(fresh.filter(m => m.w !== -1).pop());
     chatBadge();
   }
   if (document.hidden) return;                                // a tab in the background just delivers; it doesn't write new chat
@@ -280,6 +280,7 @@ function renderChat(){
   if (!list){
     el.innerHTML = `<div class="card ch-card"><div class="ch-top"><div><b>Global chat</b><small><i class="ch-on"></i>${online.length} online</small></div><div class="ch-online" id="chatOnline"></div></div>
       <div class="ch-list" id="chatList"></div>
+      <div class="ch-typing" id="chatTyping" aria-live="polite"></div>
       <div class="ch-replying" id="chatReplying" hidden></div>
       <form class="ch-send" id="chatForm"><input id="chatIn" maxlength="200" placeholder="Say something to the room" autocomplete="off" aria-label="Message"><button class="small-btn accent">Send</button></form>
       <p class="hint ch-hint" id="chatHint"></p></div>`;
@@ -291,6 +292,7 @@ function renderChat(){
   $('#chatHint').innerHTML = GEM.key ? (GEM.err ? esc(GEM.err) : '') : '';
   if (chatReplyTo){ const el = document.querySelector(`.ch-msg[data-id="${chatReplyTo}"]`); if (el) el.classList.add('picked'); }
   const L = $('#chatList'); if (nearBottom) L.scrollTop = L.scrollHeight;
+  chatLive();
 }
 function chatShown(name){
   if (name !== 'chat') { chatBadge(); return; }
@@ -313,6 +315,7 @@ function setChatReply(id){
 }
 $('#page-chat').addEventListener('submit', e => {
   if (e.target.id !== 'chatForm') return; e.preventDefault();
+  if (focusing()) return;
   const inp = $('#chatIn'), text = inp.value.replace(/\s+/g, ' ').trim(); if (!text) return;
   inp.value = '';
   CHATS.msgs.push({id: chatId(), t: Date.now(), w: -1, text, re: chatReplyTo}); CHATS.read = Date.now(); setChatReply(null); saveChat(); renderChat();
@@ -331,6 +334,32 @@ $('#page-chat').addEventListener('click', e => {
 });
 $('#page-chat').addEventListener('keydown', e => { if (e.key === 'Escape' && chatReplyTo) setChatReply(null); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && chatPageOpen()){ CHATS.read = Date.now(); saveChat(); chatBadge(); } });
+
+/* ---- "X is typing": a queued message shows its writer typing for a few seconds before it lands,
+   longer for longer messages. Shared with direct messages. ---- */
+const typeMs = text => Math.min(7000, 1600 + String(text || '').length * 55);
+const typingNow = q => { const now = Date.now(), seen = new Set(), out = [];
+  q.forEach(m => { if (m.w >= 0 && m.t > now && m.t - typeMs(m.text) <= now && !seen.has(m.w)){ seen.add(m.w); out.push(m.w); } }); return out; };
+function typingHtml(ws){
+  if (!ws.length) return '';
+  const n = ws.map(w => `<b>${esc(bot(w).name)}</b>`);
+  const who = ws.length === 1 ? `${n[0]} is typing` : ws.length === 2 ? `${n[0]} and ${n[1]} are typing` : ws.length === 3 ? `${n[0]}, ${n[1]} and ${n[2]} are typing` : 'Several people are typing';
+  return `<span class="ty-avs">${ws.slice(0, 3).map(w => avatar(bot(w), 'sm')).join('')}</span><span class="ty-txt">${who}</span><span class="ty-dots" aria-hidden="true"><i></i><i></i><i></i></span>`;
+}
+// the send box is closed during a focus block and opens on breaks, when paused and when stopped
+function chatLockInput(inp, btn){
+  if (!inp) return;
+  const lock = focusing();
+  if (inp.disabled !== lock){ inp.disabled = lock; if (btn) btn.disabled = lock; inp.placeholder = lock ? 'Chat opens on your break' : inp.dataset.ph || inp.placeholder; }
+}
+function chatLive(){
+  const t = $('#chatTyping'); if (!t) return;
+  const ws = typingNow(CHATS.q), key = ws.join(',');
+  if (t.dataset.k !== key){ t.dataset.k = key; t.innerHTML = typingHtml(ws); t.classList.toggle('on', !!ws.length); }
+  const inp = $('#chatIn'); if (inp && !inp.dataset.ph) inp.dataset.ph = inp.placeholder;
+  chatLockInput(inp, $('#chatForm button'));
+}
+setInterval(() => { if (chatPageOpen()) chatLive(); }, 500);
 
 /* ---- Settings > Chat ---- */
 function renderChatSettings(){
