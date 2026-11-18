@@ -1408,3 +1408,12 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .mc-send input{flex:1;min-width:0;padding:6px 10px;font-size:13px}
 .mc-send input:disabled{opacity:.7;cursor:not-allowed}
 .mc .ch-typing.on{height:22px}
+
+.g-side>.fc-side{flex:none;padding-top:14px;padding-bottom:12px}
+.fc-side .fc-side-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.fc-side-t{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.fc-side-t small{letter-spacing:0;text-transform:none}
+.fc-side-t em.le{font-weight:700}
+.fc-tog{font-size:12px;margin-top:4px;padding:0}
+.fc-side .fc-list{max-height:200px}
+.g-side>.g-toc-card{flex:1 1 auto}

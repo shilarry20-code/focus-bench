@@ -126,10 +126,12 @@ addEventListener('keydown', e => {
 }, true);
 
 /* ---- in the guide: a list of the cards, and a "Study" link on sections with cards ---- */
+// one compact row (count, how many you're still learning, Study); the card list opens with "Show list" and stays the way you left it
 function fcSideList(g, r){
-  const learn = r.cards.filter(c => fcMark(g, c) === 'learn').length;
-  return `<div class="card fc-side"><div class="h first fc-side-h"><span>Flashcards <small class="pf-sub">${r.cards.length}${learn ? ` · ${learn} learning` : ''}</small></span><button class="small-btn accent" data-ga="fc">Study</button></div>
-    <nav class="fc-list">${r.cards.map(c => { const mk = fcMark(g, c); return `<button data-fcjump="${c.n}"><i class="fc-dot ${mk}"></i><span>${esc(c.q.replace(/[*_`=~]/g, '').split('\n')[0])}</span></button>`; }).join('')}</nav></div>`;
+  const learn = r.cards.filter(c => fcMark(g, c) === 'learn').length, open = !!P.fcListOpen;
+  return `<div class="card fc-side${open ? ' open' : ''}"><div class="fc-side-h"><span class="fc-side-t">Flashcards <small class="pf-sub">${r.cards.length}${learn ? ` · <em class="le">${learn} learning</em>` : ''}</small></span><button class="small-btn accent" data-ga="fc">Study</button></div>
+    <button class="link-btn fc-tog" data-fctog="1" aria-expanded="${open}">${open ? 'Hide list ▴' : 'Show list ▾'}</button>
+    ${open ? `<nav class="fc-list">${r.cards.map(c => { const mk = fcMark(g, c); return `<button data-fcjump="${c.n}"><i class="fc-dot ${mk}"></i><span>${esc(c.q.replace(/[*_`=~]/g, '').split('\n')[0])}</span></button>`; }).join('')}</nav>` : ''}</div>`;
 }
 function fcDecorate(g, r){
   const secs = fcSections(r);
@@ -141,6 +143,7 @@ function fcDecorate(g, r){
 }
 $('#page-guides').addEventListener('click', e => {
   const s = e.target.closest('[data-fcsec]'); if (s){ e.preventDefault(); const g = gView && guideById(gView); if (g) fcOpen(g, s.dataset.fcsec); return; }
+  if (e.target.closest('[data-fctog]')){ P.fcListOpen = !P.fcListOpen; saveP(); renderGuides(); return; }
   const j = e.target.closest('[data-fcjump]');
   if (j){ const d = document.getElementById('fc' + j.dataset.fcjump); if (!d) return; d.open = true;
     d.scrollIntoView({block: 'center', behavior: motion() === 'off' ? 'auto' : 'smooth'}); d.classList.remove('flash'); void d.offsetWidth; d.classList.add('flash'); }
