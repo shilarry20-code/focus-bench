@@ -107,7 +107,23 @@ function mergeAch(a, b){
   out.seeded = !!(out.seeded || b.seeded);
   return out;
 }
+// when neither side has a recorded change for an item (data from before sync was turned on), don't just keep
+// this device's copy: a fresh device would push its defaults over your real settings and rank.
+//   settings: a value you've changed beats a default
+//   ranked:   the side with more matches played (then the longer match history) wins
+//   guides:   the more recently edited one
+let tieRankedB = false;
+const isDefault = (k, v) => k in DEFAULTS ? JSON.stringify(DEFAULTS[k]) === JSON.stringify(v) : v == null || v === '' || (Array.isArray(v) && !v.length);
+function tieB(sec, k, va, vb){
+  if (JSON.stringify(va) === JSON.stringify(vb)) return false;
+  if (sec === 'settings') return isDefault(k, va) && !isDefault(k, vb);
+  if (sec === 'ranked') return tieRankedB;
+  if (sec === 'guides') return (vb.updated || 0) > (va.updated || 0);
+  return false;
+}
 function mergePayload(L, Rm){
+  { const ra = L.data.ranked || {}, rb = (Rm.data || {}).ranked || {};
+    tieRankedB = (rb.played || 0) > (ra.played || 0) || ((rb.played || 0) === (ra.played || 0) && (rb.hist || []).length > (ra.hist || []).length); }
   const cut = Date.now() - DEAD_DAYS * 864e5, out = {app: 'focus-bench-sync', v: 1, at: Date.now(), data: {}, stamps: {}, dead: {}};
   Object.keys(SECTIONS).forEach(sec => {
     const a = L.data[sec] || {}, b = (Rm.data || {})[sec] || {}, sa = L.stamps[sec] || {}, sb = (Rm.stamps || {})[sec] || {};
@@ -117,7 +133,7 @@ function mergePayload(L, Rm){
       const inA = k in a, inB = k in b, ta = sa[k] || 0, tb = sb[k] || 0;
       let v, t;
       if (inA && inB){
-        const useB = tb > ta || (tb === ta && sec === 'guides' && (b[k].updated || 0) > (a[k].updated || 0));
+        const useB = tb > ta || (tb === ta && tieB(sec, k, a[k], b[k]));
         v = useB ? b[k] : a[k]; t = Math.max(ta, tb);
         if (sec === 'guides') v = mergeGuide(v, useB ? a[k] : b[k]);
       } else if (inA){ v = a[k]; t = ta; } else { v = b[k]; t = tb; }
