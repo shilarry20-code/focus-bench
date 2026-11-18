@@ -31,7 +31,10 @@ function chatRegulars(){
   return (chatPool = [...set]);
 }
 // who's in the room right now: regulars who are studying, plus some whose usual hours these are
-function chatWhoOnline(){
+// your opponent in a live match is studying against you, so they're not in the room
+const inMatchWith = () => R && R.cur && R.cur.state === 'live' && !R.cur.tapped ? R.cur.b : -1;
+function chatWhoOnline(){ const opp = inMatchWith(); return chatWhoOnline0().filter(i => i !== opp); }
+function chatWhoOnline0(){
   if (chatOnline && Date.now() - chatOnlineAt < 180000) return chatOnline;
   const h = new Date().getHours(), hh = h < 5 ? h + 24 : h, today = dayKey(Date.now()), rr = mulberry32(Math.floor(Date.now() / 1800000));
   const out = [];
@@ -40,7 +43,6 @@ function chatWhoOnline(){
     let live = false; try { const d = botDay(i, today); live = !!(d && d.sessions.some(x => x.live)); } catch(e){}
     if (live || (inPeak && rr() < .12)) out.push(i);
   });
-  if (R.cur && R.cur.state === 'live' && !out.includes(R.cur.b)) out.push(R.cur.b);
   chatOnline = out.slice(0, 60); chatOnlineAt = Date.now();
   return chatOnline;
 }
@@ -88,7 +90,7 @@ function chatChallengeNote(cast){
 }
 function aiPrompt(online, forUser, away){
   const now = new Date(), sem = semesterOf(now), people = online.slice(0, 12);
-  if (forUser){ const mine = CHATS.msgs[CHATS.msgs.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re); if (to && to.w !== -1 && !people.includes(to.w)) people.unshift(to.w); }
+  if (forUser){ const mine = CHATS.msgs[CHATS.msgs.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re); if (to && to.w !== -1 && to.w !== inMatchWith() && !people.includes(to.w)) people.unshift(to.w); }
   const cast = people.map(chatFacts);
   // you're only part of the conversation if you've been talking lately; otherwise your old messages and your name stay out of it
   const userHere = forUser || CHATS.msgs.some(m => m.w === -1 && !m.del && Date.now() - m.t < 15 * 60000);
@@ -256,6 +258,7 @@ function chatTick(){
     chatStarted = true; chatCatchUp();
   }
   let fresh = [];
+  const opp = inMatchWith(); if (opp >= 0 && CHATS.q.some(m => m.w === opp)) CHATS.q = CHATS.q.filter(m => m.w !== opp);
   while (CHATS.q.length && CHATS.q[0].t <= now){ const m = CHATS.q.shift(); CHATS.msgs.push(m); fresh.push(m); }
   if (fresh.length){
     CHATS.msgs.sort((a, b) => a.t - b.t); saveChat();
