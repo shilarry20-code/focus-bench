@@ -644,30 +644,83 @@ $('#page-guides').addEventListener('click', e => {
 });
 
 /* ---- "What to review" notes that jump to the matching part of the guide ---- */
-// Review notes are free text ("Chapter 4, adjusting entries"), so they're matched against the guide's headings:
-// shared section numbers count most, then shared words. If no heading is a clear match, a phrase from the note
-// that appears in the guide's text is used instead. No match means the note stays plain text.
-const REV_STOP = new Set('a an and are as at be by ch chap chapter for from how in is it of on or page pages pp review reread section sec see study the to topic topics what why with your you lecture slide slides notes unit module part'.split(' '));
-const revWords = s => String(s || '').toLowerCase().replace(/[*_`=~]/g, '').match(/[a-z0-9]+(?:\.[0-9]+)*/g) || [];
-const stem = w => w.length > 4 ? w.replace(/(ing|es|s)$/, '') : w;
-let revCache = {body: null, heads: [], text: ''};
+// Review notes are free text ("SIC Ch 9, Fair Information Practices"). Parts with a chapter or section
+// number ("SIC Ch 9") pick the part of the guide to look in: the heading that names that chapter, down to the next
+// heading at its level. The other parts are the topic, matched against every heading and line in that part of the
+// guide; rarer words count more (in a privacy chapter "privacy" says little, "cookies" says a lot). The closest
+// heading or line wins, so a note can land on a single bullet. No good match anywhere: the note stays plain text.
+const REV_STOP = new Set('a an and are as at be by ch chap chapter for from how in is it of on or page pages pp review reread section sec see study the to topic topics what why with your you lecture slide slides notes unit module part tab vs about this that its their them these those can do does means mean against into over when where which who issues issue problems problem concepts concept basics overview types type examples example things ways key main general intro introduction'.split(' '));
+const revWords = s => String(s || '').toLowerCase().replace(/[*_`=~]/g, '').replace(/(\w)['’](\w)/g, '$1$2').match(/[a-z0-9]+(?:\.[0-9]+)*/g) || [];
+const isNum = w => /^\d/.test(w);
+const wkey = w => w.length >= 6 ? w.slice(0, 6) : w.replace(/s$/, '');    // "anonymized" ~ "anonymity", "cookies" ~ "cookie"
+const topicKeys = s => [...new Set(revWords(s).filter(w => !isNum(w) && !REV_STOP.has(w) && w.length > 1).map(wkey))];
+const cleanLine = l => l.replace(/^\s*(#{1,4}\s+|>\s*|[-*+]\s+(\[[ xX]\]\s+)?|\d+[.)]\s+|[QA]:\s*)/, '').replace(/[*_`=~]/g, '').replace(/\|/g, ' ').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
+let revCache = {body: null};
+function revPrep(g){
+  if (revCache.body === g.body) return revCache;
+  const heads = mdRender(g.body).heads, lines = []; let fence = false, hi = 0;
+  String(g.body).replace(/\r\n?/g, '\n').split('\n').forEach(raw => {
+    if (/^\s*```/.test(raw)){ fence = !fence; return; }
+    if (fence || !raw.trim()) return;
+    const m = raw.match(/^(#{1,4})\s+(.*)$/), text = cleanLine(raw);
+    const c = text.indexOf(':'), label = m ? text.replace(/\([^)]*\d[^)]*\)/g, '') : c > 0 && c <= 70 ? text.slice(0, c) : '';
+    const L = {text, keys: new Set(topicKeys(text)), lkeys: new Set(topicKeys(label)), words: new Set(revWords(text)), nums: revWords(text).filter(isNum), qa: /^\s*[QA]:/.test(raw)};
+    if (m && heads[hi]){ L.head = heads[hi++]; L.lv = m[1].length; }
+    if (L.keys.size || L.head) lines.push(L);
+  });
+  return (revCache = {body: g.body, lines});
+}
 function reviewTarget(g, note){
   if (!g || !note) return null;
-  if (revCache.body !== g.body) revCache = {body: g.body, heads: mdRender(g.body).heads, text: String(g.body).toLowerCase().replace(/[*_`=~#>|]/g, ' ').replace(/\s+/g, ' ')};
-  const ws = revWords(note), nums = ws.filter(w => /^\d/.test(w)), words = [...new Set(ws.filter(w => !/^\d/.test(w) && !REV_STOP.has(w) && w.length > 1).map(stem))];
-  let best = null, bestS = 0;
-  revCache.heads.forEach(h => {
-    const hw = revWords(h.text), hn = hw.filter(w => /^\d/.test(w)), hs = new Set(hw.filter(w => !/^\d/.test(w)).map(stem));
-    const exact = nums.some(n => hn.includes(n)), prefix = !exact && nums.some(n => hn.some(m => m.startsWith(n + '.')));
-    const shared = words.filter(w => hs.has(w)).length;
-    const sure = exact || (words.length && (shared >= 2 || shared / words.length >= 0.5));
-    const sc = (exact ? 5 : prefix ? 2 : 0) + shared + (shared && shared === hs.size ? 0.5 : 0);
-    if (sure && sc > bestS){ best = h; bestS = sc; }
-  });
-  if (best) return {id: best.id};
-  const phrases = String(note).split(/[,;:()\n]|\s[-–—]\s|\band\b/i).map(t => t.trim().toLowerCase().replace(/[*_`=~]/g, '')).filter(t => t.length >= 5 && revWords(t).some(w => !REV_STOP.has(w) && !/^\d/.test(w)));
-  const hit = phrases.filter(t => revCache.text.includes(t)).sort((a, b) => b.length - a.length)[0];
-  return hit ? {find: hit} : null;
+  const {lines} = revPrep(g), parts = String(note).split(/[,;:\n]|\s[-–—]\s/).map(t => t.trim()).filter(Boolean);
+  const ctx = parts.filter(t => /\d/.test(t)), topic = parts.filter(t => !/\d/.test(t));
+  const nums = ctx.flatMap(t => revWords(t).filter(isNum)), ctxKeys = ctx.flatMap(topicKeys);
+  // where to look: the highest-level heading naming the chapter ("6. Privacy (SIC Ch 9)"), down to its next sibling
+  let lo = 0, hi = lines.length, scopeHead = null;
+  if (nums.length){
+    const cand = lines.map((L, i) => ({L, i})).filter(({L}) => L.head && nums.some(n => L.nums.includes(n)) && (!ctxKeys.length || ctxKeys.some(k => L.keys.has(k))));
+    const pick = cand.sort((x, y) => x.L.lv - y.L.lv || x.i - y.i)[0];
+    if (pick){ scopeHead = pick.L; lo = pick.i; hi = lines.findIndex((L, j) => j > pick.i && L.head && L.lv <= pick.L.lv); if (hi < 0) hi = lines.length; }
+  }
+  let keys = topic.length ? [...new Set(topic.flatMap(topicKeys))] : [];
+  if (!keys.length){
+    const dotted = nums.filter(n => n.includes('.')), byNum = dotted.length && lines.find(L => L.head && dotted.some(n => L.nums.includes(n)));
+    if (byNum) return {id: byNum.head.id};
+    keys = parts.flatMap(topicKeys).filter(k => !ctxKeys.includes(k) || !scopeHead);
+    if (!keys.length) return scopeHead ? {id: scopeHead.head.id} : null;
+  }
+  // the topic is the chapter's own title ("Chapter 4, adjusting entries" → "Chapter 4: Adjusting Entries")
+  if (scopeHead && keys.every(k => scopeHead.keys.has(k))) return {id: scopeHead.head.id};
+  const topicWordsFull = [...new Set(topic.flatMap(revWords).filter(w => !isNum(w) && !REV_STOP.has(w)))];
+  // a line's label is the part before its colon ("Cookies: text files a site stores…"); a label that matches the
+  // topic is the strongest clue, since the guide is written as "Label: explanation" lines
+  const best = (a, b, need, headsOnly) => {
+    const pool = lines.slice(a, b).filter(L => L !== scopeHead && (!headsOnly || L.head)), N = pool.length || 1, df = {};
+    lines.slice(a, b).forEach(L => L.keys.forEach(k => { df[k] = (df[k] || 0) + 1; }));
+    // words the guide never uses can't be found anyway, so they don't count against a line, but at least half
+    // of the topic's words have to appear somewhere in this part of the guide
+    const present = keys.filter(k => df[k]); if (!present.length || present.length * 2 < keys.length) return null;
+    // words from the section's own title ("privacy" inside the privacy chapter) say little about where to go
+    const dull = new Set([...(scopeHead ? scopeHead.keys : []), ...ctxKeys]);
+    const idf = k => Math.log(1 + N / df[k]) * (dull.has(k) ? 0.3 : 1), total = present.reduce((t, k) => t + idf(k), 0);
+    let top = null, topS = 0;
+    pool.forEach(L => {
+      const got = present.filter(k => L.keys.has(k)); if (!got.some(k => !dull.has(k))) return;
+      const cover = got.reduce((t, k) => t + idf(k), 0) / total;
+      const lgot = present.filter(k => L.lkeys.has(k)), lcov = lgot.reduce((t, k) => t + idf(k), 0) / total;
+      const labelFull = L.lkeys.size > 0 && (present.every(k => L.lkeys.has(k)) || ([...L.lkeys].every(k => keys.includes(k)) && lcov >= 0.5));
+      if (!(cover >= need || labelFull)) return;
+      const exact = Math.min(0.15, topicWordsFull.filter(w => L.words.has(w)).length * 0.05);
+      const same = L.lkeys.size === present.length && present.every(k => L.lkeys.has(k));   // "Cookies:" for "cookies"
+      const sc = cover + 0.5 * lcov + (labelFull ? 0.3 : 0) + (same ? 0.25 : 0) + exact + (L.head ? 0.12 : 0) - (L.qa ? 0.6 : 0) - Math.min(0.08, L.text.length / 4000);
+      if (sc > topS){ top = L; topS = sc; }
+    });
+    return top;
+  };
+  // a note that names a chapter only ever lands inside that chapter
+  const L = best(lo, hi, 0.45) || (scopeHead && best(lo, hi, 0.2, true));
+  if (!L) return null;
+  return L.head ? {id: L.head.id} : {find: L.text.toLowerCase().slice(0, 60)};
 }
 const revLink = (g, note) => reviewTarget(g, note) ? `<button class="qz-revlink" data-qrev="${esc(note)}" title="Show this in the guide">${qInline(note)}<span class="qz-revgo" aria-hidden="true">→</span></button>` : qInline(note);
 function goToReview(note){
@@ -676,7 +729,8 @@ function goToReview(note){
   let el = t.id ? document.getElementById(t.id) : null;
   if (!el && t.find){
     const cands = [...document.querySelectorAll('#guidesBody .g-md :is(p, li, td, th, blockquote, h2, h3, h4, h5, summary, dd, pre, details)')];
-    el = cands.filter(c => c.textContent.toLowerCase().replace(/\s+/g, ' ').includes(t.find)).sort((a, b) => a.textContent.length - b.textContent.length)[0];
+    const norm = c => c.textContent.toLowerCase().replace(/[*_`=~|]/g, ' ').replace(/\s+/g, ' ').trim(), probe = t.find.slice(0, 40).trim();
+    el = cands.filter(c => norm(c).includes(probe) || probe.includes(norm(c)) && norm(c).length > 12).sort((a, b) => a.textContent.length - b.textContent.length)[0];
     const d = el && el.closest('details'); if (d) d.open = true;
   }
   if (!el){ window.scrollTo(0, 0); return; }
