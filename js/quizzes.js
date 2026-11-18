@@ -279,7 +279,7 @@ function quizPage(g){
     <div class="g-qz-top">${qs.length ? `<div class="pf-kv g-qz-sum"><span><b>${qs.length}</b><small>quiz${qs.length === 1 ? '' : 'zes'} · ${qn} questions</small></span><span><b>${sm.best != null ? sm.best + '%' : '–'}</b><small>average best score</small></span><span><b>${tries}</b><small>attempt${tries === 1 ? '' : 's'}</small></span></div>` : '<span class="g-bar-sp"></span>'}
       <div class="g-qz-new"><button class="small-btn" data-qz="new">+ New quiz</button><button class="small-btn accent" data-qz="import">Import quiz</button></div></div>
     ${qs.length ? `<div class="g-qz-cards2">${mistakeCard(g)}${qs.length > 1 ? mixedCard(g) : ''}</div><div class="g-qz-grid">${qs.map(card).join('')}</div>`
-      : `<div class="card g-empty"><b>No practice quizzes yet</b><p>Write one yourself, or ask Claude for a question bank on this guide's topic and import the file it gives you. <b>Import quiz</b> has instructions you can copy straight to Claude.</p><div class="g-empty-btns"><button class="small-btn" data-qz="new">+ New quiz</button><button class="small-btn accent" data-qz="import">Import quiz</button></div></div>`}
+      : `<div class="card g-empty"><b>No practice quizzes yet</b><p>Write one yourself, or ask your AI for a question bank on this guide's topic and import the file it gives you. <b>Import quiz</b> has instructions you can copy straight to it.</p><div class="g-empty-btns"><button class="small-btn" data-qz="new">+ New quiz</button><button class="small-btn accent" data-qz="import">Import quiz</button></div></div>`}
   </div>`;
 }
 
@@ -293,7 +293,7 @@ function openQuizImport(g){
     <label class="g-imp-chk"><input type="checkbox" id="gImpReplace" checked> Update quizzes with the same title instead of adding copies (keeps your scores)</label>
     <div id="gImpFound" class="g-imp-found"></div>
     <div class="g-imp-btns"><button class="small-btn" data-gi="cancel">Cancel</button><button class="small-btn accent" data-qi="go" disabled>Import</button></div>
-    <details class="g-help" open><summary>Instructions for AI</summary><p>Copy this, add your topic at the end, and send it to Claude. Then import what it gives you.</p>
+    <details class="g-help" open><summary>Instructions for AI</summary><p>Copy this, add your topic at the end, and send it to your AI. Then import what it gives you.</p>
       <button class="small-btn" data-qi="copy">Copy instructions</button></details>
     <details class="g-help"><summary>The format</summary><pre>${esc(QZ_FORMAT)}</pre>
       <p><code>pick:</code> is how many questions each attempt draws from the bank (or <code>all</code>). Leave it out for 10. Put <code>*</code> in front of the right choice's letter. Mark several for a “select all” question. True/false and short-answer questions use an <code>Answer:</code> line instead of choices. <code>Why:</code> and <code>Review:</code> are optional but shown after you answer.</p></details>`;
@@ -317,7 +317,7 @@ function openQuizImport(g){
 }
 $('#gImpModal').addEventListener('click', e => {
   if (e.target.closest('[data-qi="copy"]')){
-    try { navigator.clipboard.writeText(QZ_CLAUDE).then(() => toast('Instructions copied. Add your topic and send it to Claude.'), () => toast("Couldn't copy here.")); } catch(err){ toast("Couldn't copy here."); }
+    try { navigator.clipboard.writeText(QZ_CLAUDE).then(() => toast('Instructions copied. Add your topic and send it to your AI.'), () => toast("Couldn't copy here.")); } catch(err){ toast("Couldn't copy here."); }
     return;
   }
   if (!e.target.closest('[data-qi="go"]')) return;
