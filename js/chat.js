@@ -140,16 +140,25 @@ async function aiCall(sys, user){
   throw {kind: 'other', msg: last || 'No Gemini model answered'};
 }
 // turn Gemini's messages into chat messages, checking every name against the room
+const normName = n => String(n || '').toLowerCase().replace(/^@/, '').replace(/[^a-z0-9]/g, '');
 function aiToBatch(list, recent, cast){
-  const byName = new Map(cast.map(f => [f.name.toLowerCase(), f.i])), out = [];
-  list.forEach(m => {
-    const w = byName.get(String(m.from || '').trim().toLowerCase());
-    let text = String(m.text || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 220);
+  const out = [], keys = cast.map(f => ({i: f.i, k: normName(f.name)}));
+  let lastW = null;
+  const who = from => {
+    const k = normName(from); if (!k || !keys.length) return null;
+    const hit = keys.find(x => x.k === k) || keys.find(x => x.k.startsWith(k) || k.startsWith(x.k)) || keys.find(x => k.length >= 4 && x.k.includes(k));
+    if (hit) return hit.i;
+    const others = keys.filter(x => x.i !== lastW);                     // a name Gemini made up: give the line to someone online
+    return (others.length ? others : keys)[Math.floor(Math.random() * (others.length || keys.length))].i;
+  };
+  (Array.isArray(list) ? list : []).forEach(m => {
+    const w = who(m && (m.from || m.name || m.player));
+    let text = String((m && (m.text || m.message)) || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
     if (w == null || !text) return;
-    let re = null; const id = String(m.replyTo || '');
-    if (/^m\d+$/.test(id)){ const x = recent[+id.slice(1) - 1]; if (x) re = x.id; }
+    let re = null; const id = String(m.replyTo || m.reply_to || '').trim().replace(/^#/, '');
+    if (/^m?\d+$/.test(id) && !/^n/.test(id)){ const x = recent[+id.replace('m', '') - 1]; if (x) re = x.id; }
     else if (/^n\d+$/.test(id)){ const k = +id.slice(1) - 1; if (k >= 0 && k < out.length) re = k; }
-    out.push({w, text, re});
+    out.push({w, text, re}); lastW = w;
   });
   return out;
 }
@@ -158,8 +167,9 @@ async function chatGenerate(forUser, away){
   chatBusy = true;
   try {
     const {sys, user, recent, cast} = aiPrompt(chatWhoOnline(), forUser, away);
-    const batch = aiToBatch(await aiCall(sys, user), recent, cast);
-    if (!batch.length) return;
+    const got = await aiCall(sys, user), batch = aiToBatch(got, recent, cast);
+    GEM.last = {at: Date.now(), got: Array.isArray(got) ? got.length : 0, used: batch.length, model: GEM.model};
+    if (!batch.length){ GEM.last.why = cast.length ? 'Gemini sent no usable messages' : 'nobody is online right now'; saveAI(); return; }
     GEM.err = null; GEM.ok = Date.now(); saveAI();
     if (away){                                    // what was said while you were gone, spread over that time
       const span = Date.now() - away.from, ids = [];
@@ -170,6 +180,7 @@ async function chatGenerate(forUser, away){
       CHATS.msgs.sort((a, b) => a.t - b.t); saveChat(); chatBadge(); renderChat();
     } else chatQueue(batch, Date.now(), forUser ? 4 : 10, forUser ? 14 : 50);
   } catch(e){
+    GEM.last = {at: Date.now(), got: 0, used: 0, why: e.kind === 'offline' ? 'couldn’t reach Gemini' : e.msg || e.kind};
     GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? 'Gemini’s free limit is used up for now. The chat is quiet until it resets.' : e.kind === 'offline' ? null : 'Gemini had a problem. The chat is quiet for a bit.';
     if (e.msg) GEM.detail = e.msg;
     GEM.wait = Date.now() + (e.kind === 'busy' ? 15 : e.kind === 'key' ? 60 * 24 : 5) * 60000; saveAI();
@@ -194,6 +205,7 @@ function chatTick(){
   if (document.hidden) return;                                // a tab in the background just delivers; it doesn't write new chat
   if (now - Math.max(CHATS.seen || 0, CHATS.msgs.length ? CHATS.msgs[CHATS.msgs.length - 1].t : 0) > 8 * 60000 && CHATS.seen) chatCatchUp();
   CHATS.seen = now;
+  if (GEM.key && !CHATS.msgs.length && !CHATS.q.length && !chatBusy && !(GEM.wait > now)) CHATS.next = 0;
   if (!CHATS.q.length && now >= (CHATS.next || 0)){
     CHATS.next = now + (180 + Math.random() * 180) * 1000; saveChat();
     chatGenerate(false);
@@ -267,6 +279,8 @@ function renderChat(){
 }
 function chatShown(name){
   if (name !== 'chat') { chatBadge(); return; }
+  const lastT = CHATS.msgs.length ? CHATS.msgs[CHATS.msgs.length - 1].t : 0;
+  if (GEM.key && !CHATS.q.length && Date.now() - lastT > 4 * 60000 && !(GEM.wait > Date.now())){ CHATS.next = Date.now() + (180 + Math.random() * 180) * 1000; saveChat(); chatGenerate(false); }
   CHATS._shownRead = CHATS.read; CHATS.read = Date.now(); saveChat(); chatBadge();
   renderChat(); const L = $('#chatList'); if (L) L.scrollTop = L.scrollHeight;
 }
@@ -309,6 +323,7 @@ function renderChatSettings(){
   el.innerHTML = `<p class="lead">The global chat is written by Gemini: the players talk to each other and answer what you say. It needs a free Gemini key; without one the room stays quiet.</p>
     ${GEM.key ? `<div class="sync-status ${GEM.err ? 'bad' : ''}"><span class="sync-dot${GEM.err ? ' off' : ''}"></span><span><b>${GEM.err ? esc(GEM.err) : 'Gemini is on'}</b><small>${GEM.model ? `Model: ${esc(GEM.model)}` : 'Not used yet'}${GEM.ok ? ` · last used ${syncAgo(GEM.ok)}` : ''}</small></span></div>
       ${GEM.err && GEM.detail ? `<p class="hint ai-detail">Google said: <code>${esc(GEM.detail)}</code></p>` : ''}
+      ${GEM.last ? `<p class="hint ai-detail">Last chat request ${syncAgo(GEM.last.at)}: ${GEM.last.used ? `${GEM.last.got} message${GEM.last.got === 1 ? '' : 's'}, ${GEM.last.used} used` : esc(GEM.last.why || 'nothing came back')}.</p>` : ''}
       <div class="confirm"><button class="small-btn" id="aiTest">Test it</button><button class="small-btn" id="aiOff">Remove key</button></div>`
     : `<ol class="sync-steps"><li><b>Get a free key.</b> <a class="small-btn" href="${GEMINI_KEY_URL}" target="_blank" rel="noopener">Google AI Studio ↗</a><small class="hint">Sign in with Google, click <b>Create API key</b>, and copy it. Use a key from a project with <b>no billing</b> set up, so nothing can ever be charged.</small></li>
       <li><b>Paste it here.</b><span class="sync-row"><input type="password" id="aiKey" placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false" aria-label="Gemini API key"><button class="small-btn accent" id="aiSave">Save</button></span><small class="hint">It stays in this browser only. Paste it on each device you use.</small></li></ol>`}
@@ -319,7 +334,7 @@ async function aiTest(){
   const b = $('#aiTest') || $('#aiSave'); if (b){ b.disabled = true; b.textContent = 'Checking…'; }
   try {
     const out = await aiCall('Reply with JSON only.', 'Return {"messages":[{"from":"test","text":"ok"}]}');
-    GEM.err = null; GEM.wait = 0; GEM.ok = Date.now(); saveAI(); toast(`Gemini works (${GEM.model}).`); return Array.isArray(out);
+    GEM.err = null; GEM.wait = 0; GEM.ok = Date.now(); saveAI(); CHATS.next = 0; saveChat(); toast(`Gemini works (${GEM.model}).`); return Array.isArray(out);
   } catch(e){
     GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? 'Gemini’s free limit is used up for now.' : e.kind === 'offline' ? 'Couldn’t reach Gemini.' : 'Gemini had a problem.';
     if (e.msg) GEM.detail = e.msg;
