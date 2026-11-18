@@ -257,7 +257,7 @@
 
     <section class="page page-settings" id="page-settings" data-title="Settings" hidden>
       <nav class="toc" aria-label="Settings sections">
-        <a href="#set-timer" data-sec="set-timer">Timer</a><a href="#set-activities" data-sec="set-activities">Activities</a><a href="#set-sound" data-sec="set-sound">Sound</a><a href="#set-look" data-sec="set-look">Look</a><a href="#set-backup" data-sec="set-backup">Backup</a><a href="#set-keys" data-sec="set-keys">Shortcuts</a>
+        <a href="#set-timer" data-sec="set-timer">Timer</a><a href="#set-activities" data-sec="set-activities">Activities</a><a href="#set-sound" data-sec="set-sound">Sound</a><a href="#set-look" data-sec="set-look">Look</a><a href="#set-sync" data-sec="set-sync">Sync</a><a href="#set-backup" data-sec="set-backup">Backup</a><a href="#set-keys" data-sec="set-keys">Shortcuts</a>
       </nav>
       <div class="set-body">
         <section class="card set" id="set-timer"><h2>Timer</h2>
@@ -324,6 +324,7 @@
         <p class="lead">The mini clock floats on top of your other windows and keeps counting while you work in other apps. It works in Chrome and Edge. Safari and Firefox don't allow it.</p>
         <div class="confirm"><button class="small-btn" id="resetLook">Reset look to default</button></div>
         </section>
+        <section class="card set" id="set-sync"><h2>Sync across devices</h2><div id="syncBody"><p class="hint">Loading…</p></div></section>
         <section class="card set" id="set-backup"><h2>Back up or move your data</h2>
         <p class="lead">Each copy of Focus Bench (the downloaded file, the website, the page in Claude) keeps its own history in your browser. To move it, make a backup in the copy that has your history, then restore it in the other one.</p>
         <div class="confirm"><button class="small-btn" id="bkCopy">Copy backup</button><button class="small-btn" id="bkDownload">Download backup file</button></div>
@@ -364,6 +365,7 @@
 <script src="js/ranked.js"></script>
 <script src="js/quizzes.js"></script>
 <script src="js/guides.js"></script>
+<script src="js/sync.js"></script>
 <script src="js/leaderboards.js"></script>
 <script src="js/app.js"></script>
 

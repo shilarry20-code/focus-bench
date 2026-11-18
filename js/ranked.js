@@ -831,14 +831,55 @@ function rollTarget(i){
 }
 const kFactor = () => R.played < 5 ? 40 : 24;
 function stakes(br){ const E = 1 / (1 + Math.pow(10, (br - R.mmr) / 400)), K = kFactor(); return {E, win: Math.round(K * (1 - E)), loss: Math.round(K * E), draw: Math.round(K * (.5 - E))}; }
-function startMatch(){
-  const b = findOpponent(), br = botRating(b), now = Date.now();
+function startMatch(found){
+  const b = found != null ? found : findOpponent(), br = botRating(b), now = Date.now();
   const lines = [...CHAT].sort(() => Math.random() - .5).slice(0, 6);
   R.cur = {pl: R.played < 5 ? R.played + 1 : 0, b, br, mmr0: R.mmr, target: rollTarget(b), you: 0, them: 0, t0: now, last: now, tick: now, state: 'live', tapped: false, lines, tap: pick(Math.random, TAPS), feat: botFeatured(b), mine: myFeatured()};
   R.last = b; saveRanked();
   const B = BOTS[b];
-  toast(`Match found: ${B.name} (${rankOf(br).full} · ${br.toLocaleString()})`);
+  if ($('#page-focus').hidden) toast(`Match started: ${B.name} (${rankOf(br).full} · ${br.toLocaleString()})`);
   renderMatch(true);
+}
+
+/* the matchmaking queue: you press Find match, the search runs a few seconds (longer late at night and at the
+   top of the ladder, where fewer players are near your rating), then the match is shown and starts after a countdown */
+let MQ = null, mqTimer = null;    // {t0, wait, pool, b, found}
+function queueWait(){
+  const h = new Date().getHours(), m = R.mmr;
+  let w = 3 + Math.random() * 9;
+  if (h >= 2 && h < 7) w *= 1.9; else if (h >= 23 || h < 2) w *= 1.35;
+  if (m >= 3000) w *= 2.2; else if (m >= 2400) w *= 1.6; else if (m < 700) w *= 1.25;
+  return Math.round(clampN(w, 3, 30) * 1000);
+}
+function queueActivity(h){ return [.35,.25,.15,.1,.08,.1,.18,.3,.45,.55,.6,.65,.7,.7,.72,.75,.8,.85,.95,1,1,.9,.75,.5][h]; }
+function startSearch(){
+  if (!R.on || !RK_READY || MQ || (R.cur && R.cur.state === 'live')) return;
+  if (R.cur) R.cur = null;
+  const near = sortedBots().filter(i => Math.abs(botRating(i) - R.mmr) <= 250).length;
+  MQ = {t0: Date.now(), wait: queueWait(), pool: Math.max(4, Math.round(near * .012 * queueActivity(new Date().getHours()))), b: null, found: 0};
+  clearInterval(mqTimer); mqTimer = setInterval(queueTick, 250);
+  saveRanked(); renderMatch(true);
+}
+function cancelSearch(){ MQ = null; clearInterval(mqTimer); renderMatch(); }
+function queueTick(){
+  if (!MQ){ clearInterval(mqTimer); return; }
+  if (!R.on){ cancelSearch(); return; }
+  const now = Date.now();
+  if (!MQ.found && now - MQ.t0 >= MQ.wait){ MQ.b = findOpponent(); MQ.found = now; try { chime(P.chime); } catch(e){} renderMatch(true); return; }
+  if (MQ.found && now - MQ.found >= 3200){ const b = MQ.b; MQ = null; clearInterval(mqTimer); startMatch(b); return; }
+  renderQueue();
+}
+const clock = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+function queueRange(ms){ return ms < 4000 ? 50 : ms < 9000 ? 100 : ms < 16000 ? 200 : 400; }
+// while searching only the numbers change, so the pulsing rings keep their rhythm
+function renderQueue(){
+  const slot = $('#matchSlot'); if (!slot || !MQ) return;
+  const el = slot.querySelector('.mq'), now = Date.now();
+  if (!el || MQ.found){ renderMatch(); return; }
+  const t = now - MQ.t0, q = Math.max(2, Math.round(MQ.pool * (1 + .12 * Math.sin(now / 2300) + .06 * Math.sin(now / 700))));
+  slot.querySelector('.mq-time').textContent = clock(t);
+  slot.querySelector('.mq-range').textContent = `±${queueRange(t)}`;
+  slot.querySelector('.mq-q').textContent = `${q.toLocaleString()} player${q === 1 ? '' : 's'} in queue`;
 }
 function finalize(res, why){
   const c = R.cur; if (!c || c.state !== 'live') return;
@@ -876,13 +917,10 @@ function endMatch(why){
   finalize(!c.tapped && c.target - c.you <= 60000 ? 'D' : 'L', why);
 }
 // runs inside the timer loop
-let rkLastRender = 0, rkLastSave = 0, rkFresh = true;
+let rkLastRender = 0, rkLastSave = 0;
 function rankedTick(){
   if (!R || !R.on || !RK_READY) return;
   const now = Date.now(), running = S.running && S.phase === 'focus';
-  if (!running) rkFresh = true;                       // a new match needs a fresh start (Start, or the next focus block)
-  if (running && rkFresh && (!R.cur || R.cur.state === 'done')){ rkFresh = false; startMatch(); }
-  if (running) rkFresh = false;
   const c = R.cur; if (!c) return;
   if (c.state === 'live'){
     if (running){
@@ -912,8 +950,32 @@ function renderMatch(fresh){
   const slot = $('#matchSlot'); if (!slot || !RK_READY) return;
   if (!R.on){ slot.innerHTML = ''; return; }
   const c = R.cur, rk = myRk();
+  if (MQ && !MQ.found){
+    if (slot.querySelector('.mq') && !fresh) return renderQueue();
+    const t = Date.now() - MQ.t0;
+    slot.dataset.key = '';
+    slot.innerHTML = `<div class="card match mq"><div class="m-head"><span class="h first">Finding a match</span><span class="mq-time">${clock(t)}</span></div>
+      <div class="mq-radar"><span class="mq-ring"></span><span class="mq-ring r2"></span><span class="mq-ring r3"></span>${emblem(rk, 'md')}</div>
+      <p class="mq-line">Searching for players near <b>${R.mmr.toLocaleString()} Elo</b> <span class="mq-range">±${queueRange(t)}</span></p>
+      <p class="hint mq-q">${MQ.pool.toLocaleString()} players in queue</p>
+      <div class="mq-foot"><span class="hint">${R.played < 5 ? `Placement match ${R.played + 1} of 5` : `${rk.full} · ranked`}</span><button class="small-btn" data-act="m-cancel">Cancel</button></div></div>`;
+    return;
+  }
+  if (MQ && MQ.found){
+    const B = BOTS[MQ.b], br = botRating(MQ.b), brk = rankOf(br), left = Math.max(1, Math.ceil((3200 - (Date.now() - MQ.found)) / 1000));
+    const n = slot.querySelector('.mq-cd');
+    if (n && !fresh){ n.textContent = left; return; }
+    slot.dataset.key = '';
+    slot.innerHTML = `<div class="card match mq-found"><div class="m-head"><span class="h first mq-ok">Match found</span><span class="hint">Starting in <b class="mq-cd">${left}</b></span></div>
+      <div class="m-players mq-vs">
+        <div class="m-p">${myAvatar()}<span class="m-n"><b>${esc(myName())}</b><small>${emblem(rk, 'xs')} ${rk.full} · ${R.mmr.toLocaleString()}</small></span></div>
+        <span class="vs">VS</span>
+        <div class="m-p them" data-bot="${MQ.b}">${avatar(B)}<span class="m-n"><b>${esc(B.name)}</b><small>${emblem(brk, 'xs')} ${brk.full} · ${br.toLocaleString()}</small><span class="bdgs">${botFeatured(MQ.b).map(id => badgeHtml(id)).join('')}</span></span></div>
+      </div></div>`;
+    return;
+  }
   if (!c){
-    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.mmr.toLocaleString()} Elo${R.played < 5 ? ` · placement ${R.played}/5` : ''}</small></span></div><p class="hint">Press Start and you'll be matched with a player near your rating. Whoever studies longer wins.</p><button class="link-btn" data-go="ranked">Ranked page →</button></div>`;
+    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.mmr.toLocaleString()} Elo${R.played < 5 ? ` · placement ${R.played}/5` : ''}</small></span></div><p class="hint">Get matched with a player near your rating. Whoever studies longer wins.</p><div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find match</button><button class="link-btn" data-go="ranked">Ranked page →</button></div></div>`;
     return;
   }
   const B = BOTS[c.b], brk = rankOf(c.br), s = stakes(c.br), max = Math.max(c.you, c.tapped ? c.target : c.them, 60000) * 1.08;
@@ -921,7 +983,8 @@ function renderMatch(fresh){
   const lineIdx = Math.min(c.lines.length - 1, Math.floor(c.them / (7 * 60000)));
   const tired = B.style === 'Steady' && !c.tapped && c.them > c.target * .85;
   const botLine = c.tapped ? `“${c.tap}”` : tired ? '“starting to slow down…”' : c.them > 60000 ? `“${c.lines[lineIdx]}”` : '“gl hf”';
-  const status = !live ? '' : `${esc(B.name)} is still going. Keep studying: if they stop first, you win.`;
+  const waiting = live && c.you === 0 && !(S.running && S.phase === 'focus');
+  const status = !live ? '' : waiting ? 'Press Start to begin. Time only counts while you’re focusing, for both of you.' : `${esc(B.name)} is still going. Keep studying: if they stop first, you win.`;
   let result = '';
   if (!live){
     const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
@@ -930,10 +993,10 @@ function renderMatch(fresh){
     result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em></span>
       ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
       <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>
-      <p class="hint">Your next match starts with your next focus block.</p><button class="small-btn" data-act="m-dismiss">OK</button></div>`;
+      <div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find next match</button><button class="small-btn" data-act="m-dismiss">Close</button></div></div>`;
   }
   // while a match is live, only the moving parts change, so badges you're hovering stay put
-  const key = `${c.t0}|${c.state}|${c.tapped}`;
+  const key = `${c.t0}|${c.state}|${c.tapped}|${waiting}`;
   if (!fresh && live && slot.dataset.key === key && slot.querySelector('.m-bars')){
     const bars = slot.querySelectorAll('.m-bar');
     bars[0].querySelector('i').style.width = `${c.you / max * 100}%`; bars[0].querySelector('b').textContent = mm(c.you);
@@ -951,16 +1014,22 @@ function renderMatch(fresh){
     </div>
     <div class="m-bars">
       <div class="m-bar"><span>You</span><span class="trk"><i style="width:${c.you / max * 100}%"></i></span><b>${mm(c.you)}</b></div>
-      <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.tapped ? mm(c.target) : live ? 'going…' : '?'}</b></div>
+      <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.tapped ? mm(c.target) : waiting ? 'ready' : live ? 'going…' : '?'}</b></div>
     </div>
     ${live ? `<p class="m-chat">${esc(B.name)}: ${esc(botLine)}</p><p class="m-status">${status}</p>
     <div class="m-foot"><span class="stakes">Win <b class="pos">+${s.win}</b> · Draw <b>${s.draw > 0 ? '+' : s.draw < 0 ? '−' : ''}${Math.abs(s.draw)}</b> · Loss <b class="neg">−${s.loss}</b></span><button class="small-btn" data-act="m-end">End match</button></div>` : result}
   </div>`;
 }
+$('#page-ranked').addEventListener('click', e => {
+  if (!e.target.closest('[data-rkfind]')) return;
+  showPage('focus'); startSearch(); window.scrollTo(0, 0);
+});
 $('#matchSlot').addEventListener('click', e => {
   const a = e.target.closest('[data-act]'), them = e.target.closest('[data-bot]');
   if (a && a.dataset.act === 'm-end'){ if (a.dataset.sure){ endMatch('button'); } else { a.dataset.sure = 1; a.textContent = 'Tap again to end'; a.classList.add('danger'); setTimeout(() => { $('#matchSlot').dataset.key = ''; renderMatch(); }, 3500); } return; }
   if (a && a.dataset.act === 'm-dismiss'){ R.cur = null; saveRanked(); renderMatch(); return; }
+  if (a && a.dataset.act === 'm-find'){ startSearch(); return; }
+  if (a && a.dataset.act === 'm-cancel'){ cancelSearch(); return; }
   if (them && !e.target.closest('.bdg')) openBot(+them.dataset.bot);
 });
 
@@ -983,7 +1052,8 @@ function renderRanked(){
     <span>${R.mmr.toLocaleString()} Elo · best ${R.best.toLocaleString()}</span>
     <span class="bar2 big"><i style="width:${prog * 100}%;background:${rk.c}"></i></span>
     <small>${next ? `${(rk.hi - R.mmr).toLocaleString()} Elo to ${next.full}` : rk.i === PARAGON_I ? 'You hold the Paragon title: no one is rated higher. Keep it.' : 'Be the highest-rated player of all to claim Paragon.'}</small>
-    <span class="bdgs lg">${myFeatured().map(id => badgeHtml(id, 'lg')).join('')}<button class="link-btn" data-go="awards">Change showcase →</button></span></div>`;
+    <span class="bdgs lg">${myFeatured().map(id => badgeHtml(id, 'lg')).join('')}<button class="link-btn" data-go="awards">Change showcase →</button></span></div>
+    <div class="rk-find">${R.cur && R.cur.state === 'live' ? '<button class="small-btn" data-rkfind="1">Match in progress →</button>' : MQ ? '<button class="small-btn" data-rkfind="1">Searching… →</button>' : '<button class="small-btn accent" data-rkfind="1">Find match</button>'}</div>`;
   $('#rkKpis').innerHTML = `<div class="stat"><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><span>wins–losses${R.d ? '–draws' : ''}</span></div><div class="stat"><b>${wr}%</b><span>win rate</span></div><div class="stat"><b>${R.ws}</b><span>win streak · best ${R.bestWs}</span></div><div class="stat"><b>${R.played}</b><span>matches played</span></div>`;
   renderEloChart();
   const hist = R.hist.slice(0, rkHistShown);
