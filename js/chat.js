@@ -261,7 +261,8 @@ function renderChat(){
   $('.ch-top small').innerHTML = `<i class="ch-on"></i>${online.length} online`;
   $('#chatList').innerHTML = rows || (GEM.key ? '<p class="hint ch-empty">It’s quiet. Say hi, or give the regulars a minute.</p>'
     : '<p class="hint ch-empty">The chat is written by Gemini. Add a free key in <button class="link-btn" data-go="settings" data-sec="set-chat">Settings → Chat</button> to bring the room to life.</p>');
-  $('#chatHint').innerHTML = GEM.key ? (GEM.err ? esc(GEM.err) : '') : '';
+  $('#chatHint').innerHTML = GEM.key ? (GEM.err ? esc(GEM.err) : 'Tap a message to reply to it.') : '';
+  if (chatReplyTo){ const el = document.querySelector(`.ch-msg[data-id="${chatReplyTo}"]`); if (el) el.classList.add('picked'); }
   const L = $('#chatList'); if (nearBottom) L.scrollTop = L.scrollHeight;
 }
 function chatShown(name){
@@ -274,6 +275,8 @@ onPageShown = function(name){ _onPageShown(name); chatShown(name); };
 let chatReplyTo = null;
 function setChatReply(id){
   const m = id && CHATS.msgs.find(x => x.id === id), bar = $('#chatReplying'); chatReplyTo = m ? m.id : null;
+  document.querySelectorAll('.ch-msg.picked').forEach(x => x.classList.remove('picked'));
+  if (m){ const el = document.querySelector(`.ch-msg[data-id="${m.id}"]`); if (el) el.classList.add('picked'); }
   if (!bar) return;
   bar.hidden = !m;
   bar.innerHTML = m ? `<span>Replying to <b>${esc(chatName(m.w))}</b>: ${esc(m.text.length > 60 ? m.text.slice(0, 60) + '…' : m.text)}</span><button type="button" class="ch-x" data-unreply="1" aria-label="Cancel reply">✕</button>` : '';
@@ -290,7 +293,11 @@ $('#page-chat').addEventListener('submit', e => {
 $('#page-chat').addEventListener('click', e => {
   const r = e.target.closest('[data-reply]'); if (r){ setChatReply(r.dataset.reply); return; }
   if (e.target.closest('[data-unreply]')){ setChatReply(null); return; }
-  const b = e.target.closest('[data-bot], [data-me]'); if (!b) return;
+  const b = e.target.closest('[data-bot], [data-me]');
+  if (!b){                                   // tapping a message itself (not a name or picture) replies to it
+    const msg = e.target.closest('.ch-msg'); if (msg && !window.getSelection().toString()) setChatReply(chatReplyTo === msg.dataset.id ? null : msg.dataset.id);
+    return;
+  }
   if (b.dataset.me) openProfile(ME); else openProfile(+b.dataset.bot);
 });
 $('#page-chat').addEventListener('keydown', e => { if (e.key === 'Escape' && chatReplyTo) setChatReply(null); });
