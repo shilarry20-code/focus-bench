@@ -26,8 +26,7 @@ function mcRender(){
     L.scrollTop = mcStick || (grew && msgs[msgs.length - 1].me) ? L.scrollHeight : mcScroll;     // stay where you were reading
   }
   const foc = focusing(), now = Date.now(), q = c.cq || [];
-  const held = foc ? q.filter(x => x.t <= now).length : 0, n = $('#mcNew');
-  if (n){ n.hidden = !held; n.textContent = `${held} new`; }
+  const n = $('#mcNew'); if (n) n.hidden = true;
   const t = $('#mcTyping');
   if (t){
     const ws = foc ? [] : typingNow(q.map(x => ({...x, w: c.b}))), key = ws.join(',');
@@ -80,6 +79,7 @@ async function mcSay(kind, delay){
       : kind === 'brk' ? pick(Math.random, c.lines || ['nice break lol']) : pick(Math.random, MC_REPLIES)];
   }
   const cur = mcCur(); if (cur !== c) return;                      // the match changed meanwhile
+  if (focusing() && c.state === 'live') return;                    // you started focusing: they're studying too
   let t = Date.now() + delay;
   c.cq = c.cq || [];
   texts.forEach(text => { c.cq.push({t: Math.round(t), text, ...(kind === 'reply' ? {re: 1} : {})}); t += (3 + text.length * .07 + Math.random() * 3) * 1000; });
@@ -101,11 +101,15 @@ function mcTick(){
   const c = mcCur(); if (!c){ mcPrevFoc = focusing(); return; }
   const now = Date.now(), foc = focusing(); let changed = false;
   c.cq = c.cq || []; c.chat = c.chat || [];
+  // during a focus block you're both studying: anything they hadn't sent yet is dropped (and they don't start anything)
+  if (foc && c.state === 'live' && c.cq.length){ c.cq = []; changed = true; }
   while (c.cq.length && c.cq[0].t <= now && !foc){ const q = c.cq.shift(); c.chat.push({t: now, text: q.text}); changed = true; }
   if (c.state === 'live'){
     if (mcPrevFoc && !foc && c.you > 0 && !c.mcBrk){ c.mcBrk = 1; changed = true; if (Math.random() < .35) mcSay('brk', (6 + Math.random() * 25) * 1000); }
     if (foc && c.mcBrk){ c.mcBrk = 0; changed = true; }
-    if (c.tapped && !c.mcTap){ c.mcTap = 1; changed = true; if (Math.random() < .5) mcSay('tap', (2 + Math.random() * 6) * 1000); }
+    // when they stop for good during your focus block, they say so on your break
+    if (c.tapped && !c.mcTap){ c.mcTap = 1; changed = true; if (Math.random() < .5){ if (foc) c.mcTapLater = 1; else mcSay('tap', (2 + Math.random() * 6) * 1000); } }
+    if (c.mcTapLater && !foc){ c.mcTapLater = 0; changed = true; mcSay('tap', (3 + Math.random() * 6) * 1000); }
   }
   mcPrevFoc = foc;
   if (changed) saveRanked();
