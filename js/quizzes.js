@@ -62,7 +62,7 @@ Rules:
 - Write a question bank with as many questions as you can (up to 300) covering the whole topic, with a mix of question types and difficulty. Each attempt in the app draws a random set from the bank, so every attempt is different.
 - Start each quiz with the --- / quiz: Title / pick: 10 / --- block. pick is how many questions each attempt draws (use "all" for every question). Several quizzes can go one after another.
 - Number every question (1. 2. 3.).
-- Multiple choice: letter the choices a) b) c) d) and put * directly in front of the correct letter, like *b). Mark several with * for a "select all" question.
+- Multiple choice: give each question 2 to 8 choices, lettered a) through h), and use more than four when the question calls for it. Put * directly in front of the correct letter, like *b). Mark several with * for a "select all" question.
 - True/false or short answer: no choices, just an "Answer:" line.
 - Give every question a "Why:" line explaining the answer, and a "Review:" line saying exactly what to review if I get it wrong (chapter, section, or topic).
 - Don't repeat the same question with different wording; make each question test something distinct.
