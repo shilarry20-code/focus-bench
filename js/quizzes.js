@@ -13,6 +13,12 @@ let QR = null;          // the quiz being taken (see "taking a quiz")
 let QE = null;          // the quiz being written or edited (see the editor section)
 let MBV = null;         // id of the guide whose mistake bank list is open
 let MXV = null;         // id of the guide whose mixed test setup is open
+let HV = null;          // {gid, src}: the attempt history list that's open (src = a quiz id or 'mixed')
+let RETQR = null;       // {qr, y}: results you left to read a review section in the guide, for "Back to results"
+// Attempt history: quiz.hist / g.mixed.hist = [{at, r, n, it}] oldest first. it = one entry per question:
+//   {q: quiz id, x: question id, a: your answer, g: 1 if right, f: 1 if flagged, p: the choice order you saw}.
+//   The last HIST_FULL attempts keep it; older ones keep just the date and score.
+const HIST_FULL = 50, HIST_MAX = 500;
 // A guide's mixed tests: g.mixed = {sel: [quiz ids], n: questions, best, last, tries, lastAt, scores}
 let qImportFound = [], qImportGuide = null;
 const qid = () => 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -60,6 +66,7 @@ Rules:
 - Multiple choice: letter the choices a) b) c) d) and put * directly in front of the correct letter, like *b). Mark several with * for a "select all" question.
 - True/false or short answer: no choices, just an "Answer:" line.
 - Give every question a "Why:" line explaining the answer, and a "Review:" line saying exactly what to review if I get it wrong (chapter, section, or topic).
+- If I've shared my study guide, write each "Review:" line using the guide's exact section heading, so it can link to that section.
 - Don't repeat the same question with different wording; make each question test something distinct.
 - No other text inside the code block.
 
@@ -197,7 +204,8 @@ function normQuiz(o, base){
     pick: parsePick(o.pick != null ? o.pick : o.questionsPerAttempt), shuffle: !(o.shuffle === false || /^(no|false|off|0)$/i.test(String(o.shuffle == null ? '' : o.shuffle).trim())),
     prevSet: Array.isArray(o.prevSet) ? o.prevSet.filter(v => typeof v === 'string') : [],
     created: +o.created || now, updated: +o.updated || now, best: o.best != null ? +o.best : null, last: o.last != null ? +o.last : null, tries: +o.tries || 0, lastAt: +o.lastAt || 0,
-    scores: Array.isArray(o.scores) ? o.scores.map(Number).filter(v => v >= 0 && v <= 100).slice(-500) : []};
+    scores: Array.isArray(o.scores) ? o.scores.map(Number).filter(v => v >= 0 && v <= 100).slice(-500) : [],
+    hist: Array.isArray(o.hist) ? o.hist.filter(h => h && +h.at && +h.n > 0).slice(-HIST_MAX) : []};
 }
 const quizAvg = qz => qz.scores && qz.scores.length ? qz.scores.reduce((a, b) => a + b, 0) / qz.scores.length : null;
 // questions per attempt: a number, 0 for "all", or null for the default (10)
@@ -274,7 +282,7 @@ function quizPage(g){
       ${seen ? `<small>${seen} of ${n} seen · ${missed ? `<span class="neg">${missed} in the mistake bank</span>` : 'none missed right now'}</small>` : ''}</div>
     ${qz.tries ? `<div class="g-qz-scores"><span><b class="${qz.best === 100 ? 'pos' : ''}">${pctText(qz.best)}</b><small>best</small></span><span><b>${pctText(qz.last)}</b><small>last</small></span><span><b>${pctText(quizAvg(qz))}</b><small>avg</small></span></div>
       <span class="bar2 g-qz-bar"><i style="width:${qz.best}%"></i></span>` : ''}
-    <div class="g-qz-btns"><button class="small-btn accent" data-qz="take" data-q="${qz.id}">${qz.tries ? 'Retake' : 'Take quiz'}</button><button class="small-btn" data-qz="edit" data-q="${qz.id}">Edit</button><button class="small-btn" data-qz="export" data-q="${qz.id}">Export</button><button class="small-btn" data-qz="del" data-q="${qz.id}">Delete</button></div></div>`; };
+    <div class="g-qz-btns"><button class="small-btn accent" data-qz="take" data-q="${qz.id}">${qz.tries ? 'Retake' : 'Take quiz'}</button>${(qz.hist || []).length ? `<button class="small-btn" data-qz="hist" data-q="${qz.id}">History</button>` : ''}<button class="small-btn" data-qz="edit" data-q="${qz.id}">Edit</button><button class="small-btn" data-qz="export" data-q="${qz.id}">Export</button><button class="small-btn" data-qz="del" data-q="${qz.id}">Delete</button></div></div>`; };
   return `<div class="g-qz-page">
     <div class="g-qz-top">${qs.length ? `<div class="pf-kv g-qz-sum"><span><b>${qs.length}</b><small>quiz${qs.length === 1 ? '' : 'zes'} · ${qn} questions</small></span><span><b>${sm.best != null ? sm.best + '%' : '–'}</b><small>average best score</small></span><span><b>${tries}</b><small>attempt${tries === 1 ? '' : 's'}</small></span></div>` : '<span class="g-bar-sp"></span>'}
       <div class="g-qz-new"><button class="small-btn" data-qz="new">+ New quiz</button><button class="small-btn accent" data-qz="import">Import quiz</button></div></div>
@@ -378,7 +386,7 @@ function beginRun(g, base, items){
   if (!items.length){ toast('No questions to practice.'); return; }
   QR = {gid: g.id, ...base, items: items.map(it => { const qz = quizzes.find(z => z.id === it.q); return {q: it.q, k: it.k, perm: choicePerm(qz, qz.questions[it.k])}; }),
     ans: items.map(() => null), grade: items.map(() => undefined), flags: new Set(), submitted: false, saved: false, cleared: 0, onlyMissed: false};
-  MBV = null; MXV = null; renderGuides(); window.scrollTo(0, 0);
+  MBV = null; MXV = null; HV = null; RETQR = null; renderGuides(); window.scrollTo(0, 0);
 }
 function startQuiz(g, qz, retry){
   if (retry) return beginRun(g, {mode: 'quiz', qid: qz.id, full: false, bank: qz.questions.length}, retry);
@@ -427,7 +435,7 @@ function mixedCard(g){
   return `<div class="card g-mx"><div class="g-mb-info"><b>Mixed test</b>
       <small>${m.tries ? `${m.tries} test${m.tries === 1 ? '' : 's'} · last taken ${agoText(m.lastAt)}` : 'Combine questions from several quizzes into one test'}</small></div>
     ${m.tries ? `<div class="g-qz-scores"><span><b class="${m.best === 100 ? 'pos' : ''}">${pctText(m.best)}</b><small>best</small></span><span><b>${pctText(m.last)}</b><small>last</small></span><span><b>${pctText(avg)}</b><small>avg</small></span></div>` : ''}
-    <div class="g-mb-btns"><button class="small-btn accent" data-mx="setup">${m.tries ? 'New mixed test' : 'Set up a test'}</button></div></div>`;
+    <div class="g-mb-btns">${(m.hist || []).length ? '<button class="small-btn" data-mx="hist">History</button>' : ''}<button class="small-btn accent" data-mx="setup">${m.tries ? 'New mixed test' : 'Set up a test'}</button></div></div>`;
 }
 function renderMixedSetup(){
   $('#guidesBody').classList.add('narrow');
@@ -455,7 +463,9 @@ const isAnswered = i => { const a = QR.ans[i]; return Array.isArray(a) ? a.lengt
 const TYPE_TAG = {multi: 'Select all that apply', tf: 'True or false', short: 'Short answer'};
 
 function qxCard(i){
-  const it = QR.items[i], cur = itemQ(it); if (!cur) return '';
+  const it = QR.items[i], cur = itemQ(it);
+  if (!cur) return QR.past ? `<div class="card qx-q gone ${QR.grade[i] ? 'ok' : 'bad'}" id="qx-${i}" data-i="${i}"><div class="qx-qhead"><span class="qz-l">${i + 1}</span></div>
+    <p class="hint">This question was removed from the quiz after this attempt. You got it ${QR.grade[i] ? 'right' : 'wrong'}.</p></div>` : '';
   const {qz, x} = cur, a = QR.ans[i], sub = QR.submitted, gr = QR.grade[i], answered = isAnswered(i), flag = QR.flags.has(i);
   const state = sub ? (gr === true ? ' ok' : gr === false ? ' bad' : ' pend') : answered ? ' done' : '';
   let body;
@@ -473,11 +483,11 @@ function qxCard(i){
     const ans = x.type === 'short' ? qInline(x.answer) : inShownOrder(it, x.correct).map(c => esc(shownLabel(it, x, c))).join(', ');
     if (gr === null) fb = `<div class="qz-fb"><b>The answer:</b> ${ans}<div class="qz-self"><span>Did you get it?</span><button class="small-btn qz-yes" data-qx="self" data-i="${i}" data-ok="1">I got it right</button><button class="small-btn qz-no" data-qx="self" data-i="${i}" data-ok="0">I got it wrong</button></div></div>`;
     else fb = `<div class="qz-fb ${gr ? 'ok' : 'bad'}"><b>${gr ? 'Correct.' : answered ? 'Not quite.' : 'Not answered.'}</b>${gr && x.type !== 'short' ? '' : ` The answer is <b>${ans}</b>.`}
-      ${x.why ? `<p>${qInline(x.why)}</p>` : ''}${!gr && x.review ? `<p class="qz-rev"><b>Review:</b> ${qInline(x.review)}</p>` : ''}</div>`;
+      ${x.why ? `<p>${qInline(x.why)}</p>` : ''}${!gr && x.review ? `<p class="qz-rev"><b>Review:</b> ${revLink(guideById(QR.gid), x.review)}</p>` : ''}</div>`;
   }
   return `<div class="card qx-q${state}${flag ? ' flagged' : ''}" id="qx-${i}" data-i="${i}">
     <div class="qx-qhead"><span class="qz-l">${i + 1}</span>${TYPE_TAG[x.type] ? `<small class="qx-tag">${TYPE_TAG[x.type]}</small>` : ''}${QR.mode !== 'quiz' ? `<small class="hint qx-from">${esc(qz.title)}</small>` : ''}<span class="g-bar-sp"></span>
-      <button class="qx-flag" data-qx="flag" data-i="${i}" aria-pressed="${flag}">${flag ? '🚩 Flagged' : '⚑ Flag'}</button></div>
+      ${QR.past ? (flag ? '<span class="qx-flag on">🚩 Flagged</span>' : '') : `<button class="qx-flag" data-qx="flag" data-i="${i}" aria-pressed="${flag}">${flag ? '🚩 Flagged' : '⚑ Flag'}</button>`}</div>
     <div class="qz-q">${qInline(x.q)}</div>${body}${fb}</div>`;
 }
 function qxBar(){
@@ -497,17 +507,17 @@ function qxSummary(g){
   const missed = QR.items.filter((_, i) => QR.grade[i] === false);
   const reviews = [...new Set(missed.map(it => { const c = itemQ(it); return c && c.x.review; }).filter(Boolean))];
   const newBest = QR.full && QR.saved && QR.prevBest != null && pct > QR.prevBest;
-  const sub = pending ? `Mark the ${pending} short answer${pending === 1 ? '' : 's'} below to finish${QR.full ? ' and save your score' : ''}.`
+  const sub = QR.past ? `Taken ${whenText(QR.past.at)}${QR.past.k ? ` · attempt ${QR.past.k}` : ''}` : pending ? `Mark the ${pending} short answer${pending === 1 ? '' : 's'} below to finish${QR.full ? ' and save your score' : ''}.`
     : QR.mode === 'mistakes' ? `${QR.cleared ? `${QR.cleared} question${QR.cleared === 1 ? '' : 's'} cleared from the mistake bank. ` : ''}${mistakePool(g).length} left in the bank. Practice rounds don’t change your quiz scores.`
     : QR.full ? [newBest ? 'New best!' : '', `Best ${pctText(qz.best)}`, quizAvg(qz) != null ? `Avg ${pctText(quizAvg(qz))}` : '', `${qz.tries} attempt${qz.tries === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
     : QR.mode === 'mixed' ? 'Retry of the ones you missed. It doesn’t change your mixed test scores.'
     : 'Practice round on the ones you missed. It doesn’t change your best score.';
   return `<div class="card qx-res"><div class="qz-score ${pending ? '' : pct === 100 ? 'ok' : pct < 60 ? 'bad' : ''}"><b>${right} / ${n}</b><span>${pct}%</span></div>
     <p class="hint qz-score-sub">${sub}</p>
-    <div class="qz-row qz-res-btns"><button class="small-btn accent" data-qx="retake">${QR.mode === 'mistakes' ? 'Practice the mistake bank again' : QR.mode === 'mixed' ? 'New mixed test' : 'Retake with new questions'}</button>${missed.length ? `<button class="small-btn" data-qx="retry">Retry the ${missed.length} missed</button>` : ''}
+    <div class="qz-row qz-res-btns">${QR.past ? '' : `<button class="small-btn accent" data-qx="retake">${QR.mode === 'mistakes' ? 'Practice the mistake bank again' : QR.mode === 'mixed' ? 'New mixed test' : 'Retake with new questions'}</button>${missed.length ? `<button class="small-btn" data-qx="retry">Retry the ${missed.length} missed</button>` : ''}`}
       ${missed.length && missed.length < n ? `<button class="small-btn" data-qx="onlymissed" aria-pressed="${QR.onlyMissed}">${QR.onlyMissed ? 'Show all questions' : 'Show only missed'}</button>` : ''}<button class="small-btn" data-qx="copy">Copy results</button></div>
     <div class="qz-copybox" id="qzCopyBox" hidden><p class="hint">Copying isn't allowed here. Select the text below and copy it yourself.</p><textarea readonly></textarea></div>
-    ${reviews.length ? `<div class="qz-revlist"><div class="h">What to review</div><ul>${reviews.map(t => `<li>${qInline(t)}</li>`).join('')}</ul></div>` : ''}
+    ${reviews.length ? `<div class="qz-revlist"><div class="h">What to review</div><ul>${reviews.map(t => `<li>${revLink(g, t)}</li>`).join('')}</ul></div>` : ''}
     ${!missed.length && !pending ? '<p class="qz-perfect">Every question right.</p>' : ''}</div>`;
 }
 function renderQuizRun(){
@@ -518,8 +528,8 @@ function renderQuizRun(){
   const n = QR.items.length;
   const title = QR.mode === 'mistakes' ? 'Mistake bank practice' : QR.mode === 'mixed' ? 'Mixed test' : qz.title;
   const sub = QR.mode === 'mistakes' ? `${g.title} · questions you've missed` : QR.mode === 'mixed' ? `${g.title} · ${n} question${n === 1 ? '' : 's'} from ${nq} quiz${nq === 1 ? '' : 'zes'}${QR.full ? '' : ' · missed questions only'}` : `${g.title}${QR.full ? (QR.bank > n ? ` · ${n} of ${QR.bank} questions this time` : '') : ' · missed questions only'}`;
-  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-qx="quit">← Back to quizzes</button></div>
-    <div class="qx-title"><h2>${esc(title)}</h2><small class="hint">${esc(sub)}</small></div>
+  $('#guidesBody').innerHTML = `<div class="g-bar">${QR.past ? '<button class="small-btn" data-qx="hist">← Back to history</button>' : '<button class="small-btn" data-qx="quit">← Back to quizzes</button>'}</div>
+    <div class="qx-title"><h2>${esc(title)}</h2><small class="hint">${esc(QR.past ? `${g.title} · ${n} question${n === 1 ? '' : 's'}` : sub)}</small></div>
     ${QR.submitted ? qxSummary(g) : ''}
     <div class="qx-bar card" id="qxBar">${qxBar()}</div>
     <div class="qx-list${QR.onlyMissed ? ' only-missed' : ''}">${QR.items.map((_, i) => qxCard(i)).join('')}</div>
@@ -556,6 +566,12 @@ function qxFinish(){
     const qz = QR.mode === 'quiz' ? runQuiz(QR.qid) : mixedOf(guideById(QR.gid)); QR.prevBest = qz.best;
     qz.last = pct; qz.best = qz.best == null ? pct : Math.max(qz.best, pct); qz.tries = (qz.tries || 0) + 1; qz.lastAt = Date.now();
     qz.scores = [...(qz.scores || []), pct].slice(-500);
+    const rec = {at: Date.now(), r: QR.grade.filter(v => v === true).length, n: QR.items.length,
+      it: QR.items.map((it, i) => { const c = itemQ(it); return {q: it.q, x: c ? c.x.id : null, a: QR.ans[i], g: QR.grade[i] === true ? 1 : 0, f: QR.flags.has(i) ? 1 : 0, p: it.perm}; })};
+    const h = qz.hist || (qz.hist = []); h.push(rec);
+    if (h.length > HIST_MAX) h.splice(0, h.length - HIST_MAX);
+    h.slice(0, Math.max(0, h.length - HIST_FULL)).forEach(o => { delete o.it; });
+    QR.rec = rec;
     if (pct === 100){ achBump('quizPerfect'); fx.burst(); }
   }
   saveGuides();
@@ -568,14 +584,14 @@ function quizResultsText(){
   const qz = QR.mode === 'quiz' ? runQuiz(QR.qid) : QR.mode === 'mixed' ? mixedOf(g) : null, n = QR.items.length, right = QR.grade.filter(v => v === true).length;
   const flagged = QR.flags.size;
   const L = [QR.mode === 'mistakes' ? 'Mistake bank practice results' : QR.mode === 'mixed' ? `Mixed test results (questions from ${new Set(QR.items.map(it => it.q)).size} quizzes)` : `Practice quiz results: ${qz.title}`, `Study guide: ${g.title}${g.cls ? ` (${g.cls})` : ''}`,
-    `Score: ${right}/${n} (${Math.round(right / n * 100)}%)${QR.full && QR.bank > n ? ` · ${n} questions drawn from a bank of ${QR.bank}` : ''}${QR.full && QR.saved ? ` · best ${pctText(qz.best)}${quizAvg(qz) != null ? ` · average ${pctText(quizAvg(qz))}` : ''} · attempt ${qz.tries}` : QR.mode === 'quiz' && !QR.full ? ' · retry of missed questions only' : ''}`,
-    `Taken: ${new Date().toLocaleString(undefined, {month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'})}`];
+    QR.past ? `Score: ${right}/${n} (${Math.round(right / n * 100)}%)${QR.past.k ? ` · attempt ${QR.past.k}` : ''}` : `Score: ${right}/${n} (${Math.round(right / n * 100)}%)${QR.full && QR.bank > n ? ` · ${n} questions drawn from a bank of ${QR.bank}` : ''}${QR.full && QR.saved ? ` · best ${pctText(qz.best)}${quizAvg(qz) != null ? ` · average ${pctText(quizAvg(qz))}` : ''} · attempt ${qz.tries}` : QR.mode === 'quiz' && !QR.full ? ' · retry of missed questions only' : ''}`,
+    `Taken: ${new Date(QR.past ? QR.past.at : Date.now()).toLocaleString(undefined, {month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'})}`];
   if (flagged) L.push(`I flagged ${flagged} question${flagged === 1 ? '' : 's'} (marked [FLAGGED]) as ones I want explained.`);
   const reviews = [...new Set(QR.items.filter((_, i) => QR.grade[i] === false).map(it => { const c = itemQ(it); return c && c.x.review; }).filter(Boolean))];
   if (reviews.length) L.push('', 'What to review:', ...reviews.map(t => `- ${plain(t)}`));
   L.push('', 'Questions:');
   QR.items.forEach((it, i) => {
-    const c = itemQ(it); if (!c) return; const {qz: z, x} = c, gr = QR.grade[i], a = QR.ans[i];
+    const c = itemQ(it); if (!c){ if (QR.past) L.push('', `${i + 1}. [${QR.grade[i] ? 'RIGHT' : 'WRONG'}] (this question was removed from the quiz)`); return; } const {qz: z, x} = c, gr = QR.grade[i], a = QR.ans[i];
     L.push('', `${i + 1}. [${gr === true ? 'RIGHT' : gr === false ? 'WRONG' : 'NOT MARKED'}]${QR.flags.has(i) ? ' [FLAGGED]' : ''} ${plain(x.q)}${QR.mode !== 'quiz' ? `  (from: ${plain(z.title)})` : ''}`);
     if (x.type === 'mc' || x.type === 'multi') L.push(`   Choices: ${it.perm.map((ci, d) => `${LETTERS[d]}) ${plain(x.choices[ci])}`).join('  ')}`);
     L.push(`   My answer: ${!isAnswered(i) ? '(no answer)' : x.type === 'short' ? plain(a) : inShownOrder(it, a).map(ci => plain(shownLabel(it, x, ci))).join(', ')}`);
@@ -589,6 +605,90 @@ function copyQuizResults(){
   const fallback = () => { const box = $('#qzCopyBox'); if (!box) return; box.hidden = false; const ta = box.querySelector('textarea'); ta.value = t; ta.focus(); ta.select(); toast('Select the text and copy it.'); };
   try { navigator.clipboard.writeText(t).then(() => toast('Results copied. Paste them anywhere.'), fallback); } catch(e){ fallback(); }
 }
+
+/* ---- attempt history ---- */
+const whenText = t => new Date(t).toLocaleString(undefined, {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'});
+function histOf(g, src){ const o = src === 'mixed' ? mixedOf(g) : guideQuizzes(g).find(q => q.id === src); return o ? {o, h: o.hist || []} : null; }
+function renderHistory(){
+  $('#guidesBody').classList.add('narrow');
+  const g = guideById(HV.gid), hs = g && histOf(g, HV.src); if (!hs){ HV = null; return renderGuides(); }
+  const {o, h} = hs, title = HV.src === 'mixed' ? 'Mixed test' : o.title, before = Math.max(0, (o.tries || 0) - h.length);
+  const rows = h.map((r, k) => ({r, k})).reverse().map(({r, k}) => {
+    const pct = Math.round(r.r / r.n * 100);
+    return `<div class="qh-row"><span class="qh-when">${whenText(r.at)}</span><span class="qh-score"><b class="${pct === 100 ? 'pos' : pct < 60 ? 'neg' : ''}">${pct}%</b><small>${r.r} / ${r.n}</small></span>
+      ${r.it ? `<button class="small-btn" data-qh="open" data-k="${k}">View</button>` : '<small class="hint qh-old">Score only</small>'}</div>`;
+  }).join('');
+  $('#guidesBody').innerHTML = `<div class="g-bar"><button class="small-btn" data-qh="back">← Back to quizzes</button></div>
+    <div class="qx-title"><h2>${esc(title)} · history</h2><small class="hint">${esc(g.title)} · ${h.length} saved attempt${h.length === 1 ? '' : 's'}${before ? ` · ${before} earlier attempt${before === 1 ? '' : 's'} from before history was kept (still in your average)` : ''}</small></div>
+    <div class="card qh-list">${rows}</div>
+    ${h.length > HIST_FULL ? `<p class="hint">Your last ${HIST_FULL} attempts keep every answer; older ones keep the score.</p>` : ''}`;
+}
+function openAttempt(g, src, k){
+  const hs = histOf(g, src), r = hs && hs.h[k]; if (!r || !r.it){ toast('Only the score was kept for that attempt.'); return; }
+  const items = r.it.map(e => {
+    const qz = guideQuizzes(g).find(z => z.id === e.q), kk = qz ? qz.questions.findIndex(x => x.id === e.x) : -1, x = kk >= 0 ? qz.questions[kk] : null;
+    const n = x ? (x.choices || []).length : 0, ok = Array.isArray(e.p) && e.p.length === n && e.p.every(v => v >= 0 && v < n);
+    return {q: e.q, k: kk, perm: ok ? e.p : Array.from({length: n}, (_, i) => i)};
+  });
+  const before = Math.max(0, (hs.o.tries || 0) - hs.h.length);
+  QR = {gid: g.id, mode: src === 'mixed' ? 'mixed' : 'quiz', qid: src === 'mixed' ? null : src, full: true, bank: 0, items,
+    ans: r.it.map(e => e.a), grade: r.it.map(e => e.g === 1), flags: new Set(r.it.map((e, i) => e.f ? i : -1).filter(i => i >= 0)),
+    submitted: true, saved: true, cleared: 0, onlyMissed: false, past: {src, k: before + k + 1, at: r.at}};
+  HV = null; MBV = null; MXV = null; RETQR = null; renderGuides(); window.scrollTo(0, 0);
+}
+$('#page-guides').addEventListener('click', e => {
+  const b = e.target.closest('[data-qh]'); if (!b || !HV) return;
+  const g = guideById(HV.gid); if (!g) return;
+  if (b.dataset.qh === 'back'){ HV = null; setGuideTab(g.id, 'quizzes'); renderGuides(); window.scrollTo(0, 0); }
+  else if (b.dataset.qh === 'open') openAttempt(g, HV.src, +b.dataset.k);
+});
+
+/* ---- "What to review" notes that jump to the matching part of the guide ---- */
+// Review notes are free text ("Chapter 4, adjusting entries"), so they're matched against the guide's headings:
+// shared section numbers count most, then shared words. If no heading is a clear match, a phrase from the note
+// that appears in the guide's text is used instead. No match means the note stays plain text.
+const REV_STOP = new Set('a an and are as at be by ch chap chapter for from how in is it of on or page pages pp review reread section sec see study the to topic topics what why with your you lecture slide slides notes unit module part'.split(' '));
+const revWords = s => String(s || '').toLowerCase().replace(/[*_`=~]/g, '').match(/[a-z0-9]+(?:\.[0-9]+)*/g) || [];
+const stem = w => w.length > 4 ? w.replace(/(ing|es|s)$/, '') : w;
+let revCache = {body: null, heads: [], text: ''};
+function reviewTarget(g, note){
+  if (!g || !note) return null;
+  if (revCache.body !== g.body) revCache = {body: g.body, heads: mdRender(g.body).heads, text: String(g.body).toLowerCase().replace(/[*_`=~#>|]/g, ' ').replace(/\s+/g, ' ')};
+  const ws = revWords(note), nums = ws.filter(w => /^\d/.test(w)), words = [...new Set(ws.filter(w => !/^\d/.test(w) && !REV_STOP.has(w) && w.length > 1).map(stem))];
+  let best = null, bestS = 0;
+  revCache.heads.forEach(h => {
+    const hw = revWords(h.text), hn = hw.filter(w => /^\d/.test(w)), hs = new Set(hw.filter(w => !/^\d/.test(w)).map(stem));
+    const exact = nums.some(n => hn.includes(n)), prefix = !exact && nums.some(n => hn.some(m => m.startsWith(n + '.')));
+    const shared = words.filter(w => hs.has(w)).length;
+    const sure = exact || (words.length && (shared >= 2 || shared / words.length >= 0.5));
+    const sc = (exact ? 5 : prefix ? 2 : 0) + shared + (shared && shared === hs.size ? 0.5 : 0);
+    if (sure && sc > bestS){ best = h; bestS = sc; }
+  });
+  if (best) return {id: best.id};
+  const phrases = String(note).split(/[,;:()\n]|\s[-–—]\s|\band\b/i).map(t => t.trim().toLowerCase().replace(/[*_`=~]/g, '')).filter(t => t.length >= 5 && revWords(t).some(w => !REV_STOP.has(w) && !/^\d/.test(w)));
+  const hit = phrases.filter(t => revCache.text.includes(t)).sort((a, b) => b.length - a.length)[0];
+  return hit ? {find: hit} : null;
+}
+const revLink = (g, note) => reviewTarget(g, note) ? `<button class="qz-revlink" data-qrev="${esc(note)}" title="Show this in the guide">${qInline(note)}<span class="qz-revgo" aria-hidden="true">→</span></button>` : qInline(note);
+function goToReview(note){
+  const g = guideById(QR.gid), t = reviewTarget(g, note); if (!t) return;
+  RETQR = {qr: QR, y: scrollY}; QR = null; gView = g.id; setGuideTab(g.id, 'guide'); renderGuides();
+  let el = t.id ? document.getElementById(t.id) : null;
+  if (!el && t.find){
+    const cands = [...document.querySelectorAll('#guidesBody .g-md :is(p, li, td, th, blockquote, h2, h3, h4, h5, summary, dd, pre, details)')];
+    el = cands.filter(c => c.textContent.toLowerCase().replace(/\s+/g, ' ').includes(t.find)).sort((a, b) => a.textContent.length - b.textContent.length)[0];
+    const d = el && el.closest('details'); if (d) d.open = true;
+  }
+  if (!el){ window.scrollTo(0, 0); return; }
+  requestAnimationFrame(() => {
+    el.scrollIntoView({block: 'start', behavior: 'auto'}); window.scrollBy(0, -16);
+    el.classList.remove('g-flash'); void el.offsetWidth; el.classList.add('g-flash');
+  });
+}
+$('#page-guides').addEventListener('click', e => {
+  const b = e.target.closest('[data-qrev]'); if (!b || !QR) return;
+  e.stopPropagation(); goToReview(b.dataset.qrev);
+}, true);
 
 /* ---- the mistake bank list ---- */
 function renderMistakeList(){
@@ -822,6 +922,7 @@ $('#page-guides').addEventListener('click', e => {
   const a = b.dataset.qz, g = gView && guideById(gView), qz = g && b.dataset.q && guideQuizzes(g).find(x => x.id === b.dataset.q);
   if (a === 'import' && g) openQuizImport(g);
   else if (a === 'take' && qz) startQuiz(g, qz);
+  else if (a === 'hist' && qz){ HV = {gid: g.id, src: qz.id}; renderGuides(); window.scrollTo(0, 0); }
   else if (a === 'new' && g) openQuizEditor(g, null);
   else if (a === 'edit' && qz) openQuizEditor(g, qz);
   else if (a === 'export' && qz){
@@ -853,7 +954,7 @@ $('#page-guides').addEventListener('click', e => {
     QR.ans[i] = x.type === 'multi' ? (cur.includes(c) ? cur.filter(v => v !== c) : [...cur, c]) : cur[0] === c ? [] : [c];
     qxRefresh(i);
   }
-  else if (a === 'flag'){ QR.flags.has(i) ? QR.flags.delete(i) : QR.flags.add(i); qxRefresh(i); }
+  else if (a === 'flag'){ if (QR.past) return; QR.flags.has(i) ? QR.flags.delete(i) : QR.flags.add(i); if (QR.rec && QR.rec.it && QR.rec.it[i]){ QR.rec.it[i].f = QR.flags.has(i) ? 1 : 0; saveGuides(); } qxRefresh(i); }
   else if (a === 'go' || a === 'nextflag'){
     let j = i;
     if (a === 'nextflag'){
@@ -875,6 +976,7 @@ $('#page-guides').addEventListener('click', e => {
   }
   else if (a === 'onlymissed'){ QR.onlyMissed = !QR.onlyMissed; renderQuizRun(); }
   else if (a === 'copy') copyQuizResults();
+  else if (a === 'hist'){ HV = {gid: QR.gid, src: QR.past.src}; QR = null; renderGuides(); window.scrollTo(0, 0); }
   else if (a === 'retake' || a === 'retry'){
     const missed = QR.items.filter((_, k) => QR.grade[k] === false).map(it => ({q: it.q, k: it.k}));
     if (QR.mode === 'mistakes') startMistakes(g, a === 'retry' ? missed : null);
@@ -908,6 +1010,7 @@ $('#page-guides').addEventListener('click', e => {
   else if (a === 'back'){ MXV = null; setGuideTab(g.id, 'quizzes'); renderGuides(); window.scrollTo(0, 0); }
   else if (a === 'all'){ const qs = guideQuizzes(g); setMixedSel(g, mixedSel(g).length === qs.length ? [] : qs.map(q => q.id)); renderMixedSetup(); }
   else if (a === 'start') startMixed(g);
+  else if (a === 'hist'){ HV = {gid: g.id, src: 'mixed'}; renderGuides(); window.scrollTo(0, 0); }
 });
 $('#page-guides').addEventListener('change', e => {
   const c = e.target.closest('[data-mxq]'); if (!c || !MXV) return;
