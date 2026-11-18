@@ -684,6 +684,15 @@ function botStats(i){
     unlocked: 0
   };
   st.modeCount = Object.keys(modes).length;
+  /* study guides and practice quizzes came later, so they get their own seeded draws (the ones above stay put).
+     Longer-time players are likelier to have them, and each step needs the one before it. */
+  const g = mulberry32(ROSTER_SEED + i * 7919 + 17), use = clampN(days / 180, .3, 1);
+  const hasGuide = g() < .51 * use, studied = hasGuide && g() < .7, quizzed = hasGuide && g() < .5;
+  st.c.guides = hasGuide ? (g() < .24 ? 5 + Math.floor(g() * 6) : 1 + Math.floor(g() * 4)) : 0;
+  st.c.guideStudy = studied ? 1 : 0;
+  st.c.quizzes = quizzed ? 1 + Math.floor(g() * 3) : 0;
+  st.c.quizPerfect = quizzed && g() < .4 ? 1 : 0;
+  st.c.guideDone = studied && g() < .17 ? 1 : 0;
   return st;
 }
 const badgeCache = new Map();
@@ -723,11 +732,12 @@ function myFeatured(){
 /* one pass over every bot, in small idle chunks: how many bots hold each achievement (rarity, kept
    for the day) and each bot's achievement points (for the leaderboard, redone after each update).
    Badge lists aren't kept for every bot, only for the few on screen. */
+const RAR_V = 2;   // bump when bot stats change so rarity is recounted right away
 let passGen = 0, passRunning = false, passWait = [];
 function badgePass(done){
   if (done) passWait.push(done);
   if (!RK_READY) return;
-  const needRar = !(R.rar && R.rar.day === R.lastSim);
+  const needRar = !(R.rar && R.rar.day === R.lastSim && R.rar.v === RAR_V);
   if (!needRar && lbPts){ const w = passWait; passWait = []; w.forEach(f => f()); return; }
   if (passRunning) return; passRunning = true;
   const gen = botsVer, counts = {}, pts = new Int32Array(ROSTER_N), PT = {}; ACHS.forEach(a => { counts[a.id] = 0; PT[a.id] = TIERS[a.tier].pts; });
@@ -741,7 +751,7 @@ function badgePass(done){
       for (; i < end; i++){ const got = badgeCache.get(i) || earnedFor(botStats(i)); let n = 0; for (const id of got){ counts[id]++; n += PT[id]; } pts[i] = n; }
     }
     if (i < ROSTER_N){ idle(step); return; }
-    R.rar = {day: R.lastSim, counts}; lbPts = pts; passRunning = false; saveRanked();
+    R.rar = {day: R.lastSim, counts, v: RAR_V}; lbPts = pts; passRunning = false; saveRanked();
     const w = passWait; passWait = []; w.forEach(f => f());
   };
   idle(step);
