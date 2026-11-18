@@ -1,0 +1,31 @@
+# Once a day, just after midnight Eastern, save the shared world so new devices can start from it.
+# The snapshot lives alone on the "world" branch (replaced each day, so the repo doesn't grow).
+name: World snapshot
+on:
+  schedule:
+    - cron: '20 5 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: world-snapshot
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
+      - run: (python3 -m http.server 8765 >/dev/null 2>&1 &) && sleep 2
+      - run: node tools/snapshot.mjs out
+      - name: Publish to the world branch
+        run: |
+          cd out
+          git init -q -b world
+          git config user.name "world-snapshot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add world.bin world.json
+          git commit -qm "World snapshot $(cat day.txt)"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" world

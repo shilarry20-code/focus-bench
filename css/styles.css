@@ -1436,3 +1436,11 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .g-archived[open]>summary::before{content:"▾ ";}
 .g-arch-note{margin:0 0 8px;padding:8px 12px;border-radius:var(--r-ctl);background:var(--soft);color:var(--muted);font-size:13px}
 .toast-undo{margin-left:10px;border:0;background:none;color:var(--accent);font:inherit;font-weight:800;cursor:pointer;padding:0}
+.ch-typing.still{transition:none}
+.mc-typing{transition:none}
+
+/* the side panel: no width animation on the layout (see toggleSide) */
+.shell{transition:none}
+/* long lists: skip drawing what's off screen */
+.ch-msg{content-visibility:auto;contain-intrinsic-size:auto 72px}
+.dm-msg{content-visibility:auto;contain-intrinsic-size:auto 48px}

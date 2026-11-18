@@ -5,29 +5,36 @@
    lines. The chat stays on the result screen and is cleared when your next match starts. It never goes to DMs. */
 
 const MC_REPLIES = ['lol', 'ok ok', 'haha', 'true', 'bet', 'nah you got this', 'we ball', 'lmao', 'fair', 'real'];
-let mcPrevFoc = focusing(), mcBusy = false;
+let mcPrevFoc = focusing(), mcBusy = false, mcStick = true, mcScroll = 0, mcTyKey = '', mcReplyT = null;
 const mcCur = () => R.cur && (R.cur.state === 'live' || R.cur.state === 'done') ? R.cur : null;
 
 function mcBox(c){
   const B = BOTS[c.b];
   return `<div class="mc" id="mc"><div class="mc-h"><span>Match chat</span><b class="mc-new" id="mcNew" hidden></b></div>
-    <div class="mc-list" id="mcList"></div><div class="ch-typing" id="mcTyping" aria-live="polite"></div>
+    <div class="mc-list" id="mcList"></div><div class="ch-typing mc-typing" id="mcTyping" aria-live="polite"></div>
     <form class="mc-send" id="mcForm"><input id="mcIn" maxlength="200" autocomplete="off" aria-label="Match chat message" placeholder="Message ${esc(B.name)}" data-ph="Message ${esc(B.name)}"><button class="small-btn accent">Send</button></form></div>`;
 }
 function mcRender(){
   const c = mcCur(), L = $('#mcList'); if (!c || !L) return;
   const msgs = c.chat || [], last = msgs[msgs.length - 1], k = msgs.length + '|' + (last ? last.t : 0);
+  if (!L.dataset.w){ L.dataset.w = 1; L.addEventListener('scroll', () => { mcStick = L.scrollHeight - L.scrollTop - L.clientHeight < 24; mcScroll = L.scrollTop; }, {passive: true}); }
   if (L.dataset.k !== k){
-    L.dataset.k = k;
+    const fresh = !L.dataset.k, grew = !fresh && msgs.length > (+L.dataset.n || 0);
+    L.dataset.k = k; L.dataset.n = msgs.length;
     L.innerHTML = msgs.length ? msgs.map(m => `<div class="mc-msg${m.me ? ' me' : ''}"><b>${m.me ? 'You' : esc(BOTS[c.b].name)}</b> <span>${esc(m.text)}</span></div>`).join('')
       : `<p class="hint mc-empty">${c.state === 'live' ? 'Say gl hf. You can chat on breaks, while paused, and before you start.' : 'No messages this match.'}</p>`;
-    L.scrollTop = L.scrollHeight;
+    L.scrollTop = mcStick || (grew && msgs[msgs.length - 1].me) ? L.scrollHeight : mcScroll;     // stay where you were reading
   }
   const foc = focusing(), now = Date.now(), q = c.cq || [];
   const held = foc ? q.filter(x => x.t <= now).length : 0, n = $('#mcNew');
   if (n){ n.hidden = !held; n.textContent = `${held} new`; }
   const t = $('#mcTyping');
-  if (t){ const ws = foc ? [] : typingNow(q.map(x => ({...x, w: c.b}))), key = ws.join(','); if (t.dataset.k !== key){ t.dataset.k = key; t.innerHTML = typingHtml(ws); t.classList.toggle('on', !!ws.length); } }
+  if (t){
+    const ws = foc ? [] : typingNow(q.map(x => ({...x, w: c.b}))), key = ws.join(',');
+    // a redrawn card gets a new, empty row: fill it straight away without replaying the slide-in or restarting the dots
+    if (t.dataset.k !== key){ const isNew = t.dataset.k == null; t.dataset.k = key; if (isNew && key && key === mcTyKey) t.classList.add('still'); t.innerHTML = typingHtml(ws); t.classList.toggle('on', !!ws.length); }
+    mcTyKey = key;
+  }
   chatLockInput($('#mcIn'), $('#mcForm button'));
 }
 
@@ -53,12 +60,13 @@ ${task}`;
 async function mcSay(kind, delay){
   const c = mcCur(); if (!c || mcBusy) return;
   if ((c.cq || []).length && kind !== 'reply') return;              // one thing at a time
+  if (kind === 'reply' && mcBusy){ clearTimeout(mcReplyT); mcReplyT = setTimeout(() => mcSay('reply', delay), 2000); return; }
   const B = BOTS[c.b], me = myName();
   const task = {start: `The match just started. Write 1 short opening message from ${B.name} (like gl hf, a bit of banter).`,
     brk: `${me} just took a break. Write 1 short message ${B.name} sends (teasing, chatting, or about how the match is going).`,
     tap: `${B.name} is done studying for this match and stopped. Write 1 short message about it.`,
     end: `Write 1 short post-game message from ${B.name} about the result.`,
-    reply: `${me} just sent a message. Write ${B.name}'s reply: 1 or 2 short messages.`}[kind];
+    reply: `${me} just sent you something (maybe a few messages in a row). Write ${B.name}'s reply to all of it together: 1 or 2 short messages.`}[kind];
   let texts = [];
   if (GEM.key && !(GEM.wait > Date.now())){
     mcBusy = true;
@@ -74,7 +82,7 @@ async function mcSay(kind, delay){
   const cur = mcCur(); if (cur !== c) return;                      // the match changed meanwhile
   let t = Date.now() + delay;
   c.cq = c.cq || [];
-  texts.forEach(text => { c.cq.push({t: Math.round(t), text}); t += (3 + text.length * .07 + Math.random() * 3) * 1000; });
+  texts.forEach(text => { c.cq.push({t: Math.round(t), text, ...(kind === 'reply' ? {re: 1} : {})}); t += (3 + text.length * .07 + Math.random() * 3) * 1000; });
   saveRanked(); mcRender();
 }
 // the opponent's own moments: the start, your breaks (once each), when they stop, and after the result
@@ -108,6 +116,8 @@ document.addEventListener('submit', e => {
   if (e.target.id !== 'mcForm') return; e.preventDefault();
   const c = mcCur(); if (!c || focusing()) return;
   const inp = $('#mcIn'), text = inp.value.replace(/\s+/g, ' ').trim(); if (!text) return;
-  inp.value = ''; (c.chat = c.chat || []).push({t: Date.now(), me: 1, text}); saveRanked(); mcRender();
-  setTimeout(() => mcSay('reply', (2 + Math.random() * 8) * 1000), 1200);
+  inp.value = ''; (c.chat = c.chat || []).push({t: Date.now(), me: 1, text}); mcStick = true;
+  c.cq = (c.cq || []).filter(q => !q.re);         // they were about to answer your last message; now they'll answer all of them
+  saveRanked(); mcRender();
+  clearTimeout(mcReplyT); mcReplyT = setTimeout(() => mcSay('reply', (2 + Math.random() * 6) * 1000), 3500);
 });

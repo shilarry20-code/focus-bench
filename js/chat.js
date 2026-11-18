@@ -73,6 +73,19 @@ const chatName = w => w === -1 ? myName() : bot(w).name;
 const CHAT_TOPICS = ['dining hall food', 'a show they’re binging', 'music they have on repeat', 'a game they’re playing', 'sports last night', 'the weather', 'weekend plans',
   'roommate stuff', 'something funny that happened today', 'sleep schedules', 'pets back home', 'a random hot take', 'campus events', 'a meme or trend', 'going home for break',
   'coffee or boba orders', 'the gym', 'cooking disasters', 'a movie they saw', 'online shopping', 'their phone or laptop dying', 'what to eat tonight', 'a would-you-rather question', 'favorite snacks'];
+let chatWilling = [];      // [{i, mode}] players who'd send you a challenge if you ask, decided for this reply
+function chatChallengeNote(cast){
+  chatWilling = [];
+  if (typeof chAcceptP !== 'function' || !R.on || matchBusy()) return '';
+  cast.forEach(f => {
+    if (dmStudying(f.i) || pendingCh(f.i)) return;
+    if (Math.random() < chAcceptP(f.i, 'r')) chatWilling.push({i: f.i, mode: 'r'});
+    else if (Math.random() < chAcceptP(f.i, 'f')) chatWilling.push({i: f.i, mode: 'f'});
+  });
+  const me = myName();
+  if (!chatWilling.length) return `If ${me} is asking for a match or a challenge, nobody here is up for one right now: they can say so, but nobody sends one.\n`;
+  return `If ${me} is asking for a match or a challenge, these players are up for it: ${chatWilling.map(x => `${bot(x.i).name} (${x.mode === 'r' ? 'ranked' : 'friendly only'})`).join(', ')}. One or two of them can say yes, and each one who does sends ${me} a challenge: for each, add an extra item with "from": "ACTION" and "text": "<their name>: ranked" or "<their name>: friendly". Never say a challenge was sent without that item. If ${me} isn't asking to play, add no ACTION items.\n`;
+}
 function aiPrompt(online, forUser, away){
   const now = new Date(), sem = semesterOf(now), people = online.slice(0, 12);
   if (forUser){ const mine = CHATS.msgs[CHATS.msgs.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re); if (to && to.w !== -1 && !people.includes(to.w)) people.unshift(to.w); }
@@ -100,7 +113,7 @@ ${forUser ? (() => { const mine = recent[recent.length - 1], to = mine && mine.r
     return `The newest message is from ${myName()} (m${recent.length})${to && to.w !== -1 ? `, replying to ${chatName(to.w)}` : ''}. Write 1 to 4 messages: ${to && to.w !== -1 ? `${chatName(to.w)} answers ${myName()} first (replyTo "m${recent.length}"), and maybe one more player` : `one or two players answer ${myName()} (replyTo "m${recent.length}")`}; others may react or keep their own conversation going.`; })()
   : away ? `The room kept going for the last ${Math.round((Date.now() - away.from) / 60000)} minutes. Write 6 to 10 messages the room exchanged during that time, continuing the chat above: threads, replies, and whatever else people brought up.`
   : 'Write 6 to 9 new messages continuing this chat. Continue or answer threads above, or let someone change the subject to whatever is on their mind.'}
-For replyTo use the id of the message being answered: "m#" from the recent chat, or "n1", "n2"… for the new messages in your list. Leave it out when a message isn't a reply.`;
+${forUser ? chatChallengeNote(cast) : ''}For replyTo use the id of the message being answered: "m#" from the recent chat, or "n1", "n2"… for the new messages in your list. Leave it out when a message isn't a reply.`;
   return {sys, user, recent, cast, userHere};
 }
 // Tries the models in order. For each, it first asks for JSON in an exact shape; if Gemini refuses that request
@@ -191,12 +204,27 @@ function aiToBatch(list, recent, cast, noYou){
   });
   return out;
 }
+// players who said yes in the room send their challenge to your Messages, just after their chat message
+function chatSendChallenges(acts){
+  if (typeof dmQueue !== 'function' || !R.on || matchBusy()) return;
+  let n = 0;
+  acts.forEach(a => {
+    if (n >= 2) return;
+    const [nm, md] = a.split(':').map(x => x.trim()), k = normName(nm);
+    const x = chatWilling.find(c => normName(bot(c.i).name) === k) || chatWilling.find(c => k && normName(bot(c.i).name).startsWith(k));
+    if (!x || pendingCh(x.i)) return;
+    const mode = /friendly/i.test(md || '') || x.mode === 'f' ? 'f' : 'r';
+    const said = CHATS.q.filter(m => m.w === x.i).pop(), at = (said ? said.t : Date.now()) + 2500 + n * 1500;
+    dmQueue(x.i, at, [''], {ch: {mode, by: 'them'}}); n++;
+  });
+}
 async function chatGenerate(forUser, away){
   if (chatBusy || !GEM.key || GEM.wait > Date.now()) return;
   chatBusy = true;
   try {
     const {sys, user, recent, cast, userHere} = aiPrompt(chatWhoOnline(), forUser, away);
-    const got = await aiCall(sys, user), batch = aiToBatch(got, recent, cast, !userHere);
+    const raw = await aiCall(sys, user), acts = [], got = (Array.isArray(raw) ? raw : []).filter(m => { if (/^action$/i.test(String((m && m.from) || '').trim())){ acts.push(String(m.text || '')); return false; } return true; });
+    const batch = aiToBatch(got, recent, cast, !userHere);
     GEM.last = {at: Date.now(), got: Array.isArray(got) ? got.length : 0, used: batch.length, model: GEM.model};
     if (!batch.length){ GEM.last.why = cast.length ? 'Gemini sent no usable messages' : 'nobody is online right now'; saveAI(); return; }
     GEM.err = null; GEM.ok = Date.now(); saveAI();
@@ -208,6 +236,7 @@ async function chatGenerate(forUser, away){
       });
       CHATS.msgs.sort((a, b) => a.t - b.t); saveChat(); chatBadge(); renderChat();
     } else chatQueue(batch, Date.now(), forUser ? 4 : chatPageOpen() ? 5 : 10, forUser ? 14 : chatPageOpen() ? 28 : 50);
+    if (forUser && acts.length) chatSendChallenges(acts);
   } catch(e){
     GEM.last = {at: Date.now(), got: 0, used: 0, why: e.msg || (e.kind === 'offline' ? 'couldn’t reach Gemini' : e.kind)};
     GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? 'Gemini’s free limit is used up for now. The chat is quiet until it resets.' : e.kind === 'offline' ? null : 'Gemini had a problem. The chat is quiet for a bit.';

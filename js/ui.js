@@ -201,8 +201,16 @@ document.addEventListener('keydown', e => {
 });
 /* hiding the side panel (computers only; phones use the bottom bar), remembered between visits */
 function applySide(){ document.body.classList.toggle('side-hidden', !!P.sideHidden); }
+// The layout changes once; the page then slides into place with a transform (cheap), instead of the column
+// width animating, which made the browser re-lay out the whole page on every frame.
 function toggleSide(){
+  const main = document.querySelector('.main'), desk = matchMedia('(min-width:761px)').matches && !document.body.classList.contains('focus-mode');
+  const x0 = desk && main ? main.getBoundingClientRect().left : 0;
   P.sideHidden = !P.sideHidden; saveP(); applySide();
+  if (desk && main && motion() !== 'off'){
+    const dx = x0 - main.getBoundingClientRect().left;
+    if (dx) main.animate([{transform: `translateX(${dx}px)`}, {transform: 'none'}], {duration: 260, easing: 'cubic-bezier(.4,0,.2,1)'});
+  }
   const f = P.sideHidden ? $('#sideShow') : $('#sideHide'); if (f && f.getClientRects().length) f.focus({preventScroll: true});
   if (P.sideHidden && !P.sideTip){ P.sideTip = 1; saveP(); toast('Hover the left edge or press \\ to bring the panel back.'); }
 }
