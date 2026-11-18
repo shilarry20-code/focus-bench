@@ -1292,6 +1292,24 @@ function renderProfilePage(){
 }
 // calendar on a profile: week by default, month on request; click a day to see its sessions
 let pc = null;
+const pcOpen = new Set();   // expanded session groups in the profile calendar (this visit only)
+/* the selected day's sessions, with everything of the same name and activity in one group you can expand */
+function pcSessRows(ss, me, col){
+  const span = (a, b) => me ? hmRange(a.t0, b.t1) : `${hm12(a.a)}–${hm12(b.b)}`;
+  const groups = [], by = new Map();
+  ss.forEach(x => { const k = (x.subj || '') + '\u0000' + (x.task || '').trim().toLowerCase() + '\u0000' + (x.tag || ''); const g = by.get(k); if (g) g.push(x); else { const n = [x]; by.set(k, n); groups.push(n); } });
+  const em = (x, mode, live) => `<em><i class="pc-dot" style="background:${col(x.tag)}"></i>${esc(x.tag)}${mode ? ` · ${MODE_NAMES[mode] || esc(mode)}` : ''}${live ? ' · <span class="pc-live">studying now</span>' : ''}</em>`;
+  const nm = x => `<span class="nm">${x.subj ? `<b>${esc(x.subj)}</b> · ` : ''}${esc(x.task)}</span>`;
+  return groups.map((g, gi) => {
+    const x = g[0];
+    if (g.length === 1) return `<li><span class="t">${span(x, x)}</span><span class="task"><span class="exp-sp"></span>${nm(x)}${em(x, x.mode, x.live)}</span><span class="min">${fmtMin(x.min)}</span></li>`;
+    const key = `${profWho}|${pc.day}|${gi}|${x.task}`, open = pcOpen.has(key), last = g[g.length - 1];
+    const mode = g.every(y => y.mode === x.mode) ? x.mode : null, live = g.some(y => y.live);
+    let h = `<li class="grp"><span class="t">${span(x, last)}</span><span class="task"><button class="exp" data-pcx="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Hide' : 'Show'} sessions">${open ? '▾' : '▸'}</button>${nm(x)}${em(x, mode, live)}<span class="badge">${g.length} sessions</span></span><span class="min">${fmtMin(g.reduce((n, y) => n + y.min, 0))}</span></li>`;
+    if (open) g.forEach((y, n) => { h += `<li class="sub"><span class="t">${span(y, y)}</span><span class="task"><span class="nm">Session ${n + 1}</span>${y.live ? '<em><span class="pc-live">studying now</span></em>' : ''}</span><span class="min">${fmtMin(y.min)}</span></li>`; });
+    return h;
+  }).join('');
+}
 function pcReset(){ const d = new Date(); pc = {view: P.calView === 'month' ? 'month' : 'week', week: startOfWeek(d), month: new Date(d.getFullYear(), d.getMonth(), 1), day: dayKey(d)}; }
 function pcDayInfo(w, dk){
   if (w !== ME) return botDay(w, dk);
@@ -1337,7 +1355,7 @@ function renderProfileCal(){
     const rows = Object.entries(r.by).sort((a, b) => b[1] - a[1]), top = rows[0][1];
     dayH += `<p class="cal-total"><b>${fmtMin(r.min)}</b> across ${r.n} session${r.n === 1 ? '' : 's'}</p>
       <div class="tagbars">${rows.map(([t, mm]) => `<div class="tagbar" style="--c:${col(t)}"><span class="name"><i></i><b>${esc(t)}</b></span><span class="track2"><i style="width:${mm / top * 100}%"></i></span><span class="m">${fmtMin(mm)}</span></div>`).join('')}</div>
-      <ul class="sessions pc-sess">${r.sessions.map(x => `<li><span class="t">${me ? hmRange(x.t0, x.t1) : `${hm12(x.a)}–${hm12(x.b)}`}</span><span class="task"><span class="nm">${x.subj ? `<b>${esc(x.subj)}</b> · ` : ''}${esc(x.task)}</span><em><i class="pc-dot" style="background:${col(x.tag)}"></i>${esc(x.tag)}${x.mode ? ` · ${MODE_NAMES[x.mode] || esc(x.mode)}` : ''}${x.live ? ' · <span class="pc-live">studying now</span>' : ''}</em></span><span class="min">${fmtMin(x.min)}</span></li>`).join('')}</ul>`;
+      <ul class="sessions pc-sess">${pcSessRows(r.sessions, me, col)}</ul>`;
   } else dayH += `<p class="hint">${pc.day > today ? "This day hasn't happened yet." : !me && pc.day < botJoinKey(w) ? `${esc(pName(w))} hadn't started studying here yet.` : 'No study on this day.'}</p>`;
   el.innerHTML = `<div class="pc-top"><div class="h first">Calendar</div><div class="seg" role="group" aria-label="Calendar view"><button data-pc="week" aria-pressed="${week}">Week</button><button data-pc="month" aria-pressed="${!week}">Month</button></div></div>
     <div class="cal-head pc-head"><button class="small-btn" data-pc="prev" aria-label="Previous ${pc.view}">‹</button><b>${title}</b><button class="small-btn" data-pc="next" aria-label="Next ${pc.view}">›</button><button class="small-btn" data-pc="today">Today</button></div>
@@ -1379,6 +1397,7 @@ $('#botModal').addEventListener('click', e => {
 $('#botModal').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pfName'){ saveProfileEdit(); openProfile(ME); } });
 $('#page-profile').addEventListener('click', e => {
   profClick(e);
+  const px = e.target.closest('[data-pcx]'); if (px){ const k = px.dataset.pcx; pcOpen.has(k) ? pcOpen.delete(k) : pcOpen.add(k); renderProfileCal(); return; }
   const pcb = e.target.closest('[data-pc]'); if (pcb){ pcAct(pcb.dataset.pc); return; }
   const pk = e.target.closest('[data-pk]'); if (pk){ pcAct(null, pk.dataset.pk); if (pk.classList.contains('hm')) $('#pfCal').scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); return; }
   const lb = e.target.closest('[data-lb]'); if (lb){ P.lbCat = lb.dataset.lb; saveP(); lbShown = 10; lbJump = profWho === ME; showPage('leaders'); return; }

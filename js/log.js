@@ -93,26 +93,23 @@ document.addEventListener('focusout', e => { if (tipTarget(e)) hideTip(); });
 document.addEventListener('scroll', hideTip, true);
 
 /* ---------- session lists: grouping, editing, selecting and deleting ---------- */
-// Back-to-back blocks (same task and activity, next one starting within 30 minutes of the
-// previous one ending) are shown as one group you can expand. The same list component is
-// used in the Log tab and under the calendar.
-const GROUP_GAP = 30 * 60000;
+// Every block on the same day with the same task and activity is shown as one group you can expand,
+// however long the gaps between them. The same list component is used in the Log tab and under the calendar.
 const sStart = s => s.t - s.min * 60000;
-const sameWork = (a, b) => (a.task || '').trim().toLowerCase() === (b.task || '').trim().toLowerCase() && (a.tag || 'General') === (b.tag || 'General');
-function groupSessions(items){            // items: [{s, i}] oldest first
-  const groups = [];
+const workKey = s => dayKey(s.t) + '\u0000' + (s.task || '').trim().toLowerCase() + '\u0000' + (s.tag || 'General');
+function groupSessions(items){            // items: [{s, i}] oldest first; groups come back ordered by their last block
+  const groups = [], by = new Map();
   for (const it of items){
-    const g = groups[groups.length - 1], st = sStart(it.s);
-    if (g && sameWork(g.items[g.items.length - 1].s, it.s) && st - g.end <= GROUP_GAP && st >= g.start && dayKey(st) === dayKey(g.start)){
-      g.items.push(it); g.end = Math.max(g.end, it.s.t); g.min += it.s.min;
-    } else groups.push({items: [it], start: st, end: it.s.t, min: it.s.min, key: String(it.s.t)});
+    const k = workKey(it.s), st = sStart(it.s), g = by.get(k);
+    if (g){ g.items.push(it); g.start = Math.min(g.start, st); g.end = Math.max(g.end, it.s.t); g.min += it.s.min; }
+    else { const n = {items: [it], start: st, end: it.s.t, min: it.s.min, key: String(it.s.t)}; by.set(k, n); groups.push(n); }
   }
-  return groups;
+  return groups.sort((x, y) => x.end - y.end);
 }
 const hm = t => new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
 function hmRange(a, b){
   const x = hm(a), y = hm(b), sx = x.split(' '), sy = y.split(' ');
-  if (sx.length > 1 && sy.length > 1 && sx[sx.length-1] === sy[sy.length-1] && /\D/.test(sx[sx.length-1])) return sx.slice(0, -1).join(' ') + '–' + y;
+  if (dayKey(a) === dayKey(b) && sx.length > 1 && sy.length > 1 && sx[sx.length-1] === sy[sy.length-1] && /\D/.test(sx[sx.length-1])) return sx.slice(0, -1).join(' ') + '–' + y;
   return x + '–' + y;
 }
 function toLocalInput(t){ const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
@@ -135,7 +132,7 @@ function SessionList(root, opts){
   }
   function row(it, cls, label, timeTxt, extra){
     const {s, i} = it;
-    return `<li class="${cls}${st.sel.has(i) ? ' sel' : ''}" data-i="${i}">${st.select ? `<input type="checkbox" data-i="${i}" ${st.sel.has(i)?'checked':''} aria-label="Select this block">` : ''}<span class="t">${timeTxt}</span><span class="task"><span class="nm">${label}</span><em>${esc(s.tag || '')}</em></span><span class="min">${fmtMin(s.min)}</span>${st.select ? '' : `<button class="ed" data-edit="i:${i}" aria-label="Edit this session" title="Edit">${PENCIL}</button>`}</li>`;
+    return `<li class="${cls}${st.sel.has(i) ? ' sel' : ''}" data-i="${i}">${st.select ? `<input type="checkbox" data-i="${i}" ${st.sel.has(i)?'checked':''} aria-label="Select this block">` : ''}<span class="t">${timeTxt}</span><span class="task">${cls ? '' : '<span class="exp-sp"></span>'}<span class="nm">${label}</span><em>${esc(s.tag || '')}</em></span><span class="min">${fmtMin(s.min)}</span>${st.select ? '' : `<button class="ed" data-edit="i:${i}" aria-label="Edit this session" title="Edit">${PENCIL}</button>`}</li>`;
   }
   function render(){
     const items = opts.items(), groups = groupSessions(items).reverse();
