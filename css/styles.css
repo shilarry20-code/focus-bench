@@ -1253,5 +1253,15 @@ body:not(.m-off) .mq-vs .vs{animation:mqVs .5s .3s cubic-bezier(.2,1.6,.4,1) bot
 .chat-pop small{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
 body:not(.m-off) .chat-pop.in{animation:chatPopIn .35s cubic-bezier(.2,1.2,.4,1)}
 @keyframes chatPopIn{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
-@media (max-width:760px){.chat-pop{bottom:84px;right:10px;left:10px;max-width:none}.ch-list{height:56vh}}
+@media (max-width:760px){.chat-pop{bottom:84px;right:10px;left:10px;max-width:none}.ch-list{height:max(200px,calc(100dvh - 470px))}.ch-online .av{width:22px;height:22px;font-size:9px}#page-chat{padding-bottom:96px}}
 .ai-detail{margin:4px 0 8px;overflow-wrap:anywhere}.ai-detail code{font-size:12px}
+.ch-msg{position:relative}
+.ch-reply{position:absolute;top:6px;right:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:12px;padding:2px 8px;border-radius:var(--r-ctl);cursor:pointer;opacity:0;transition:opacity .12s}
+.ch-msg:hover .ch-reply,.ch-reply:focus-visible{opacity:1}
+.ch-msg:hover time{visibility:hidden}
+@media (hover:none){.ch-reply{position:static;opacity:.75;align-self:flex-start;margin-top:2px;flex:none}}
+.ch-replying{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:6px 10px;border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);border-radius:0 var(--r-ctl) var(--r-ctl) 0}
+.ch-replying[hidden]{display:none}
+.ch-replying span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-replying b{color:var(--ink)}
+.ch-x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px}
