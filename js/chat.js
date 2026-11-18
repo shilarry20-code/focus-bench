@@ -185,7 +185,7 @@ async function chatGenerate(forUser, away){
         CHATS.msgs.push({id, t, w: m.w, text: m.text, re: typeof m.re === 'number' ? (m.re >= 0 ? ids[m.re] : null) : m.re || null, ai: true});
       });
       CHATS.msgs.sort((a, b) => a.t - b.t); saveChat(); chatBadge(); renderChat();
-    } else chatQueue(batch, Date.now(), forUser ? 4 : 10, forUser ? 14 : 50);
+    } else chatQueue(batch, Date.now(), forUser ? 4 : chatPageOpen() ? 5 : 10, forUser ? 14 : chatPageOpen() ? 28 : 50);
   } catch(e){
     GEM.last = {at: Date.now(), got: 0, used: 0, why: e.msg || (e.kind === 'offline' ? 'couldn’t reach Gemini' : e.kind)};
     GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? 'Gemini’s free limit is used up for now. The chat is quiet until it resets.' : e.kind === 'offline' ? null : 'Gemini had a problem. The chat is quiet for a bit.';
@@ -215,11 +215,17 @@ function chatTick(){
   if (now - Math.max(CHATS.seen || 0, CHATS.msgs.length ? CHATS.msgs[CHATS.msgs.length - 1].t : 0) > 8 * 60000 && CHATS.seen) chatCatchUp();
   CHATS.seen = now;
   if (GEM.key && !CHATS.msgs.length && !CHATS.q.length && !chatBusy && !(GEM.wait > now)) CHATS.next = 0;
+  // while you're watching the room it keeps flowing: the next stretch starts about a minute after the last
+  // message (at most one request every 75 s); on other pages it's every 3 to 6 minutes
+  const lastT = CHATS.msgs.length ? CHATS.msgs[CHATS.msgs.length - 1].t : 0;
+  if (chatPageOpen() && GEM.key && !CHATS.q.length && !chatBusy && !(GEM.wait > now) && now - lastT > 45000 + Math.random() * 30000 && now - (chatLastReq || 0) > 75000) CHATS.next = 0;
   if (!CHATS.q.length && now >= (CHATS.next || 0)){
-    CHATS.next = now + (180 + Math.random() * 180) * 1000; saveChat();
+    CHATS.next = now + (180 + Math.random() * 180) * 1000; chatLastReq = now; saveChat();
     chatGenerate(false);
   }
+  if (chatPageOpen() && $('#chatList') && $('#chatList').children.length !== CHATS.msgs.length + ($('#chatList .ch-new') ? 1 : 0) && CHATS.msgs.length) renderChat();
 }
+let chatLastReq = 0;
 function chatCatchUp(){
   const now = Date.now(), lastMsg = CHATS.msgs.length ? CHATS.msgs[CHATS.msgs.length - 1].t : 0;
   if (lastMsg > (CHATS.seen || 0)) CHATS.seen = Math.min(now, lastMsg);    // another device kept the room going
