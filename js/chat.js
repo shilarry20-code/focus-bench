@@ -172,7 +172,7 @@ function aiPrompt(online, forUser){
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app where college students track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
 Write like a real group chat: casual, mostly lowercase, short (usually 2-16 words), varied, emoji rare. Topics: studying, classes, exams, focus tricks, breaks, ranked matches, streaks, leaderboards.
 The players mostly talk to each other: they answer each other's questions, tease rivals after a match, disagree politely, and continue threads already in the chat. Keep each player's personality (style, when they study, what they study).
-Keep it friendly and school-appropriate: no politics, no romance, no real people. Never mention GEM or that anyone is simulated. Only use player names from the list. "${myName()}" is another player in the room; only talk to them when answering one of their messages.`;
+Keep it friendly and school-appropriate: no politics, no romance, no real people. Never mention AI or that anyone is simulated. Only use player names from the list. "${myName()}" is another player in the room; only talk to them when answering one of their messages.`;
   const who = cast.map(f => `- ${f.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}${f.last ? `; just ${f.last.won ? 'beat' : 'lost to'} ${f.last.opp} in ranked (${f.last.mine} vs ${f.last.theirs} min)` : ''}`).join('\n');
   const hist = recent.map((m, k) => `[m${k + 1}] ${chatName(m.w)}: ${m.text}${m.re && tag.has(m.re) ? ` (replying to ${tag.get(m.re)})` : ''}`).join('\n') || '(the chat is quiet)';
   const user = `It's ${now.toLocaleDateString(undefined, {weekday: 'long'})} ${now.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}, week ${sem.wk + 1} of the semester${sem.exam ? `, ${sem.exam.toLowerCase()} season` : ''}.
@@ -187,29 +187,49 @@ ${forUser ? `The newest message is from ${myName()} (m${recent.length}). Write 1
 For replyTo use the id of the message being answered: "m#" from the recent chat, or "n1", "n2"… for the new messages in your list. Leave it out when a message isn't a reply.`;
   return {sys, user, recent, cast};
 }
+// Tries the models in order. For each, it first asks for JSON in an exact shape; if Gemini refuses that request
+// (some models or keys don't take a schema), it asks again more loosely and pulls the JSON out of the text.
+// GEM.detail keeps Google's own error message so Settings can show what went wrong.
 async function aiCall(sys, user){
   const models = GEM.model ? [GEM.model, ...GEMINI_MODELS.filter(m => m !== GEM.model)] : GEMINI_MODELS;
+  const schema = {type: 'OBJECT', properties: {messages: {type: 'ARRAY', items: {type: 'OBJECT',
+    properties: {from: {type: 'STRING'}, text: {type: 'STRING'}, replyTo: {type: 'STRING'}}, required: ['from', 'text']}}}, required: ['messages']};
+  const configs = [{responseMimeType: 'application/json', responseSchema: schema}, {responseMimeType: 'application/json'}, {}];
+  let last = null;
   for (const model of models){
-    let r;
-    try {
-      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {method: 'POST',
-        headers: {'Content-Type': 'application/json', 'x-goog-api-key': GEM.key},
-        body: JSON.stringify({systemInstruction: {parts: [{text: sys}]}, contents: [{role: 'user', parts: [{text: user}]}],
-          generationConfig: {temperature: 1, maxOutputTokens: 3000, responseMimeType: 'application/json',
-            responseSchema: {type: 'OBJECT', properties: {messages: {type: 'ARRAY', items: {type: 'OBJECT',
-              properties: {from: {type: 'STRING'}, text: {type: 'STRING'}, replyTo: {type: 'STRING'}}, required: ['from', 'text']}}}, required: ['messages']}}})});
-    } catch(e){ throw {kind: 'offline'}; }
-    if (r.status === 404 || (r.status === 400 && /model/i.test(await r.clone().text()))) continue;     // that model's gone: try the next
-    if (r.status === 400 || r.status === 401 || r.status === 403){ const t = await r.text(); throw {kind: /api key|API_KEY|permission/i.test(t) ? 'key' : 'other', msg: t.slice(0, 200)}; }
-    if (r.status === 429) throw {kind: 'busy'};
-    if (!r.ok) throw {kind: 'other', msg: 'HTTP ' + r.status};
-    const j = await r.json(), txt = ((j.candidates || [])[0] || {}).content;
-    const s = txt && txt.parts ? txt.parts.map(p => p.text || '').join('') : '';
-    let o; try { o = JSON.parse(s); } catch(e){ throw {kind: 'other', msg: 'unreadable reply'}; }
-    if (GEM.model !== model){ GEM.model = model; saveAI(); }
-    return o.messages || [];
+    for (const extra of configs){
+      let r, raw = '';
+      try {
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {method: 'POST',
+          headers: {'Content-Type': 'application/json', 'x-goog-api-key': GEM.key},
+          body: JSON.stringify({systemInstruction: {parts: [{text: sys}]},
+            contents: [{role: 'user', parts: [{text: user + (extra.responseSchema ? '' : '\n\nAnswer with only a JSON object: {"messages":[{"from":"…","text":"…","replyTo":"…"}]}')}]}],
+            generationConfig: {temperature: 1, maxOutputTokens: 4000, ...extra}})});
+        raw = await r.text();
+      } catch(e){ throw {kind: 'offline'}; }
+      let j = null; try { j = JSON.parse(raw); } catch(e){}
+      const em = j && j.error ? `${j.error.status || r.status}: ${j.error.message || ''}` : `HTTP ${r.status}`;
+      if (!r.ok){
+        last = `${model} · ${em}`.slice(0, 260); GEM.detail = last;
+        if (r.status === 429) throw {kind: 'busy', msg: last};
+        if (/API key|API_KEY|api_key|unauthenticated|credential/i.test(em) || r.status === 401) throw {kind: 'key', msg: last};
+        if (r.status === 404 || /not found|not supported|is not available|unsupported model/i.test(em)) break;   // next model
+        continue;                                                                  // same model, looser request
+      }
+      const cand = ((j && j.candidates) || [])[0];
+      const txt = cand && cand.content && cand.content.parts ? cand.content.parts.filter(p => !p.thought).map(p => p.text || '').join('') : '';
+      let o = null; try { o = JSON.parse(txt); } catch(e){ const m = txt.match(/\{[\s\S]*\}/); if (m) try { o = JSON.parse(m[0]); } catch(e2){} }
+      if (!o || !Array.isArray(o.messages)){
+        last = `${model} · ${cand ? 'reply ended: ' + (cand.finishReason || 'unreadable') : 'no reply' + (j && j.promptFeedback && j.promptFeedback.blockReason ? ' (' + j.promptFeedback.blockReason + ')' : '')}`;
+        GEM.detail = last; continue;
+      }
+      if (GEM.model !== model){ GEM.model = model; }
+      GEM.detail = null; saveAI();
+      return o.messages;
+    }
   }
-  throw {kind: 'other', msg: 'No Gemini model available'};
+  saveAI();
+  throw {kind: 'other', msg: last || 'No Gemini model answered'};
 }
 // turn Gemini's messages into chat messages, checking every name against the room
 function aiToBatch(list, recent, cast){
@@ -379,8 +399,9 @@ function renderChatSettings(){
   const el = $('#chatSetBody'); if (!el) return;
   el.innerHTML = `<p class="lead">The global chat runs on its own. With a free Gemini key, the players write real conversation and answer what you say; without one, the chat is scripted.</p>
     ${GEM.key ? `<div class="sync-status ${GEM.err ? 'bad' : ''}"><span class="sync-dot${GEM.err ? ' off' : ''}"></span><span><b>${GEM.err ? esc(GEM.err) : 'Gemini is on'}</b><small>${GEM.model ? `Model: ${esc(GEM.model)}` : 'Not used yet'}${GEM.ok ? ` · last used ${syncAgo(GEM.ok)}` : ''}</small></span></div>
+      ${GEM.err && GEM.detail ? `<p class="hint ai-detail">Google said: <code>${esc(GEM.detail)}</code></p>` : ''}
       <div class="confirm"><button class="small-btn" id="aiTest">Test it</button><button class="small-btn" id="aiOff">Remove key</button></div>`
-    : `<ol class="sync-steps"><li><b>Get a free key.</b> <a class="small-btn" href="${GEMINI_KEY_URL}" target="_blank" rel="noopener">Google GEM Studio ↗</a><small class="hint">Sign in with Google, click <b>Create API key</b>, and copy it. The free tier is plenty for the chat; nothing is charged.</small></li>
+    : `<ol class="sync-steps"><li><b>Get a free key.</b> <a class="small-btn" href="${GEMINI_KEY_URL}" target="_blank" rel="noopener">Google AI Studio ↗</a><small class="hint">Sign in with Google, click <b>Create API key</b>, and copy it. The free tier is plenty for the chat; nothing is charged.</small></li>
       <li><b>Paste it here.</b><span class="sync-row"><input type="password" id="aiKey" placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false" aria-label="Gemini API key"><button class="small-btn accent" id="aiSave">Save</button></span><small class="hint">It stays in this browser only. Paste it on each device you use.</small></li></ol>`}
     <div class="row"><label for="chatPopOn">Message previews<span class="sub">A small pop-up for new messages, only during breaks or with the timer stopped</span></label><input type="checkbox" id="chatPopOn" ${P.chatPop !== false ? 'checked' : ''}></div>
     <div class="confirm"><button class="small-btn" id="chatClear">Clear chat history</button></div>`;
@@ -392,7 +413,8 @@ async function aiTest(){
     GEM.err = null; GEM.wait = 0; GEM.ok = Date.now(); saveAI(); toast(`Gemini works (${GEM.model}).`); return Array.isArray(out);
   } catch(e){
     GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? 'Gemini’s free limit is used up for now.' : e.kind === 'offline' ? 'Couldn’t reach Gemini.' : 'Gemini had a problem.';
-    saveAI(); toast(GEM.err); return false;
+    if (e.msg) GEM.detail = e.msg;
+    saveAI(); toast(GEM.err + (e.msg ? ' Details are in Settings → Chat.' : '')); return false;
   } finally { renderChatSettings(); }
 }
 $('#page-settings').addEventListener('click', async e => {
@@ -402,7 +424,7 @@ $('#page-settings').addEventListener('click', async e => {
     const k = ($('#aiKey').value || '').replace(/^[\s"'`]+|[\s"'`]+$/g, '').replace(/\s+/g, '');
     if (k.length < 20){ toast('That key looks too short. Copy the whole key from Google AI Studio.'); return; }
     GEM = {key: k}; saveAI();
-    if (!(await aiTest())){ GEM = {}; saveAI(); renderChatSettings(); }
+    await aiTest();
   }
   else if (b.id === 'aiTest') aiTest();
   else if (b.id === 'aiOff'){ GEM = {}; saveAI(); renderChatSettings(); toast('Key removed. The chat is scripted now.'); }
