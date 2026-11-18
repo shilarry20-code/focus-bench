@@ -205,7 +205,7 @@ function renderGuideView(){
   requestAnimationFrame(fitGuideSide);
   const g = guideById(gView), r = mdRender(g.body), p = guideProgress(g), mins = guideMinutes(g), ex = examText(g), qs = quizSummary(g), tab = guideTab(g);
   // the title sits above two tabs: the guide itself, and its practice quizzes
-  const top = `<div class="g-bar"><button class="small-btn" data-ga="back">← All guides</button>${RETQR && RETQR.qr.gid === g.id ? '<button class="small-btn accent" data-ga="backres">← Back to results</button>' : ''}<span class="g-bar-sp"></span>
+  const top = `<div class="g-bar"><button class="small-btn" data-ga="back">← All guides</button><span class="g-bar-sp"></span>
       <button class="small-btn accent" data-ga="study">▶ Study this</button><button class="small-btn" data-ga="edit">Edit</button><button class="small-btn" data-ga="export">Export</button><button class="small-btn" data-ga="del">Delete</button></div>
     <header class="g-head g-top"><h2>${esc(g.title)}</h2><div class="g-sub">${g.cls ? `<span class="g-cls">${esc(g.cls)}</span>` : ''}${ex ? `<span class="g-ex${examSoon(g) ? ' soon' : ''}">${ex}</span>` : ''}${g.tags.map(t => `<i class="g-tag">${esc(t)}</i>`).join('')}</div></header>
     <div class="g-tabs" role="tablist" aria-label="Guide sections">
@@ -407,7 +407,6 @@ $('#page-guides').addEventListener('click', e => {
   else if (a === 'import') openImport();
   else if (a === 'sample'){ importGuides(parseGuides(SAMPLE_GUIDE), false); renderGuides(); }
   else if (a === 'back'){ gView = null; renderGuides(); }
-  else if (a === 'backres' && RETQR){ const r = RETQR; RETQR = null; QR = r.qr; gView = QR.gid; renderGuides(); window.scrollTo(0, r.y); }
   else if (a === 'edit' && g){ gEdit = {...g, tags: [...g.tags]}; renderGuides(); }
   else if (a === 'cancel'){ gEdit = null; renderGuides(); }
   else if (a === 'save') gEditorSave();

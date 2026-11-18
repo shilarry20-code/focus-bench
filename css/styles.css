@@ -1161,10 +1161,3 @@ body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
 .qh-score small{color:var(--muted);font-size:12px}
 .qh-old{min-width:64px;text-align:right}
 .qx-q.gone{opacity:.8}.qx-flag.on{cursor:default}
-/* review notes that link into the guide */
-.qz-revlink{display:inline;border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--accent) 55%,transparent);text-underline-offset:3px}
-.qz-revlink:hover{color:var(--accent);text-decoration-color:var(--accent)}
-.qz-revgo{margin-left:5px;color:var(--accent);text-decoration:none;display:inline-block}
-@keyframes gFlash{0%,35%{background:color-mix(in srgb,var(--accent) 24%,transparent)}100%{background:transparent}}
-.g-flash{animation:gFlash 2.2s ease-out;border-radius:6px}
-body.m-off .g-flash{animation:none;background:color-mix(in srgb,var(--accent) 14%,transparent)}
