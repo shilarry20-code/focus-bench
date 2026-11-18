@@ -281,6 +281,7 @@ function renderSyncPanel(){
   el.innerHTML = `<div class="sync-status ${SYNC.err && SYNC.err !== 'offline' ? 'bad' : ''}"><span class="sync-dot${syncState === 'busy' ? ' busy' : SYNC.err ? ' off' : ''}"></span><span><b>${esc(st)}</b><small>${SYNC.login ? `GitHub account: ${esc(SYNC.login)}` : 'Connecting…'}${syncDirty && !SYNC.err && syncState !== 'busy' ? ' · changes waiting to sync' : ''}</small></span></div>
     <p class="hint">Changes sync about 30 seconds after you make them, when you leave the page, and whenever you open the app.</p>
     <div class="confirm"><button class="small-btn" id="syncNowBtn" ${syncState === 'busy' ? 'disabled' : ''}>Sync now</button><button class="small-btn" id="syncQR" aria-expanded="${syncShowQR}">${syncShowQR ? 'Hide' : 'Connect another device'}</button><button class="small-btn" id="syncOff">Turn off sync</button></div>
+    <div class="sync-push"><button class="link-btn" id="syncPushSet">Use this device's settings on all devices</button><small class="hint">Style, timer, sounds and activities. Your other devices switch to them the next time they sync.</small></div>
     ${SYNC.err && SYNC.err !== 'offline' && /token/i.test(SYNC.err) ? `<p class="hint">Make a new token and paste it below. <a href="${SYNC_TOKEN_URL}" target="_blank" rel="noopener">Create a GitHub token ↗</a></p><span class="sync-row"><input type="password" id="syncTok" placeholder="ghp_…" autocomplete="off" spellcheck="false" aria-label="New GitHub token"><button class="small-btn accent" id="syncConnect">Use this token</button></span>` : ''}
     ${syncShowQR ? `<div class="sync-qr"><div class="sync-qr-img" id="syncQRImg" aria-label="QR code for connecting another device">Loading…</div>
       <div><p><b>Scan this with your phone's camera.</b> It opens Focus Bench and turns on sync there. Or open the link on any other device.</p>
@@ -314,7 +315,16 @@ async function syncConnect(){
   }
 }
 $('#page-settings').addEventListener('click', e => {
-  const b = e.target.closest('#syncConnect, #syncNowBtn, #syncQR, #syncOff, #syncCopyLink'); if (!b) return;
+  const b = e.target.closest('#syncConnect, #syncNowBtn, #syncQR, #syncOff, #syncCopyLink, #syncPushSet'); if (!b) return;
+  if (b.id === 'syncPushSet'){
+    if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Click again to send these settings to every device'; setTimeout(() => { if (b.isConnected){ delete b.dataset.sure; b.textContent = "Use this device's settings on all devices"; } }, 4000); return; }
+    // mark every setting as just changed here, so it beats every other device's copy
+    const now = Date.now(), st = SMETA.stamps.settings || (SMETA.stamps.settings = {});
+    Object.keys(P).forEach(k => { st[k] = now; if (SMETA.dead.settings) delete SMETA.dead.settings[k]; });
+    saveMeta(); syncDirty = true;
+    syncNow().then(() => toast(SYNC.err ? SYNC.err : 'Done. Your other devices switch to these settings the next time they sync (reopen the app there).'));
+    return;
+  }
   if (b.id === 'syncConnect') syncConnect();
   else if (b.id === 'syncNowBtn') syncNow(true);
   else if (b.id === 'syncQR'){ syncShowQR = !syncShowQR; renderSyncPanel(); }
