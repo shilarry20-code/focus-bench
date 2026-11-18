@@ -27,8 +27,9 @@ const botVal = (c, i) => c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f]
 const lbOrders = {};
 function lbOrder(c){
   const hit = lbOrders[c.id]; if (hit && hit.ver === botsVer && (c.f != null || hit.pts === lbPts)) return hit.order;
-  const keys = new Float64Array(ROSTER_N), SH = 262144;
-  for (let i = 0; i < ROSTER_N; i++){ const v = clampN(botVal(c, i), 0, 4e6), e = clampN(BS[i * BF], 0, 8191); keys[i] = -((v * 8192 + e) * SH) + i; }
+  // packed as value · Elo · bot number; the bot number needs 20 bits (up to 1,048,576 players), and the whole key stays under 2^53
+  const keys = new Float64Array(ROSTER_N), SH = 1048576;
+  for (let i = 0; i < ROSTER_N; i++){ const v = clampN(botVal(c, i), 0, 1e6), e = clampN(BS[i * BF], 0, 8191); keys[i] = -((v * 8192 + e) * SH) + i; }
   keys.sort();
   const order = new Int32Array(ROSTER_N); for (let k = 0; k < ROSTER_N; k++) order[k] = ((keys[k] % SH) + SH) % SH;
   lbOrders[c.id] = {ver: botsVer, pts: lbPts, order}; return order;

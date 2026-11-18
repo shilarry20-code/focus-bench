@@ -256,25 +256,63 @@ const unb64 = (s, T) => { const bin = atob(s), u = new Uint8Array(bin.length); f
 /* ---------- the shared world ----------
    Every device works out exactly the same world. It starts from a fixed state on WORLD_START, every bot's day is
    fixed by its seed, the matches between players are paired with a seeded random stream, and the clock is Eastern
-   time wherever you are. Your own matches are "events" (from your match history, which syncs): each one is applied
-   to your opponent at the moment it happened, so a device that hears about a match late goes back to the start of
-   that day (a saved checkpoint) and redoes it. So at any moment every device shows the same ratings. */
-const WORLD_V = 1, WORLD_START = new Date(2026, 10, 18).getTime();    // midnight Nov 18, 2026 (Eastern)
+   time wherever you are. Real players' matches (yours, from your match history, which syncs) sit on top of that as
+   adjustments: each match moves your opponent's shown rating and adds the sitting they studied, while the
+   simulation itself keeps using the players' own ratings. Adjustments add up the same in any order, so a match
+   heard about late lands in exactly the same place, and a daily snapshot of the world (made on GitHub) is exact. */
+const WORLD_V = 2, WORLD_START = new Date(2026, 10, 18).getTime();    // midnight Nov 18, 2026 (Eastern)
 const WORLD_FMT = new Intl.DateTimeFormat('en-US', {timeZone: 'America/New_York', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'});
 // a timestamp whose reading on this device's clock is Eastern time at t (the same as t on a device set to Eastern)
 function worldT(t){
   const p = {}; for (const x of WORLD_FMT.formatToParts(new Date(t))) p[x.type] = x.value;
   return new Date(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second).getTime() + (t % 1000);
 }
-let WAP = new Set(), M5_SKIP = 0, WIN_END = 0;     // matches already applied; on a redo, windows already shown keep their saved match lists
+let WAP = new Set(), OV_R = null, WORLD_UNTIL = 0;     // matches already applied; each player's rating adjustment from real players' matches
+const baseR = i => BS[i * BF] - OV_R[i];                 // the rating the simulation uses
+if (/[?&]snapshot\b/.test(location.search)){ const d = new Date(worldT(Date.now())); d.setHours(0, 0, 0, 0); WORLD_UNTIL = d.getTime(); }
 const evKey = h => h.t + ':' + h.b;
 function applyEvent(h){        // your match, as it changed your opponent: their rating, and the sitting they studied
   const o = h.b * BF;
-  if (!h.f && h.d) BS[o] = clampN(BS[o] - h.d, 300, 5000);
+  if (!h.f && h.d){ BS[o] -= h.d; OV_R[h.b] -= h.d; }
   const m = h.them || 0; BS[o+F.total] += m; BS[o+F.sessions]++; BS[o+F.maxSess] = Math.max(BS[o+F.maxSess], m);
   WAP.add(evKey(h));
 }
 const pendingEvents = () => (R.hist || []).filter(h => h && h.t && !WAP.has(evKey(h)) && h.b >= 0 && h.b < ROSTER_N).map(h => ({h, wt: worldT(h.t)})).filter(e => e.wt >= WORLD_START).sort((a, b) => a.wt - b.wt);
+
+/* ---- the daily snapshot: the world (bots only) at a midnight, saved on GitHub, so a new device needn't replay every day ----
+   It's each stat's change since the world's start (which every device can rebuild from the seeds), with each number's bytes
+   stored apart so it compresses well. Real players' matches aren't in it: each device adds its own on top. */
+const SNAP_BASE = (() => { const h = location.hostname, m = h.match(/^([^.]+)\.github\.io$/), repo = location.pathname.split('/')[1];
+  return m && repo ? `https://raw.githubusercontent.com/${m[1]}/${repo}/world/` : 'https://raw.githubusercontent.com/shilarry20-code/focus-bench/world/'; })();
+const gzipBuf = async (u8, de) => { const cs = de ? new DecompressionStream('gzip') : new CompressionStream('gzip'); const w = cs.writable.getWriter(); w.write(u8); w.close(); return new Uint8Array(await new Response(cs.readable).arrayBuffer()); };
+async function exportWorld(){      // used by the GitHub Action (a fresh browser, so no real players' matches are mixed in)
+  const N = ROSTER_N, init = new Int32Array(N * BF); await initBotStats(init, 0);
+  const sh = new Uint8Array(N * BF * 4);
+  for (let k = 0; k < BF; k++){ const base = k * N * 4; for (let i = 0; i < N; i++){ const v = BS[i * BF + k] - init[i * BF + k]; sh[base + i] = v & 255; sh[base + N + i] = (v >> 8) & 255; sh[base + 2 * N + i] = (v >> 16) & 255; sh[base + 3 * N + i] = (v >>> 24) & 255; } }
+  const gz = await gzipBuf(sh);
+  let bin = ''; for (let k = 0; k < gz.length; k += 0x8000) bin += String.fromCharCode.apply(null, gz.subarray(k, k + 0x8000));
+  if (new Date(R.lastSlice).getHours() !== 0) throw new Error('snapshots are taken at midnight');
+  return {meta: {v: WORLD_V, n: N, bf: BF, day: dayKey(R.lastSlice), made: Date.now()}, bin: btoa(bin)};
+}
+// the snapshot's time is its Eastern date at midnight, read on this device's clock (the world clock)
+const snapT = meta => new Date(meta.day + 'T00:00').getTime();
+async function fetchSnapshotMeta(){
+  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 5000);
+  try { const r = await fetch(SNAP_BASE + 'world.json', {cache: 'no-store', signal: ctl.signal}); if (!r.ok) return null; const m = await r.json(); return m && m.v === WORLD_V && m.n === ROSTER_N && m.bf === BF ? m : null; } catch(e){ return null; } finally { clearTimeout(tm); }
+}
+async function loadSnapshot(meta){
+  try {
+    const r = await fetch(SNAP_BASE + 'world.bin?d=' + meta.day); if (!r.ok) return false;
+    const sh = await gzipBuf(new Uint8Array(await r.arrayBuffer()), true), N = ROSTER_N;
+    if (sh.length !== N * BF * 4) return false;
+    const init = new Int32Array(N * BF); await initBotStats(init, 0);
+    BS = new Int32Array(N * BF); PREV = new Int16Array(N);
+    for (let k = 0; k < BF; k++){ const base = k * N * 4; for (let i = 0; i < N; i++) BS[i * BF + k] = init[i * BF + k] + (sh[base + i] | sh[base + N + i] << 8 | sh[base + 2 * N + i] << 16 | sh[base + 3 * N + i] << 24); }
+    for (let i = 0; i < N; i++) PREV[i] = BS[i * BF];
+    R.lastSlice = snapT(meta); R.lastSim = meta.day; WAP = new Set(); OV_R = new Int16Array(N); m5Init(null);     // your matches are added back on top
+    return true;
+  } catch(e){ console.error(e); return false; }
+}
 
 /* IndexedDB: the bots' numbers are about 13 MB, far past what localStorage holds */
 const IDB = (() => {
@@ -319,17 +357,21 @@ async function loadBots(){
     await buildRosterArrays(); botCache.clear();
     if (idbOk) IDB.set('roster', {v: ROSTER_V, n: ROSTER_N, sty: T_STY.buffer, pk: T_PK.buffer, fav: T_FAV.buffer, sit: T_SIT.buffer, pact: T_PACT.buffer, suf: T_SUF.buffer, base: T_BASE.buffer}).catch(() => {});
   }
-  if (rec && rec.n === ROSTER_N && rec.w === WORLD_V && rec.bs && rec.bs.byteLength === ROSTER_N * BF * 4){
+  const haveRec = rec && rec.n === ROSTER_N && rec.w === WORLD_V && rec.bs && rec.bs.byteLength === ROSTER_N * BF * 4;
+  const meta = await fetchSnapshotMeta();
+  if (meta && (!haveRec || snapT(meta) - rec.lastSlice > 2 * 864e5) && await loadSnapshot(meta)){ botsDirty = true; }
+  else if (rec && rec.n === ROSTER_N && rec.w === WORLD_V && rec.bs && rec.bs.byteLength === ROSTER_N * BF * 4){
     BS = new Int32Array(rec.bs); PREV = new Int16Array(rec.prev);
     R.lastSlice = rec.lastSlice; R.lastSim = rec.lastSim; WAP = new Set(rec.ap || []);
+    OV_R = rec.ov && rec.ov.byteLength === ROSTER_N * 2 ? new Int16Array(rec.ov) : new Int16Array(ROSTER_N);
     m5Init(rec.m5);
   } else {
     // the shared world, from its fixed start (the same on every device)
     BS = new Int32Array(ROSTER_N * BF); PREV = new Int16Array(ROSTER_N);
     await initBotStats(BS, 0);
     for (let i = 0; i < ROSTER_N; i++) PREV[i] = BS[i * BF];
-    R.lastSlice = WORLD_START; R.lastSim = dayKey(WORLD_START); WAP = new Set(); m5Init(null);
-    if (idbOk) IDB.set('worldcp', {w: WORLD_V, bs: BS.slice().buffer, prev: PREV.slice().buffer, lastSlice: WORLD_START, ap: []}).catch(() => {});
+    R.lastSlice = WORLD_START; R.lastSim = dayKey(WORLD_START); WAP = new Set(); OV_R = new Int16Array(ROSTER_N); m5Init(null);
+    IDB.del('worldcp').catch(() => {});
     botsDirty = true;
   }
   if (R.rv < 2){ R.hist.forEach(h => h.br = stretchR(h.br)); if (R.cur) R.cur.br = stretchR(R.cur.br); }
@@ -357,11 +399,11 @@ function saveBots(){
   clearTimeout(botsSaveT);
   botsSaveT = setTimeout(() => {
     botsDirty = false;
-    IDB.set('bots', {n: ROSTER_N, w: WORLD_V, ap: [...WAP], bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(),
+    IDB.set('bots', {n: ROSTER_N, w: WORLD_V, ap: [...WAP], ov: OV_R.buffer, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(),
       m5: m5Save()}).catch(e => { console.error(e); botsDirty = true; });
   }, 600);
 }
-addEventListener('pagehide', () => { if (botsDirty && RK_READY && idbOk){ clearTimeout(botsSaveT); botsDirty = false; IDB.set('bots', {n: ROSTER_N, w: WORLD_V, ap: [...WAP], bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(), m5: m5Save()}).catch(() => {}); } });
+addEventListener('pagehide', () => { if (botsDirty && RK_READY && idbOk){ clearTimeout(botsSaveT); botsDirty = false; IDB.set('bots', {n: ROSTER_N, w: WORLD_V, ap: [...WAP], ov: OV_R.buffer, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(), m5: m5Save()}).catch(() => {}); } });
 const botRating = i => BS[i * BF];
 
 /* bots update every 2 hours. Each bot has a plan for each day (study or not, how long), worked out
@@ -451,7 +493,7 @@ function rollover(t){
   for (let i = 0; i < ROSTER_N; i++){
     const o = i * BF;
     if (cached ? planM[i] > 0 : dayPlan(i, yk, PLAN).active){ BS[o+F.days]++; BS[o+F.cur]++; if (BS[o+F.cur] > BS[o+F.best]) BS[o+F.best] = BS[o+F.cur]; } else BS[o+F.cur] = 0;
-    PREV[i] = BS[o]; BS[o+F.today] = 0;
+    PREV[i] = baseR(i); BS[o+F.today] = 0;
     if (sun) BS[o+F.week] = 0;
     if (first) BS[o+F.month] = 0;
   }
@@ -459,7 +501,7 @@ function rollover(t){
 }
 function addStudy(i, add, longest){
   const o = i * BF, before = BS[o+F.today]; add = Math.min(add, DAY_MAX - before); if (add <= 0) return;
-  const today = before + add, bl = blockLenI(i, BS[o]);
+  const today = before + add, bl = blockLenI(i, baseR(i));
   BS[o+F.today] = today; BS[o+F.total] += add; BS[o+F.week] += add; BS[o+F.month] += add;
   BS[o+F.sessions] += Math.max(0, Math.round(today / bl) - Math.round(before / bl)) || (before === 0 ? 1 : 0);
   if (today > BS[o+F.maxDay]) BS[o+F.maxDay] = today;
@@ -525,8 +567,8 @@ function windowMatches(w0, dk){      // sittings that ended during the window st
   if (!CAND){ CAND = new Int32Array(ROSTER_N); CSIT = new Int32Array(ROSTER_N); }
   let n = 0;
   for (let i = 0; i < ROSTER_N; i++){ if (!planM[i]) continue; const k = sitEndingIn(i, w0, w0 + 120); if (k >= 0){ CAND[n] = i; CSIT[i] = k; n++; } }
-  const cand = Array.from(CAND.subarray(0, n)).sort((x, y) => BS[y * BF] - BS[x * BF]);
-  const candR = cand.map(i => BS[i * BF]), rOfK = q => candR[q], ks = Array.from({length: n}, (_, q) => q);
+  const cand = Array.from(CAND.subarray(0, n)).sort((x, y) => baseR(y) - baseR(x) || x - y);
+  const candR = cand.map(i => baseR(i)), rOfK = q => candR[q], ks = Array.from({length: n}, (_, q) => q);
   const used = new Uint8Array(n), rnd = mulberry32(ROSTER_SEED ^ (dayIdx(dk) * 1440 + w0) * 2246822519);
   for (const k of shuffledIdx(n, rnd)){
     if (used[k]) continue;
@@ -537,13 +579,12 @@ function windowMatches(w0, dk){      // sittings that ended during the window st
     if (j < 0) continue;
     used[k] = used[j] = 1;
     const a = cand[k], c = cand[j], sa_ = CSIT[a], sc_ = CSIT[c];
-    const ma = SCH_B[sa_] - SCH_A[sa_], mc = SCH_B[sc_] - SCH_A[sc_], ra = BS[a * BF], rc = BS[c * BF];
+    const ma = SCH_B[sa_] - SCH_A[sa_], mc = SCH_B[sc_] - SCH_A[sc_], ra = baseR(a), rc = baseR(c);
     const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = ma > mc ? 1 : ma < mc ? 0 : .5, dlt = Math.round(BOT_K * (sa - ea));
-    BS[a * BF] = clampN(ra + dlt, 300, 5000); BS[c * BF] = clampN(rc - dlt, 300, 5000);
-    if (WIN_END > M5_SKIP){
-      m5Put(a, c, tCode(dk, SCH_B[sa_]), ma, mc, BS[a * BF] - ra, BS[a * BF], rc);
-      m5Put(c, a, tCode(dk, SCH_B[sc_]), mc, ma, BS[c * BF] - rc, BS[c * BF], ra);
-    }
+    const na = clampN(ra + dlt, 300, 5000), nc = clampN(rc - dlt, 300, 5000);
+    BS[a * BF] = na + OV_R[a]; BS[c * BF] = nc + OV_R[c];
+    m5Put(a, c, tCode(dk, SCH_B[sa_]), ma, mc, na - ra, BS[a * BF], rc + OV_R[c]);
+    m5Put(c, a, tCode(dk, SCH_B[sc_]), mc, ma, nc - rc, BS[c * BF], ra + OV_R[a]);
   }
   botsChanged();
 }
@@ -588,7 +629,7 @@ function m5Backfill(i){
 }
 // one window [t, t + 2h): everyone's study minutes from their real session times, then that window's matches
 function runWindow(t, addMinutes){
-  const dk = dayKey(t), w0 = new Date(t).getHours() * 60; WIN_END = t + SLICE;
+  const dk = dayKey(t), w0 = new Date(t).getHours() * 60;
   plansFor(dk);
   if (addMinutes) for (let i = 0; i < ROSTER_N; i++){ if (!planM[i]) continue; const m = windowMin(i, w0, w0 + 120); if (m > 0) addStudy(i, m, planL[i]); }
   windowMatches(w0, dk);
@@ -601,38 +642,23 @@ function runSlice(t, addMinutes = true){
 // runs one update (or one whole missed day) at a time, letting the page breathe in between;
 // resolves to true if anything changed
 let simBusy = null;
-// the state at the start of the current world day, so a match heard about late can be redone in order
-const saveCheckpoint = cp => { if (idbOk) IDB.set('worldcp', cp).catch(() => {}); };
 function dailySim(){
   if (!RK_READY) return Promise.resolve(false);
   if (simBusy) return simBusy;
   let res; const prom = simBusy = new Promise(r => res = r);
   (async () => {
-    const now = sliceStartOf(worldT(Date.now()));
+    let now = sliceStartOf(worldT(Date.now()));
+    if (WORLD_UNTIL) now = Math.min(now, WORLD_UNTIL);
     if (!R.lastSlice || R.lastSlice < WORLD_START) R.lastSlice = WORLD_START;
-    let evs = pendingEvents(), changed = false;
-    // a match from before our last update (heard about late, e.g. from your other device): redo from the day's start
-    if (evs.length && evs[0].wt < R.lastSlice){
-      let cp = null; try { cp = await IDB.get('worldcp'); } catch(e){}
-      if (cp && cp.w === WORLD_V && cp.bs && cp.bs.byteLength === BS.byteLength && cp.lastSlice <= evs[0].wt){
-        M5_SKIP = R.lastSlice;
-        BS.set(new Int32Array(cp.bs)); PREV.set(new Int16Array(cp.prev)); R.lastSlice = cp.lastSlice; WAP = new Set(cp.ap || []); planDay = null;
-        evs = pendingEvents(); changed = true;
-      }
-    }
-    let cp = null;
+    let changed = false;
     for (let t = R.lastSlice + SLICE; t <= now; t += SLICE){
-      while (evs.length && evs[0].wt < t){ applyEvent(evs.shift().h); changed = true; }
       runSlice(t); R.lastSlice = t; changed = true;
-      if (new Date(t).getHours() === 0) cp = {w: WORLD_V, bs: BS.slice().buffer, prev: PREV.slice().buffer, lastSlice: t, ap: [...WAP]};
       await new Promise(r => setTimeout(r, 15));          // let the page breathe between updates
     }
-    while (evs.length){ applyEvent(evs.shift().h); changed = true; }     // matches during the current 2 hours
-    M5_SKIP = 0;
-    if (cp) saveCheckpoint(cp);
+    for (const e of pendingEvents()){ applyEvent(e.h); changed = true; }     // real players' matches, in any order
     if (changed){ R.lastSim = dayKey(R.lastSlice); lbPts = null; botsChanged(); markBots(); updateParagon(); saveRanked(true); }
     return changed;
-  })().then(ch => { simBusy = null; res(ch); }, e => { console.error(e); M5_SKIP = 0; simBusy = null; res(false); });
+  })().then(ch => { simBusy = null; res(ch); }, e => { console.error(e); simBusy = null; res(false); });
   return prom;
 }
 /* sorted by rating (counting sort: ratings are whole numbers from 0 to 5,000), ties by bot number */
@@ -1036,7 +1062,9 @@ function renderMatch(fresh){
     if (typeof mcRender === 'function') mcRender();
     return;
   }
-  slot.dataset.key = key;
+  const doneKey = !live ? `done|${c.t0}|${c.res}|${c.promo}|${R.mmr}` : '';
+  if (!fresh && !live && slot.dataset.key === doneKey && slot.querySelector('.m-result')){ if (typeof mcRender === 'function') mcRender(); return; }
+  slot.dataset.key = live ? key : doneKey;
   const mcVal = $('#mcIn') ? $('#mcIn').value : '', mcFoc = !!(document.activeElement && document.activeElement.id === 'mcIn');
   slot.innerHTML = `<div class="card match${fresh ? ' found' : ''}${live ? '' : ' over'}">
     <div class="m-head"><span class="h first">${c.friendly ? 'Friendly match' : c.pl ? `Placement match ${c.pl} of 5` : 'Ranked match'}</span>${live ? '<span class="live-dot">Live</span>' : ''}</div>
@@ -1097,7 +1125,7 @@ function renderRanked(){
   // ladder: 10 above and 10 below you
   const order = sortedBots(); let pos = order.findIndex(i => botRating(i) < R.mmr); if (pos < 0) pos = order.length;
   const from = Math.max(0, pos - 10), to = Math.min(order.length, pos + 10), nem = nemesis();
-  const row = (i, place) => { const B = BOTS[i], r = botRating(i), para = R.para.h === i, mv = r - PREV[i], rec = R.rec[i], feat = botFeatured(i)[0];
+  const row = (i, place) => { const B = BOTS[i], r = botRating(i), para = R.para.h === i, mv = r - OV_R[i] - PREV[i], rec = R.rec[i], feat = botFeatured(i)[0];
     return `<li data-bot="${i}"${para ? ' class="para-row"' : ''}><span class="pl">#${place.toLocaleString()}</span><span class="mv ${mv > 0 ? 'up' : mv < 0 ? 'dn' : ''}">${mv > 0 ? '▲' : mv < 0 ? '▼' : ''}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)}</b><small>${B.style}${rec ? ` · ${i === nem ? 'nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'rival' : 'played'} ${rec[0]}–${rec[1]}` : ''}</small></span>${feat ? badgeHtml(feat) : '<span></span>'}${emblem(rkOf(i), 'xs')}<span class="rt">${r.toLocaleString()}</span></li>`; };
   let lad = '';
   for (let k = from; k < pos; k++) lad += row(order[k], k + 1);
