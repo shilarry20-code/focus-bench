@@ -1207,3 +1207,8 @@ body:not(.m-off) .mq-vs .vs{animation:mqVs .5s .3s cubic-bezier(.2,1.6,.4,1) bot
 @keyframes mqVs{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
 .rk-find{margin-left:auto;align-self:center}
 .sync-push{margin-top:10px;display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+.sync-cmp{margin-top:10px}
+.sync-cmp summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.sync-cmp table{border-collapse:collapse;margin-top:6px;font-size:13px}
+.sync-cmp th{text-align:left;font-weight:500;color:var(--muted);padding:3px 14px 3px 0}
+.sync-cmp td{padding:3px 14px 3px 0;font-variant-numeric:tabular-nums}

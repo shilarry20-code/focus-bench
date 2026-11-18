@@ -16,7 +16,8 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180;
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 18 · 4';
+let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
 let SMETA = store.get('fb.syncMeta', {stamps: {}, dead: {}});
@@ -221,6 +222,7 @@ async function syncNow(manual){
       try { remote = await readGist(); } catch(e){ if (e.kind !== 'missing') throw e; SYNC.gist = null; }
     }
     syncDirty = false;
+    if (remote) syncRemoteSum = syncSummary(remote.data);
     if (!SYNC.gist){ SYNC.gist = await createGist(local); }
     else {
       const merged = remote ? mergePayload(local, remote) : local;
@@ -229,6 +231,7 @@ async function syncNow(manual){
       if (!same) await writeGist(merged);
     }
     SYNC.last = Date.now(); SYNC.err = null; syncState = '';
+    syncRemoteSum = syncSummary(buildPayload().data);
     if (SYNC.fromLink){ delete SYNC.fromLink; toast(`Sync is on. Connected as ${SYNC.login}.`); }
     else if (manual) toast(pulled ? 'Synced. Brought in changes from your other devices.' : 'Synced.');
   } catch(e){
@@ -258,6 +261,19 @@ addEventListener('online', () => { if (SYNC.token && syncDirty) syncNow(); });
 setInterval(() => { if (SYNC.token && !document.hidden && (!SYNC.last || Date.now() - SYNC.last > 10 * 60000)) syncNow(); }, 60000);
 
 /* ---- the Sync panel in Settings ---- */
+// a short side-by-side of this device and the synced copy, so it's easy to see whether they match
+function syncSummary(d){
+  const r = d.ranked || {}, st = d.settings || {};
+  return {sessions: Object.keys(d.log || {}).length, guides: Object.keys(d.guides || {}).length, played: r.played || 0, mmr: r.mmr || 1000, theme: (THEMES[st.theme] || {}).name || st.theme || 'Match device', accent: st.accent || 'cobalt'};
+}
+function syncCompare(){
+  const a = syncSummary(buildPayload().data), b = syncRemoteSum;
+  const row = (label, f) => `<tr><th>${label}</th><td>${esc(String(f(a)))}</td><td>${b ? esc(String(f(b))) : '–'}</td></tr>`;
+  return `<details class="sync-cmp"><summary>Compare this device with the synced copy</summary><table>
+    <tr><th></th><td><b>This device</b></td><td><b>Synced copy</b></td></tr>
+    ${row('Sessions', x => x.sessions)}${row('Study guides', x => x.guides)}${row('Ranked matches', x => x.played)}${row('Rating', x => x.mmr.toLocaleString() + ' Elo')}${row('Theme', x => x.theme)}${row('Accent', x => x.accent)}
+  </table><p class="hint">App version ${SYNC_VER}. If this says an older version than your other device, close the tab and reopen the site.</p></details>`;
+}
 let syncShowQR = false;
 function syncAgo(t){
   if (!t) return 'not yet';
@@ -281,6 +297,7 @@ function renderSyncPanel(){
   el.innerHTML = `<div class="sync-status ${SYNC.err && SYNC.err !== 'offline' ? 'bad' : ''}"><span class="sync-dot${syncState === 'busy' ? ' busy' : SYNC.err ? ' off' : ''}"></span><span><b>${esc(st)}</b><small>${SYNC.login ? `GitHub account: ${esc(SYNC.login)}` : 'Connecting…'}${syncDirty && !SYNC.err && syncState !== 'busy' ? ' · changes waiting to sync' : ''}</small></span></div>
     <p class="hint">Changes sync about 30 seconds after you make them, when you leave the page, and whenever you open the app.</p>
     <div class="confirm"><button class="small-btn" id="syncNowBtn" ${syncState === 'busy' ? 'disabled' : ''}>Sync now</button><button class="small-btn" id="syncQR" aria-expanded="${syncShowQR}">${syncShowQR ? 'Hide' : 'Connect another device'}</button><button class="small-btn" id="syncOff">Turn off sync</button></div>
+    ${syncCompare()}
     <div class="sync-push"><button class="link-btn" id="syncPushSet">Use this device's settings on all devices</button><small class="hint">Style, timer, sounds and activities. Your other devices switch to them the next time they sync.</small></div>
     ${SYNC.err && SYNC.err !== 'offline' && /token/i.test(SYNC.err) ? `<p class="hint">Make a new token and paste it below. <a href="${SYNC_TOKEN_URL}" target="_blank" rel="noopener">Create a GitHub token ↗</a></p><span class="sync-row"><input type="password" id="syncTok" placeholder="ghp_…" autocomplete="off" spellcheck="false" aria-label="New GitHub token"><button class="small-btn accent" id="syncConnect">Use this token</button></span>` : ''}
     ${syncShowQR ? `<div class="sync-qr"><div class="sync-qr-img" id="syncQRImg" aria-label="QR code for connecting another device">Loading…</div>
