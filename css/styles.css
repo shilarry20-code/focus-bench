@@ -1394,3 +1394,17 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .dm-msg:hover .dm-del,.dm-del:focus-visible,.dm-del.sure{opacity:1}
 @media (hover:none){.dm-del{opacity:.6}}
 .m-foot-btns{display:flex;gap:6px}
+/* match chat */
+.mc{border:1px solid var(--line);border-radius:var(--r-ctl);padding:8px 10px;margin:8px 0;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.mc-h{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.mc-new{background:var(--accent);color:var(--on-accent);font-size:10px;padding:1px 7px;border-radius:9px;letter-spacing:0;text-transform:none}
+.mc-new[hidden]{display:none}
+.mc-list{max-height:132px;min-height:40px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;font-size:13px;line-height:1.35}
+.mc-msg b{font-weight:700;color:var(--accent)}
+.mc-msg.me b{color:var(--muted)}
+.mc-msg span{overflow-wrap:anywhere}
+.mc-empty{margin:4px 0;font-size:12px}
+.mc-send{display:flex;gap:6px}
+.mc-send input{flex:1;min-width:0;padding:6px 10px;font-size:13px}
+.mc-send input:disabled{opacity:.7;cursor:not-allowed}
+.mc .ch-typing.on{height:22px}

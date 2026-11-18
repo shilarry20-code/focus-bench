@@ -1005,10 +1005,11 @@ function renderMatch(fresh){
     const bars = slot.querySelectorAll('.m-bar');
     bars[0].querySelector('i').style.width = `${c.you / max * 100}%`; bars[0].querySelector('b').textContent = mm(c.you);
     bars[1].querySelector('i').style.width = `${(c.tapped ? c.target : c.them) / max * 100}%`;
-    const chat = `${B.name}: ${botLine}`; if (slot.querySelector('.m-chat').textContent !== chat) slot.querySelector('.m-chat').textContent = chat;
+    if (typeof mcRender === 'function') mcRender();
     return;
   }
   slot.dataset.key = key;
+  const mcVal = $('#mcIn') ? $('#mcIn').value : '', mcFoc = !!(document.activeElement && document.activeElement.id === 'mcIn');
   slot.innerHTML = `<div class="card match${fresh ? ' found' : ''}${live ? '' : ' over'}">
     <div class="m-head"><span class="h first">${c.friendly ? 'Friendly match' : c.pl ? `Placement match ${c.pl} of 5` : 'Ranked match'}</span>${live ? '<span class="live-dot">Live</span>' : ''}</div>
     <div class="m-players">
@@ -1020,9 +1021,10 @@ function renderMatch(fresh){
       <div class="m-bar"><span>You</span><span class="trk"><i style="width:${c.you / max * 100}%"></i></span><b>${mm(c.you)}</b></div>
       <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.tapped ? mm(c.target) : waiting ? 'ready' : live ? 'going…' : '?'}</b></div>
     </div>
-    ${live ? `<p class="m-chat">${esc(B.name)}: ${esc(botLine)}</p><p class="m-status">${status}</p>
-    <div class="m-foot"><span class="stakes">${c.friendly ? 'Friendly · no Elo change' : `Win <b class="pos">+${s.win}</b> · Draw <b>${s.draw > 0 ? '+' : s.draw < 0 ? '−' : ''}${Math.abs(s.draw)}</b> · Loss <b class="neg">−${s.loss}</b>`}</span><span class="m-foot-btns"><button class="small-btn" data-dm="${c.b}">Message</button><button class="small-btn" data-act="m-end">End match</button></span></div>` : result}
+    ${live ? `${typeof mcBox === 'function' ? mcBox(c) : `<p class="m-chat">${esc(B.name)}: ${esc(botLine)}</p>`}<p class="m-status">${status}</p>
+    <div class="m-foot"><span class="stakes">${c.friendly ? 'Friendly · no Elo change' : `Win <b class="pos">+${s.win}</b> · Draw <b>${s.draw > 0 ? '+' : s.draw < 0 ? '−' : ''}${Math.abs(s.draw)}</b> · Loss <b class="neg">−${s.loss}</b>`}</span><span class="m-foot-btns"><button class="small-btn" data-dm="${c.b}">Message</button><button class="small-btn" data-act="m-end">End match</button></span></div>` : result + (typeof mcBox === 'function' ? mcBox(c) : '')}
   </div>`;
+  if (typeof mcRender === 'function'){ const inp = $('#mcIn'); if (inp){ inp.value = mcVal; if (mcFoc) inp.focus(); } mcRender(); }
 }
 $('#page-ranked').addEventListener('click', e => {
   if (!e.target.closest('[data-rkfind]')) return;
