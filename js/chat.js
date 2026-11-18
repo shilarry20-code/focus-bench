@@ -381,7 +381,7 @@ function renderChatSettings(){
     ${GEM.key ? `<div class="sync-status ${GEM.err ? 'bad' : ''}"><span class="sync-dot${GEM.err ? ' off' : ''}"></span><span><b>${GEM.err ? esc(GEM.err) : 'Gemini is on'}</b><small>${GEM.model ? `Model: ${esc(GEM.model)}` : 'Not used yet'}${GEM.ok ? ` · last used ${syncAgo(GEM.ok)}` : ''}</small></span></div>
       <div class="confirm"><button class="small-btn" id="aiTest">Test it</button><button class="small-btn" id="aiOff">Remove key</button></div>`
     : `<ol class="sync-steps"><li><b>Get a free key.</b> <a class="small-btn" href="${GEMINI_KEY_URL}" target="_blank" rel="noopener">Google GEM Studio ↗</a><small class="hint">Sign in with Google, click <b>Create API key</b>, and copy it. The free tier is plenty for the chat; nothing is charged.</small></li>
-      <li><b>Paste it here.</b><span class="sync-row"><input type="password" id="aiKey" placeholder="AIza…" autocomplete="off" spellcheck="false" aria-label="Gemini API key"><button class="small-btn accent" id="aiSave">Save</button></span><small class="hint">It stays in this browser only. Paste it on each device you use.</small></li></ol>`}
+      <li><b>Paste it here.</b><span class="sync-row"><input type="password" id="aiKey" placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false" aria-label="Gemini API key"><button class="small-btn accent" id="aiSave">Save</button></span><small class="hint">It stays in this browser only. Paste it on each device you use.</small></li></ol>`}
     <div class="row"><label for="chatPopOn">Message previews<span class="sub">A small pop-up for new messages, only during breaks or with the timer stopped</span></label><input type="checkbox" id="chatPopOn" ${P.chatPop !== false ? 'checked' : ''}></div>
     <div class="confirm"><button class="small-btn" id="chatClear">Clear chat history</button></div>`;
 }
@@ -398,8 +398,9 @@ async function aiTest(){
 $('#page-settings').addEventListener('click', async e => {
   const b = e.target.closest('#aiSave, #aiTest, #aiOff, #chatClear'); if (!b) return;
   if (b.id === 'aiSave'){
-    const k = ($('#aiKey').value || '').trim();
-    if (!/^AIza[0-9A-Za-z_\-]{30,}$/.test(k)){ toast('That doesn’t look like a Gemini key. It should start with AIza.'); return; }
+    // any key format Google issues is fine: the test call below is what decides whether it works
+    const k = ($('#aiKey').value || '').replace(/^[\s"'`]+|[\s"'`]+$/g, '').replace(/\s+/g, '');
+    if (k.length < 20){ toast('That key looks too short. Copy the whole key from Google AI Studio.'); return; }
     GEM = {key: k}; saveAI();
     if (!(await aiTest())){ GEM = {}; saveAI(); renderChatSettings(); }
   }
