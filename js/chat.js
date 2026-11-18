@@ -239,9 +239,9 @@ function chatMsgHtml(m, byId){
   return `<div class="ch-msg${me ? ' mine' : ''}" data-id="${m.id}">
     <button class="ch-av" ${me ? 'data-me="1"' : `data-bot="${m.w}"`} aria-label="${esc(chatName(m.w))}'s profile">${me ? myAvatar() : avatar(B)}</button>
     <div class="ch-body"><div class="ch-head"><button class="ch-name" ${me ? 'data-me="1"' : `data-bot="${m.w}"`}>${esc(chatName(m.w))}</button>${emblem(rk, 'xs')}<span class="ch-rk">${esc(rk.full)}</span>${feat ? badgeHtml(feat) : ''}<time>${chatTime(m.t)}</time></div>
-    ${r ? `<div class="ch-re">↪ <b>${esc(chatName(r.w))}</b> ${esc(r.text.length > 70 ? r.text.slice(0, 70) + '…' : r.text)}</div>` : ''}
+    ${r ? `<div class="ch-re"><b>${esc(chatName(r.w))}</b> ${esc(r.text.length > 70 ? r.text.slice(0, 70) + '…' : r.text)}</div>` : ''}
     <p>${esc(m.text)}</p></div>
-    <button class="ch-reply" data-reply="${m.id}" aria-label="Reply to ${esc(chatName(m.w))}">↩ Reply</button></div>`;
+    <button class="ch-reply" data-reply="${m.id}" aria-label="Reply to ${esc(chatName(m.w))}">Reply</button></div>`;
 }
 function renderChat(){
   const el = $('#chatBody'); if (!el || $('#page-chat').hidden) return;
@@ -261,7 +261,7 @@ function renderChat(){
   $('.ch-top small').innerHTML = `<i class="ch-on"></i>${online.length} online`;
   $('#chatList').innerHTML = rows || (GEM.key ? '<p class="hint ch-empty">It’s quiet. Say hi, or give the regulars a minute.</p>'
     : '<p class="hint ch-empty">The chat is written by Gemini. Add a free key in <button class="link-btn" data-go="settings" data-sec="set-chat">Settings → Chat</button> to bring the room to life.</p>');
-  $('#chatHint').innerHTML = GEM.key ? (GEM.err ? esc(GEM.err) : 'Tap a message to reply to it.') : '';
+  $('#chatHint').innerHTML = GEM.key ? (GEM.err ? esc(GEM.err) : '') : '';
   if (chatReplyTo){ const el = document.querySelector(`.ch-msg[data-id="${chatReplyTo}"]`); if (el) el.classList.add('picked'); }
   const L = $('#chatList'); if (nearBottom) L.scrollTop = L.scrollHeight;
 }
