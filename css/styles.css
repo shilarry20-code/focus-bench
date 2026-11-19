@@ -1399,7 +1399,7 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .mc-h{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .mc-new{background:var(--accent);color:var(--on-accent);font-size:10px;padding:1px 7px;border-radius:9px;letter-spacing:0;text-transform:none}
 .mc-new[hidden]{display:none}
-.mc-list{max-height:132px;min-height:40px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;font-size:13px;line-height:1.35}
+.mc-list{max-height:min(320px,45vh);min-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;font-size:13px;line-height:1.35}
 .mc-msg b{font-weight:700;color:var(--accent)}
 .mc-msg.me b{color:var(--muted)}
 .mc-msg span{overflow-wrap:anywhere}
@@ -1457,3 +1457,5 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .ke-x{width:18px;display:inline-block}
 .ke-note{min-height:1.2em;margin:6px 0 10px}
 .ai-usage{margin:10px 0}.ai-u-row{display:flex;align-items:center;gap:10px;font-size:13px;margin:4px 0}.ai-u-row>span:first-child{min-width:170px}.ai-u-row .bar2{flex:1;max-width:220px}.ai-u-row b{font-variant-numeric:tabular-nums;min-width:70px;text-align:right}
+.mc{padding:10px 12px}.mc-list{font-size:14px;gap:5px}.mc-send input{padding:8px 12px;font-size:14px}
+@media (max-width:760px){.mc-list{max-height:40vh;min-height:130px}}
