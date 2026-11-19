@@ -45,8 +45,8 @@ function mcPrompt(c, task){
     : !c.you ? `${me} hasn't started studying yet.` : focusing() ? `${me} is focusing right now.` : S.running ? `${me} is on a break.` : `${me} has paused their timer.`;
   const sys = `You write in-match chat messages from ${B.name} to ${me}. They're playing a live match on Focus Bench, a study-timer app for college students: both study at the same time and whoever studies longer wins.
 Write like quick game chat: short, casual, lowercase is fine, friendly trash talk is fine. Keep ${B.name}'s personality. Don't lecture about studying.
-Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Every message is from ${B.name}.`;
-  const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.subj}, ${f.style.toLowerCase()} studier. ${me}: ${rankOf(c.mmr0).full} (${c.mmr0} Elo).
+Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message, used the way real people text (reactions, tone), not decoration on every line. Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Every message is from ${B.name}.`;
+  const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.subj}, ${f.style.toLowerCase()} studier, emojis: ${emojiStyle(c.b)}. ${me}: ${rankOf(c.mmr0).full} (${c.mmr0} Elo).
 Match: ${c.friendly ? 'friendly (no Elo at stake)' : `ranked (${me} gains ${s.win} Elo for a win, loses ${s.loss} for a loss)`}. Their record before this: ${r ? `${r[0]}–${r[1]}${r[2] ? '–' + r[2] : ''} (${me}'s wins–losses)` : 'first time playing'}.
 So far ${me} has studied ${youMin} min and ${B.name} ${themMin} min${c.tapped && c.state === 'live' ? `, and ${B.name} has stopped for good` : ''}. ${state}
 
