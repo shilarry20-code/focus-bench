@@ -3,7 +3,7 @@
    something big starts the next one. A dot on the panel button (and on More on phones) shows until you've opened
    the page, and after a change ships you get a one-time note. Whether you've seen it is kept per device. */
 const UPDATES = [
-  {n: 3, name: 'Living Campus', when: 'Nov 19', secs: [
+  {n: 6, key: 3, name: 'Living Campus', when: 'Nov 19', secs: [
     ['Players', ['Every player has a major and a real class schedule that changes each semester', 'New usernames for everyone, modeled on real platforms, so names don’t keep repeating', 'Night owls study past midnight, and schedules vary from day to day']],
     ['Studying now', ['A live count of who’s studying, today’s busiest hours and trending classes, on the Ranked page and in the side panel', 'Live feed with For you, Top matches (top 1,000 players) and Everyone tabs']],
     ['Watching matches', ['Watch live top matches from the Top matches tab', 'Study along with them (normal focus time, no Elo)', 'Chat with the other spectators on your breaks']],
@@ -11,14 +11,14 @@ const UPDATES = [
     ['Messages', ['Message someone who’s offline and they’ll answer once they’re back online', 'In global chat, a different number of people answer you each time']],
     ['What’s new', ['This page, with a dot in the panel when there’s something new']]],
     fixes: ['Profile page zoomed out on phones', 'The feed said someone started studying while their profile showed Offline', 'Top matches showed one ± number instead of each side’s Elo change', 'Stars drawn in the wrong place on one profile picture', 'People chatting in a watch room sometimes showed as Offline']},
-  {n: 2, name: 'Shared World', when: 'Nov 18–19', secs: [
+  {n: 5, name: 'Shared World', when: 'Nov 18', secs: [
     ['The world', ['682,925 players, the same on every device', 'A daily world save so new devices load quickly']],
     ['Chat', ['People talk about real shows, music and games, with rotating topics and no repeats', 'Several of your messages in a row get one answer', 'Replies actually match the message they answer', 'Emotion emojis only, and no “speaking of…” lead-ins', 'Online players answer DMs within seconds; players who are studying take a few minutes']],
     ['Matches', ['Faster matchmaking', 'A bigger match chat you can scroll back through', 'DMs and match chat stay quiet during your focus blocks', 'Your opponent stays online for a while after a match']],
     ['Studying', ['Weak-spot quizzes built from your flagged and missed questions', 'Reset is now Log: it saves the time you’ve focused, then resets', 'Customizable keyboard shortcuts']],
     ['Gemini', ['Uses 3.5 Flash-Lite, then 3.1 Flash-Lite when it runs out', 'A requests-today counter in Settings']]],
     fixes: ['Leaderboards were scrambled', 'The side panel was laggy to open', 'Match chat showed “1 new” during a focus block', 'Your opponent messaged you or posted in global chat during a match', 'The Reset button didn’t save your time', 'DMs jumped up when you sent a message', 'The chat icon’s dots were off center']},
-  {n: 1, name: 'Study Together', when: 'Nov 17–18', secs: [
+  {n: 4, name: 'Study Together', when: 'Nov 17', secs: [
     ['Quizzes', ['Practice quizzes inside study guides, with Guide and Practice quizzes tabs', 'A quiz editor and question banks', 'A quiz page with every question at once, flags and a mistake bank', 'Mixed tests from several quizzes, and your average score per quiz', 'Quiz history with review notes', 'Better instructions for making quizzes with AI']],
     ['Study guides and flashcards', ['Flashcard study mode: pick a section to study', 'A compact flashcards box', 'Archive study guides', 'Back-to-top buttons and centered single-column guides']],
     ['Side panel', ['Hide it; a glowing left edge brings it back']],
@@ -26,10 +26,36 @@ const UPDATES = [
     ['Sync', ['Sync across devices with a GitHub gist', 'Your settings and rank win over a new device’s defaults']],
     ['Chat and DMs', ['A global chat room with tap-to-reply', 'Direct messages, challenges and friendly matches', 'Typing indicators and varied profile pictures', 'Match chat with your opponent', 'Delete messages and jump to the message a reply answers']],
     ['Stats and awards', ['Sessions with the same name are grouped for the day', 'Sensible rarities for guide and quiz achievements']]],
-    fixes: ['Contents links in study guides', 'Words splitting in guide tables', 'The Settings section highlight', 'The accent color switching back to a custom color', 'Players said your name when talking to someone else', 'Players agreed to a challenge in DMs but never accepted it']}
+    fixes: ['Contents links in study guides', 'Words splitting in guide tables', 'The Settings section highlight', 'The accent color switching back to a custom color', 'Players said your name when talking to someone else', 'Players agreed to a challenge in DMs but never accepted it']},
+  {n: 3, name: 'Leaderboards & Profiles', when: 'Nov 16', secs: [
+    ['Leaderboards', ['11 leaderboard categories']],
+    ['Ranks', ['100 Elo per division, with divisions running I to III', 'Distinguished Professor, Provost, Chancellor and Laureate', 'Paragon for the single top player', 'New emblems for every rank']],
+    ['Players', ['250,000 players, each with their own study history']],
+    ['Profiles', ['A popup and a full page with stats, leaderboard places, 6-month activity, a calendar of every session and achievements', 'Your own display name and avatar color']],
+    ['Matches', ['Results show both times, with seconds on close finishes']],
+    ['Study guides', ['Write them or import them as Markdown, text or JSON', 'Checklists and flashcards', 'Study a guide next to the timer']]],
+    fixes: ['Some players had days longer than 24 hours', 'Rank icon marks didn’t match the division', 'Both sides of a match result showed the same time', 'Long guide contents were cut off']},
+  {n: 2, name: 'Ranked', when: 'Nov 13', secs: [
+    ['Timer', ['Stopwatch mode, which counts up until you’re done']],
+    ['Layout', ['A redesign with separate pages (Focus, Stats, Ranked, Awards, Settings) and a quick dock']],
+    ['Streaks', ['A daily study streak, where 10 minutes counts as a day']],
+    ['Achievements', ['144 achievements with an Awards page and unlock pop-ups', 'Search, sort and filters, and badge details on hover']],
+    ['Ranked', ['You’re matched automatically when you study, with Elo, ranks, a live match card, badges, a showcase and a ladder of 5,000 players']],
+    ['Sessions', ['Switching tasks mid-session splits the time automatically']]],
+    fixes: ['A new match started right after a win', 'Badge details vanished while you hovered over them', 'Switching between similar task names, like CNIT 182 → CNIT 176, didn’t split the time']},
+  {n: 1, name: 'First Release', when: 'Oct 27', secs: [
+    ['Timer', ['Pomodoro, 52/17, Flowtime, Timebox and Custom modes', 'Rolling digits and a glowing ring', 'A mini clock you can pop out over other windows']],
+    ['Sounds', ['White and brown noise', 'Realistic rain and thunder, with on-screen rain and lightning']],
+    ['Look', ['Themes, fonts and colors to customize']],
+    ['Log', ['Each session records what you were working on', 'Bars split by activity, with details on hover']],
+    ['Sessions', ['Back-to-back sessions are grouped', 'Edit sessions and pick which ones to delete', 'A Calendar tab with weeks by default and a Month view']],
+    ['Music', ['A Spotify player with study playlists', 'Music per activity and for breaks']],
+    ['Backup', ['Backup and restore']]],
+    fixes: ['Noise skipped a beat when it looped', 'Rain had fake-sounding plops', 'The Spotify player was blank in the downloaded copy', 'Log bars didn’t show what you were working on']}
 ];
 // a fingerprint of the newest update, so anything added to it counts as new
-const wnKey = () => { const u = UPDATES[0]; return u.n + ':' + (u.secs.reduce((n, s) => n + s[1].length, 0) + u.fixes.length); };
+// (key: the number an update had before older updates were added and the list was renumbered; leave it off new ones)
+const wnKey = () => { const u = UPDATES[0]; return (u.key ?? u.n) + ':' + (u.secs.reduce((n, s) => n + s[1].length, 0) + u.fixes.length); };
 const wnSeen = () => store.get('fb.wnSeen', '');
 function wnBadge(){
   const unseen = wnSeen() !== wnKey();
