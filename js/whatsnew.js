@@ -9,7 +9,7 @@ const UPDATES = [
     ['Watching matches', ['Watch live top matches from the Top matches tab', 'Study along with them (normal focus time, no Elo)', 'Chat with the other spectators on your breaks']],
     ['Messages', ['Message someone who’s offline and they’ll answer once they’re back online']],
     ['What’s new', ['This page, with a dot in the panel when there’s something new']]],
-    fixes: ['Profile page zoomed out on phones', 'The feed said someone started studying while their profile showed Offline', 'Top matches showed one ± number instead of each side’s Elo change', 'Stars drawn in the wrong place on one profile picture']},
+    fixes: ['Profile page zoomed out on phones', 'The feed said someone started studying while their profile showed Offline', 'Top matches showed one ± number instead of each side’s Elo change', 'Stars drawn in the wrong place on one profile picture', 'People chatting in a watch room sometimes showed as Offline']},
   {n: 2, name: 'Shared World', when: 'Nov 18–19', secs: [
     ['The world', ['682,925 players, the same on every device', 'A daily world save so new devices load quickly']],
     ['Chat', ['People talk about real shows, music and games, with rotating topics and no repeats', 'Several of your messages in a row get one answer', 'Replies actually match the message they answer', 'Emotion emojis only, and no “speaking of…” lead-ins', 'Online players answer DMs within seconds; players who are studying take a few minutes']],

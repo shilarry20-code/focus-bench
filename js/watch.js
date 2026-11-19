@@ -32,14 +32,18 @@ function watchMatch(p){
   setTimeout(() => { const el = $('#watchSlot'); if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 60);
   if (!focusing()) wSay('open', 2500);
 }
-// who's in the room: players online now, plus some near the two players' level (never the players themselves)
+// who's in the room: only players who are online right now (never the two players while they're still going)
 function wCast(p){
-  const rr = mulberry32(p.a * 31 + p.c * 17 + p.ea), pool = [];
-  try { chatWhoOnline().forEach(i => { if (i !== p.a && i !== p.c) pool.push(i); }); } catch(e){}
-  const sb = sortedBots(), at = posOf(p.a);
-  for (let k = 0; k < 10; k++){ const i = sb[clampN(at + Math.floor((rr() - .5) * 4000), 0, sb.length - 1)]; if (i !== p.a && i !== p.c) pool.push(i); }
-  const out = []; while (pool.length && out.length < 9){ const i = pool.splice(Math.floor(rr() * pool.length), 1)[0]; if (!out.includes(i)) out.push(i); }
+  const rr = mulberry32(p.a * 31 + p.c * 17 + p.ea), pool = chatWhoOnline().filter(i => i !== p.a && i !== p.c), out = [];
+  while (pool.length && out.length < 9){ const i = pool.splice(Math.floor(rr() * pool.length), 1)[0]; if (!out.includes(i)) out.push(i); }
   return out;
+}
+// people drift off: anyone who's gone offline leaves the room and someone online wanders in
+function wRoom(){
+  const on = new Set(chatWhoOnline()), st = wState();
+  W.cast = W.cast.filter(i => on.has(i));
+  if (W.cast.length < 5){ const more = [...on].filter(i => i !== W.a && i !== W.c && !W.cast.includes(i)); while (more.length && W.cast.length < 7) W.cast.push(more.splice(Math.floor(Math.random() * more.length), 1)[0]); }
+  return W.cast.concat([W.a, W.c].filter(i => i === W.a ? !st.aOn : !st.cOn));
 }
 function wState(){
   const {m} = wNowMin(), aOn = m < W.ea, cOn = m < W.ec, ta = wElapsed(W.sa, W.ea, m), tc = wElapsed(W.sc, W.ec, m);
@@ -50,7 +54,7 @@ const wClock = min => { const s = Math.floor(min * 60), h = Math.floor(s / 3600)
 /* ---- what the room says ---- */
 function wPrompt(task){
   const st = wState(), A = bot(W.a), C = bot(W.c), me = myName();
-  const inRoom = W.cast.concat([W.a, W.c].filter(i => (i === W.a ? !st.aOn : !st.cOn)));
+  const inRoom = wRoom();
   const cast = inRoom.map(i => { const f = chatFacts(i); return `- ${f.name}: ${f.rank}, ${f.subj}, emojis: ${emojiStyle(i)}${i === W.a || i === W.c ? ' (one of the two players; they just stopped and are watching now)' : ''}`; });
   const lead = st.ta === st.tc ? 'tied' : `${st.ta > st.tc ? A.name : C.name} is ahead by ${Math.round(Math.abs(st.ta - st.tc))} min`;
   const res = st.over ? (W.ma === W.mc ? 'It ended in a draw.' : `It's over: ${W.ma > W.mc ? A.name : C.name} won ${Math.max(W.ma, W.mc)}–${Math.min(W.ma, W.mc)} min (${W.ma > W.mc ? '+' + W.dlt : '+' + -W.dlt} Elo for the winner, the same off the loser).`) : '';
@@ -98,7 +102,7 @@ async function wSay(kind, delay, extra){
   if (!W) return;
   if (!out.length && (kind === 'stop' || kind === 'end' || (kind === 'open' && !W.chat.length))){
     const lines = W_LINES[kind === 'open' ? 'hi' : kind].slice(), rr = Math.random, n = 1 + Math.floor(rr() * 2);
-    for (let k = 0; k < n && lines.length; k++) out.push({w: W.cast[Math.floor(rr() * W.cast.length)], text: lines.splice(Math.floor(rr() * lines.length), 1)[0]});
+    const room = wRoom(); if (room.length) for (let k = 0; k < n && lines.length; k++) out.push({w: room[Math.floor(rr() * room.length)], text: lines.splice(Math.floor(rr() * lines.length), 1)[0]});
   }
   if (focusing() && !st.over) return;                 // you started focusing meanwhile: the room waits for your break
   let t = Date.now() + delay;
@@ -190,3 +194,10 @@ document.addEventListener('click', e => {
 });
 // the watch room belongs to today's world: an old one from yesterday is dropped
 if (W && W.dk !== wNowMin().dk) { W = null; wSave(); }
+// the two players count as online while they hang around in the room after stopping
+const _wOnline = chatWhoOnline;
+chatWhoOnline = function(){
+  const o = _wOnline.apply(this, arguments);
+  if (W){ const st = wState(); [[W.a, st.aOn], [W.c, st.cOn]].forEach(([i, on]) => { if (!on && !o.includes(i)) o.push(i); }); }
+  return o;
+};
