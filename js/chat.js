@@ -89,7 +89,7 @@ function chatWhoOnline0(){
 function chatFacts(i){
   const B = bot(i), r = botRating(i), rk = rankOf(r);
   let last = null; try { const m = m5List(i)[0]; if (m && Date.now() - m.t < 6 * 3600e3) last = m; } catch(e){}
-  return {i, name: B.name, rank: rk.full, r, style: B.style, peak: B.peak, subj: B.subject, bio: B.bio,
+  return {i, name: B.name, rank: rk.full, r, style: B.style, peak: B.peak, subj: `${B.subject} major, taking ${(() => { try { return botClasses(i).join(', '); } catch(e){ return B.subject; } })()}`, bio: B.bio,
     last: last ? {opp: bot(last.opp).name, won: last.a > last.b, mine: last.a, theirs: last.b, d: last.d} : null};
 }
 

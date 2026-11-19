@@ -2,7 +2,7 @@
 // Each bot is generated from a fixed seed (name, look, style, habits), so only the numbers that
 // change are saved: each bot's rating and study totals, packed into a typed array kept in IndexedDB.
 // The first 5,000 bots are the original roster and keep their names; the rest came later.
-const ROSTER_N = 682925, OLD_N = 5000, ROSTER_SEED = 20261113, ROSTER_V = 3, BF = 13;   // BF: fields per bot
+const ROSTER_N = 682925, OLD_N = 5000, ROSTER_SEED = 20261113, ROSTER_V = 4, BF = 13;   // BF: fields per bot
 const F = {rating:0, total:1, sessions:2, days:3, cur:4, best:5, maxSess:6, maxDay:7, maxWeek:8, maxMonth:9, week:10, month:11, today:12};
 function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const gaussOf = rnd => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
@@ -170,7 +170,6 @@ const STYLES = ['Steady','Steady','Steady','Sprinter','Sprinter','Grinder','Grin
 const NM_A = ['lofi','quiet','night','coffee','study','calc','bio','chem','library','deep','focus','pixel','neon','mellow','sleepy','caffeine','notes','flash','ivy','maple','ember','nova','echo','sol','juniper','atlas','orbit','sage','cozy','paper','ink','tea','matcha','cloud','moss','river','solar','lunar','static','vinyl','quill','cedar','cobalt','velvet','retro','tidy','zen','grind','late','early'];
 const NM_B = ['maya','pete','kenji','ari','noor','leo','zara','finn','priya','omar','lena','theo','jun','sami','ana','rui','bea','kai','mira','eli','nina','dev','rosa','yuki','tom','ada','felix','iris','hana','arjun','chloe','diego','emma','gus','hugo','isla','jade','kofi','lars','mo','nadia','oscar','pia','quinn','raf','sofia','tariq','uma','vik','wren'];
 const NM_C = ['reads','studies','notes','grinds','codes','learns','writes','focus','crams','solves','thinks','works','labs','reviews','drafts'];
-const SUBJECTS = ['Organic chemistry','Calculus II','Linear algebra','Microeconomics','Biology','Physics I','Data structures','Accounting','Statistics','World history','Psychology','Philosophy','Spanish','Anatomy','Thermodynamics','Marketing','Discrete math','Art history','Neuroscience','Mechanical design','Political science','Nursing pharmacology','Japanese','Music theory','Genetics','Circuits','Literature','Biochem','Machine learning','Architecture'];
 const BIOS = ['one more chapter, then sleep (lie)','powered by iced coffee','library 3rd floor regular','flashcards are a lifestyle','studying so future me says thanks','do not disturb, midterm szn','lo-fi on, world off','quiet grind, loud results','reading the textbook nobody reads','pomodoros and peppermint tea','here to beat my own record','just trying to pass orgo','notes so neat they get borrowed','will study for snacks','early lecture survivor','night shift scholar','one problem set at a time','learning out loud','highlighters in every color','my desk is my happy place','procrastination recovery arc','study playlist on repeat','gym, study, sleep, repeat','second coffee, first chapter','i read the syllabus','finals mode: permanent','teaching it back to myself','dean\'s list or bust','focus is a muscle','tiny steps every day'];
 const PEAKS = {Morning:[5,12], Afternoon:[12,17], Evening:[17,22], 'Late night':[22,29]};
 const CHAT = ['halfway through problem set 3','coffee #2','flashcards time','this chapter is long','ok locking in','rewriting my notes','lab report grind','one more practice exam','reading the slides again','on question 14','music up, phone down','outlining the essay','reviewing lecture 9','almost through the reading','doing the hard problems first'];
@@ -189,7 +188,7 @@ let T_STY = null, T_PK = null, T_FAV = null, T_SIT = null, T_PACT = null, T_SUF 
 const botCache = new Map();
 function bot(i){
   let b = botCache.get(i); if (b) return b;
-  b = genBot(i); b.i = i; const suf = T_SUF ? T_SUF[i] : 0; if (suf) b.name += '_' + suf;
+  b = genBot(i); b.i = i; const suf = T_SUF ? T_SUF[i] : 0; if (suf) b.name += (/\d$/.test(b.name) ? '_' : '') + suf;
   if (botCache.size > 4000) botCache.clear();
   botCache.set(i, b); return b;
 }
@@ -212,15 +211,22 @@ function genBot(i){
   const pat = Math.floor(rnd() * 7), a = pick(rnd, NM_A), b = pick(rnd, NM_B), c = pick(rnd, NM_C), num = 1 + Math.floor(rnd() * 99);
   const cap = x => x[0].toUpperCase() + x.slice(1);
   let name = [`${b}_${a}`, `${a}${cap(b)}`, `${b}.${c}`, `${cap(b)}${num}`, `Dr.${cap(a)}`, `${a}_${num}`, `${cap(b)}${cap(c)}`][pat];
-  if (i >= OLD_N) name = newName(i);
   const style = pick(rnd, STYLES);
   const peak = style === 'Night Owl' ? 'Late night' : style === 'Early Bird' ? 'Morning' : pick(rnd, ['Morning','Afternoon','Evening','Evening','Late night']);
   const hi = rnd() < .08;   // a thin elite group sits on top of the main bell curve
   const base = stretchR(Math.round(clampN(hi ? 1700 + gaussOf(rnd) * 280 : 1120 + gaussOf(rnd) * 260, 520, 2750)));
   const fav = style === 'Sprinter' ? 'pomodoro' : style === 'Grinder' ? 'stopwatch' : style === 'Wildcard' ? 'flow' : pick(rnd, ['pomodoro','pomodoro','fifty','custom','timebox','stopwatch']);
-  return {i, name, ini: name.replace(/^Dr\./, '').replace(/[^A-Za-z]/g, ' ').trim().split(/\s+|(?=[A-Z])/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('') || 'B',
-    hue: Math.floor(rnd() * 360), style, peak, subject: pick(rnd, SUBJECTS), bio: pick(rnd, BIOS), base, fav,
+  let maj;
+  const o = {i, name, ini: name.replace(/^Dr\./, '').replace(/[^A-Za-z]/g, ' ').trim().split(/\s+|(?=[A-Z])/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('') || 'B',
+    hue: Math.floor(rnd() * 360), style, peak, subject: (maj = majorAt(rnd())).n, major: maj.k, bio: pick(rnd, BIOS), base, fav,
     sitMul: .85 + rnd() * .3, age: 20 + Math.floor(Math.pow(rnd(), 1.3) * 500), pAct: rnd(), x: [rnd(), rnd(), rnd(), rnd(), rnd(), rnd(), rnd(), rnd()]};
+  o.name = makeName(i, maj);    // names come from their own random stream, so nothing else about the player changes
+  o.ini = iniOf(o.name);
+  return o;
+}
+function iniOf(n){
+  const w = n.replace(/^(xX_|Xx|xx|iiTz|Im|oh|Real|King|TTV_|its|the)(?=[A-Za-z])/, '').replace(/[0-9]+/g, ' ').replace(/[._-]+/g, ' ').trim().split(/\s+|(?=[A-Z])/).filter(Boolean);
+  return (w.slice(0, 2).map(x => x[0].toUpperCase()).join('') || 'P');
 }
 const activity = (b, r) => clampN(.35 + (unstretchR(r) - 800) / 2600 + b.pAct * .25, .2, .97);
 const blockLen = (b, r) => b.fav === 'pomodoro' ? 25 : b.fav === 'fifty' ? 52 : b.fav === 'custom' ? 45 : typical(r) * b.sitMul;
@@ -584,13 +590,14 @@ function sitEndingIn(i, e0, e1){
 }
 let CAND = null, CSIT = null;
 function shuffledIdx(n, rnd){ const a = new Int32Array(n); for (let k = 0; k < n; k++) a[k] = k; for (let k = n - 1; k > 0; k--){ const j = Math.floor(rnd() * (k + 1)); const t = a[k]; a[k] = a[j]; a[j] = t; } return a; }
-function windowMatches(w0, dk){      // sittings that ended during the window starting at minute w0 of day dk
+// who plays whom in one window, and how it goes (nothing is changed here, so the live feed can look ahead)
+function pairWindow(w0, dk){      // sittings that ended during the window starting at minute w0 of day dk
   if (!CAND){ CAND = new Int32Array(ROSTER_N); CSIT = new Int32Array(ROSTER_N); }
   let n = 0;
   for (let i = 0; i < ROSTER_N; i++){ if (!planM[i]) continue; const k = sitEndingIn(i, w0, w0 + 120); if (k >= 0){ CAND[n] = i; CSIT[i] = k; n++; } }
   const cand = Array.from(CAND.subarray(0, n)).sort((x, y) => baseR(y) - baseR(x) || x - y);
   const candR = cand.map(i => baseR(i)), rOfK = q => candR[q], ks = Array.from({length: n}, (_, q) => q);
-  const used = new Uint8Array(n), rnd = mulberry32(ROSTER_SEED ^ (dayIdx(dk) * 1440 + w0) * 2246822519);
+  const used = new Uint8Array(n), rnd = mulberry32(ROSTER_SEED ^ (dayIdx(dk) * 1440 + w0) * 2246822519), out = [];
   for (const k of shuffledIdx(n, rnd)){
     if (used[k]) continue;
     // someone whose sitting also just ended, usually within ~80 points of their rating
@@ -602,10 +609,16 @@ function windowMatches(w0, dk){      // sittings that ended during the window st
     const a = cand[k], c = cand[j], sa_ = CSIT[a], sc_ = CSIT[c];
     const ma = SCH_B[sa_] - SCH_A[sa_], mc = SCH_B[sc_] - SCH_A[sc_], ra = baseR(a), rc = baseR(c);
     const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = ma > mc ? 1 : ma < mc ? 0 : .5, dlt = Math.round(BOT_K * (sa - ea));
-    const na = clampN(ra + dlt, 300, 5000), nc = clampN(rc - dlt, 300, 5000);
+    out.push({a, c, ma, mc, ra, rc, dlt, ea: SCH_B[sa_], ec: SCH_B[sc_]});
+  }
+  return out;
+}
+function windowMatches(w0, dk){
+  for (const m of pairWindow(w0, dk)){
+    const {a, c, ma, mc, ra, rc, dlt} = m, na = clampN(ra + dlt, 300, 5000), nc = clampN(rc - dlt, 300, 5000);
     BS[a * BF] = na + OV_R[a]; BS[c * BF] = nc + OV_R[c];
-    m5Put(a, c, tCode(dk, SCH_B[sa_]), ma, mc, na - ra, BS[a * BF], rc + OV_R[c]);
-    m5Put(c, a, tCode(dk, SCH_B[sc_]), mc, ma, nc - rc, BS[c * BF], ra + OV_R[a]);
+    m5Put(a, c, tCode(dk, m.ea), ma, mc, na - ra, BS[a * BF], rc + OV_R[c]);
+    m5Put(c, a, tCode(dk, m.ec), mc, ma, nc - rc, BS[c * BF], ra + OV_R[a]);
   }
   botsChanged();
 }
@@ -1214,12 +1227,7 @@ const ROSTER_EPOCH = new Date(2026, 10, 13).getTime();       // bots' join dates
 const botJoinKey = i => dayKey(ROSTER_EPOCH - bot(i).age * 864e5);
 const BOT_TAGS = ['Homework', 'Exam prep', 'Reading', 'Project', 'Review'];
 const botTagColor = t => { const k = BOT_TAGS.indexOf(t), pal = SERIES[isDark() ? 'dark' : 'light']; return k >= 0 ? pal[k] : actColor(t); };
-const LANGS = ['Spanish', 'Japanese'], WRITING = ['Literature', 'World history', 'Philosophy', 'Art history', 'Political science', 'Psychology'];
-function botClasses(i){
-  const B = bot(i), rr = mulberry32(ROSTER_SEED * 3 + i * 613), list = [B.subject], n = 2 + (rr() < .5 ? 1 : 0);
-  while (list.length < n + 1){ const x = pick(rr, SUBJECTS); if (!list.includes(x)) list.push(x); }
-  return list;
-}
+function botClasses(i, d){ return scheduleFor(i, MAJOR_BY[bot(i).major] || MAJORS[0], d || new Date()); }
 function semesterOf(d){
   const y = d.getFullYear(), m = d.getMonth();
   const start = m >= 7 ? new Date(y, 7, 20) : m <= 4 ? new Date(y, 0, 10) : new Date(y, 4, 20);
@@ -1228,12 +1236,12 @@ function semesterOf(d){
 }
 function botTask(rnd, subj, kind, sem, d, k){
   const ps = sem.wk + 1 + k % 2, ch = 1 + Math.floor(sem.wk * 1.15), lec = 1 + Math.floor(sem.wk * 2.6) + (d.getDay() >= 3 ? 1 : 0), lab = 1 + Math.floor(sem.wk / 2);
-  const lang = LANGS.includes(subj), writ = WRITING.includes(subj);
+  const kd = CLASS_KIND.get(subj) || '', lang = kd === 'L', writ = kd === 'W', code = kd === 'C', des = kd === 'D', isLab = kd === 'B';
   const T = {
-    'Homework': lang ? [`Workbook unit ${ch}`, `Vocab set ${ps}`, 'Translation practice'] : writ ? [`Response paper ${lab}`, `Discussion post ${ps}`, `Reading questions ${ch}`] : [`Problem set ${ps}`, `Homework ${ps}`, `Worksheet ${ps}`],
+    'Homework': lang ? [`Workbook unit ${ch}`, `Vocab set ${ps}`, 'Translation practice', 'Conjugation drills', `Vocab quiz ${ps} prep`] : writ ? [`Response paper ${lab}`, `Discussion post ${ps}`, `Reading questions ${ch}`] : code ? [`Programming assignment ${ps}`, `Lab ${lab} code`, 'Debugging', `Project ${1 + Math.floor(sem.wk / 4)} milestone`] : des ? [`Studio project ${lab}`, 'Sketching concepts', 'Critique prep', `Design brief ${ps}`] : [`Problem set ${ps}`, `Homework ${ps}`, `Worksheet ${ps}`],
     'Reading': [`Chapter ${ch} reading`, `Reading: chapter ${ch}`, `Chapter ${ch} notes`],
     'Exam prep': sem.exam ? [`${sem.exam} prep`, `${sem.exam} practice exam`, `${sem.exam} flashcards`, `${sem.exam} review sheet`] : ['Quiz prep', 'Practice problems', 'Flashcards', `Exam ${1 + Math.floor(sem.wk / 5)} review`],
-    'Project': lang ? ['Oral presentation', 'Conversation prep'] : writ ? ['Essay draft', 'Term paper', 'Essay outline', 'Editing essay'] : [`Lab report ${lab}`, 'Group project', 'Project write-up', `Lab ${lab} prep`],
+    'Project': lang ? ['Oral presentation', 'Conversation prep'] : writ ? ['Essay draft', 'Term paper', 'Essay outline', 'Editing essay'] : code ? ['Group project', 'Final project', 'Code review', 'Writing tests'] : des ? ['Portfolio piece', 'Studio project', 'Prototype', 'Final critique prep'] : isLab ? [`Lab report ${lab}`, `Lab ${lab} prep`, 'Lab write-up', 'Pre-lab questions'] : ['Group project', 'Project write-up', 'Case study', 'Presentation slides'],
     'Review': [`Lecture ${lec} notes`, 'Rewriting notes', 'Review session', `Lecture ${lec} review`]
   };
   return sem.summer ? pick(rnd, ['Summer review', 'Getting ahead', `Chapter ${1 + Math.floor(sem.wk / 2)} reading`, 'Practice problems']) : pick(rnd, T[kind]);
@@ -1247,7 +1255,7 @@ function botDay(i, dk){
   if (dk >= botJoinKey(i) && dk <= todayK){
     const xs = daySits(i, dk, []);
     if (xs.length){
-      const B = bot(i), d = new Date(dk + 'T12:00'), sem = semesterOf(d), cls = botClasses(i);
+      const B = bot(i), d = new Date(dk + 'T12:00'), sem = semesterOf(d), cls = botClasses(i, d);
       const {n, rnd} = sitTimes(i, dk, xs), starts = Array.from(ST_A.subarray(0, n)), lens = Array.from(ST_LEN.subarray(0, n));
       const sessions = [];
       lens.forEach((len, k) => { const at = starts[k];
@@ -1286,7 +1294,7 @@ function withMatches(i, dk, out){
     add.push({a, b: Math.min(1440, a + len)});
   });
   if (!add.length) return out;
-  const B = bot(i), cls = botClasses(i), base = out ? out.sessions : [];
+  const B = bot(i), cls = botClasses(i, new Date(dk + 'T12:00')), base = out ? out.sessions : [];
   const keep = base.filter(x => !add.some(m => x.a < m.b && x.b > m.a));
   const ms = add.map(m => { const o = base.find(x => x.a < m.b && x.b > m.a);
     return {a: m.a, b: m.b, min: m.b - m.a, subj: o ? o.subj : cls[0], task: `Ranked match vs ${myName()}`, tag: o ? o.tag : 'Review', mode: B.fav, ...(m.live ? {match: true} : {})}; });
@@ -1356,6 +1364,7 @@ function profileHead(w, big){
   return `<div class="pf-top">${pAvatar(w, big ? 'xl' : 'lg')}<div><b id="bmName">${esc(pName(w))}</b>
     <span>${emblem(rk, 'xs')} ${esc(rk.full)} · ${r.toLocaleString()} Elo</span>
     <small>${B ? `${B.style} · studies in the ${B.peak.toLowerCase()} · ${esc(B.subject)}` : 'Your profile'}</small>
+    ${B ? `<small class="pf-cls">This semester: ${botClasses(w).map(esc).join(', ')}</small>` : ''}
     ${B && botLiveNow(w) ? `<span class="pf-live">● ${R.cur && R.cur.b === w && R.cur.state === 'live' && !R.cur.tapped ? 'Studying now · in a ranked match with you' : 'Studying now'}</span>` : ''}</div>
     ${w === ME && !profEditing ? '<button class="small-btn pf-editbtn" data-pf="edit">Edit</button>' : ''}</div>
     ${w === ME && profEditing ? editForm() : ''}
