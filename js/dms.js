@@ -354,7 +354,7 @@ function renderDmThread(el, w){
     <button class="small-btn accent" data-send="r">Ranked<small>Win +${s.win} · Loss −${s.loss}</small></button><button class="small-btn" data-send="f">Friendly<small>No Elo change</small></button><button class="ch-x" data-chx="1" aria-label="Cancel">✕</button>` : '';
   const cb = el.querySelector('[data-dmchal]'); cb.disabled = lock; cb.title = pend ? 'A challenge is already waiting' : '';
   el.querySelectorAll('[data-ch]').forEach(b => { b.disabled = lock; });
-  const L = $('#dmList'); if (nearBottom) L.scrollTop = L.scrollHeight;
+  const L = $('#dmList'); if (nearBottom){ L.scrollTop = L.scrollHeight; requestAnimationFrame(() => { L.scrollTop = L.scrollHeight; }); }
   const inp = $('#dmIn'); if (!inp.dataset.ph) inp.dataset.ph = inp.placeholder; chatLockInput(inp, $('#dmForm button'));
   if (lock) inp.disabled = true;
 }
