@@ -94,18 +94,22 @@ function aiPrompt(online, forUser, away){
   const recent = CHATS.msgs.filter(m => !m.del && (userHere || m.w !== -1)).slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
 This is a general hangout room: people can talk about anything, like any group chat of college students. Studying, exams and ranked matches come up now and then because of where they are. Don't tack study talk onto other messages (no \"back to studying\", \"gotta grind\", \"locking in\").
-People talk about whatever is on their mind; it's up to each player. If they mention a show, movie, song, game, team or anything like that, they name the real thing rather than a vague "that show". Don't quote song lyrics.
+People talk about whatever is on their mind; it's up to each player. If they mention a show, movie, song, game, team or anything like that, they name the real thing rather than a vague "that show". Don't quote song lyrics. Something a model might think of as "new" may be old by now (see today's date): only call things new or upcoming if you're sure they still are. Don't reuse a line or a topic someone already used.
 A reply must respond to what that message actually said; if someone changes the subject, it's a new message, not a reply.
 Write like a real group chat: casual texting style (lowercase is fine, contractions, slang, not formal full sentences), mostly short, with only the odd longer message. A reply is already shown as a reply, so don't start it with the other person's name; use names only now and then, the way people really do. with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
 Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
   const lastK = Math.floor(Math.random() * cast.length * 3);    // mention one player's last match only sometimes, so ranked isn't always the topic
   const who = cast.map((f, k) => `- ${f.name}: ${f.rank}, ${f.subj}${f.last && k === lastK ? `; just ${f.last.won ? 'beat' : 'lost to'} ${f.last.opp} in ranked (${f.last.mine} vs ${f.last.theirs} min)` : ''}`).join('\n');
   const hist = recent.map((m, k) => `[m${k + 1}] ${chatName(m.w)}: ${m.text}${m.re && tag.has(m.re) ? ` (replying to ${tag.get(m.re)})` : ''}`).join('\n') || '(the chat is quiet)';
-  const user = `It's ${now.toLocaleDateString(undefined, {weekday: 'long'})} ${now.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}, week ${sem.wk + 1} of the semester${sem.exam ? `, ${sem.exam.toLowerCase()} season` : ''}.
+  const older = CHATS.msgs.filter(m => !m.del && m.t > Date.now() - 6 * 3600e3 && !recent.includes(m)).slice(-60);
+  const user = `It's ${now.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'})}, ${now.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}, week ${sem.wk + 1} of the semester${sem.exam ? `, ${sem.exam.toLowerCase()} season` : ''}.
 Players online (background only; most messages shouldn't be about it):
 ${who}
 
-Recent chat, oldest first:
+${older.length ? `Already said in the room earlier today (don't repeat these or bring the same things up again as if they were new):
+${older.map(m => '- ' + m.text.slice(0, 90)).join('\n')}
+
+` : ''}Recent chat, oldest first:
 ${hist}
 
 ${forUser ? (() => { const mine = recent[recent.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re);
@@ -177,6 +181,17 @@ function stripLeadName(text, names){
   }
   return text;
 }
+// a message that's mostly the same words as one said in the last 6 hours (or earlier in this batch) is a repeat
+const wordSet = t => new Set(String(t).toLowerCase().replace(/[^a-z0-9' ]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOP.has(w)));
+const STOP = new Set(['the', 'and', 'for', 'that', 'this', 'with', 'just', 'but', 'you', 'your', 'are', 'was', 'have', 'its', "it's", 'not', 'all', 'can', 'out', 'like', 'get', 'got', 'too', 'what', 'how', 'any', 'one', 'now', 'lol', 'about', 'they', 'did', 'has', 'from', 'really', 'honestly', 'actually', 'anyone', 'guys']);
+function chatRepeats(text, batch){
+  const a = wordSet(text); if (a.size < 3) return false;
+  const since = Date.now() - 6 * 3600e3;
+  return CHATS.msgs.filter(m => m.t > since).concat(batch).some(m => {
+    const b = wordSet(m.text); let both = 0; a.forEach(w => { if (b.has(w)) both++; });
+    return both >= 3 && both / Math.min(a.size, b.size) >= .6;
+  });
+}
 function aiToBatch(list, recent, cast, noYou){
   const out = [], pos = [], keys = cast.map(f => ({i: f.i, k: normName(f.name)}));
   let lastW = null;
@@ -194,6 +209,7 @@ function aiToBatch(list, recent, cast, noYou){
     let text = String((m && (m.text || m.message)) || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
     if (w == null || !text) return;
     if (noYou && youRe && youRe.test(text)) return;
+    if (chatRepeats(text, out)) return;
     text = stripLeadName(text, [...cast.map(f => f.name), myName()]);
     let re = null; const id = String(m.replyTo || m.reply_to || '').trim().replace(/^#/, '');
     if (/^m?\d+$/.test(id) && !/^n/.test(id)){ const x = recent[+id.replace('m', '') - 1]; if (x) re = x.id; }
