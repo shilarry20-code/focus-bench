@@ -143,7 +143,9 @@ $('#focusBtn').onclick = toggleFocusMode;
 function onModeClick(e){
   const b = e.target.closest('[data-mode]'); if (!b || b.dataset.mode === P.mode) return;
   if (S.running && S.phase === 'focus'){ const el = focusElapsed(); if (el >= 60000) logFocus(el); }
-  P.mode = b.dataset.mode; saveP(); S.flowBreakMin = 5; resetCycle(); renderTimerPane();
+  const saved = savePartial();                       // save what you'd focused in the old mode first
+  P.mode = b.dataset.mode; saveP(); S.flowBreakMin = 5; resetCycle(true); renderTimerPane();
+  if (saved) toast(`Saved ${saved} min to your log.`);
 }
 $('#modes').onclick = $('#modesSet').onclick = onModeClick;
 $('#task').value = P.task;
