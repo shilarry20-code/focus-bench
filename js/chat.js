@@ -125,7 +125,9 @@ ${older.map(m => '- ' + m.text.slice(0, 90)).join('\n')}
 ${hist}
 
 ${forUser ? (() => { const mine = recent[recent.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re);
-    return `The newest message is from ${myName()} (m${recent.length})${to && to.w !== -1 ? `, replying to ${chatName(to.w)}` : ''}. Write 1 to 4 messages: ${to && to.w !== -1 ? `${chatName(to.w)} answers ${myName()} first (replyTo "m${recent.length}"), and maybe one more player` : `one or two players answer ${myName()} (replyTo "m${recent.length}")`}; others may react or keep their own conversation going.`; })()
+    let run = 0; for (let k = recent.length - 1; k >= 0 && recent[k].w === -1; k--) run++;
+    const several = run > 1 ? ` ${myName()} sent the last ${run} messages in a row (m${recent.length - run + 1} to m${recent.length}): answer them together, not one by one.` : '';
+    return `The newest message is from ${myName()} (m${recent.length})${to && to.w !== -1 ? `, replying to ${chatName(to.w)}` : ''}.${several} Write 1 to 4 messages: ${to && to.w !== -1 ? `${chatName(to.w)} answers ${myName()} first (replyTo "m${recent.length}"), and maybe one more player` : `one or two players answer ${myName()} (replyTo "m${recent.length}")`}; others may react or keep their own conversation going.`; })()
   : away ? `The room kept going for the last ${Math.round((Date.now() - away.from) / 60000)} minutes. Write 6 to 10 messages the room exchanged during that time, continuing the chat above: threads, replies, and whatever else people brought up.`
   : 'Write 6 to 9 new messages continuing this chat. Continue or answer threads above, or let someone change the subject to whatever is on their mind.'}
 ${forUser ? chatChallengeNote(cast) : ''}For replyTo use the id of the message being answered: "m#" from the recent chat, or "n1", "n2"… for the new messages in your list. Leave it out when a message isn't a reply.`;
@@ -389,7 +391,7 @@ function chatShown(name){
 }
 const _onPageShown = onPageShown;
 onPageShown = function(name){ _onPageShown(name); chatShown(name); };
-let chatReplyTo = null;
+let chatReplyTo = null, chatReplyT = null;
 function setChatReply(id){
   const m = id && CHATS.msgs.find(x => x.id === id), bar = $('#chatReplying'); chatReplyTo = m ? m.id : null;
   document.querySelectorAll('.ch-msg.picked').forEach(x => x.classList.remove('picked'));
@@ -406,7 +408,8 @@ $('#page-chat').addEventListener('submit', e => {
   inp.value = '';
   CHATS.msgs.push({id: chatId(), t: Date.now(), w: -1, text, re: chatReplyTo}); CHATS.read = Date.now(); setChatReply(null); saveChat(); renderChat();
   CHATS.q = CHATS.q.filter(m => m.t > Date.now() + 20000);   // the room pauses to answer you
-  if (GEM.key) setTimeout(() => chatGenerate(true), 600 + Math.random() * 1200);
+  clearTimeout(chatReplyT);
+  if (GEM.key) chatReplyT = setTimeout(function go(){ if (chatBusy){ chatReplyT = setTimeout(go, 1500); return; } chatGenerate(true); }, 3500);
 });
 // tapping the quoted message in a reply jumps up to it
 function chatJump(id){
