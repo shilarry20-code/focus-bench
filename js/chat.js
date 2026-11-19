@@ -45,6 +45,19 @@ function chatRegulars(){
 // who's in the room right now: regulars who are studying, plus some whose usual hours these are
 // each player's emoji habit, fixed by their number: about 3 in 10 never use them, half sometimes, 2 in 10 often
 const emojiStyle = i => { const h = (Math.imul(i + 1, 2654435761) >>> 0) % 10; return h < 3 ? 'never' : h < 8 ? 'sometimes' : 'often'; };
+// only emotion and reaction emojis survive (faces, hearts, a few gestures); object emojis that just illustrate words are removed
+const EMO_OK = new Set([...'😀😃😄😁😆😅🤣😂🙂🙃🫠😉😊😇🥰😍🤩😘😋😛😜🤪😝🤑🤗🤭🫢🫣🤫🤔🫡🤐🤨😐😑😶🫥😏😒🙄😬🤥😌😔😪🤤😴😷🤒🤕🤢🤮🥵🥶🥴😵🤯🥳🥸😎🤓🧐😕🫤😟🙁😮😯😲😳🥺🥹😦😧😨😰😥😢😭😱😖😣😞😓😩😫🥱😤😡😠🤬😈💀☠💩🤡👻👀🙏👍👎👏🙌💪🤝👋✌🤞🫶🤷🤦❤🧡💛💚💙💜🖤🤍💔💕💖💗💯🔥✨💅🎉']);
+const SEG = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter() : null;
+function emotionOnly(t){
+  if (!SEG || !/\p{Extended_Pictographic}/u.test(t)) return t;
+  let out = '';
+  for (const {segment: g} of SEG.segment(t)){
+    if (!/\p{Extended_Pictographic}/u.test(g)){ out += g; continue; }
+    const base = [...g.replace(/[\u{1F3FB}-\u{1F3FF}\uFE0F\u200D\u2640\u2642]/gu, '')][0];
+    if (base && EMO_OK.has(base)) out += g;
+  }
+  return out.replace(/ {2,}/g, ' ').replace(/ ([,.!?])/g, '$1').trim();
+}
 // your opponent in a live match is studying against you, so they're not in the room
 const inMatchWith = () => R && R.cur && R.cur.state === 'live' && !R.cur.tapped ? R.cur.b : -1;
 function chatWhoOnline(){ const opp = inMatchWith(); return chatWhoOnline0().filter(i => i !== opp); }
@@ -145,7 +158,7 @@ This is a general hangout room: people can talk about anything, like any group c
 People talk about what's on their mind; each batch you'll get a few things on people's minds right now, so the room doesn't go in circles. If they mention a show, movie, song, game, team or anything like that, they name the real thing rather than a vague "that show". Don't quote song lyrics. Something a model might think of as "new" may be old by now (see today's date): only call things new or upcoming if you're sure they still are. Don't reuse a line or a topic someone already used.
 A reply must respond to what that message actually said; if someone changes the subject, it's a new message, not a reply.
 Write like a real group chat: casual texting style (lowercase is fine, contractions, slang, not formal full sentences), mostly short, with only the odd longer message. A reply is already shown as a reply, so don't start it with the other person's name; use names only now and then, the way people really do. with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
-Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message, used the way real people text (reactions, tone), not decoration on every line. Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
+Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. Use them like real people do, to show emotion or react (😭 💀 😂 🥲 😩 😤 🙏 👀 ❤️), never to illustrate the words (no 🍪 for cookies, 🚗 for cars, ⭐ for stars, 📚 for studying). Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
   const lastK = Math.floor(Math.random() * cast.length * 3);    // mention one player's last match only sometimes, so ranked isn't always the topic
   const who = cast.map((f, k) => `- ${f.name}: ${f.rank}, ${f.subj}, emojis: ${emojiStyle(f.i)}${f.last && k === lastK ? `; just ${f.last.won ? 'beat' : 'lost to'} ${f.last.opp} in ranked (${f.last.mine} vs ${f.last.theirs} min)` : ''}`).join('\n');
   const hist = recent.map((m, k) => `[m${k + 1}] ${chatName(m.w)}: ${m.text}${m.re && tag.has(m.re) ? ` (replying to ${tag.get(m.re)})` : ''}`).join('\n') || '(the chat is quiet)';
@@ -270,6 +283,7 @@ function aiToBatch(list, recent, cast, noYou){
     if (noYou && youRe && youRe.test(text)) return;
     if (chatRepeats(text, out)) return;
     text = stripLeadName(text, [...cast.map(f => f.name), myName()]);
+    text = emotionOnly(text); if (!text) return;
     let re = null; const id = String(m.replyTo || m.reply_to || '').trim().replace(/^#/, '');
     if (/^m?\d+$/.test(id) && !/^n/.test(id)){ const x = recent[+id.replace('m', '') - 1]; if (x) re = x.id; }
     else if (/^n\d+$/.test(id)){ const k = pos[+id.slice(1) - 1]; if (k != null && k >= 0) re = k; }
