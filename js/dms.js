@@ -97,10 +97,12 @@ function dmSend(w, text){
   saveDms(); renderChat();
   clearTimeout(dmReplyTimer[w]);
   dmReplyTimer[w] = setTimeout(async () => {                 // wait a moment in case you send a few texts in a row
-    const d = dmDelay(w); if (d == null || dmGenBusy[w]) return;
+    // offline: they write back now, but it only sends once they're back online (or studying) and see it
+    const off = !dmStudying(w) && !dmOnline(w), d = off ? 0 : dmDelay(w); if (d == null || dmGenBusy[w]) return;
     dmGenBusy[w] = 1;
-    const B = bot(w), me = myName(), pend = pendingCh(w), mine = pend && pend.ch.by === 'me', gap = botRating(w) - R.mmr;
+    const B = bot(w), me = myName(), pend = pendingCh(w), mine = pend && pend.ch.by === 'me' && !off, gap = botRating(w) - R.mmr;
     let task = `${me} just messaged. Write ${B.name}'s reply: 1 to 3 short texts.`;
+    if (off) task += ` ${B.name} is offline right now and will only see this later, when they're back on, so write the reply they send then: they can say they just saw it (not every time), and they're answering a while after ${me} wrote.${pend && pend.ch.by === 'me' ? ` ${me}'s challenge will have run out by then.` : ''}`;
     if (mine){
       const {yes, fYes} = chDecide(pend), md = pend.ch.mode === 'f' ? 'friendly' : 'ranked';
       task += ` There's a ${md} challenge from ${me} waiting for ${B.name}'s answer, and ${B.name} ${yes ? 'ACCEPTS it now' : `DECLINES it${pend.ch.mode === 'r' && gap > 150 ? ` (they're ${gap} Elo higher, so a ranked match risks a lot of Elo for little gain${fYes ? '; they would play a friendly instead' : ''})` : ''}`}. The reply must make that answer clear.`;
@@ -110,7 +112,7 @@ function dmSend(w, text){
     }
     const {texts, act} = await dmWrite(w, task, true);
     dmGenBusy[w] = 0;
-    const t0 = Math.max(Date.now() + 2500, Date.now() + d - 4000);
+    const t0 = off ? Date.now() + 7 * 864e5 : Math.max(Date.now() + 2500, Date.now() + d - 4000), had = new Set(DMS.q.map(q => q.id));
     if (mine && pendingCh(w) === pend){
       DMS.q = DMS.q.filter(q => !(q.upd && q.upd.id === pend.id));          // this reply is their answer
       dmQueue(w, t0, texts, {upd: {id: pend.id, st: pend.ch.yes ? 'a' : 'd'}});
@@ -118,6 +120,7 @@ function dmSend(w, text){
       dmQueue(w, t0, texts.length ? texts : [''], {});
       dmQueue(w, t0 + 1500 + texts.length * 3500, [''], {ch: {mode: /friendly/.test(act) ? 'f' : 'r', by: 'them'}});
     } else if (texts.length) dmQueue(w, t0, texts);
+    if (off){ DMS.q.forEach(q => { if (!had.has(q.id)) q.wake = 1; }); saveDms(); }
   }, 3500);
 }
 
@@ -227,10 +230,18 @@ async function dmAmbient(){
 }
 
 /* ---- the clock: deliver, expire, count down ---- */
+let dmWakeAt = 0;
 function dmTick(){
   const now = Date.now(); let fresh = [], changed = false;
   const opp = liveOpp();
   if (opp >= 0 && DMS.q.some(m => m.w === opp && !m.upd)){ DMS.q = DMS.q.filter(m => m.w !== opp || m.upd); changed = true; }
+  // replies written while they were offline go out a little after they're back
+  if (now - dmWakeAt > 15000 && DMS.q.some(m => m.wake)){
+    dmWakeAt = now; const back = new Map();
+    DMS.q.forEach(m => { if (!m.wake) return; if (!back.has(m.w)) back.set(m.w, (dmOnline(m.w) || dmStudying(m.w)) ? {base: now + (20 + Math.random() * 100) * 1000, first: Math.min(...DMS.q.filter(x => x.w === m.w && x.wake).map(x => x.t))} : null);
+      const b = back.get(m.w); if (b){ m.t = b.base + (m.t - b.first); delete m.wake; changed = true; } });
+    if (changed) DMS.q.sort((a, b) => a.t - b.t);
+  }
   DMS.q.forEach(m => { if (focusing() && m.t <= now) m.t = now + 5000; });     // nothing arrives during a focus block: it waits for your break
   while (DMS.q.length && DMS.q[0].t <= now){
     const q = DMS.q.shift();
