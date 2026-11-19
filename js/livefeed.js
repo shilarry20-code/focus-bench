@@ -10,18 +10,41 @@ const lfHash = (i, t, salt) => (Math.imul(i ^ 0x2c1b3c6d, 0x297a2d39) ^ Math.imu
 const lfKeep = (i, t, salt, p) => lfHash(i, t, salt) / 4294967296 < p;
 const lfFocusing = () => typeof S !== 'undefined' && S.running && S.phase === 'focus';
 
+// the heavy parts that only change once a day or once a window (today's plan, past hours, the window's pairings and the
+// index of sessions) are prepared in small steps, so opening Ranked never freezes; the refresh after that is quick
+async function lfPrep(){
+  if (LF.prepping || simBusy) return false;
+  const {dk, m, h} = lfNow(), w0 = Math.floor(m / 120) * 120, key = dk + '|' + w0;
+  if (planDay === dk && LF.pairKey === key && LF.hDay === dk && LF.hUpTo >= h && LF.ix && LF.ix.day === dk) return true;
+  if (R.lastSlice < sliceStartOf(worldT(Date.now()))){ await dailySim(); return false; }
+  LF.prepping = 1;
+  try {
+    if (planDay !== dk) await runGenAsync(plansGen(dk));
+    if (LF.pairKey !== key){ LF.pairs = await runGenAsync(pairGen(w0, dk)); LF.pairKey = key; }
+    if (LF.hDay !== dk || LF.hUpTo < h){
+      const hc = new Int32Array(24), e = SCH_O[ROSTER_N]; let t = performance.now();
+      for (let k = 0; k < e; k++){ const a = SCH_A[k], b = SCH_B[k]; for (let x = Math.floor(a / 60), hb = Math.min(h - 1, Math.floor((b - 1) / 60)); x <= hb; x++){ const mid = x * 60 + 30; if (a <= mid && b > mid) hc[x]++; }
+        if ((k & 32767) === 0 && performance.now() - t > 10){ await breathe(); t = performance.now(); } }
+      LF.hc = hc; LF.hDay = dk; LF.hUpTo = h;
+    }
+    await breathe(); lfIndex();
+  } finally { LF.prepping = 0; }
+  return true;
+}
 // the count, today's hours, the busiest hour and the current window's pairings
 function lfCompute(){
+  if (simBusy) return false;                     // the world is mid-update: keep showing what we have and try again shortly
   const {dk, m, h} = lfNow();
   plansFor(dk);
-  const hours = new Int32Array(24); let live = 0;
+  // past hours never change, so they're counted once; only this minute is counted fresh
   const e = SCH_O[ROSTER_N];
-  for (let k = 0; k < e; k++){
-    const a = SCH_A[k], b = SCH_B[k];
-    if (a <= m && b > m) live++;
-    for (let x = Math.floor(a / 60), hb = Math.min(h, Math.floor((b - 1) / 60)); x <= hb; x++){ const mid = x === h ? m : x * 60 + 30; if (a <= mid && b > mid) hours[x]++; }
+  if (LF.hDay !== dk || LF.hUpTo < h){
+    const hc = new Int32Array(24);
+    for (let k = 0; k < e; k++){ const a = SCH_A[k], b = SCH_B[k]; for (let x = Math.floor(a / 60), hb = Math.min(h - 1, Math.floor((b - 1) / 60)); x <= hb; x++){ const mid = x * 60 + 30; if (a <= mid && b > mid) hc[x]++; } }
+    LF.hc = hc; LF.hDay = dk; LF.hUpTo = h;
   }
-  hours[h] = live;
+  let live = 0; for (let k = 0; k < e; k++) if (SCH_A[k] <= m && SCH_B[k] > m) live++;
+  const hours = LF.hc.slice(); hours[h] = live;
   const w0 = Math.floor(m / 120) * 120, key = dk + '|' + w0;
   // the window's pairings depend on everyone's ratings after the last window: only work them out once the world has caught up
   if (LF.pairKey !== key){
@@ -33,11 +56,12 @@ function lfCompute(){
   try { const sb = sortedBots(); LF.top = botRating(sb[Math.min(999, sb.length - 1)]); } catch(e){ LF.top = 2400; }
   lfTrend(dk, m);
   LF.events = lfEvents(dk, m);
+  return true;
 }
 // subjects among a sample of the people studying right now, scaled up to everyone
 function lfTrend(dk, m){
-  const e = SCH_O[ROSTER_N], cnt = new Map(); let seen = 0, step = Math.max(1, Math.floor(e / 120000)), i = 0;
-  for (let k = 0; k < e && seen < 2500; k += step){
+  const e = SCH_O[ROSTER_N], cnt = new Map(); let seen = 0, step = Math.max(1, Math.floor(e / 60000)), i = 0;
+  for (let k = 0; k < e && seen < 1200; k += step){
     if (!(SCH_A[k] <= m && SCH_B[k] > m)) continue;
     while (SCH_O[i + 1] <= k) i++;
     if (i >= ROSTER_N) break;
@@ -52,24 +76,35 @@ function lfMine(){
   try { (DMS.msgs || []).forEach(x => set.add(x.w)); } catch(e){}
   return set;
 }
+function lfIndex(){
+  if (LF.ix && LF.ix.day === planDay) return LF.ix;
+  const e = SCH_O[ROSTER_N], own = new Int32Array(e), offA = new Int32Array(1443), offB = new Int32Array(1443), byA = new Int32Array(e), byB = new Int32Array(e);
+  for (let i = 0; i < ROSTER_N; i++) for (let k = SCH_O[i]; k < SCH_O[i + 1]; k++) own[k] = i;
+  for (let k = 0; k < e; k++){ offA[SCH_A[k] + 1]++; offB[SCH_B[k] + 1]++; }
+  for (let x = 1; x < 1443; x++){ offA[x] += offA[x - 1]; offB[x] += offB[x - 1]; }
+  const pa = offA.slice(), pb = offB.slice();
+  for (let k = 0; k < e; k++){ byA[pa[SCH_A[k]]++] = k; byB[pb[SCH_B[k]]++] = k; }
+  return (LF.ix = {day: planDay, own, offA, offB, byA, byB});
+}
 function lfEvents(dk, m){
   const out = [], mine = lfMine(), mm = R.mmr, from = m - 120, e = SCH_O[ROSTER_N];
-  // sessions starting and finishing, and people passing 4 or 6 hours for the day
-  let i = 0;
-  for (let k = 0; k < e; k++){
-    while (SCH_O[i + 1] <= k) i++;
-    const a = SCH_A[k], b = SCH_B[k], r = botRating(i), near = Math.abs(r - mm) <= 60, rel = mine.has(i);
+  // sessions starting and finishing in the last 2 hours, and people passing 4 or 6 hours for the day
+  const X = lfIndex(), lo0 = Math.max(0, from + 1), started = new Map();
+  for (let q = X.offA[lo0], qe = X.offA[Math.min(1441, m + 1)]; q < qe; q++){
+    const k = X.byA[q], i = X.own[k], a = SCH_A[k], b = SCH_B[k], near = Math.abs(botRating(i) - mm) <= 60, rel = mine.has(i);
     // a session that started in the last 2 hours shows as "started" while it's still going, and as "finished" once it's over
-    const sYou = a > from && a <= m && (rel || (near && lfKeep(i, a, 1, .035))), sAll = a > from && a <= m && lfKeep(i, a, 2, 1 / 900);
+    const sYou = rel || (near && lfKeep(i, a, 1, .035)), sAll = lfKeep(i, a, 2, 1 / 900);
     if ((sYou || sAll) && b > m) out.push({t: a, i, kind: 'start', k, you: sYou, all: sAll});
-    if (b > from && b <= m && b - a >= 20){
-      const you = sYou || rel || (near && lfKeep(i, b, 3, .03)), all = sAll || lfKeep(i, b, 4, (b - a >= 150 ? 1 / 60 : 1 / 1100));
-      if (you || all) out.push({t: b, i, kind: 'end', k, min: b - a, you, all});
-      // passing 4 or 6 hours today
-      let tot = 0; for (let q = SCH_O[i]; q <= k; q++) tot += SCH_B[q] - SCH_A[q];
-      const prev = tot - (b - a), mile = [360, 240].find(x => prev < x && tot >= x);
-      if (mile && (rel || lfKeep(i, b, 5, mile >= 360 ? 1 / 4 : 1 / 25))) out.push({t: b, i, kind: 'hours', h: mile / 60, you: rel || near, all: true});
-    }
+    if (b <= m) started.set(k, [sYou, sAll]);
+  }
+  for (let q = X.offB[lo0], qe = X.offB[Math.min(1441, m + 1)]; q < qe; q++){
+    const k = X.byB[q], i = X.own[k], a = SCH_A[k], b = SCH_B[k]; if (b - a < 20) continue;
+    const near = Math.abs(botRating(i) - mm) <= 60, rel = mine.has(i), [sYou, sAll] = started.get(k) || [false, false];
+    const you = sYou || rel || (near && lfKeep(i, b, 3, .03)), all = sAll || lfKeep(i, b, 4, (b - a >= 150 ? 1 / 60 : 1 / 1100));
+    if (you || all) out.push({t: b, i, kind: 'end', k, min: b - a, you, all});
+    let tot = 0; for (let x = SCH_O[i]; x <= k; x++) tot += SCH_B[x] - SCH_A[x];
+    const prev = tot - (b - a), mile = [360, 240].find(x => prev < x && tot >= x);
+    if (mile && (rel || lfKeep(i, b, 5, mile >= 360 ? 1 / 4 : 1 / 25))) out.push({t: b, i, kind: 'hours', h: mile / 60, you: rel || near, all: true});
   }
   // ranked matches between other players that have finished so far in this window
   for (const p of LF.pairs || []){
@@ -77,18 +112,25 @@ function lfEvents(dk, m){
     const rel = mine.has(p.a) || mine.has(p.c), near = Math.abs(p.ra - mm) <= 60 || Math.abs(p.rc - mm) <= 60;
     const upset = Math.abs(p.ra - p.rc) >= 120 && ((p.ra < p.rc && p.ma > p.mc) || (p.rc < p.ra && p.mc > p.ma));
     const ev = {t, kind: 'match', p, upset, rel, top: p.ra + p.rc, you: rel || (near && lfKeep(p.a, t, 6, .07)), all: lfKeep(p.a, t, 7, upset ? 1 / 12 : 1 / 260)};
-    out.push(ev);
+    if (ev.you || ev.all || Math.max(p.ra, p.rc) >= LF.top) out.push(ev);
     lfRankUps(out, p, t, mine, near);
   }
-  // matches that finished in the previous window (already settled, so they come from the saved results)
-  const base = dayIdx(dk) * 1440, w0 = Math.floor(m / 120) * 120, lo = base + from, hi = base + w0;
-  for (let s = 0, n = ROSTER_N * M5; s < n; s++){
-    const opp = M5_OPP[s]; if (opp < 0) continue; const c = M5_T[s]; if (c <= lo || c > hi) continue;
-    const i = (s / M5) | 0; if (i > opp) continue;
-    const t = c - base, p = {a: i, c: opp, ma: M5_A[s], mc: M5_B[s], ra: M5_R[s] - M5_D[s], rc: M5_O[s], dlt: M5_D[s], ea: t, ec: t};
-    const rel = mine.has(i) || mine.has(opp), near = Math.abs(p.ra - mm) <= 60 || Math.abs(p.rc - mm) <= 60;
+  // matches that finished in the previous window (already settled, so they come from the saved results, read once per window)
+  const base = dayIdx(dk) * 1440, w0 = Math.floor(m / 120) * 120, mk = dk + '|' + w0 + '|' + R.lastSlice;
+  if (LF.m5Key !== mk){
+    const lo = base + w0 - 120, hi = base + w0, list = [];
+    for (let s = 0, n = ROSTER_N * M5; s < n; s++){
+      const opp = M5_OPP[s]; if (opp < 0) continue; const c = M5_T[s]; if (c <= lo || c > hi) continue;
+      const i = (s / M5) | 0; if (i > opp) continue;
+      list.push({a: i, c: opp, ma: M5_A[s], mc: M5_B[s], ra: M5_R[s] - M5_D[s], rc: M5_O[s], dlt: M5_D[s], ea: c - base, ec: c - base});
+    }
+    LF.m5Key = mk; LF.m5List = list;
+  }
+  for (const p of LF.m5List){
+    const t = p.ea, i = p.a; if (t <= from) continue;
+    const rel = mine.has(p.a) || mine.has(p.c), near = Math.abs(p.ra - mm) <= 60 || Math.abs(p.rc - mm) <= 60;
     const upset = Math.abs(p.ra - p.rc) >= 120 && ((p.ra < p.rc && p.ma > p.mc) || (p.rc < p.ra && p.mc > p.ma));
-    out.push({t, kind: 'match', p, upset, rel, top: p.ra + p.rc, you: rel || (near && lfKeep(i, t, 6, .07)), all: lfKeep(i, t, 7, upset ? 1 / 12 : 1 / 260)});
+    { const ev = {t, kind: 'match', p, upset, rel, top: p.ra + p.rc, you: rel || (near && lfKeep(i, t, 6, .07)), all: lfKeep(i, t, 7, upset ? 1 / 12 : 1 / 260)}; if (ev.you || ev.all || Math.max(p.ra, p.rc) >= LF.top) out.push(ev); }
     lfRankUps(out, p, t, mine, near);
   }
   // your own matches
@@ -96,7 +138,7 @@ function lfEvents(dk, m){
   return out.sort((x, y) => y.t - x.t);
 }
 function lfRankUps(out, p, t, mine, near){
-  const up = (r, nr, who) => { const x0 = rankOf(r), x1 = rankOf(clampN(nr, 300, 5000)); if (x1.i > x0.i || (x1.i === x0.i && x1.d > x0.d)) out.push({t, i: who, kind: 'rank', rk: x1, you: mine.has(who) || (near && lfKeep(who, t, 9, .3)), all: x1.i >= 6 || lfKeep(who, t, 8, 1 / 80)}); };
+  const up = (r, nr, who) => { const x0 = rankOf(r), x1 = rankOf(clampN(nr, 300, 5000)); if (x1.i > x0.i || (x1.i === x0.i && x1.d > x0.d)) { const you = mine.has(who) || (near && lfKeep(who, t, 9, .3)), all = x1.i >= 6 || lfKeep(who, t, 8, 1 / 80); if (you || all) out.push({t, i: who, kind: 'rank', rk: x1, you, all}); } };
   up(p.ra, p.ra + p.dlt, p.a); up(p.rc, p.rc - p.dlt, p.c);
 }
 function lfAgo(t){ const d = LF.m - t; return d <= 0 ? 'now' : d < 60 ? `${d}m` : `${Math.floor(d / 60)}h`; }
@@ -124,7 +166,14 @@ function renderLive(force){
   const page = $('#page-ranked'), shown = page && !page.hidden;
   if (!force && (!shown || (lfFocusing() && el.firstChild))){ lfSide(); if (shown && lfFocusing() && !LF.frozen){ LF.frozen = true; const n = el.querySelector('.lf-pause'); if (n) n.hidden = false; } return; }
   LF.frozen = false;
-  if (Date.now() - LF.at > 25000 || !LF.hours) lfCompute();
+  if (Date.now() - LF.at > 25000 || !LF.hours){
+    const {dk, m, h} = lfNow();
+    const ready = planDay === dk && LF.pairKey === dk + '|' + Math.floor(m / 120) * 120 && LF.hDay === dk && LF.hUpTo >= h && LF.ix && LF.ix.day === dk;
+    if (!ready){ if (!LF.hours && !el.firstChild) el.innerHTML = '<div class="h first lf-h"><span><i class="lf-dot" aria-hidden="true"></i>Studying now</span></div><p class="hint">Counting who’s studying…</p>';
+      lfPrep().then(ok => { if (ok){ LF.at = 0; renderLive(true); } }); if (!LF.hours) return; }
+    else lfCompute();
+  }
+  if (!LF.hours) return;
   const key = LF.at + '|' + LF.tab + '|' + R.mmr;
   if (!force && LF.drawn === key && el.firstChild) return;
   LF.drawn = key;
@@ -157,7 +206,12 @@ function renderLive(force){
 const hourLabel = x => x === 0 ? '12 AM' : x < 12 ? `${x} AM` : x === 12 ? 'noon' : `${x - 12} PM`;
 function lfSide(){
   const b = $('#navLive'); if (!b || !RK_READY) return;
-  if (!LF.hours || Date.now() - LF.at > 60000){ if (lfFocusing() && LF.hours) {} else { try { lfCompute(); } catch(e){ return; } } }
+  if (!simBusy && (!LF.sideAt || Date.now() - LF.sideAt > 60000)){
+    const {dk, m} = lfNow();
+    if (planDay === dk){ let live = 0; for (let k = 0, e = SCH_O[ROSTER_N]; k < e; k++) if (SCH_A[k] <= m && SCH_B[k] > m) live++; LF.live = live; LF.sideAt = Date.now(); }
+    else if (!LF.hours) { try { if (lfCompute()) LF.sideAt = Date.now(); } catch(e){ return; } }
+  }
+  if (!LF.hours && !LF.sideAt) return;
   b.hidden = false; b.querySelector('b').textContent = LF.live.toLocaleString();
 }
 document.addEventListener('click', e => {

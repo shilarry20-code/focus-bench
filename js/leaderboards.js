@@ -22,26 +22,45 @@ const LB = [
 ];
 const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : v.toLocaleString();
 const botVal = (c, i) => c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f];
-// each category's bots sorted best first, kept until the bots next change (a native typed-array sort
-// on one packed number per bot: value, then Elo, then bot number)
-const lbOrders = {};
-function lbOrder(c){
-  const hit = lbOrders[c.id]; if (hit && hit.ver === botsVer && (c.f != null || hit.pts === lbPts)) return hit.order;
-  // packed as value · Elo · bot number; the bot number needs 20 bits (up to 1,048,576 players), and the whole key stays under 2^53
-  const keys = new Float64Array(ROSTER_N), SH = 1048576;
-  for (let i = 0; i < ROSTER_N; i++){ const v = clampN(botVal(c, i), 0, 1e6), e = clampN(BS[i * BF], 0, 8191); keys[i] = -((v * 8192 + e) * SH) + i; }
-  keys.sort();
-  const order = new Int32Array(ROSTER_N); for (let k = 0; k < ROSTER_N; k++) order[k] = ((keys[k] % SH) + SH) % SH;
-  lbOrders[c.id] = {ver: botsVer, pts: lbPts, order}; return order;
+// the board only ever shows the top 50 and the few players around you, so instead of sorting all 682,925 players,
+// one pass picks those out and counts how many are ahead of you (ties: Elo, then bot number). Cached until the world changes.
+const lbSel = {};
+function lbPick50(c, me, n){
+  const key = `${c.id}|${botsVer}|${c.f == null ? (lbPts ? 1 : 0) : ''}|${me}|${R.mmr}|${n}`; if (lbSel[c.id] && lbSel[c.id].key === key) return lbSel[c.id];
+  const top = [], tv = [], above = [], below = [], AB = 5, BE = 6; let mine = 0;
+  const better = (v1, e1, i1, v2, e2, i2) => v1 > v2 || (v1 === v2 && (e1 > e2 || (e1 === e2 && i1 < i2)));
+  const put = (arr, i, v, e, keep, bestFirst) => {      // a small list kept in rank order (best first), trimmed to keep
+    let k = arr.length; arr.push([i, v, e]);
+    while (k > 0 && better(v, e, i, arr[k - 1][1], arr[k - 1][2], arr[k - 1][0])){ arr[k] = arr[k - 1]; k--; }
+    arr[k] = [i, v, e]; if (arr.length > keep){ if (bestFirst) arr.pop(); else arr.shift(); }
+  };
+  for (let i = 0; i < ROSTER_N; i++){
+    const v = botVal(c, i), e = BS[i * BF];
+    if (top.length < n || better(v, e, i, top[top.length - 1][1], top[top.length - 1][2], top[top.length - 1][0])) put(top, i, v, e, n, true);
+    if (v > me || (v === me && e > R.mmr)){ mine++; if (above.length < AB || !better(v, e, i, above[0][1], above[0][2], above[0][0])) put(above, i, v, e, AB, false); }
+    else if (below.length < BE || better(v, e, i, below[below.length - 1][1], below[below.length - 1][2], below[below.length - 1][0])) put(below, i, v, e, BE, true);
+  }
+  return (lbSel[c.id] = {key, top: top.map(x => x[0]), above: above.map(x => x[0]), below: below.map(x => x[0]), mine});
 }
-const lbAhead = (c, me) => { let n = 0; for (let i = 0; i < ROSTER_N; i++){ const v = botVal(c, i); if (v > me || (v === me && BS[i * BF] > R.mmr)) n++; } return n; };
 function lbRanking(c, t){
-  const me = c.me(t), order = lbOrder(c), mine = lbAhead(c, me);
-  const at = k => k < mine ? order[k] : k === mine ? ROSTER_N : order[k - 1];
+  const me = c.me(t), S = lbPick50(c, me, Math.max(lbShown, 1)), mine = S.mine;
+  const at = k => k === mine ? ROSTER_N : k < mine ? (k < S.top.length && k < mine - S.above.length ? S.top[k] : S.above[k - (mine - S.above.length)]) : (k - mine - 1 < S.below.length ? S.below[k - mine - 1] : S.top[k - 1]);
   const val = k => k === ROSTER_N ? me : botVal(c, k);
   return {at, mine, val, me};
 }
-const myPlace = (c, t) => lbAhead(c, c.me(t)) + 1;
+const lbAhead = (c, me) => lbPick50(c, me, Math.max(lbShown, 1)).mine;
+// your place in every category at once: one pass over everyone instead of one per category
+let lbPlaces = null;
+function myPlace(c, t){
+  const mes = LB.map(x => x.me(t)), key = `${botsVer}|${lbPts ? 1 : 0}|${R.mmr}|${mes.join(',')}`;
+  if (!lbPlaces || lbPlaces.key !== key){
+    const n = new Int32Array(LB.length), fs = LB.map(x => x.f), mm = R.mmr;
+    for (let i = 0; i < ROSTER_N; i++){ const o = i * BF, e = BS[o];
+      for (let k = 0; k < fs.length; k++){ const v = fs[k] == null ? (lbPts ? lbPts[i] : 0) : BS[o + fs[k]], me = mes[k]; if (v > me || (v === me && e > mm)) n[k]++; } }
+    lbPlaces = {key, n};
+  }
+  return lbPlaces.n[LB.indexOf(c)] + 1;
+}
 const topPct = place => { const p = place / (ROSTER_N + 1) * 100; return p < 1 ? 'top 1%' : `top ${Math.ceil(p)}%`; };
 let lbShown = 10, lbJump = false;
 function lbRow(k, place, c, val){

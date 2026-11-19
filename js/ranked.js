@@ -400,10 +400,14 @@ function saveRanked(now){
   clearTimeout(rkSaveT); now ? doSave() : rkSaveT = setTimeout(doSave, 800);
 }
 const markBots = () => { botsDirty = true; };
-function saveBots(){
+document.addEventListener('visibilitychange', () => { if (document.hidden && botsDirty) saveBots(true); });
+let botsSavedAt = Date.now();
+function saveBots(force){
   if (!idbOk || !RK_READY || !BS) return;
   clearTimeout(botsSaveT);
+  if (!force && !document.hidden && Date.now() - botsSavedAt < 10 * 60000){ botsSaveT = setTimeout(() => saveBots(), 10 * 60000 - (Date.now() - botsSavedAt) + 1000); return; }
   botsSaveT = setTimeout(() => {
+    botsSavedAt = Date.now();
     botsDirty = false;
     IDB.set('bots', {n: ROSTER_N, w: WORLD_V, ap: [...WAP], ov: OV_R.buffer, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(),
       m5: m5Save()}).catch(e => { console.error(e); botsDirty = true; });
@@ -492,8 +496,12 @@ function sitTimes(i, dk, xs){      // fills ST_A / ST_B, returns the count and t
 // every bot's plan for one day, worked out once and reused by that day's twelve updates:
 // total and longest sitting, plus when each sitting happens (SCH_*: player i's sittings are SCH_O[i] .. SCH_O[i+1])
 let planDay = null, planM = null, planL = null, SCH_O = null, SCH_A = new Uint16Array(1 << 20), SCH_B = new Uint16Array(1 << 20);
-function plansFor(dk){
-  if (planDay === dk) return;
+// the world update can run in small steps (a few milliseconds at a time) so the page stays smooth; the result is identical
+const runGen = g => { let r; while (!(r = g.next()).done); return r.value; };
+async function runGenAsync(g){ let r, t = performance.now(); while (!(r = g.next()).done){ if (performance.now() - t > 10){ await breathe(); t = performance.now(); } } return r.value; }
+function plansFor(dk){ if (planDay !== dk) runGen(plansGen(dk)); }
+function* plansGen(dk){
+  planDay = null;
   if (!planM){ planM = new Int32Array(ROSTER_N); planL = new Int32Array(ROSTER_N); SCH_O = new Int32Array(ROSTER_N + 1); }
   let c = 0;
   for (let i = 0; i < ROSTER_N; i++){
@@ -504,6 +512,7 @@ function plansFor(dk){
     const {n} = sitTimes(i, dk, SITS);
     if (c + n > SCH_A.length){ const a = new Uint16Array(SCH_A.length * 2), b = new Uint16Array(SCH_B.length * 2); a.set(SCH_A); b.set(SCH_B); SCH_A = a; SCH_B = b; }
     for (let k = 0; k < n; k++){ SCH_A[c] = ST_A[k]; SCH_B[c] = ST_B[k]; c++; }
+    if ((i & 4095) === 4095) yield;
   }
   SCH_O[ROSTER_N] = c;
   planDay = dk;
@@ -591,14 +600,19 @@ function sitEndingIn(i, e0, e1){
 let CAND = null, CSIT = null;
 function shuffledIdx(n, rnd){ const a = new Int32Array(n); for (let k = 0; k < n; k++) a[k] = k; for (let k = n - 1; k > 0; k--){ const j = Math.floor(rnd() * (k + 1)); const t = a[k]; a[k] = a[j]; a[j] = t; } return a; }
 // who plays whom in one window, and how it goes (nothing is changed here, so the live feed can look ahead)
-function pairWindow(w0, dk){      // sittings that ended during the window starting at minute w0 of day dk
+function pairWindow(w0, dk){ return runGen(pairGen(w0, dk)); }
+function* pairGen(w0, dk){      // sittings that ended during the window starting at minute w0 of day dk
   if (!CAND){ CAND = new Int32Array(ROSTER_N); CSIT = new Int32Array(ROSTER_N); }
   let n = 0;
-  for (let i = 0; i < ROSTER_N; i++){ if (!planM[i]) continue; const k = sitEndingIn(i, w0, w0 + 120); if (k >= 0){ CAND[n] = i; CSIT[i] = k; n++; } }
+  for (let i = 0; i < ROSTER_N; i++){ if ((i & 16383) === 16383) yield; if (!planM[i]) continue; const k = sitEndingIn(i, w0, w0 + 120); if (k >= 0){ CAND[n] = i; CSIT[i] = k; n++; } }
+  yield;
   const cand = Array.from(CAND.subarray(0, n)).sort((x, y) => baseR(y) - baseR(x) || x - y);
   const candR = cand.map(i => baseR(i)), rOfK = q => candR[q], ks = Array.from({length: n}, (_, q) => q);
+  yield;
   const used = new Uint8Array(n), rnd = mulberry32(ROSTER_SEED ^ (dayIdx(dk) * 1440 + w0) * 2246822519), out = [];
+  let step = 0;
   for (const k of shuffledIdx(n, rnd)){
+    if ((++step & 2047) === 0) yield;
     if (used[k]) continue;
     // someone whose sitting also just ended, usually within ~80 points of their rating
     const target = candR[k] + Math.round(gaussOf(rnd) * MATCH_SPREAD);
@@ -614,8 +628,8 @@ function pairWindow(w0, dk){      // sittings that ended during the window start
   }
   return out;
 }
-function windowMatches(w0, dk){
-  for (const m of pairWindow(w0, dk)){
+function windowMatches(w0, dk, pairs){
+  for (const m of pairs || pairWindow(w0, dk)){
     const {a, c, ma, mc, ra, rc, dlt} = m, na = clampN(ra + dlt, 300, 5000), nc = clampN(rc - dlt, 300, 5000);
     BS[a * BF] = na + OV_R[a]; BS[c * BF] = nc + OV_R[c];
     m5Put(a, c, tCode(dk, m.ea), ma, mc, na - ra, BS[a * BF], rc + OV_R[c]);
@@ -663,16 +677,22 @@ function m5Backfill(i){
   return true;
 }
 // one window [t, t + 2h): everyone's study minutes from their real session times, then that window's matches
-function runWindow(t, addMinutes){
+function runWindow(t, addMinutes){ return runGen(windowGen(t, addMinutes)); }
+function* windowGen(t, addMinutes){
   const dk = dayKey(t), w0 = new Date(t).getHours() * 60;
-  plansFor(dk);
-  if (addMinutes) for (let i = 0; i < ROSTER_N; i++){ if (!planM[i]) continue; const m = windowMin(i, w0, w0 + 120); if (m > 0) addStudy(i, m, planL[i]); }
-  windowMatches(w0, dk);
+  if (planDay !== dk) yield* plansGen(dk);
+  if (addMinutes) for (let i = 0; i < ROSTER_N; i++){ if ((i & 16383) === 16383) yield; if (!planM[i]) continue; const m = windowMin(i, w0, w0 + 120); if (m > 0) addStudy(i, m, planL[i]); }
+  const pairs = yield* pairGen(w0, dk);
+  windowMatches(w0, dk, pairs);
 }
 // the update at time t handles the 2 hours that just ended; at midnight that's yesterday's last window, then the new day starts
 function runSlice(t, addMinutes = true){
   runWindow(t - SLICE, addMinutes);
   if (new Date(t).getHours() === 0) rollover(t);
+}
+async function runSliceAsync(t){
+  await runGenAsync(windowGen(t - SLICE, true));
+  if (new Date(t).getHours() === 0){ await breathe(); rollover(t); }
 }
 // runs one update (or one whole missed day) at a time, letting the page breathe in between;
 // resolves to true if anything changed
@@ -682,12 +702,13 @@ function dailySim(){
   if (simBusy) return simBusy;
   let res; const prom = simBusy = new Promise(r => res = r);
   (async () => {
+    while (typeof LF !== 'undefined' && LF.prepping) await breathe();      // the Studying now card is mid-way through its own steps
     let now = sliceStartOf(worldT(Date.now()));
     if (WORLD_UNTIL) now = Math.min(now, WORLD_UNTIL);
     if (!R.lastSlice || R.lastSlice < WORLD_START) R.lastSlice = WORLD_START;
     let changed = false;
     for (let t = R.lastSlice + SLICE; t <= now; t += SLICE){
-      runSlice(t); R.lastSlice = t; changed = true;
+      await runSliceAsync(t); R.lastSlice = t; changed = true;
       await new Promise(r => setTimeout(r, 15));          // let the page breathe between updates
     }
     for (const e of pendingEvents()){ applyEvent(e.h); changed = true; }     // real players' matches, in any order
