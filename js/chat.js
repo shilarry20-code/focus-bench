@@ -72,9 +72,6 @@ CHATS.msgs = CHATS.msgs.filter(chatKeep); CHATS.q = CHATS.q.filter(chatKeep);
 
 /* ---- Gemini ---- */
 const chatName = w => w === -1 ? myName() : bot(w).name;
-const CHAT_TOPICS = ['dining hall food', 'a specific show they’re binging (name it)', 'an artist or album they have on repeat (name it)', 'a video game they’re playing (name it)', 'last night’s game (name the teams)', 'the weather', 'weekend plans',
-  'roommate stuff', 'something funny that happened today', 'sleep schedules', 'pets back home', 'a random hot take', 'campus events', 'a meme or trend', 'going home for break',
-  'coffee or boba orders', 'the gym', 'cooking disasters', 'a dumb argument they had today', 'a class that’s going badly or weirdly well', 'something that happened at work or their job', 'a would-you-rather', 'what they’d do with $1,000', 'a weird dream', 'laundry or cleaning chaos', 'a campus pet peeve', 'their worst habit', 'a movie they just saw (name it)', 'a YouTuber or streamer they watch (name them)', 'a hot take about a famous movie, show or song', 'online shopping', 'their phone or laptop dying', 'what to eat tonight', 'a would-you-rather question', 'favorite snacks'];
 let chatWilling = [];      // [{i, mode}] players who'd send you a challenge if you ask, decided for this reply
 function chatChallengeNote(cast){
   chatWilling = [];
@@ -88,11 +85,6 @@ function chatChallengeNote(cast){
   if (!chatWilling.length) return `If ${me} is asking for a match or a challenge, nobody here is up for one right now: they can say so, but nobody sends one.\n`;
   return `If ${me} is asking for a match or a challenge, these players are up for it: ${chatWilling.map(x => `${bot(x.i).name} (${x.mode === 'r' ? 'ranked' : 'friendly only'})`).join(', ')}. One or two of them can say yes, and each one who does sends ${me} a challenge: for each, add an extra item with "from": "ACTION" and "text": "<their name>: ranked" or "<their name>: friendly". Never say a challenge was sent without that item. If ${me} isn't asking to play, add no ACTION items.\n`;
 }
-// a few ideas for the batch: everyday ones, plus at most one about shows, music, games or sports
-function chatTopicPick(){
-  const mix = a => a.slice().sort(() => Math.random() - .5), media = mix(CHAT_TOPICS.filter(t => /\(name/.test(t) || /famous/.test(t))), life = mix(CHAT_TOPICS.filter(t => !/\(name/.test(t) && !/famous/.test(t)));
-  return mix(life.slice(0, Math.random() < .5 ? 3 : 4).concat(Math.random() < .5 ? media.slice(0, 1) : []));
-}
 function aiPrompt(online, forUser, away){
   const now = new Date(), sem = semesterOf(now), people = online.slice(0, 12);
   if (forUser){ const mine = CHATS.msgs[CHATS.msgs.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re); if (to && to.w !== -1 && to.w !== inMatchWith() && !people.includes(to.w)) people.unshift(to.w); }
@@ -101,8 +93,8 @@ function aiPrompt(online, forUser, away){
   const userHere = forUser || CHATS.msgs.some(m => m.w === -1 && !m.del && Date.now() - m.t < 15 * 60000);
   const recent = CHATS.msgs.filter(m => !m.del && (userHere || m.w !== -1)).slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
-This is a general hangout room: people can talk about anything, like any group chat of college students. Food, games, sports, music, shows, weather, classes, roommates, weekend plans, random thoughts, memes, complaining, jokes. Studying, classes, work and ranked matches should only come up now and then: in a batch, at most one or two messages touch on them, and plenty of batches have none. Don't tack study talk onto other messages (no "back to studying", "gotta grind", "locking in", "anyway back to work").
-Mix it up like a real group chat: everyday life (food, classes, roommates, sleep, weather, plans, money, campus stuff), jokes and banter, complaints, random thoughts, debates and hot takes, questions to each other, and only sometimes shows, movies, music, games or sports (at most one or two messages per batch, often none). When media does come up, be specific: name the real show, movie, artist, song, game, team or player (never vague stand-ins like "that show" or "that album"), and say something about it, an opinion, a moment, a reaction. Don't open with "has anyone watched/listened to/seen…" or "did anyone catch…"; people just say what they think. Only mention real things you're confident exist, and don't quote song lyrics.
+This is a general hangout room: people can talk about anything, like any group chat of college students. Studying, exams and ranked matches come up now and then because of where they are. Don't tack study talk onto other messages (no \"back to studying\", \"gotta grind\", \"locking in\").
+People talk about whatever is on their mind; it's up to each player. If they mention a show, movie, song, game, team or anything like that, they name the real thing rather than a vague "that show". Don't quote song lyrics.
 A reply must respond to what that message actually said; if someone changes the subject, it's a new message, not a reply.
 Write like a real group chat: casual texting style (lowercase is fine, contractions, slang, not formal full sentences), mostly short, with only the odd longer message. A reply is already shown as a reply, so don't start it with the other person's name; use names only now and then, the way people really do. with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
 Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
@@ -112,8 +104,6 @@ Keep it friendly and appropriate: no explicit content, no slurs or harassment, n
   const user = `It's ${now.toLocaleDateString(undefined, {weekday: 'long'})} ${now.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}, week ${sem.wk + 1} of the semester${sem.exam ? `, ${sem.exam.toLowerCase()} season` : ''}.
 Players online (background only; most messages shouldn't be about it):
 ${who}
-
-Some things people might bring up this time (optional ideas, not about studying): ${chatTopicPick().join(', ')}.
 
 Recent chat, oldest first:
 ${hist}
