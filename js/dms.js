@@ -84,8 +84,8 @@ function dmQueue(w, t, texts, first = {}, hold = false){
 }
 // how long until they answer: online now is quick, studying is slower, offline may be a long while or never
 function dmDelay(w){
-  if (dmStudying(w)) return Math.random() < .7 ? (60 + Math.random() * 240) * 1000 : null;
-  if (dmOnline(w)) return (12 + Math.random() * 60) * 1000;
+  if (dmStudying(w)) return Math.random() < .85 ? (20 + Math.random() * 70) * 1000 : null;
+  if (dmOnline(w)) return (3 + Math.random() * 9) * 1000;
   return Math.random() < .45 ? (8 + Math.random() * 90) * 60000 : null;
 }
 
