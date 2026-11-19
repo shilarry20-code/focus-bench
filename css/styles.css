@@ -1447,3 +1447,15 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .dm-p.dm-typing{color:var(--accent);font-weight:600;font-style:italic;display:flex;align-items:center;gap:6px}
 .dm-p.dm-typing .ty-dots i{background:var(--accent)}
 .g-wk{border-left-color:var(--accent)}
+
+/* keyboard shortcut editor */
+.keyedit{list-style:none;margin:10px 0 6px;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px 18px}
+.keyedit li{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}
+.keyedit.off{opacity:.5}
+.ke-n{flex:1;font-size:14px}
+.ke-k{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:3px 8px;min-width:64px;cursor:pointer;font:inherit;font-size:12px;color:var(--ink)}
+.ke-k kbd{font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--bg)}
+.ke-k.none{color:var(--muted)}
+.ke-k.cap{border-color:var(--accent);color:var(--accent);font-weight:700}
+.ke-x{width:18px;display:inline-block}
+.ke-note{min-height:1.2em;margin:6px 0 10px}

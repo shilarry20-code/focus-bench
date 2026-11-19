@@ -188,16 +188,8 @@ $('#noteClear').onclick = () => { NOTES = NOTES.filter(n => !n.done); saveNotes(
 document.addEventListener('keydown', e => {
   const t = e.target;
   if (e.metaKey || e.ctrlKey || e.altKey || t.matches('input, textarea, select')) return;
-  const k = e.key.toLowerCase();
-  if (' rsmf'.includes(k) && k) achBump('keys');
-  if (/^[1-9]$/.test(k)){ const b = document.querySelector(`.nav-btn[data-key="${k}"]`); if (b) showPage(b.dataset.page); return; }
-  if (k === 'escape') $('#nav').classList.remove('more-open');
-  if (k === ' '){ if (t.closest('button')) return; e.preventDefault(); toggle(); }
-  else if (k === 'r') reset();
-  else if (k === 's') skip();
-  else if (k === 'm') toggleMini();
-  else if (k === 'f') toggleFocusMode();
-  else if (k === '\\') toggleSide();
+  if (e.key === 'Escape') $('#nav').classList.remove('more-open');
+  if (typeof runShortcut === 'function') runShortcut(e);      // your shortcuts (js/keys.js)
 });
 /* hiding the side panel (computers only; phones use the bottom bar), remembered between visits */
 function applySide(){ document.body.classList.toggle('side-hidden', !!P.sideHidden); }
