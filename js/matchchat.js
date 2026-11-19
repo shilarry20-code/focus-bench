@@ -71,7 +71,7 @@ async function mcSay(kind, delay){
     mcBusy = true;
     try { const {sys, user} = mcPrompt(c, task), got = await aiCall(sys, user);
       texts = (Array.isArray(got) ? got : []).map(m => String((m && (m.text || m.message)) || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 200)).filter(Boolean).slice(0, 2);
-    } catch(e){ if (e.kind === 'busy' || e.kind === 'key') GEM.wait = Date.now() + (e.kind === 'busy' ? 15 : 60 * 24) * 60000; if (e.msg) GEM.detail = e.msg; saveAI(); }
+    } catch(e){ if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); if (e.msg) GEM.detail = e.msg; saveAI(); }
     finally { mcBusy = false; }
   }
   if (!texts.length){                                              // the built-in lines
