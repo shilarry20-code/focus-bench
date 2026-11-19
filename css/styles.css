@@ -1494,3 +1494,4 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .nav-live{display:flex;align-items:center;border:0;background:none;color:var(--muted);font-size:12.5px;padding:8px 10px;margin:4px 0;border-radius:var(--r-ctl);text-align:left}
 .nav-live:hover{background:var(--soft);color:var(--ink)}.nav-live b{color:var(--ink);margin-right:4px}
 .lf-tophint{margin:2px 0 4px;font-size:12px}
+.lft-d{font-style:normal;font-size:11px;font-weight:700;color:var(--muted)}.lft-d.up{color:#16a34a}.lft-d.down{color:#dc2626}
