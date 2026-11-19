@@ -110,8 +110,20 @@ function pause(){
   S.running = false; wake(false); changed();
 }
 const toggle = () => S.running ? pause() : start();
-function reset(){ achBump('resets'); S.segOff = 0; S.segTask = null; S.running = false; S.flowAcc = 0; S.remaining = durMs(S.phase); wake(false); changed(); }
-function resetCycle(){ S.phase = 'focus'; S.round = 1; reset(); }
+// time already focused in this block (a minute or more) is saved to your log, like Skip and Break do
+function savePartial(){
+  if (S.phase !== 'focus') return 0;
+  const el = focusElapsed(), m = Math.round((el - (S.segOff || 0)) / 60000);
+  if (el - (S.segOff || 0) < 60000) return 0;
+  logFocus(el); return m;
+}
+function reset(noSave){
+  achBump('resets');
+  const saved = noSave ? 0 : savePartial();
+  S.segOff = 0; S.segTask = null; S.running = false; S.flowAcc = 0; S.remaining = durMs(S.phase); wake(false); changed();
+  if (saved) toast(`Saved ${saved} min to your log.`);
+}
+function resetCycle(noSave){ S.phase = 'focus'; S.round = 1; reset(noSave); }
 
 function advance(autoStart){
   S.segOff = 0; S.segTask = null;
