@@ -31,6 +31,7 @@ function dmCanStart(w){
   return !last || !!last.me;
 }
 const pendingCh = w => thread(w).find(m => m.ch && m.ch.st === 'p');
+const liveOpp = () => R && R.cur && R.cur.state === 'live' && !R.cur.tapped ? R.cur.b : -1;
 const matchBusy = () => !!((R.cur && R.cur.state === 'live') || MQ);
 
 /* ---- Gemini writes what they say ---- */
@@ -41,7 +42,8 @@ Write like real texting between two college students: casual, short, lowercase i
 Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Don't check in on how ${me} is doing and don't congratulate rank-ups unprompted. Every message is from ${B.name}.`;
   const hist = thread(w).filter(m => m.text || m.ch).slice(-14).map(m => m.ch ? `(${m.me ? me : B.name} sent a ${m.ch.mode === 'f' ? 'friendly' : 'ranked'} challenge, ${({p: 'pending', a: 'accepted', d: 'declined', x: 'expired'})[m.ch.st]})` : `${m.me ? me : B.name}: ${m.text}`).join('\n') || '(no messages yet)';
   const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}${B.bio ? `. Bio: "${B.bio}"` : ''}.
-${me}: ${rk.full} (${R.mmr} Elo).
+${me}: ${rk.full} (${R.mmr} Elo). ${B.name} is ${botRating(w)} Elo, so the gap is ${Math.abs(botRating(w) - R.mmr)} (don't claim the ratings are the same unless the gap is 0).
+${R.cur && R.cur.b === w && R.cur.state === 'live' ? `They are in a live ${R.cur.friendly ? 'friendly' : 'ranked'} match with each other right now (any challenge between them was already accepted).` : ''}
 Their head-to-head record (${me}'s wins–losses${R.rec[w] && R.rec[w][2] ? '–draws' : ''}): ${recStr(w)}${isRival(w) ? ', they are rivals' : ''}.
 ${h ? `Their last match: ${winLabel(h.t).toLowerCase()}, ${h.f ? 'friendly' : 'ranked'}, ${me} ${({W: 'won', L: 'lost', D: 'drew'})[h.r]}, ${matchTimes(h).replace(/<[^>]+>/g, '')}${h.f ? '' : `, ${h.d > 0 ? '+' : ''}${h.d} Elo for ${me}`}.` : 'They have no matches together.'}
 It's ${new Date().toLocaleDateString(undefined, {weekday: 'long'})} ${new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
@@ -55,7 +57,7 @@ ${task}`;
 // returns their texts; with withAct, {texts, act}: act is an extra item Gemini adds (from "ACTION") to say what they do
 async function dmWrite(w, task, withAct){
   let texts = [], act = null;
-  if (GEM.key && !(GEM.wait > Date.now())){
+  if (GEM.key && !(GEM.wait > Date.now()) && w !== liveOpp()){
     try {
       const {sys, user} = dmPrompt(w, task), got = await aiCall(sys, user);
       (Array.isArray(got) ? got : []).forEach(m => {
@@ -227,7 +229,9 @@ async function dmAmbient(){
 /* ---- the clock: deliver, expire, count down ---- */
 function dmTick(){
   const now = Date.now(); let fresh = [], changed = false;
-  DMS.q.forEach(m => { if (m.hold && focusing() && m.t <= now) m.t = now + 5000; });     // held until your break
+  const opp = liveOpp();
+  if (opp >= 0 && DMS.q.some(m => m.w === opp && !m.upd)){ DMS.q = DMS.q.filter(m => m.w !== opp || m.upd); changed = true; }
+  DMS.q.forEach(m => { if (focusing() && m.t <= now) m.t = now + 5000; });     // nothing arrives during a focus block: it waits for your break
   while (DMS.q.length && DMS.q[0].t <= now){
     const q = DMS.q.shift();
     if (q.upd){                                 // their answer to your challenge; too late if it already ran out
@@ -251,7 +255,7 @@ function dmTick(){
   }
   // in the conversation list: "typing…" in place of the last message while someone is writing to you
   if (CHAT_TAB === 'dm' && DM_OPEN == null && chatPageOpen()){
-    const ty = new Set(typingNow(DMS.q.filter(m => m.text && !(m.hold && focusing()))));
+    const ty = new Set(typingNow(DMS.q.filter(m => m.text && !focusing())));
     document.querySelectorAll('#chatBody .dm-row').forEach(row => {
       const p = row.querySelector('.dm-p'), on = ty.has(+row.dataset.open); if (!p || p.dataset.ty === String(on)) return;
       if (p.dataset.orig == null) p.dataset.orig = p.innerHTML;
@@ -263,7 +267,7 @@ function dmTick(){
   document.querySelectorAll('#chatBody .cc-left[data-exp]').forEach(el => { const ms = +el.dataset.exp - now; el.textContent = ms > 0 ? `${clock(ms)} left` : 'Expired'; });
   if (CHAT_TAB === 'dm' && DM_OPEN != null && chatPageOpen()){
     const t = $('#dmTyping');
-    if (t){ const ws = typingNow(DMS.q.filter(m => m.w === DM_OPEN && m.text && !(m.hold && focusing()))), k = ws.join(',');
+    if (t){ const ws = typingNow(DMS.q.filter(m => m.w === DM_OPEN && m.text && !focusing())), k = ws.join(',');
       if (t.dataset.k !== k){ t.dataset.k = k; t.innerHTML = typingHtml(ws); t.classList.toggle('on', !!ws.length); } }
     const inp = $('#dmIn'); if (inp && !inp.dataset.ph) inp.dataset.ph = inp.placeholder;
     chatLockInput(inp, $('#dmForm button'));
