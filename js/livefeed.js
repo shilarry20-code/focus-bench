@@ -23,7 +23,11 @@ function lfCompute(){
   }
   hours[h] = live;
   const w0 = Math.floor(m / 120) * 120, key = dk + '|' + w0;
-  if (LF.pairKey !== key){ LF.pairs = pairWindow(w0, dk); LF.pairKey = key; }
+  // the window's pairings depend on everyone's ratings after the last window: only work them out once the world has caught up
+  if (LF.pairKey !== key){
+    if (R.lastSlice < sliceStartOf(worldT(Date.now()))){ if (!LF.waiting){ LF.waiting = 1; dailySim().then(() => { LF.waiting = 0; LF.at = 0; renderLive(true); }); } LF.pairs = []; }
+    else { LF.pairs = pairWindow(w0, dk); LF.pairKey = key; }
+  }
   let pk = 0; for (let x = 0; x <= h; x++) if (hours[x] > hours[pk]) pk = x;
   Object.assign(LF, {hours, live, peak: {h: pk, n: hours[pk]}, dk, m, at: Date.now()});
   try { const sb = sortedBots(); LF.top = botRating(sb[Math.min(999, sb.length - 1)]); } catch(e){ LF.top = 2400; }
@@ -129,7 +133,7 @@ function renderLive(force){
   const tmax = LF.trend.length ? LF.trend[0][1] : 1;
   let list;
   if (LF.tab === 'top'){
-    const top = LF.events.filter(x => x.kind === 'match' && Math.max(x.p.ra, x.p.rc) >= LF.top).slice(0, 30);
+    const top = LF.events.filter(x => x.kind === 'match' && Math.max(x.p.ra, x.p.rc) >= LF.top).slice(0, 60);
     const live = typeof wLiveTop === 'function' ? wLiveTop() : [];
     const liveHtml = live.length ? `<div class="lf-sub lf-livehd"><i class="lf-dot" aria-hidden="true"></i>Live now</div><ul class="lf-live">${live.map(p => { const {m} = lfNow(); return `<li><span class="lf-txt">${lfName(p.a)} <span>vs</span> ${lfName(p.c)}<small>${Math.max(p.ra, p.rc).toLocaleString()} Elo · ${Math.round(m - Math.max(p.ea - p.ma, p.ec - p.mc))} min in</small></span><button class="small-btn" data-watch="${p.a}-${p.c}">Watch</button></li>`; }).join('')}</ul><div class="lf-sub">Finished</div>` : '';
     list = liveHtml + (top.length ? `<ol class="lf-top">${top.map(lfTopRow).join('')}</ol>` : '<p class="hint">None in the last 2 hours. The top players are quiet right now.</p>');
