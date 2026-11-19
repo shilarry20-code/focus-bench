@@ -39,7 +39,7 @@ function dmPrompt(w, task){
   const B = bot(w), f = chatFacts(w), me = myName(), h = lastVs(w), rk = myRk();
   const sys = `You write direct messages that ${B.name}, a player of Focus Bench, sends to another player, ${me}. Focus Bench is a study-timer app for college students; in ranked matches whoever studies longer wins and gains Elo.
 Write like real texting between two college students: casual, short, lowercase is fine, sometimes several short texts in a row. Keep ${B.name}'s own personality. They can talk about anything; most texts shouldn't be about studying or work, and don't tack study talk onto messages. When they bring up shows, movies, music, games or sports, they name the real ones (no vague "that show").
-Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. Use them like real people do, to show emotion or react (😭 💀 😂 🥲 😩 😤 🙏 👀 ❤️), never to illustrate the words (no 🍪 for cookies, 🚗 for cars, ⭐ for stars, 📚 for studying). Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Don't check in on how ${me} is doing and don't congratulate rank-ups unprompted. Every message is from ${B.name}.`;
+Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. Use them like real people do, to show emotion or react, mostly their own go-tos (listed next to their name) and sometimes any other face, hand or heart emoji: don't fall back on the same few (😭 💀 😂) for everyone. Never use them to illustrate the words (no 🍪 for cookies, 🚗 for cars, ⭐ for stars, 📚 for studying). Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Don't check in on how ${me} is doing and don't congratulate rank-ups unprompted. Every message is from ${B.name}.`;
   const hist = thread(w).filter(m => m.text || m.ch).slice(-14).map(m => m.ch ? `(${m.me ? me : B.name} sent a ${m.ch.mode === 'f' ? 'friendly' : 'ranked'} challenge, ${({p: 'pending', a: 'accepted', d: 'declined', x: 'expired'})[m.ch.st]})` : `${m.me ? me : B.name}: ${m.text}`).join('\n') || '(no messages yet)';
   const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}, emojis: ${emojiStyle(w)}${B.bio ? `. Bio: "${B.bio}"` : ''}.
 ${me}: ${rk.full} (${R.mmr} Elo).
@@ -202,6 +202,39 @@ finalize = function(res, why){
   if (c && R.cur){ c.res = R.cur.res; c.delta = R.cur.delta; dmAfterMatch(c); }
 };
 // every minute or so, while you're not focusing: a rare word from a rival, or a challenge from someone online
+/* ---- messages from while you were away: come back after a while and someone may have written to you ---- */
+let dmAwaySince = store.get('fb.lastSeen', Date.now()), dmAwayBusy = false;          // when you were last here, captured on open
+function dmSeenNow(){ if (!document.hidden) store.set('fb.lastSeen', Date.now()); }
+async function dmAway(){
+  const now = Date.now(), from = dmAwaySince, away = now - from;
+  dmAwaySince = now; dmSeenNow();
+  if (dmAwayBusy || !GEM.key || !RK_READY || away < 45 * 60000) return;
+  if (Math.random() > Math.min(.65, away / 3600e3 * .18)) return;                    // ~20% after an hour, up to 65% after a long day
+  dmAwayBusy = true;
+  try {
+    const pool = [], add = (w, n) => { if (w >= 0 && w < ROSTER_N && w !== liveOpp() && !dmGenBusy[w]) for (let k = 0; k < n; k++) pool.push(w); };
+    [...new Set(DMS.msgs.map(m => m.w))].forEach(w => add(w, 3));
+    Object.keys(R.rec || {}).map(Number).filter(w => isRival(w)).forEach(w => add(w, 3));
+    (R.hist || []).slice(0, 15).forEach(h => add(h.b, 2));
+    const sb = sortedBots(), at = (() => { let lo = 0, hi = sb.length; while (lo < hi){ const m = (lo + hi) >> 1; if (BS[sb[m] * BF] > R.mmr) lo = m + 1; else hi = m; } return lo; })();
+    for (let k = 0; k < 4; k++) add(sb[clampN(at + Math.floor((Math.random() - .5) * 400), 0, sb.length - 1)], 1);
+    const n = Math.random() < .75 ? 1 : 2, used = new Set();
+    for (let k = 0; k < n && pool.length; k++){
+      const w = pool[Math.floor(Math.random() * pool.length)]; if (used.has(w)) continue; used.add(w);
+      const when = from + 600000 + Math.random() * Math.max(0, away - 900000), cls = (() => { try { return botClasses(w)[0]; } catch(e){ return bot(w).subject; } })();
+      dmGenBusy[w] = 1;
+      const texts = await dmWrite(w, `${bot(w).name} messaged ${myName()} a while ago, around ${new Date(when).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}, and ${myName()} is only now seeing it. Write the 1 or 2 short texts ${bot(w).name} sent then. Pick whatever's natural for them: following up on what they last talked about, something about their last match, asking how ${myName()}'s classes are going, a complaint about their own ${cls}, something funny that happened, asking if ${myName()} wants to play later. Don't mention ${myName()} being away or offline.`);
+      dmGenBusy[w] = 0;
+      if (texts.length){ const base = Date.now() + 2500 + k * 4000; texts.forEach((text, j) => DMS.q.push({id: chatId() + 'a' + j, t: base + j * 900, at: Math.round(when + j * (20 + Math.random() * 60) * 1000), w, text})); }
+    }
+    DMS.q.sort((a, b) => a.t - b.t); saveDms(); dmRefresh();
+  } catch(e){ console.error(e); } finally { dmAwayBusy = false; }
+}
+setTimeout(() => setInterval(dmSeenNow, 60000), 1000);
+document.addEventListener('visibilitychange', () => { if (document.hidden){ dmAwaySince = Date.now(); store.set('fb.lastSeen', dmAwaySince); } else setTimeout(dmAway, 4000); });
+addEventListener('pagehide', () => store.set('fb.lastSeen', Date.now()));
+(function dmAwayStart(){ if (!RK_READY) return setTimeout(dmAwayStart, 3000); setTimeout(dmAway, 6000); })();
+
 let dmAmbientAt = 0;
 async function dmAmbient(){
   const now = Date.now();
@@ -251,7 +284,7 @@ function dmTick(){
       c.ch.st = q.upd.st; c.ch.at = now;
       if (q.upd.st === 'a'){ if (!chPlay(c.w, c.ch.mode, chatPageOpen())) c.ch.late = 1; else toast(`${bot(c.w).name} accepted your challenge`); }
     }
-    const m = {id: q.id, t: now, w: q.w, text: q.text || '', ai: 1};
+    const m = {id: q.id, t: q.at && q.at < now ? q.at : now, w: q.w, text: q.text || '', ai: 1};      // messages sent while you were away keep their time
     if (q.ch) m.ch = {mode: q.ch.mode, exp: now + CH_THEIRS, st: 'p', by: 'them'};
     if (m.text || m.ch){ DMS.msgs.push(m); fresh.push(m); }
     changed = true;

@@ -61,7 +61,7 @@ function wPrompt(task){
   const sys = `You write chat messages from spectators watching a live ranked match on Focus Bench, a study-timer app for college students. In a match both players study at the same time and whoever studies longer wins Elo.
 The spectators are in a watch room together; some are studying along on their own break schedule. They react to the match like viewers of a stream: hype, predictions, rooting for someone, jokes, surprise when someone stops. They can also just chat with each other a bit.
 Write like quick live-stream chat: short, casual, lowercase is fine, slang is fine. Never formal. No "speaking of…" style bridges.
-Each spectator has their own emoji habit (given next to their name): "often", "sometimes" or "never"; only emotion and reaction emojis (😭 💀 😂 🔥 👀 😤 🙏), at most a couple per message.
+Each spectator has their own emoji habit (given next to their name): "often", "sometimes" or "never", with their go-to emojis; mostly use those, sometimes any other face, hand or heart emoji, never the same few for everyone, at most a couple per message.
 ${me} is the user, also watching. When ${me} talks, answer what they actually said. Don't start a message with the name of the person it answers.
 Answer with JSON: {"messages":[{"from":"<spectator name exactly as listed>","text":"…"}]}.`;
   const user = `The match: ${A.name} (${rankOf(W.ra).full}, ${W.ra} Elo, #${posOf(W.a) + 1} on the ladder) vs ${C.name} (${rankOf(W.rc).full}, ${W.rc} Elo, #${posOf(W.c) + 1}).
