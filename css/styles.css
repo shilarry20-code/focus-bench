@@ -1467,8 +1467,13 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .lf-count{display:flex;align-items:baseline;gap:8px;margin:6px 0 0}.lf-count b{font-size:30px;font-family:var(--f-display);letter-spacing:-.02em}.lf-count span{color:var(--muted);font-size:13px}
 .lf-peak{margin:2px 0 10px}
 .lf-bars{display:grid;grid-template-columns:repeat(24,1fr);gap:3px;height:56px;align-items:end}
-.lf-bars i{display:block;height:calc(var(--v,0)*100%);min-height:3px;border-radius:3px 3px 1px 1px;background:color-mix(in srgb,var(--accent) 45%,transparent)}
-.lf-bars i.now{background:#22c55e}.lf-bars i.fut{height:3px;background:var(--line)}
+.lf-bars span{position:relative;height:100%;display:flex;align-items:flex-end;cursor:default;outline:none}
+.lf-bars i{display:block;width:100%;height:calc(var(--v,0)*100%);min-height:3px;border-radius:3px 3px 1px 1px;background:color-mix(in srgb,var(--accent) 45%,transparent);transition:background .12s}
+.lf-bars span.now i{background:#22c55e}.lf-bars span.fut i{height:3px;background:var(--line)}
+.lf-bars span[data-tip]:hover i,.lf-bars span.tip i,.lf-bars span:focus-visible i{background:var(--accent)}.lf-bars span.now:hover i,.lf-bars span.now.tip i{background:#16a34a}
+.lf-bars span[data-tip]:hover::after,.lf-bars span.tip::after,.lf-bars span:focus-visible::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--ink);color:var(--bg);font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px;z-index:5;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.lf-bars span.tl::after{left:0!important;transform:none!important}.lf-bars span.tr::after{left:auto!important;right:0!important;transform:none!important}
+.lf-card{overflow:visible}
 .lf-axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin:4px 0 12px}
 .lf-sub{font-weight:600;font-size:13px;margin:4px 0 6px}
 .lf-trend div{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 3.6em;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}

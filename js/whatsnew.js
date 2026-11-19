@@ -5,7 +5,7 @@
 const UPDATES = [
   {n: 6, key: 3, name: 'Living Campus', when: 'Nov 19', secs: [
     ['Players', ['Every player has a major and a real class schedule that changes each semester', 'New usernames for everyone, modeled on real platforms, so names don’t keep repeating', 'Night owls study past midnight, and schedules vary from day to day']],
-    ['Studying now', ['A live count of who’s studying, today’s busiest hours and trending classes, on the Ranked page and in the side panel', 'Live feed with For you, Top matches (top 1,000 players) and Everyone tabs']],
+    ['Studying now', ['A live count of who’s studying, today’s busiest hours and trending classes, on the Ranked page and in the side panel', 'Hover over (or tap) an hour’s bar to see how many were studying', 'Live feed with For you, Top matches (top 1,000 players) and Everyone tabs']],
     ['Watching matches', ['Watch live top matches from the Top matches tab', 'Study along with them (normal focus time, no Elo)', 'Chat with the other spectators on your breaks']],
     ['Matches', ['Passing your opponent wins the match right away; your time keeps counting (shown as TBD) through your focus blocks until you pause or end your session, so a long session shows as a big win (breaks don’t end it)', 'Find your next match while you’re still studying after a win', 'No more draws: every match has a winner']],
     ['Messages', ['Message someone who’s offline and they’ll answer once they’re back online', 'In global chat, a different number of people answer you each time']],

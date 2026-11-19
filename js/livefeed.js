@@ -129,7 +129,8 @@ function renderLive(force){
   if (!force && LF.drawn === key && el.firstChild) return;
   LF.drawn = key;
   const H = LF.hours, mx = Math.max(1, ...H), {h} = lfNow();
-  const bars = Array.from({length: 24}, (_, x) => x > h ? '<i class="fut"></i>' : `<i style="--v:${Math.max(.04, H[x] / mx).toFixed(3)}"${x === h ? ' class="now"' : ''} title="${hourLabel(x)}: ${H[x].toLocaleString()}"></i>`).join('');
+  const bars = Array.from({length: 24}, (_, x) => x > h ? '<span class="fut"><i></i></span>'
+    : `<span class="${x === h ? 'now' : ''}${x < 4 ? ' tl' : x > 19 ? ' tr' : ''}" tabindex="0" data-tip="${x === h ? 'Now' : hourLabel(x)}: ${H[x].toLocaleString()} studying"><i style="--v:${Math.max(.04, H[x] / mx).toFixed(3)}"></i></span>`).join('');
   const tmax = LF.trend.length ? LF.trend[0][1] : 1;
   let list;
   if (LF.tab === 'top'){
@@ -160,6 +161,10 @@ function lfSide(){
   b.hidden = false; b.querySelector('b').textContent = LF.live.toLocaleString();
 }
 document.addEventListener('click', e => {
+  // tap a bar (phones) to see its count; tap anywhere else to hide it
+  const bar = e.target.closest('.lf-bars span[data-tip]');
+  document.querySelectorAll('.lf-bars .tip').forEach(x => { if (x !== bar) x.classList.remove('tip'); });
+  if (bar){ bar.classList.toggle('tip'); return; }
   const t = e.target.closest('[data-lft]');
   if (t){ LF.tab = t.dataset.lft; P.lfTab = LF.tab; try { saveP(); } catch(err){} renderLive(true); return; }
   const a = e.target.closest('[data-lfa]');
