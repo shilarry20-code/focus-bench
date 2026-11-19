@@ -55,12 +55,11 @@ function lfEvents(dk, m){
   for (let k = 0; k < e; k++){
     while (SCH_O[i + 1] <= k) i++;
     const a = SCH_A[k], b = SCH_B[k], r = botRating(i), near = Math.abs(r - mm) <= 60, rel = mine.has(i);
-    if (a > from && a <= m){
-      const you = rel || (near && lfKeep(i, a, 1, .035)), all = lfKeep(i, a, 2, 1 / 900);
-      if (you || all) out.push({t: a, i, kind: 'start', k, you, all});
-    }
+    // a session that started in the last 2 hours shows as "started" while it's still going, and as "finished" once it's over
+    const sYou = a > from && a <= m && (rel || (near && lfKeep(i, a, 1, .035))), sAll = a > from && a <= m && lfKeep(i, a, 2, 1 / 900);
+    if ((sYou || sAll) && b > m) out.push({t: a, i, kind: 'start', k, you: sYou, all: sAll});
     if (b > from && b <= m && b - a >= 20){
-      const you = rel || (near && lfKeep(i, b, 3, .03)), all = lfKeep(i, b, 4, (b - a >= 150 ? 1 / 60 : 1 / 1100));
+      const you = sYou || rel || (near && lfKeep(i, b, 3, .03)), all = sAll || lfKeep(i, b, 4, (b - a >= 150 ? 1 / 60 : 1 / 1100));
       if (you || all) out.push({t: b, i, kind: 'end', k, min: b - a, you, all});
       // passing 4 or 6 hours today
       let tot = 0; for (let q = SCH_O[i]; q <= k; q++) tot += SCH_B[q] - SCH_A[q];

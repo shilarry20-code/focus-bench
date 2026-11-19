@@ -1272,7 +1272,7 @@ function botDay(i, dk){
   if (out && dk === todayK){
     // today: only what's happened so far; a session going on right now is cut at the current minute
     const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-    const ss = out.sessions.filter(x => x.a < nowM || x.match).map(x => x.match ? {...x, b: Math.max(x.a + 1, nowM), min: Math.max(1, nowM - x.a), live: true} : x.b > nowM ? {...x, b: nowM, min: nowM - x.a, live: true} : x).filter(x => x.min > 0);
+    const ss = out.sessions.filter(x => x.a <= nowM || x.match).map(x => x.match ? {...x, b: Math.max(x.a + 1, nowM), min: Math.max(1, nowM - x.a), live: true} : x.b > nowM ? {...x, b: Math.max(x.a + 1, nowM), min: Math.max(1, nowM - x.a), live: true} : x).filter(x => x.min > 0);
     out = ss.length ? {sessions: ss} : null;
   }
   if (out){ out.min = out.sessions.reduce((n, x) => n + x.min, 0); out.n = out.sessions.length; out.by = {}; out.sessions.forEach(x => out.by[x.tag] = (out.by[x.tag] || 0) + x.min); }
