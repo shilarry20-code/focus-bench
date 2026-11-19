@@ -904,10 +904,10 @@ function startMatch(found, friendly){
 let MQ = null, mqTimer = null;    // {t0, wait, pool, b, found}
 function queueWait(){
   const h = new Date().getHours(), m = R.mmr;
-  let w = 3 + Math.random() * 9;
-  if (h >= 2 && h < 7) w *= 1.9; else if (h >= 23 || h < 2) w *= 1.35;
-  if (m >= 3000) w *= 2.2; else if (m >= 2400) w *= 1.6; else if (m < 700) w *= 1.25;
-  return Math.round(clampN(w, 3, 30) * 1000);
+  let w = 1.5 + Math.random() * 3.5;
+  if (h >= 2 && h < 7) w *= 1.5; else if (h >= 23 || h < 2) w *= 1.2;
+  if (m >= 3000) w *= 1.5; else if (m >= 2400) w *= 1.25;
+  return Math.round(clampN(w, 1.5, 10) * 1000);
 }
 function queueActivity(h){ return [.35,.25,.15,.1,.08,.1,.18,.3,.45,.55,.6,.65,.7,.7,.72,.75,.8,.85,.95,1,1,.9,.75,.5][h]; }
 function startSearch(){
@@ -924,7 +924,7 @@ function queueTick(){
   if (!R.on){ cancelSearch(); return; }
   const now = Date.now();
   if (!MQ.found && now - MQ.t0 >= MQ.wait){ MQ.b = findOpponent(); MQ.found = now; try { chime(P.chime); } catch(e){} renderMatch(true); return; }
-  if (MQ.found && now - MQ.found >= 3200){ const b = MQ.b, fr = MQ.friendly; MQ = null; clearInterval(mqTimer); startMatch(b, fr); return; }
+  if (MQ.found && now - MQ.found >= 2500){ const b = MQ.b, fr = MQ.friendly; MQ = null; clearInterval(mqTimer); startMatch(b, fr); return; }
   renderQueue();
 }
 const clock = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -1020,7 +1020,7 @@ function renderMatch(fresh){
     return;
   }
   if (MQ && MQ.found){
-    const B = BOTS[MQ.b], br = botRating(MQ.b), brk = rankOf(br), left = Math.max(1, Math.ceil((3200 - (Date.now() - MQ.found)) / 1000));
+    const B = BOTS[MQ.b], br = botRating(MQ.b), brk = rankOf(br), left = Math.max(1, Math.ceil((2500 - (Date.now() - MQ.found)) / 1000));
     const n = slot.querySelector('.mq-cd');
     if (n && !fresh){ n.textContent = left; return; }
     slot.dataset.key = '';
