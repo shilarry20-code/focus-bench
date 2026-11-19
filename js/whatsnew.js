@@ -7,7 +7,8 @@ const UPDATES = [
     ['Players', ['Every player has a major and a real class schedule that changes each semester', 'New usernames for everyone, modeled on real platforms, so names don’t keep repeating', 'Night owls study past midnight, and schedules vary from day to day']],
     ['Studying now', ['A live count of who’s studying, today’s busiest hours and trending classes, on the Ranked page and in the side panel', 'Live feed with For you, Top matches (top 1,000 players) and Everyone tabs']],
     ['Watching matches', ['Watch live top matches from the Top matches tab', 'Study along with them (normal focus time, no Elo)', 'Chat with the other spectators on your breaks']],
-    ['Messages', ['Message someone who’s offline and they’ll answer once they’re back online']],
+    ['Matches', ['Passing your opponent locks in the win, and the match keeps going so you can run up the score; it ends with your time when you pause or your block ends', 'No more draws: every match has a winner']],
+    ['Messages', ['Message someone who’s offline and they’ll answer once they’re back online', 'In global chat, a different number of people answer you each time']],
     ['What’s new', ['This page, with a dot in the panel when there’s something new']]],
     fixes: ['Profile page zoomed out on phones', 'The feed said someone started studying while their profile showed Offline', 'Top matches showed one ± number instead of each side’s Elo change', 'Stars drawn in the wrong place on one profile picture', 'People chatting in a watch room sometimes showed as Offline']},
   {n: 2, name: 'Shared World', when: 'Nov 18–19', secs: [

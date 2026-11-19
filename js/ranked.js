@@ -266,7 +266,7 @@ const unb64 = (s, T) => { const bin = atob(s), u = new Uint8Array(bin.length); f
    adjustments: each match moves your opponent's shown rating and adds the sitting they studied, while the
    simulation itself keeps using the players' own ratings. Adjustments add up the same in any order, so a match
    heard about late lands in exactly the same place, and a daily snapshot of the world (made on GitHub) is exact. */
-const WORLD_V = 3, WORLD_START = new Date(2026, 10, 18).getTime();    // midnight Nov 18, 2026 (Eastern)
+const WORLD_V = 4, WORLD_START = new Date(2026, 10, 18).getTime();    // midnight Nov 18, 2026 (Eastern)
 const WORLD_FMT = new Intl.DateTimeFormat('en-US', {timeZone: 'America/New_York', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'});
 // a timestamp whose reading on this device's clock is Eastern time at t (the same as t on a device set to Eastern)
 function worldT(t){
@@ -607,8 +607,9 @@ function pairWindow(w0, dk){      // sittings that ended during the window start
     if (j < 0) continue;
     used[k] = used[j] = 1;
     const a = cand[k], c = cand[j], sa_ = CSIT[a], sc_ = CSIT[c];
-    const ma = SCH_B[sa_] - SCH_A[sa_], mc = SCH_B[sc_] - SCH_A[sc_], ra = baseR(a), rc = baseR(c);
-    const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = ma > mc ? 1 : ma < mc ? 0 : .5, dlt = Math.round(BOT_K * (sa - ea));
+    let ma = SCH_B[sa_] - SCH_A[sa_], mc = SCH_B[sc_] - SCH_A[sc_]; const ra = baseR(a), rc = baseR(c);
+    if (ma === mc){ if ((Math.imul(a ^ c, 0x9e3779b1) ^ w0) & 1) ma++; else mc++; }      // no draws: same minute, someone went a bit longer
+    const ea = 1 / (1 + Math.pow(10, (rc - ra) / 400)), sa = ma > mc ? 1 : 0, dlt = Math.round(BOT_K * (sa - ea));
     out.push({a, c, ma, mc, ra, rc, dlt, ea: SCH_B[sa_], ec: SCH_B[sc_]});
   }
   return out;
@@ -1005,8 +1006,8 @@ function finalize(res, why){
 function nemesis(){ let best = -1, n = 4; Object.entries(R.rec).forEach(([i, r]) => { if (r[1] > n){ n = r[1]; best = +i; } }); return best; }
 function endMatch(why){
   const c = R.cur; if (!c || c.state !== 'live') return;
-  if (c.tapped && c.you > c.target) return finalize('W', why);
-  finalize(!c.tapped && c.target - c.you <= 60000 ? 'D' : 'L', why);
+  if (c.won || (c.tapped && c.you > c.target)) return finalize('W', why);
+  finalize('L', why);
 }
 // runs inside the timer loop
 let rkLastRender = 0, rkLastSave = 0;
@@ -1019,8 +1020,9 @@ function rankedTick(){
       const dt = Math.min(2000, Math.max(0, now - c.tick));
       c.you += dt; if (c.them < c.target) c.them = Math.min(c.target, c.them + dt); c.last = now;
       if (!c.tapped && c.them >= c.target){ c.tapped = true; renderMatch(); }
-      if (c.tapped && c.you > c.target){ finalize('W'); return; }
-    } else if (now - c.last > 30 * 60000){ endMatch('idle'); return; }
+      if (c.tapped && c.you > c.target && !c.won){ c.won = true; saveRanked(); renderMatch(true); if (typeof chime === 'function') chime(P.chime); }
+    } else if (c.won){ finalize('W'); return; }       // you've already won: pausing (or your block ending) locks in your time
+    else if (now - c.last > 30 * 60000){ endMatch('idle'); return; }
     if (now - rkLastSave > 5000){ rkLastSave = now; saveRanked(); }
   }
   c.tick = now;
@@ -1076,19 +1078,19 @@ function renderMatch(fresh){
   const tired = B.style === 'Steady' && !c.tapped && c.them > c.target * .85;
   const botLine = c.tapped ? `“${c.tap}”` : tired ? '“starting to slow down…”' : c.them > 60000 ? `“${c.lines[lineIdx]}”` : '“gl hf”';
   const waiting = live && c.you === 0 && !(S.running && S.phase === 'focus');
-  const status = !live ? '' : waiting ? 'Press Start to begin. Time only counts while you’re focusing, for both of you.' : `${esc(B.name)} is still going. Keep studying: if they stop first, you win.`;
+  const status = !live ? '' : c.won ? `<b class="pos">You’ve won.</b> Keep going to run up the score: the match ends with your time when you pause or your block ends.` : waiting ? 'Press Start to begin. Time only counts while you’re focusing, for both of you.' : c.tapped ? `${esc(B.name)} stopped at ${mm(c.target)}. Pass them to win.` : `${esc(B.name)} is still going. Keep studying: if they stop first, you win.`;
   let result = '';
   if (!live){
     const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
     const sec = ms => fmtSec(Math.round(ms / 1000));
-    const how = c.res === 'L' ? `${mm(c.you)} vs ${mm(c.target)}` : `${sec(c.you)} vs ${sec(c.target)}`;
+    const how = c.res === 'W' && c.you - c.target < 120000 ? `${sec(c.you)} vs ${sec(c.target)}` : `${mm(c.you)} vs ${mm(c.target)}`;
     result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${c.friendly ? 'Friendly match · no Elo change' : `${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em>`}</span>
       ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
       <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>
       <div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find next match</button><button class="small-btn" data-dm="${c.b}">Message ${esc(BOTS[c.b].name)}</button><button class="small-btn" data-act="m-dismiss">Close</button></div></div>`;
   }
   // while a match is live, only the moving parts change, so badges you're hovering stay put
-  const key = `${c.t0}|${c.state}|${c.tapped}|${waiting}`;
+  const key = `${c.t0}|${c.state}|${c.tapped}|${waiting}|${!!c.won}`;
   if (!fresh && live && slot.dataset.key === key && slot.querySelector('.m-bars')){
     const bars = slot.querySelectorAll('.m-bar');
     bars[0].querySelector('i').style.width = `${c.you / max * 100}%`; bars[0].querySelector('b').textContent = mm(c.you);
@@ -1112,7 +1114,7 @@ function renderMatch(fresh){
       <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.tapped ? mm(c.target) : waiting ? 'ready' : live ? 'going…' : '?'}</b></div>
     </div>
     ${live ? `${typeof mcBox === 'function' ? mcBox(c) : `<p class="m-chat">${esc(B.name)}: ${esc(botLine)}</p>`}<p class="m-status">${status}</p>
-    <div class="m-foot"><span class="stakes">${c.friendly ? 'Friendly · no Elo change' : `Win <b class="pos">+${s.win}</b> · Draw <b>${s.draw > 0 ? '+' : s.draw < 0 ? '−' : ''}${Math.abs(s.draw)}</b> · Loss <b class="neg">−${s.loss}</b>`}</span><span class="m-foot-btns"><button class="small-btn" data-dm="${c.b}">Message</button><button class="small-btn" data-act="m-end">End match</button></span></div>` : result + (typeof mcBox === 'function' ? mcBox(c) : '')}
+    <div class="m-foot"><span class="stakes">${c.friendly ? 'Friendly · no Elo change' : `Win <b class="pos">+${s.win}</b> · Loss <b class="neg">−${s.loss}</b>`}</span><span class="m-foot-btns"><button class="small-btn" data-dm="${c.b}">Message</button><button class="small-btn" data-act="m-end">${c.won ? 'Finish match' : 'End match'}</button></span></div>` : result + (typeof mcBox === 'function' ? mcBox(c) : '')}
   </div>`;
   if (typeof mcRender === 'function'){ const inp = $('#mcIn'); if (inp){ inp.value = mcVal; if (mcFoc) inp.focus(); } mcRender(); }
 }
