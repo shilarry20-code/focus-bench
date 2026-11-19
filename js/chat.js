@@ -84,6 +84,40 @@ CHATS.msgs = CHATS.msgs.filter(chatKeep); CHATS.q = CHATS.q.filter(chatKeep);
 
 /* ---- Gemini ---- */
 const chatName = w => w === -1 ? myName() : bot(w).name;
+/* topics: each batch gets 2-3 fresh things on people's minds, never one of the last 30 handed out, so the room keeps moving */
+const ROOM_TOPICS = [
+  // everyday life
+  'someone’s roommate keeps eating their food', 'a laundry room disaster', 'someone slept through all their alarms today', 'a terrible haircut', 'a weird dream someone had last night',
+  'someone locked themselves out', 'a group project partner who vanished', 'someone got a parking ticket', 'the dorm/apartment heater is broken', 'someone finally cleaned their room',
+  'a surprise visit from parents this weekend', 'someone’s phone screen just cracked', 'a fire alarm went off at 3 am', 'someone is trying to fix their sleep schedule', 'getting sick right before a deadline',
+  // food
+  'the best and worst dining hall meals this week', 'a cooking attempt that went badly', 'a late-night food run', 'a hot take on pineapple pizza', 'the best cheap snack',
+  'someone discovered a new restaurant near campus', 'meal prepping for the week', 'coffee vs energy drinks', 'a ramen upgrade hack', 'what to order for a group dinner',
+  // school
+  'a professor with a strange habit', 'a quiz nobody saw coming', 'the worst 8 am class', 'picking classes for next semester', 'a lecture that was actually good',
+  'office hours horror story', 'someone switched majors', 'a group chat for a class going off the rails', 'a TA who grades way too hard', 'internship applications',
+  // money and jobs
+  'someone’s part-time job shift was chaos', 'saving up for something specific', 'textbook prices', 'a subscription someone forgot to cancel', 'splitting rent or bills with roommates',
+  // campus and plans
+  'weekend plans', 'a campus event happening soon', 'the weather today', 'going home for break', 'a road trip idea',
+  'trying out for an intramural team', 'a club meeting that got weird', 'the gym being packed', 'a concert someone wants to go to', 'where to study besides the library',
+  // hot takes and games
+  'is a hot dog a sandwich', 'a would-you-rather question', 'what you’d do with $10,000', 'the most overrated thing on campus', 'an unpopular opinion about a popular food',
+  'rank the seasons', 'the best decade for music', 'cats vs dogs', 'a superpower debate', 'what they’d bring to a deserted island',
+  // media, games, sports (be specific)
+  'a show someone just finished (name it)', 'an album or artist on repeat (name it)', 'a video game someone can’t put down (name it)', 'a movie that was way better or worse than expected (name it)', 'a sports team someone follows (name it)',
+  'a YouTuber or streamer they watch (name them)', 'a comfort show someone rewatches (name it)', 'a song that’s been stuck in someone’s head (name it, no lyrics)', 'a book someone is reading for fun (name it)', 'a mobile game someone is addicted to (name it)',
+  // random
+  'a random fun fact someone just learned', 'a childhood memory that came up', 'a new hobby someone picked up', 'a pet back home', 'a holiday tradition',
+  'the best and worst gifts ever received', 'something embarrassing that happened in public', 'a skill someone wishes they had', 'a goal for the rest of the semester', 'a hometown thing nobody else gets',
+];
+function chatTopicPick(n){
+  const used = new Set(CHATS.topics || []), fresh = ROOM_TOPICS.filter(t => !used.has(t));
+  const pool = (fresh.length >= n ? fresh : ROOM_TOPICS).slice().sort(() => Math.random() - .5), out = [];
+  for (const t of pool){ if (out.length >= n) break; if (/name (it|them)/.test(t) && out.some(x => /name (it|them)/.test(x))) continue; out.push(t); }
+  CHATS.topics = (CHATS.topics || []).concat(out).slice(-30);
+  return out;
+}
 let chatWilling = [];      // [{i, mode}] players who'd send you a challenge if you ask, decided for this reply
 function chatChallengeNote(cast){
   chatWilling = [];
@@ -106,7 +140,7 @@ function aiPrompt(online, forUser, away){
   const recent = CHATS.msgs.filter(m => !m.del && (userHere || m.w !== -1)).slice(-16), tag = new Map(recent.map((m, k) => [m.id, 'm' + (k + 1)]));
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
 This is a general hangout room: people can talk about anything, like any group chat of college students. Studying, exams and ranked matches come up now and then because of where they are. Don't tack study talk onto other messages (no \"back to studying\", \"gotta grind\", \"locking in\").
-People talk about whatever is on their mind; it's up to each player. If they mention a show, movie, song, game, team or anything like that, they name the real thing rather than a vague "that show". Don't quote song lyrics. Something a model might think of as "new" may be old by now (see today's date): only call things new or upcoming if you're sure they still are. Don't reuse a line or a topic someone already used.
+People talk about what's on their mind; each batch you'll get a few things on people's minds right now, so the room doesn't go in circles. If they mention a show, movie, song, game, team or anything like that, they name the real thing rather than a vague "that show". Don't quote song lyrics. Something a model might think of as "new" may be old by now (see today's date): only call things new or upcoming if you're sure they still are. Don't reuse a line or a topic someone already used.
 A reply must respond to what that message actually said; if someone changes the subject, it's a new message, not a reply.
 Write like a real group chat: casual texting style (lowercase is fine, contractions, slang, not formal full sentences), mostly short, with only the odd longer message. A reply is already shown as a reply, so don't start it with the other person's name; use names only now and then, the way people really do. with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
 Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
@@ -121,7 +155,9 @@ ${who}
 ${older.length ? `Already said in the room earlier today (don't repeat these or bring the same things up again as if they were new):
 ${older.map(m => '- ' + m.text.slice(0, 90)).join('\n')}
 
-` : ''}Recent chat, oldest first:
+` : ''}${forUser ? '' : `On people's minds right now (build most of this batch around these, in your own words, with real details; don't repeat older threads): ${chatTopicPick(Math.random() < .5 ? 2 : 3).join('; ')}.
+
+`}Recent chat, oldest first:
 ${hist}
 
 ${forUser ? (() => { const mine = recent[recent.length - 1], to = mine && mine.re && CHATS.msgs.find(x => x.id === mine.re);
