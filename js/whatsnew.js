@@ -43,7 +43,7 @@ const UPDATES = [
     ['Ranked', ['You’re matched automatically when you study, with Elo, ranks, a live match card, badges, a showcase and a ladder of 5,000 players']],
     ['Sessions', ['Switching tasks mid-session splits the time automatically']]],
     fixes: ['A new match started right after a win', 'Badge details vanished while you hovered over them', 'Switching between similar task names, like CNIT 182 → CNIT 176, didn’t split the time']},
-  {n: 1, name: 'First Release', when: 'Oct 27', secs: [
+  {n: 1, name: 'Release', when: 'Oct 27', secs: [
     ['Timer', ['Pomodoro, 52/17, Flowtime, Timebox and Custom modes', 'Rolling digits and a glowing ring', 'A mini clock you can pop out over other windows']],
     ['Sounds', ['White and brown noise', 'Realistic rain and thunder, with on-screen rain and lightning']],
     ['Look', ['Themes, fonts and colors to customize']],
