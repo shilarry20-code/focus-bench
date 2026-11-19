@@ -1441,9 +1441,6 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 
 /* the side panel: no width animation on the layout (see toggleSide) */
 .shell{transition:none}
-/* long lists: skip drawing what's off screen */
-.ch-msg{content-visibility:auto;contain-intrinsic-size:auto 72px}
-.dm-msg{content-visibility:auto;contain-intrinsic-size:auto 48px}
 .dm-p.dm-typing{color:var(--accent);font-weight:600;font-style:italic;display:flex;align-items:center;gap:6px}
 .dm-p.dm-typing .ty-dots i{background:var(--accent)}
 .g-wk{border-left-color:var(--accent)}
