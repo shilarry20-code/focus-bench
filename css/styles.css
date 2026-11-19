@@ -1512,3 +1512,16 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .w-along{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.w-along .hint{margin:0;font-size:12px}
 .w-pill{font-size:12.5px;padding:5px 10px;border-radius:var(--r-pill);background:var(--soft);color:var(--muted)}
 .w-chat .mc-list{max-height:min(300px,40vh)}.w-sys{color:var(--muted);font-style:italic;text-align:center;font-size:12px}
+/* what's new */
+.wn-page{max-width:760px}.wn-intro{margin:0 0 14px}
+.wn{padding:0;overflow:hidden;margin-bottom:12px}
+.wn summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:16px 18px}.wn summary::-webkit-details-marker{display:none}
+.wn-t{flex:1;display:flex;flex-direction:column}.wn-t b{font-size:16px}.wn-t small{color:var(--muted);font-size:12.5px;margin-top:2px}
+.wn-new{font-size:11px;font-weight:700;padding:3px 8px;border-radius:var(--r-pill);background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.wn-chev{width:18px;height:18px;color:var(--muted);transition:transform .2s}.wn[open] .wn-chev{transform:rotate(180deg)}
+.wn-b{padding:2px 18px 16px;border-top:1px solid var(--line)}
+.wn-sec{font-weight:700;font-size:13.5px;margin:14px 0 4px;display:flex;align-items:center;gap:6px}.wn-sec svg{width:15px;height:15px}
+.wn-fix{color:var(--muted);padding-top:12px;border-top:1px dashed var(--line);margin-top:16px}
+.wn ul{margin:0;padding-left:20px;line-height:1.6;font-size:14px;color:var(--muted)}
+.wn-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;display:inline-block}.wn-dot[hidden]{display:none}
+.more-btn{position:relative}.wn-more{position:absolute;top:6px;right:calc(50% - 16px)}
