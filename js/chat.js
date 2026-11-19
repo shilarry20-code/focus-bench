@@ -60,7 +60,19 @@ function emotionOnly(t){
 }
 // your opponent in a live match is studying against you, so they're not in the room
 const inMatchWith = () => R && R.cur && R.cur.state === 'live' && !R.cur.tapped ? R.cur.b : -1;
-function chatWhoOnline(){ const opp = inMatchWith(); return chatWhoOnline0().filter(i => i !== opp); }
+// someone you just played sticks around for a while afterwards (20 to 45 min, the same for each match)
+function justPlayed(){
+  const out = [], now = Date.now();
+  for (const h of (R && R.hist) || []){
+    if (now - h.t > 45 * 60000) break;
+    if (typeof h.b === 'number' && h.b >= 0 && now - h.t < (20 + (h.t % 26)) * 60000 && !out.includes(h.b)) out.push(h.b);
+  }
+  return out;
+}
+function chatWhoOnline(){
+  const opp = inMatchWith(), base = chatWhoOnline0(), extra = justPlayed().filter(i => !base.includes(i));
+  return base.concat(extra).filter(i => i !== opp);
+}
 function chatWhoOnline0(){
   if (chatOnline && Date.now() - chatOnlineAt < 180000) return chatOnline;
   const h = new Date().getHours(), hh = h < 5 ? h + 24 : h, today = dayKey(Date.now()), rr = mulberry32(Math.floor(Date.now() / 1800000));
