@@ -992,7 +992,9 @@ function finalize(res, why){
   else if (res === 'L'){ R.l++; R.ws = 0; rec[1]++; }
   else { R.d++; rec[2]++; }
   const after = rankOf(R.mmr);
-  R.hist.unshift({t: Date.now(), b: c.b, br: c.br, you: youMin, them: themMin, ys: Math.round(c.you / 1000), ts: Math.round(c.target / 1000), r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0, ...(c.friendly ? {f: 1} : {})});
+  R.hist.forEach(x => { if (x.open){ x.ys = Math.round(x.ys); delete x.open; } });      // only one open at a time
+  R.hist.unshift({t: Date.now(), b: c.b, br: c.br, you: youMin, them: themMin, ys: Math.round(c.you / 1000), ts: Math.round(c.target / 1000), r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0, ...(c.friendly ? {f: 1} : {}), ...(why === 'open' ? {open: 1, c0: c.t0} : {})});
+  if (why === 'open') openAt = Date.now();
   if (R.hist.length > 500) R.hist.length = 500;
   if (worldT(R.hist[0].t) >= WORLD_START) applyEvent(R.hist[0]);      // your opponent's rating and the sitting they studied
   botsChanged(); markBots();
@@ -1003,6 +1005,25 @@ function finalize(res, why){
   renderMatch(); renderRankChip(); achQueue();
   if (!$('#page-ranked').hidden) renderRanked();
 }
+// a match you won is settled at once, but your time keeps counting (shown as TBD) through your focus blocks. Breaks
+// don't end it (time just doesn't count on a break); it's set when you pause, log, stop or switch modes yourself,
+// or after 3 hours with no studying (say, the app was closed)
+let openAt = 0;
+function openTick(now, running){
+  const h = R.hist.find(x => x.open); if (!h){ openAt = 0; return; }
+  if (running){ if (openAt) h.ys += Math.min(2000, Math.max(0, now - openAt)) / 1000; openAt = now; h.lr = now; h.you = Math.round(h.ys / 60); return; }
+  openAt = 0;
+  if (now - (h.lr || h.t) > 3 * 3600e3) openClose();
+}
+function openClose(){
+  const h = R.hist.find(x => x.open); if (!h) return;
+  h.ys = Math.round(h.ys); h.you = Math.round(h.ys / 60); delete h.open; delete h.lr; openAt = 0; saveRanked(true);
+  if (R.cur && R.cur.state === 'done' && R.cur.t0 === h.c0) renderMatch(true);
+  if (!$('#page-ranked').hidden) renderRanked();
+}
+// you pausing, logging, stopping or switching modes is what sets the time
+['pause', 'reset', 'finishStopwatch'].forEach(fn => { const orig = window[fn]; if (typeof orig !== 'function') return;
+  window[fn] = function(){ try { rankedTick(); } catch(e){} const r = orig.apply(this, arguments); try { openClose(); } catch(e){} return r; }; });
 function nemesis(){ let best = -1, n = 4; Object.entries(R.rec).forEach(([i, r]) => { if (r[1] > n){ n = r[1]; best = +i; } }); return best; }
 function endMatch(why){
   const c = R.cur; if (!c || c.state !== 'live') return;
@@ -1014,15 +1035,15 @@ let rkLastRender = 0, rkLastSave = 0;
 function rankedTick(){
   if (!R || !R.on || !RK_READY) return;
   const now = Date.now(), running = S.running && S.phase === 'focus';
+  openTick(now, running);
   const c = R.cur; if (!c) return;
   if (c.state === 'live'){
     if (running){
       const dt = Math.min(2000, Math.max(0, now - c.tick));
       c.you += dt; if (c.them < c.target) c.them = Math.min(c.target, c.them + dt); c.last = now;
       if (!c.tapped && c.them >= c.target){ c.tapped = true; renderMatch(); }
-      if (c.tapped && c.you > c.target && !c.won){ c.won = true; saveRanked(); renderMatch(true); if (typeof chime === 'function') chime(P.chime); }
-    } else if (c.won){ finalize('W'); return; }       // you've already won: pausing (or your block ending) locks in your time
-    else if (now - c.last > 30 * 60000){ endMatch('idle'); return; }
+      if (c.tapped && c.you > c.target){ finalize('W', 'open'); return; }
+    } else if (now - c.last > 30 * 60000){ endMatch('idle'); return; }
     if (now - rkLastSave > 5000){ rkLastSave = now; saveRanked(); }
   }
   c.tick = now;
@@ -1032,6 +1053,7 @@ function rankedTick(){
 /* how a finished match's times read: seconds when it was close, the bot's full sitting when you lost */
 const fmtSec = sec => { const m = Math.floor(sec / 60), x = sec % 60; return `${fmtMin(m)} ${String(x).padStart(2, '0')}s`; };
 function matchTimes(h){
+  if (h.open) return `<span class="tbd" title="Still studying: your time is set when you pause or end your session">TBD</span> <i>vs</i> ${fmtSec(h.ts)}`;
   if (h.ys == null){   // older matches saved minutes only
     return h.r === 'D' ? `${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}` : fmtMin(h.you);
   }
@@ -1078,12 +1100,13 @@ function renderMatch(fresh){
   const tired = B.style === 'Steady' && !c.tapped && c.them > c.target * .85;
   const botLine = c.tapped ? `“${c.tap}”` : tired ? '“starting to slow down…”' : c.them > 60000 ? `“${c.lines[lineIdx]}”` : '“gl hf”';
   const waiting = live && c.you === 0 && !(S.running && S.phase === 'focus');
-  const status = !live ? '' : c.won ? `<b class="pos">You’ve won.</b> Keep going to run up the score: the match ends with your time when you pause or your block ends.` : waiting ? 'Press Start to begin. Time only counts while you’re focusing, for both of you.' : c.tapped ? `${esc(B.name)} stopped at ${mm(c.target)}. Pass them to win.` : `${esc(B.name)} is still going. Keep studying: if they stop first, you win.`;
+  const status = !live ? '' : waiting ? 'Press Start to begin. Time only counts while you’re focusing, for both of you.' : c.tapped ? `${esc(B.name)} stopped at ${mm(c.target)}. Pass them to win.` : `${esc(B.name)} is still going. Keep studying: if they stop first, you win.`;
   let result = '';
   if (!live){
     const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
     const sec = ms => fmtSec(Math.round(ms / 1000));
-    const how = c.res === 'W' && c.you - c.target < 120000 ? `${sec(c.you)} vs ${sec(c.target)}` : `${mm(c.you)} vs ${mm(c.target)}`;
+    const oh = R.hist.find(x => x.open && x.c0 === c.t0);
+    const how = oh ? `TBD vs ${sec(c.target)} <small class="tbd-note">Your time keeps counting through your focus blocks (not breaks) until you pause or end your session. You can find your next match now.</small>` : c.res === 'W' && c.you - c.target < 120000 ? `${sec(c.you)} vs ${sec(c.target)}` : `${mm(c.you)} vs ${mm(c.target)}`;
     result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${c.friendly ? 'Friendly match · no Elo change' : `${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em>`}</span>
       ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
       <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>
@@ -1098,7 +1121,7 @@ function renderMatch(fresh){
     if (typeof mcRender === 'function') mcRender();
     return;
   }
-  const doneKey = !live ? `done|${c.t0}|${c.res}|${c.promo}|${R.mmr}` : '';
+  const doneKey = !live ? `done|${c.t0}|${c.res}|${c.promo}|${R.mmr}|${R.hist.some(x => x.open && x.c0 === c.t0)}` : '';
   if (!fresh && !live && slot.dataset.key === doneKey && slot.querySelector('.m-result')){ if (typeof mcRender === 'function') mcRender(); return; }
   slot.dataset.key = live ? key : doneKey;
   const mcVal = $('#mcIn') ? $('#mcIn').value : '', mcFoc = !!(document.activeElement && document.activeElement.id === 'mcIn');
@@ -1114,7 +1137,7 @@ function renderMatch(fresh){
       <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.tapped ? mm(c.target) : waiting ? 'ready' : live ? 'going…' : '?'}</b></div>
     </div>
     ${live ? `${typeof mcBox === 'function' ? mcBox(c) : `<p class="m-chat">${esc(B.name)}: ${esc(botLine)}</p>`}<p class="m-status">${status}</p>
-    <div class="m-foot"><span class="stakes">${c.friendly ? 'Friendly · no Elo change' : `Win <b class="pos">+${s.win}</b> · Loss <b class="neg">−${s.loss}</b>`}</span><span class="m-foot-btns"><button class="small-btn" data-dm="${c.b}">Message</button><button class="small-btn" data-act="m-end">${c.won ? 'Finish match' : 'End match'}</button></span></div>` : result + (typeof mcBox === 'function' ? mcBox(c) : '')}
+    <div class="m-foot"><span class="stakes">${c.friendly ? 'Friendly · no Elo change' : `Win <b class="pos">+${s.win}</b> · Loss <b class="neg">−${s.loss}</b>`}</span><span class="m-foot-btns"><button class="small-btn" data-dm="${c.b}">Message</button><button class="small-btn" data-act="m-end">End match</button></span></div>` : result + (typeof mcBox === 'function' ? mcBox(c) : '')}
   </div>`;
   if (typeof mcRender === 'function'){ const inp = $('#mcIn'); if (inp){ inp.value = mcVal; if (mcFoc) inp.focus(); } mcRender(); }
 }
