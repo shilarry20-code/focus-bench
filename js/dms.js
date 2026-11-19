@@ -45,7 +45,7 @@ Each player has their own emoji habit (given next to their name): \"often\" uses
 ${me}: ${rk.full} (${R.mmr} Elo).
 ${R.cur && R.cur.b === w && R.cur.state === 'live' ? `They are in a live ${R.cur.friendly ? 'friendly' : 'ranked'} match with each other right now (any challenge between them was already accepted).` : ''}
 Their head-to-head record (${me}'s wins–losses${R.rec[w] && R.rec[w][2] ? '–draws' : ''}): ${recStr(w)}${isRival(w) ? ', they are rivals' : ''}.
-${h ? `Their last match: ${winLabel(h.t).toLowerCase()}, ${h.f ? 'friendly' : 'ranked'}, ${me} ${({W: 'won', L: 'lost', D: 'drew'})[h.r]}, ${matchTimes(h).replace(/<[^>]+>/g, '')}${h.f ? '' : `, ${h.d > 0 ? '+' : ''}${h.d} Elo for ${me}`}.` : 'They have no matches together.'}
+${h ? `Their last match: ${winLabel(h.t).toLowerCase()}, ${h.f ? 'friendly' : 'ranked'}, ${me} ${({W: 'won', L: 'lost', D: 'drew'})[h.r]}, ${matchTimes(h).replace(/<[^>]+>/g, '')}${h.f ? '' : `, ${h.d > 0 ? '+' : ''}${h.d} Elo for ${me}`}${Date.now() - h.t < 3600e3 ? ` (it ended ${Math.max(1, Math.round((Date.now() - h.t) / 60000))} min ago)` : ''}.` : 'They have no matches together.'}
 It's ${new Date().toLocaleDateString(undefined, {weekday: 'long'})} ${new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
 
 Conversation so far, oldest first:
