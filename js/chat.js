@@ -156,6 +156,7 @@ function aiPrompt(online, forUser, away){
   const sys = `You write messages for the global chat room of Focus Bench, a study-timer app used by college students. Players track focus sessions and play ranked matches (whoever studies longer wins and gains Elo).
 This is a general hangout room: people can talk about anything, like any group chat of college students. Studying, exams and ranked matches come up now and then because of where they are. Don't tack study talk onto other messages (no \"back to studying\", \"gotta grind\", \"locking in\").
 People talk about what's on their mind; each batch you'll get a few things on people's minds right now, so the room doesn't go in circles. If they mention a show, movie, song, game, team or anything like that, they name the real thing rather than a vague "that show". Don't quote song lyrics. Something a model might think of as "new" may be old by now (see today's date): only call things new or upcoming if you're sure they still are. Don't reuse a line or a topic someone already used.
+A new topic is just a new message that starts on its own: no bridges like "speaking of…", "on that note", "that reminds me", "random but" or "unrelated but".
 A reply must respond to what that message actually said; if someone changes the subject, it's a new message, not a reply.
 Write like a real group chat: casual texting style (lowercase is fine, contractions, slang, not formal full sentences), mostly short, with only the odd longer message. A reply is already shown as a reply, so don't start it with the other person's name; use names only now and then, the way people really do. with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
 Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. Use them like real people do, to show emotion or react (😭 💀 😂 🥲 😩 😤 🙏 👀 ❤️), never to illustrate the words (no 🍪 for cookies, 🚗 for cars, ⭐ for stars, 📚 for studying). Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
@@ -244,6 +245,12 @@ async function aiCall(sys, user){
 }
 // turn Gemini's messages into chat messages, checking every name against the room
 const normName = n => String(n || '').toLowerCase().replace(/^@/, '').replace(/[^a-z0-9]/g, '');
+// "speaking of five am wake up calls, my professor…" → "my professor…": no lead-ins bridging to a new topic
+function stripSegue(t){
+  const m = t.match(/^(speaking of|on (that|the) (note|topic|subject) of|on that note|that reminds me( of)?|random(ly)?( but| question| thought)?|unrelated( but)?|totally unrelated( but)?|changing the subject|side note|off topic( but)?)\b[^,.!?:;—–-]*[,:;—–-]\s*/i);
+  if (!m || m[0].length >= t.length - 8) return t;
+  return t.slice(m[0].length);
+}
 // "NightFox_8, honestly…" → "honestly…": the reply already shows who it's for
 function stripLeadName(text, names){
   for (const n of names){
@@ -283,7 +290,7 @@ function aiToBatch(list, recent, cast, noYou){
     if (noYou && youRe && youRe.test(text)) return;
     if (chatRepeats(text, out)) return;
     text = stripLeadName(text, [...cast.map(f => f.name), myName()]);
-    text = emotionOnly(text); if (!text) return;
+    text = stripSegue(emotionOnly(text)); if (!text) return;
     let re = null; const id = String(m.replyTo || m.reply_to || '').trim().replace(/^#/, '');
     if (/^m?\d+$/.test(id) && !/^n/.test(id)){ const x = recent[+id.replace('m', '') - 1]; if (x) re = x.id; }
     else if (/^n\d+$/.test(id)){ const k = pos[+id.slice(1) - 1]; if (k != null && k >= 0) re = k; }
