@@ -157,7 +157,7 @@ function aiPrompt(online, forUser, away){
 This is a general hangout room: people can talk about anything, like any group chat of college students. Studying, exams and ranked matches come up now and then because of where they are. Don't tack study talk onto other messages (no \"back to studying\", \"gotta grind\", \"locking in\").
 People talk about what's on their mind; each batch you'll get a few things on people's minds right now, so the room doesn't go in circles. If they mention a show, movie, song, game, team or anything like that, they name the real thing rather than a vague "that show". Don't quote song lyrics. Something a model might think of as "new" may be old by now (see today's date): only call things new or upcoming if you're sure they still are. Don't reuse a line or a topic someone already used.
 A new topic is just a new message that starts on its own: no bridges like "speaking of…", "on that note", "that reminds me", "random but" or "unrelated but".
-A reply must respond to what that message actually said; if someone changes the subject, it's a new message, not a reply.
+Most messages are not replies: only set replyTo when the message directly answers or reacts to that exact message. A reply must respond to what that message actually said; if someone changes the subject, it's a new message, not a reply.
 Write like a real group chat: casual texting style (lowercase is fine, contractions, slang, not formal full sentences), mostly short, with only the odd longer message. A reply is already shown as a reply, so don't start it with the other person's name; use names only now and then, the way people really do. with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
 Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. Use them like real people do, to show emotion or react (😭 💀 😂 🥲 😩 😤 🙏 👀 ❤️), never to illustrate the words (no 🍪 for cookies, 🚗 for cars, ⭐ for stars, 📚 for studying). Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
   const lastK = Math.floor(Math.random() * cast.length * 3);    // mention one player's last match only sometimes, so ranked isn't always the topic
@@ -271,6 +271,15 @@ function chatRepeats(text, batch){
     return both >= 3 && both / Math.min(a.size, b.size) >= .6;
   });
 }
+// a reply has to be about the message it answers: sharing a real word with it (same word stem), or a short reaction like "lol same"
+const REACT = /^(lol|lmao|lmfao|haha|same|fr|real|true|facts|nah|no|yes|yeah|yep|bet|omg|wait|ok|okay|wdym|what|why|how|bruh|dead|nope|exactly|literally|right|ikr|w|l)\b/i;
+function replyFits(text, target){
+  if (!target) return false;
+  const words = String(text).trim().split(/\s+/);
+  if (words.length <= 5 || REACT.test(text.trim())) return true;
+  const stem = w => w.replace(/'s$/, '').slice(0, 5), a = new Set([...wordSet(text)].map(stem));
+  return [...wordSet(target)].some(w => a.has(stem(w)));
+}
 function aiToBatch(list, recent, cast, noYou){
   const out = [], pos = [], keys = cast.map(f => ({i: f.i, k: normName(f.name)}));
   let lastW = null;
@@ -295,6 +304,7 @@ function aiToBatch(list, recent, cast, noYou){
     if (/^m?\d+$/.test(id) && !/^n/.test(id)){ const x = recent[+id.replace('m', '') - 1]; if (x) re = x.id; }
     else if (/^n\d+$/.test(id)){ const k = pos[+id.slice(1) - 1]; if (k != null && k >= 0) re = k; }
     if (noYou && re != null && typeof re !== 'number' && (recent.find(x => x.id === re) || {}).w === -1) re = null;
+    if (re != null){ const tgt = typeof re === 'number' ? out[re] : recent.find(x => x.id === re); if (!replyFits(text, tgt && tgt.text)) re = null; }     // not about that message: post it on its own
     pos[gi] = out.length; out.push({w, text, re}); lastW = w;
   });
   return out;
