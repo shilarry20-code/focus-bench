@@ -260,7 +260,7 @@ const unb64 = (s, T) => { const bin = atob(s), u = new Uint8Array(bin.length); f
    adjustments: each match moves your opponent's shown rating and adds the sitting they studied, while the
    simulation itself keeps using the players' own ratings. Adjustments add up the same in any order, so a match
    heard about late lands in exactly the same place, and a daily snapshot of the world (made on GitHub) is exact. */
-const WORLD_V = 2, WORLD_START = new Date(2026, 10, 18).getTime();    // midnight Nov 18, 2026 (Eastern)
+const WORLD_V = 3, WORLD_START = new Date(2026, 10, 18).getTime();    // midnight Nov 18, 2026 (Eastern)
 const WORLD_FMT = new Intl.DateTimeFormat('en-US', {timeZone: 'America/New_York', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'});
 // a timestamp whose reading on this device's clock is Eastern time at t (the same as t on a device set to Eastern)
 function worldT(t){
@@ -448,8 +448,14 @@ function dayPlan(i, dk, out){
 // When each sitting of a player's day happens (minutes after midnight). The calendar, the 2-hour updates and
 // ranked matches all use this one function, so a player's calendar, today's minutes and matches always agree.
 const ST_A = new Int32Array(64), ST_B = new Int32Array(64), ST_LEN = new Int32Array(64), ST_GAP = new Float64Array(64);
+// the whole world runs a little early or late each day (up to 45 min early, 75 late), and Friday and Saturday nights later still
+let dsK = null, dsV = 0;
+function dayShift(dk){
+  if (dsK !== dk){ const d = new Date(dk + 'T12:00').getDay(); dsV = Math.floor(mulberry32(dayNum(dk) * 7919 + 13)() * 120) - 45 + (d === 5 || d === 6 ? 50 : d === 0 ? -20 : 0); dsK = dk; }
+  return dsV;
+}
 function sitTimes(i, dk, xs){      // fills ST_A / ST_B, returns the count and the random stream the calendar continues with
-  const n = Math.min(xs.length, 64), rnd = mulberry32(dayNum(dk) * 131 + i * 977 + 7);
+  const n = Math.min(xs.length, 63), rnd = mulberry32(dayNum(dk) * 131 + i * 977 + 7);
   if (!n) return {n: 0, rnd};
   let total = 0, sumL = 0; for (let k = 0; k < n; k++){ total += xs[k]; ST_LEN[k] = Math.max(5, Math.round(xs[k])); sumL += ST_LEN[k]; }
   total = Math.round(total);
@@ -457,10 +463,25 @@ function sitTimes(i, dk, xs){      // fills ST_A / ST_B, returns the count and t
   sumL = 0; for (let k = 0; k < n; k++) sumL += ST_LEN[k];
   let sumG = 0; for (let k = 0; k < n - 1; k++){ ST_GAP[k] = 15 + Math.floor(rnd() * 100); sumG += ST_GAP[k]; }
   if (sumL + sumG > 1435){ const f = Math.max(0, 1435 - sumL) / (sumG || 1); sumG = 0; for (let k = 0; k < n - 1; k++){ ST_GAP[k] = Math.floor(ST_GAP[k] * f); sumG += ST_GAP[k]; } }
-  const span = sumL + sumG, pa = PEAKS[PEAK_NAMES[T_PK[i]]][0];
-  let at = clampN(Math.min(pa, 22) * 60 + Math.floor(rnd() * 100) - 30, 0, Math.max(0, 1438 - span));
-  for (let k = 0; k < n; k++){ ST_A[k] = at; ST_B[k] = at + ST_LEN[k]; at += ST_LEN[k] + (k < n - 1 ? ST_GAP[k] : 0); }
-  return {n, rnd};
+  const span = sumL + sumG, pa = PEAKS[PEAK_NAMES[T_PK[i]]][0], sh = dayShift(dk);
+  if (pa < 22){
+    let at = clampN(pa * 60 + Math.floor(rnd() * 240) - 60 + sh, 0, Math.max(0, 1438 - span));     // anywhere from an hour early to three late
+    for (let k = 0; k < n; k++){ ST_A[k] = at; ST_B[k] = at + ST_LEN[k]; at += ST_LEN[k] + (k < n - 1 ? ST_GAP[k] : 0); }
+    return {n, rnd};
+  }
+  // night owls start around 10 PM and keep going past midnight: whatever runs over wraps to the small
+  // hours of the same day (the day is a loop, so nothing overlaps), and a sitting that crosses midnight is split in two
+  let at = 1260 + Math.floor(rnd() * 270) + sh + 1440, c = 0;     // some nights from 9 PM, others not until 1:30 AM
+  const A = [], L = [];
+  for (let k = 0; k < n; k++){
+    const a = at % 1440, len = ST_LEN[k];
+    if (a + len > 1440){ A.push(a); L.push(1440 - a); A.push(0); L.push(a + len - 1440); }
+    else { A.push(a); L.push(len); }
+    at += len + (k < n - 1 ? ST_GAP[k] : 0);
+  }
+  const ord = A.map((_, k) => k).sort((x, y) => A[x] - A[y]).slice(0, 64);
+  ord.forEach(k => { ST_A[c] = A[k]; ST_LEN[c] = L[k]; ST_B[c] = A[k] + L[k]; c++; });
+  return {n: c, rnd};
 }
 // every bot's plan for one day, worked out once and reused by that day's twelve updates:
 // total and longest sitting, plus when each sitting happens (SCH_*: player i's sittings are SCH_O[i] .. SCH_O[i+1])
