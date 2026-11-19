@@ -64,7 +64,7 @@ async function dmWrite(w, task, withAct){
         if (t && texts.length < 3) texts.push(t);
       });
     } catch(e){
-      if (e.kind === 'busy' || e.kind === 'key') GEM.wait = Date.now() + (e.kind === 'busy' ? 15 : 60 * 24) * 60000;
+      if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e);
       if (e.msg) GEM.detail = e.msg; saveAI();
     }
   }

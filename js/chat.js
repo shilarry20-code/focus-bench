@@ -10,7 +10,19 @@
    and your own. Messages sync across devices with the rest of your data (see sync.js); the key never does. */
 
 const CHAT_MAX = 300, CHAT_POOL_N = 700;
-const GEMINI_MODELS = ['gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+// 3.5 Flash-Lite first; when its free daily allowance is used up, 3.1 Flash-Lite until the daily reset (midnight Pacific).
+// (The 2.5 models only allow about 20 free requests a day, so they're not used.)
+const GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+const MODEL_NAMES = {'gemini-3.5-flash-lite': '3.5 Flash-Lite', 'gemini-3.1-flash-lite': '3.1 Flash-Lite'};
+const PT_FMT = new Intl.DateTimeFormat('en-US', {timeZone: 'America/Los_Angeles', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'});
+const ptParts = () => { const p = {}; for (const x of PT_FMT.formatToParts(new Date())) p[x.type] = x.value; return p; };
+const ptDay = () => { const p = ptParts(); return `${p.year}-${p.month}-${p.day}`; };
+// Google's daily counts start over at midnight Pacific time
+function ptResetAt(){ const p = ptParts(); return Date.now() - (((+p.hour % 24) * 3600 + +p.minute * 60 + +p.second) * 1000) + 864e5 + 60000; }
+const modelOut = m => !!(GEM.out && GEM.out[m] > Date.now());
+function countRequest(m){ if (!GEM.cnt || GEM.cnt.day !== ptDay()) GEM.cnt = {day: ptDay(), n: {}}; GEM.cnt.n[m] = (GEM.cnt.n[m] || 0) + 1; }
+// after a failed request: how long to wait before trying again
+function aiBackoff(e){ return e.until ? e.until : Date.now() + (e.kind === 'busy' ? (e.short ? 1 : 15) : e.kind === 'key' ? 60 * 24 : e.kind === 'offline' ? 1 : 5) * 60000; }
 const GEMINI_KEY_URL = 'https://aistudio.google.com/apikey';
 let CHATS = store.get('fb.chat', null) || {msgs: [], q: [], read: Date.now(), seen: 0, next: 0};
 let GEM = store.get('fb.ai', {});
@@ -123,7 +135,8 @@ ${forUser ? chatChallengeNote(cast) : ''}For replyTo use the id of the message b
 // (some models or keys don't take a schema), it asks again more loosely and pulls the JSON out of the text.
 // GEM.detail keeps Google's own error message so Settings can show what went wrong.
 async function aiCall(sys, user){
-  const models = GEM.model ? [GEM.model, ...GEMINI_MODELS.filter(m => m !== GEM.model)] : GEMINI_MODELS;
+  const models = GEMINI_MODELS.filter(m => !modelOut(m));
+  if (!models.length){ const until = Math.min(...GEMINI_MODELS.map(m => GEM.out[m])); throw {kind: 'busy', until, msg: 'Both Gemini models have used up today’s free requests.'}; }
   const schema = {type: 'OBJECT', properties: {messages: {type: 'ARRAY', items: {type: 'OBJECT',
     properties: {from: {type: 'STRING'}, text: {type: 'STRING'}, replyTo: {type: 'STRING'}}, required: ['from', 'text']}}}, required: ['messages']};
   const configs = [{responseMimeType: 'application/json', responseSchema: schema}, {responseMimeType: 'application/json'}, {}];
@@ -150,7 +163,11 @@ async function aiCall(sys, user){
       const em = j && j.error ? `${j.error.status || r.status}: ${j.error.message || ''}` : `HTTP ${r.status}`;
       if (!r.ok){
         last = `${model} · ${em}`.slice(0, 260); GEM.detail = last;
-        if (r.status === 429) throw {kind: 'busy', msg: last};
+        if (r.status === 429){
+          // the day's allowance for this model is gone: switch to the next one until the reset; a per-minute limit just waits a minute
+          if (/per ?day|PerDay|daily/i.test(em + ' ' + raw)){ GEM.out = GEM.out || {}; GEM.out[model] = ptResetAt(); saveAI(); break; }
+          throw {kind: 'busy', short: true, msg: last};
+        }
         if (/API key|API_KEY|api_key|unauthenticated|credential/i.test(em) || r.status === 401) throw {kind: 'key', msg: last};
         if (r.status === 404 || /not found|not supported|is not available|unsupported model/i.test(em)) break;   // next model
         continue;                                                                  // same model, looser request
@@ -163,11 +180,13 @@ async function aiCall(sys, user){
         GEM.detail = last; continue;
       }
       if (GEM.model !== model){ GEM.model = model; }
+      countRequest(model);
       GEM.detail = null; saveAI();
       return o.messages;
     }
   }
   saveAI();
+  if (!GEMINI_MODELS.some(m => !modelOut(m))){ const until = Math.min(...GEMINI_MODELS.map(m => GEM.out[m])); throw {kind: 'busy', until, msg: 'Both Gemini models have used up today’s free requests.'}; }
   throw {kind: 'other', msg: last || 'No Gemini model answered'};
 }
 // turn Gemini's messages into chat messages, checking every name against the room
@@ -254,9 +273,9 @@ async function chatGenerate(forUser, away){
     if (forUser && acts.length) chatSendChallenges(acts);
   } catch(e){
     GEM.last = {at: Date.now(), got: 0, used: 0, why: e.msg || (e.kind === 'offline' ? 'couldn’t reach Gemini' : e.kind)};
-    GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? 'Gemini’s free limit is used up for now. The chat is quiet until it resets.' : e.kind === 'offline' ? null : 'Gemini had a problem. The chat is quiet for a bit.';
+    GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? (e.until ? `Both models used up today’s free requests. The chat is quiet until ${new Date(e.until).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.` : e.short ? null : 'Gemini’s free limit is used up for now. The chat is quiet until it resets.') : e.kind === 'offline' ? null : 'Gemini had a problem. The chat is quiet for a bit.';
     if (e.msg) GEM.detail = e.msg;
-    GEM.wait = Date.now() + (e.kind === 'busy' ? 15 : e.kind === 'key' ? 60 * 24 : e.kind === 'offline' ? 1 : 5) * 60000;
+    GEM.wait = aiBackoff(e);
     if (e.kind === 'offline') CHATS.next = GEM.wait;
     saveAI();
   } finally { chatBusy = false; renderChatSettings(); renderChat(); }
@@ -444,12 +463,20 @@ function chatLive(){
 setInterval(() => { if (chatPageOpen()) chatLive(); }, 500);
 
 /* ---- Settings > Chat ---- */
+// requests this device has sent today, per model (Google's limit counts every device using your key)
+function aiUsageHtml(){
+  const n = GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n : {}, reset = new Date(ptResetAt() - 60000).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+  return `<div class="ai-usage"><div class="h">Gemini requests today</div>${GEMINI_MODELS.map(m => { const c = n[m] || 0, out = modelOut(m);
+    return `<div class="ai-u-row"><span>${MODEL_NAMES[m]}${m === GEMINI_MODELS[0] ? ' <small class="hint">(used first)</small>' : ''}</span><span class="bar2"><i style="width:${Math.min(100, c / 5)}%"></i></span><b>${out ? 'used up' : `${c} / ~500`}</b></div>`; }).join('')}
+    <p class="hint">Counts this device only; your other devices share the same daily allowance. Resets at ${reset}.</p></div>`;
+}
 function renderChatSettings(){
   const el = $('#chatSetBody'); if (!el) return;
   el.innerHTML = `<p class="lead">The global chat is written by Gemini: the players talk to each other and answer what you say. It needs a free Gemini key; without one the room stays quiet.</p>
     ${GEM.key ? `<div class="sync-status ${GEM.err ? 'bad' : ''}"><span class="sync-dot${GEM.err ? ' off' : ''}"></span><span><b>${GEM.err ? esc(GEM.err) : 'Gemini is on'}</b><small>${GEM.model ? `Model: ${esc(GEM.model)}` : 'Not used yet'}${GEM.ok ? ` · last used ${syncAgo(GEM.ok)}` : ''}</small></span></div>
       ${GEM.err && GEM.detail ? `<p class="hint ai-detail">Google said: <code>${esc(GEM.detail)}</code></p>` : ''}
       ${GEM.last ? `<p class="hint ai-detail">Last chat request ${syncAgo(GEM.last.at)}: ${GEM.last.used ? `${GEM.last.got} message${GEM.last.got === 1 ? '' : 's'}, ${GEM.last.used} used` : esc(GEM.last.why || 'nothing came back')}.</p>` : ''}
+      ${aiUsageHtml()}
       <div class="confirm"><button class="small-btn" id="aiTest">Test it</button><button class="small-btn" id="aiOff">Remove key</button></div>`
     : `<ol class="sync-steps"><li><b>Get a free key.</b> <a class="small-btn" href="${GEMINI_KEY_URL}" target="_blank" rel="noopener">Google AI Studio ↗</a><small class="hint">Sign in with Google, click <b>Create API key</b>, and copy it. Use a key from a project with <b>no billing</b> set up, so nothing can ever be charged.</small></li>
       <li><b>Paste it here.</b><span class="sync-row"><input type="password" id="aiKey" placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false" aria-label="Gemini API key"><button class="small-btn accent" id="aiSave">Save</button></span><small class="hint">It stays in this browser only. Paste it on each device you use.</small></li></ol>`}
