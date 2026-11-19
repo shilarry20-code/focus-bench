@@ -1007,13 +1007,14 @@ function finalize(res, why){
 }
 // a match you won is settled at once, but your time keeps counting (shown as TBD) through your focus blocks. Breaks
 // don't end it (time just doesn't count on a break); it's set when you pause, log, stop or switch modes yourself,
-// or after 3 hours with no studying (say, the app was closed)
+// or after 30 minutes with no timer running at all (say, the app was closed)
 let openAt = 0;
 function openTick(now, running){
   const h = R.hist.find(x => x.open); if (!h){ openAt = 0; return; }
-  if (running){ if (openAt) h.ys += Math.min(2000, Math.max(0, now - openAt)) / 1000; openAt = now; h.lr = now; h.you = Math.round(h.ys / 60); return; }
+  if (S.running) h.lr = now;                                   // a break counts as the timer running
+  if (running){ if (openAt) h.ys += Math.min(2000, Math.max(0, now - openAt)) / 1000; openAt = now; h.you = Math.round(h.ys / 60); return; }
   openAt = 0;
-  if (now - (h.lr || h.t) > 3 * 3600e3) openClose();
+  if (now - (h.lr || h.t) > 30 * 60000) openClose();
 }
 function openClose(){
   const h = R.hist.find(x => x.open); if (!h) return;
