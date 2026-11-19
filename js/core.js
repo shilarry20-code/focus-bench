@@ -119,9 +119,11 @@ function savePartial(){
 }
 function reset(noSave){
   achBump('resets');
+  const short = !noSave && S.phase === 'focus' && focusElapsed() - (S.segOff || 0) > 0 && focusElapsed() - (S.segOff || 0) < 60000;
   const saved = noSave ? 0 : savePartial();
   S.segOff = 0; S.segTask = null; S.running = false; S.flowAcc = 0; S.remaining = durMs(S.phase); wake(false); changed();
   if (saved) toast(`Saved ${saved} min to your log.`);
+  else if (short) toast('Under a minute, so nothing was logged.');
 }
 function resetCycle(noSave){ S.phase = 'focus'; S.round = 1; reset(noSave); }
 

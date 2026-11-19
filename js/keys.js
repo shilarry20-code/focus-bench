@@ -4,7 +4,7 @@
    (Ctrl, Cmd and Alt combos are left to the browser.) */
 const KEY_ACTIONS = [
   {id: 'toggle', name: 'Start or pause', def: ' '},
-  {id: 'reset', name: 'Reset', def: 'r'},
+  {id: 'reset', name: 'Log (save time so far and reset)', def: 'r'},
   {id: 'skip', name: 'Skip, or Done in Stopwatch', def: 's'},
   {id: 'mini', name: 'Mini clock', def: 'm'},
   {id: 'focus', name: 'Focus mode', def: 'f'},
