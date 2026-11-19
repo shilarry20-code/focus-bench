@@ -136,7 +136,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = fals
 
 /* ---------- events ---------- */
 $('#startBtn').onclick = toggle;
-$('#resetBtn').onclick = reset;
+$('#resetBtn').onclick = () => reset();
 $('#skipBtn').onclick = skip;
 $('#miniBtn').onclick = toggleMini;
 $('#focusBtn').onclick = toggleFocusMode;
