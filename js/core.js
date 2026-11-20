@@ -150,9 +150,10 @@ function flowBreak(){
   if (el < 60000){ toast('Focus for at least a minute before taking a break.'); return; }
   logFocus(el);
   const f = P.modes.flow;
-  S.flowBreakMin = Math.max(f.minBreak, Math.round(el / 60000 / f.ratio));
+  const sec = Math.max(1, Math.round(el / 1000 / f.ratio));         // no minimum: the break is exactly your focus time ÷ the ratio
+  S.flowBreakMin = sec / 60;
   S.running = false; S.flowAcc = 0; S.phase = 'short'; S.remaining = durMs('short');
-  toast(`Nice. You earned a ${S.flowBreakMin} minute break.`);
+  toast(`Nice. You earned a ${sec >= 60 ? `${Math.floor(sec / 60)} min${sec % 60 ? ` ${sec % 60} sec` : ''}` : `${sec} second`} break.`);
   if (P.autoBreak) start(); else { wake(false); changed(); }
 }
 // Stopwatch: log everything since Start as one session, celebrate, and reset to 0:00
@@ -366,7 +367,6 @@ function renderTimerPane(){
     h += numRow('f-short','Break','minutes',c.short,1,60);
   } else if (m === 'flow'){
     h += numRow('f-ratio','Break ratio','break = focus time ÷ this number',c.ratio,2,10);
-    h += numRow('f-minBreak','Shortest break','minutes',c.minBreak,1,30);
   } else if (m === 'stopwatch'){
     h = '';
   } else {
