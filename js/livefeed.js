@@ -197,6 +197,7 @@ function renderLive(force){
     const evs = LF.events.filter(x => LF.tab === 'you' ? x.you : x.all).slice(0, 40);
     list = evs.length ? `<ul class="lf-feed">${evs.map(lfRow).join('')}</ul>` : `<p class="hint">${LF.tab === 'you' ? 'Nothing from players near your rating in the last 2 hours.' : 'It’s quiet right now.'}</p>`;
   }
+  if (typeof elLiveHtml === 'function') list = elLiveHtml() + list;
   el.innerHTML = `<div class="h first lf-h"><span><i class="lf-dot" aria-hidden="true"></i>Studying now</span><small>${new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}</small></div>
     <div class="lf-count"><b>${LF.live.toLocaleString()}</b><span>of ${(ROSTER_N + 1).toLocaleString()} players</span></div>
     <p class="hint lf-peak">${LF.peak && LF.peak.h !== h ? `Busiest so far today: ${hourLabel(LF.peak.h)}, ${LF.peak.n.toLocaleString()} studying.` : 'This is the busiest hour so far today.'}</p>

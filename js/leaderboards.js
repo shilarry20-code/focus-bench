@@ -20,6 +20,8 @@ const LB = [
   {id:'sess',  name:'Longest single session', desc:'The longest one sitting',               u:'min', f:F.maxSess,  me:t => t.maxSess},
   {id:'day',   name:'Biggest single day',     desc:'Most study time in one day',            u:'min', f:F.maxDay,   me:t => t.maxDay},
   {id:'count', name:'Most sessions',          desc:'Focus sessions logged, all time',       u:'n',   f:F.sessions, me:t => t.sessions},
+  {id:'elw',   name:'Elimination wins',       desc:'Elimination lobbies won', u:'n', f:null, g:() => elArrs().w, me:t => (R.el && R.el.wins) || 0},
+  {id:'el3',   name:'Elimination top 3',      desc:'Elimination lobbies finished in the top 3', u:'n', f:null, g:() => elArrs().t, me:t => (R.el && R.el.top3) || 0},
   {id:'lvl',   name:'Highest level',          desc:'Level from XP: studying, daily goals, ranked wins, challenges and achievements', u:'xp', f:null, g:() => lvArrs().xp, me:t => myXp()},
   {id:'pts',   name:'Achievement points',     desc:'Points from unlocked achievements',     u:'pts', f:null,       me:t => t.pts}
 ];
@@ -134,3 +136,16 @@ $('#lbJump').onclick = () => { lbJump = !lbJump; renderLeaders(); };
 $('#lbList').addEventListener('click', e => { const r = e.target.closest('[data-bot]'); if (r && !e.target.closest('.bdg')) openBot(+r.dataset.bot); });
 $('#lbList').addEventListener('keydown', e => { if (e.key === 'Enter'){ const r = e.target.closest('[data-bot]'); if (r) openBot(+r.dataset.bot); } });
 
+
+// everyone else's Elimination record: a share of their study days, more for players who sit longer than others near them
+let ELA = null;
+function elArrs(){
+  if (ELA && ELA.v === botsVer) return ELA;
+  const N = ROSTER_N, w = new Int32Array(N), t = new Int32Array(N);
+  for (let i = 0; i < N; i++){
+    const o = i * BF, days = BS[o + F.days], h = (Math.imul(i ^ 0x2545f491, 2654435761) >>> 0) / 4294967296;
+    const play = days * (.05 + h * .25), edge = clampN(.5 + ((typeof T_SIT !== 'undefined' && T_SIT ? T_SIT[i] : 1) - 1) * 2.5, .15, .9);
+    t[i] = Math.round(play * .35 * edge * 1.6); w[i] = Math.round(t[i] * (.22 + .2 * edge));
+  }
+  return (ELA = {v: botsVer, w, t});
+}

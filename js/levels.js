@@ -22,9 +22,9 @@ function myXpParts(){
   LOG.forEach(s => { min += s.min; const k = dayKey(s.t); days[k] = (days[k] || 0) + s.min; });
   const goal = Object.values(days).filter(m => m >= P.goalMin).length;
   const ach = typeof ACHS !== 'undefined' ? ACHS.filter(a => ACH.u[a.id]).reduce((n, a) => n + TIERS[a.tier].pts, 0) : 0;
-  return {study: min, goal: goal * 25, ranked: (R.w || 0) * 30, chal: (CHL.xp || 0), ach: ach * 5};
+  return {study: min, goal: goal * 25, ranked: (R.w || 0) * 30, chal: (CHL.xp || 0), ach: ach * 5, elim: R.elXp || 0};
 }
-const myXp = () => { const p = myXpParts(); return p.study + p.goal + p.ranked + p.chal + p.ach; };
+const myXp = () => { const p = myXpParts(); return p.study + p.goal + p.ranked + p.chal + p.ach + p.elim; };
 // today's XP, by source
 function myXpToday(){
   const k = dayKey(Date.now()), t0 = new Date(k + 'T00:00').getTime();
@@ -65,7 +65,7 @@ function lvCardHtml(){
     <div class="lv-nums"><span>Level ${B.L}</span><span>${B.into.toLocaleString()} / ${B.need.toLocaleString()} XP</span><span>Level ${B.L + 1}</span></div>
     <div class="lv-sub">Today's XP <b>+${tot.toLocaleString()}</b></div>
     ${today.length ? `<ul class="lv-list">${today.map(([t, v, ic]) => `<li><span><svg viewBox="0 0 24 24">${LV_IC[ic]}</svg>${esc(t)}</span><b>+${v.toLocaleString()}</b></li>`).join('')}</ul>` : '<p class="hint">Study, win ranked matches and finish challenges to earn XP.</p>'}
-    <details class="lv-more"><summary>Where your XP comes from</summary><ul class="lv-list">${[['Studying', parts.study, 'clock'], ['Daily goals', parts.goal, 'target'], ['Ranked wins', parts.ranked, 'trophy'], ['Challenges', parts.chal, 'check'], ['Achievements', parts.ach, 'award']].map(([t, v, ic]) => `<li><span><svg viewBox="0 0 24 24">${LV_IC[ic]}</svg>${t}</span><b>${v.toLocaleString()}</b></li>`).join('')}</ul>
+    <details class="lv-more"><summary>Where your XP comes from</summary><ul class="lv-list">${[['Studying', parts.study, 'clock'], ['Daily goals', parts.goal, 'target'], ['Ranked wins', parts.ranked, 'trophy'], ['Elimination', parts.elim, 'trophy'], ['Challenges', parts.chal, 'check'], ['Achievements', parts.ach, 'award']].map(([t, v, ic]) => `<li><span><svg viewBox="0 0 24 24">${LV_IC[ic]}</svg>${t}</span><b>${v.toLocaleString()}</b></li>`).join('')}</ul>
       <p class="hint">1 XP per minute studied · +25 for hitting your daily goal · +30 per ranked win · challenges +20 to +40 daily, +100 to +150 weekly, +300 to +400 monthly, plus a bonus for finishing a whole set · achievements +25 to +500.</p></details></div>`;
 }
 function lvRender(){
