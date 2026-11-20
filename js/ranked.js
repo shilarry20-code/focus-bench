@@ -35,7 +35,20 @@ function rankOf(r){
 const PARAGON = {i:PARAGON_I, name:'Paragon', div:'', full:'Paragon', sh:'Paragon', c:RANKS[PARAGON_I].c, lo:LAUREATE_MIN, hi:null, d:0};
 const ME = -1;
 // a player's rank with the two place-based ranks: the Paragon, and Laureates numbered by place
+// before your 5 placement games you have no rank; then you're placed (no higher than Scholar III)
+const PLACE_N = 5, PLACE_MAX = 1499;
+const UNRANKED = {i:0, un:1, name:'Unranked', div:'', full:'Unranked', sh:'Unranked', c:'#8e98a3', lo:0, hi:null, d:0};
+const rkUnplaced = () => R && R.played < PLACE_N;
+// call after a rated game is counted: on your 5th, you get your rank
+function rkPlace(){
+  if (R.played !== PLACE_N || R.placed) return null;
+  R.placed = Date.now(); R.mmr = Math.min(R.mmr, PLACE_MAX); R.best = R.mmr;
+  const rk = rankOf(R.mmr);
+  setTimeout(() => { try { fx.burst(); crownShow(rk, `Placed: ${rk.full}`, `Your placement games are done. You start at ${rk.full} (${R.mmr.toLocaleString()} Elo).`); } catch(e){ toast(`You’re placed: ${rk.full}!`); } }, 600);
+  return rk;
+}
 function rkOf(who){
+  if (who === ME && rkUnplaced()) return UNRANKED;
   if (R && R.para && R.para.h === who) return PARAGON;
   if (who !== ME && !BS) return rankOf(1000);
   const k = rankOf(who === ME ? R.mmr : botRating(who));
@@ -147,6 +160,7 @@ function emblemSvg(i, d, small){
 }
 
 function emblem(rk, cls){
+  if (rk.un) return `<span class="emb un ${cls || ''}" title="Unranked"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="none" stroke="#a9b1ba" stroke-width="2.5" stroke-dasharray="4 3"/><text x="20" y="26.5" text-anchor="middle" font-size="18" font-weight="800" fill="#8e98a3">?</text></svg></span>`;
   const i = rk.i, Rk = RANKS[i] || {}, small = /\b(xs|sm)\b/.test(cls || '');
   return `<span class="emb ${cls || ''}${Rk.shine ? ' shine' : ''}${i === PARAGON_I ? ' para' : ''}" title="${esc(rk.full)}" style="--ec:${rk.c}">${emblemSvg(i, rk.div ? rk.d : -1, small)}</span>`;
 }
@@ -1077,7 +1091,9 @@ function finalize(res, why){
   }
   const s = stakes(c.br), delta = c.friendly ? 0 : res === 'W' ? s.win : res === 'D' ? s.draw : -s.loss;
   const before = rankOf(R.mmr);
+  const wasUn = rkUnplaced();
   if (!c.friendly){ R.mmr = clampN(R.mmr + delta, 100, 5000); R.best = Math.max(R.best, R.mmr); R.played++; }
+  const placed = !c.friendly ? rkPlace() : null;
   const rec = R.rec[c.b] || (R.rec[c.b] = [0, 0, 0]);
   const nem = nemesis();
   if (!c.friendly && RK_LW && c.b >= 0 && c.b < ROSTER_N){ if (res === 'W') RK_LL[c.b]++; else if (res === 'L') RK_LW[c.b]++; markBots(); }
@@ -1092,7 +1108,7 @@ function finalize(res, why){
   if (R.hist.length > 500) R.hist.length = 500;
   if (worldT(R.hist[0].t) >= WORLD_START) applyEvent(R.hist[0]);      // your opponent's rating and the sitting they studied
   botsChanged(); markBots();
-  c.state = 'done'; c.res = res; c.delta = delta; c.promo = after.i > before.i || (after.i === before.i && after.d > before.d) ? after.full : (after.i < before.i || (after.i === before.i && after.d < before.d) ? -1 : 0);
+  c.state = 'done'; c.res = res; c.delta = delta; c.placed = placed ? placed.full : null; c.promo = wasUn ? 0 : after.i > before.i || (after.i === before.i && after.d > before.d) ? after.full : (after.i < before.i || (after.i === before.i && after.d < before.d) ? -1 : 0);
   saveRanked(true);
   if (res === 'W'){ chime(P.chime); if (c.promo && c.promo !== -1){ fx.burst(); if (RANKS[after.i].elite && after.i > before.i) crownShow(after, `Promoted to ${RANKS[after.i].name}`, after.i === LAUREATE ? 'You reached the Laureate rank. Become the highest-rated player to claim Paragon.' : 'You reached an elite rank.'); } }
   updateParagon();
@@ -1189,9 +1205,9 @@ function renderMatch(fresh){
     slot.dataset.key = '';
     slot.innerHTML = `<div class="card match mq"><div class="m-head"><span class="h first">Finding a match</span><span class="mq-time">${clock(t)}</span></div>
       <div class="mq-radar"><span class="mq-ring"></span><span class="mq-ring r2"></span><span class="mq-ring r3"></span>${emblem(rk, 'md')}</div>
-      <p class="mq-line">Searching for players near <b>${R.mmr.toLocaleString()} Elo</b> <span class="mq-range">±${queueRange(t)}</span></p>
+      <p class="mq-line">Searching for players near <b>${rk.un ? 'your skill' : R.mmr.toLocaleString() + ' Elo'}</b> <span class="mq-range">±${queueRange(t)}</span></p>
       <p class="hint mq-q">${MQ.pool.toLocaleString()} players in queue</p>
-      <div class="mq-foot"><span class="hint">${R.played < 5 ? `Placement match ${R.played + 1} of 5` : `${rk.full} · ranked`}</span><button class="small-btn" data-act="m-cancel">Cancel</button></div></div>`;
+      <div class="mq-foot"><span class="hint">${R.played < 5 ? `Placement match ${R.played + 1} of 5 · 1v1` : `${rk.full} · ranked 1v1`}</span><button class="small-btn" data-act="m-cancel">Cancel</button></div></div>`;
     return;
   }
   if (MQ && MQ.found){
@@ -1208,7 +1224,7 @@ function renderMatch(fresh){
     return;
   }
   if (!c){
-    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.mmr.toLocaleString()} Elo${R.played < 5 ? ` · placement ${R.played}/5` : ''}</small></span></div><p class="hint">Get matched with a player near your rating. Whoever studies longer wins.</p><div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find match</button><button class="link-btn" data-go="ranked">Ranked page →</button></div></div>`;
+    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.played < 5 ? `Placement ${R.played}/5` : `${R.mmr.toLocaleString()} Elo`}</small></span></div><p class="hint">Get matched with a player near your rating. Whoever studies longer wins.</p><div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find match</button><button class="link-btn" data-go="ranked">Ranked page →</button></div></div>`;
     return;
   }
   const B = BOTS[c.b], brk = rankOf(c.br), s = stakes(c.br), max = Math.max(c.you, c.tapped ? c.target : c.them, 60000) * 1.08;
@@ -1230,9 +1246,9 @@ function renderMatch(fresh){
     const sec = ms => fmtSec(Math.round(ms / 1000));
     const oh = R.hist.find(x => x.open && x.c0 === c.t0);
     const how = oh ? `TBD vs ${sec(c.target)} <small class="tbd-note">Your time keeps counting through your focus blocks (not breaks) until you pause or end your session. You can find your next match now.</small>` : c.res === 'W' && c.you - c.target < 120000 ? `${sec(c.you)} vs ${sec(c.target)}` : `${mm(c.you)} vs ${mm(c.target)}`;
-    result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${c.friendly ? 'Friendly match · no Elo change' : `${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em>`}</span>
+    result = `<div class="m-result r-${c.res}"><b>${res}</b><p class="how">${how}</p><span>${c.friendly ? 'Friendly match · no Elo change' : c.placed ? `Placement done: you’re <b>${esc(c.placed)}</b>` : c.pl ? `Placement match ${c.pl} of ${PLACE_N} done` : `${(c.mmr0).toLocaleString()} → ${R.mmr.toLocaleString()} <em>(${c.delta > 0 ? '+' : ''}${c.delta})</em>`}</span>
       ${c.promo && c.promo !== -1 ? `<p class="promo">Promoted to ${esc(c.promo)}!</p>` : c.promo === -1 ? `<p class="demo">Dropped to ${esc(nrk.full)}.</p>` : ''}
-      <div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>
+      ${nrk.un ? '' : `<div class="m-prog">${emblem(nrk, 'sm')}<span class="bar2"><i style="width:${prog * 100}%;background:${nrk.c}"></i></span><small>${nrk.hi ? `${R.mmr - nrk.lo}/${nrk.hi - nrk.lo} to next` : nrk.i === PARAGON_I ? 'Paragon' : 'Laureate'}</small></div>`}
       <div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find next match</button><button class="small-btn" data-dm="${c.b}">Message ${esc(BOTS[c.b].name)}</button><button class="small-btn" data-act="m-dismiss">Close</button></div></div>`;
   }
   // while a match is live, only the moving parts change, so badges you're hovering stay put
@@ -1267,6 +1283,7 @@ function renderMatch(fresh){
 }
 $('#page-ranked').addEventListener('click', e => {
   if (!e.target.closest('[data-rkfind]')) return;
+  if (rkMode() > 1 && !(R.cur && R.cur.state === 'live') && !MQ){ if (typeof elQueue === 'function') elQueue(rkMode()); return; }
   showPage('focus'); startSearch(); window.scrollTo(0, 0);
 });
 $('#matchSlot').addEventListener('click', e => {
@@ -1283,8 +1300,8 @@ function renderRankChip(){
   const el = $('#rankChip'); if (!el) return;
   el.hidden = !R.on;
   const rk = myRk();
-  el.innerHTML = `${emblem(rk, 'xs')}<b>${rk.sh}</b><span>${R.mmr.toLocaleString()}</span>`;
-  el.title = `${rk.full} · ${R.mmr.toLocaleString()} Elo`;
+  el.innerHTML = `${emblem(rk, 'xs')}<b>${rk.sh}</b><span>${rk.un ? `${R.played}/${PLACE_N}` : R.mmr.toLocaleString()}</span>`;
+  el.title = rk.un ? `Unranked · placement ${R.played}/${PLACE_N}` : `${rk.full} · ${R.mmr.toLocaleString()} Elo`;
 }
 
 /* Ranked page */
@@ -1293,17 +1310,18 @@ function renderRanked(){
   if (!RK_READY){ $('#rkHero').innerHTML = `<p class="hint">Loading ${(ROSTER_N + 1).toLocaleString()} players…</p>`; return; }
   const rk = myRk(), next = rk.hi ? rankOf(rk.hi) : null, prog = rk.hi ? (R.mmr - rk.lo) / (rk.hi - rk.lo) : 1;
   const games = R.w + R.l + R.d, wr = games ? (Math.round(R.w / games * 1000) / 10).toFixed(1) : '0.0';
-  $('#rkHero').innerHTML = `${emblem(rk, 'xl')}<div class="rk-hero-tx"><small>${R.played < 5 ? `Placement ${R.played}/5 · your rank firms up after 5 matches` : 'Your rank'}</small><b style="color:${rk.c}">${rk.full}</b>
-    <span>${R.mmr.toLocaleString()} Elo · best ${R.best.toLocaleString()}</span>
+  $('#rkHero').innerHTML = `${emblem(rk, 'xl')}<div class="rk-hero-tx"><small>${rk.un ? `Placement ${R.played}/${PLACE_N}` : 'Your rank'}</small><b style="color:${rk.c}">${rk.full}</b>
+    ${rk.un ? `<span>Play ${PLACE_N - R.played} more rated game${PLACE_N - R.played === 1 ? '' : 's'} (1v1 or group) to get your rank.</span><span class="bar2 big"><i style="width:${R.played / PLACE_N * 100}%;background:var(--accent)"></i></span><small>You can be placed anywhere from Freshman I up to Scholar III.</small>` : `<span>${R.mmr.toLocaleString()} Elo · best ${R.best.toLocaleString()}</span>
     <span class="bar2 big"><i style="width:${prog * 100}%;background:${rk.c}"></i></span>
-    <small>${next ? `${(rk.hi - R.mmr).toLocaleString()} Elo to ${next.full}` : rk.i === PARAGON_I ? 'You hold the Paragon title: no one is rated higher. Keep it.' : 'Be the highest-rated player of all to claim Paragon.'}</small>
+    <small>${next ? `${(rk.hi - R.mmr).toLocaleString()} Elo to ${next.full}` : rk.i === PARAGON_I ? 'You hold the Paragon title: no one is rated higher. Keep it.' : 'Be the highest-rated player of all to claim Paragon.'}</small>`}
     <span class="bdgs lg">${myFeatured().map(id => badgeHtml(id, 'lg')).join('')}<button class="link-btn" data-go="awards">Change showcase →</button></span></div>
-    <div class="rk-find">${R.cur && R.cur.state === 'live' ? '<button class="small-btn" data-rkfind="1">Match in progress →</button>' : MQ ? '<button class="small-btn" data-rkfind="1">Searching… →</button>' : '<button class="small-btn accent" data-rkfind="1">Find match</button>'}</div>`;
+    <div class="rk-find">${rkFindHtml()}</div>`;
   $('#rkKpis').innerHTML = `<div class="stat"><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><span>wins–losses${R.d ? '–draws' : ''}</span></div><div class="stat"><b>${wr}%</b><span>win rate</span></div><div class="stat"><b>${R.ws}</b><span>win streak · best ${R.bestWs}</span></div><div class="stat"><b>${R.played}</b><span>matches played</span></div>`;
   renderEloChart();
   const hist = R.hist.slice(0, rkHistShown);
   $('#rkHist').innerHTML = hist.map(h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${matchTimes(h)}</span>${dlCell(h)}<span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></li>`; }).join('')
-    || '<li class="empty-li">No matches yet. Start a focus block on the Focus page and you\'ll be matched automatically.</li>';
+    || '<li class="empty-li">No 1v1 matches yet. Pick 1v1 and press Find match.</li>';
+  rkModesRender(); rkGroupHist();
   $('#rkMore').hidden = R.hist.length <= rkHistShown;
   // ladder: 10 above and 10 below you
   const order = sortedBots(); let pos = order.findIndex(i => botRating(i) < R.mmr); if (pos < 0) pos = order.length;
@@ -1338,7 +1356,7 @@ function renderParaCard(){
   el.innerHTML = `<div class="h first">Current Paragon</div><div class="para-in click"${me ? ' data-me' : ` data-bot="${h}"`}>${emblem(PARAGON, 'md')}${me ? myAvatar() : avatar(B)}<span><b>${me ? esc(myName()) : esc(B.name)}</b><small>${r.toLocaleString()} Elo · reigning ${dur(since)}</small></span></div><p class="hint">The single highest-rated player of all. Only one player holds it at a time.</p>`;
 }
 function renderEloChart(){
-  const el = $('#rkChart'), RH = R.hist.filter(h => !h.f), pts = RH.slice(0, 100).reverse().map(h => h.m);
+  const el = $('#rkChart'), RH = [...R.hist.filter(h => !h.f), ...(R.gh || []).map(g => ({...g, g: 1}))].sort((x, y) => y.t - x.t), pts = RH.slice(0, 100).reverse().map(h => h.m);
   if (!RH.length){ el.innerHTML = '<p class="hint">Your Elo line shows up after your first rated match.</p>'; return; }
   pts.unshift(RH.length >= 100 ? RH[99].m - RH[99].d : 1000);
   const W = 640, H = 200, pl = 8, pr = 74, pt = 14, pb = 14, lo = Math.floor((Math.min(...pts) - 40) / 50) * 50, hi = Math.ceil((Math.max(...pts) + 40) / 50) * 50;
@@ -1356,7 +1374,7 @@ function renderEloChart(){
     const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, k = clampN(Math.round((x - pl) / (W - pl - pr) * (pts.length - 1)), 1, pts.length - 1), h = hs[k - 1];
     guide.setAttribute('x1', X(k)); guide.setAttribute('x2', X(k));
     tip.hidden = false; tip.style.left = `${X(k) / W * 100}%`; tip.style.top = `${Y(pts[k]) / H * 100}%`;
-    tip.innerHTML = `<b>${h.m.toLocaleString()}</b> <span class="${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><small>${{W:'Win',L:'Loss',D:'Draw'}[h.r]} vs ${esc(BOTS[h.b].name)}</small>`;
+    tip.innerHTML = `<b>${h.m.toLocaleString()}</b> <span class="${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><small>${h.g ? `${elOrd(h.p)} of ${h.N} · group` : `${{W:'Win',L:'Loss',D:'Draw'}[h.r]} vs ${esc(BOTS[h.b].name)}`}</small>`;
   };
   svg.onpointerleave = () => { tip.hidden = true; guide.setAttribute('x1', -10); guide.setAttribute('x2', -10); };
 }
@@ -1788,3 +1806,32 @@ function renderMeBtn(){ const b = $('#meBtn'); if (b){ b.innerHTML = myAvatar('s
 $('#meBtn').onclick = () => openProfile(ME);
 renderMeBtn();
 
+
+/* the queue picker: 1v1 or a 4, 8 or 16-player group (Elimination with standard rules) */
+const RK_MODES = [1, 4, 8, 16];
+const rkMode = () => RK_MODES.includes(R.qm) ? R.qm : 1;
+function rkFindHtml(){
+  if (R.cur && R.cur.state === 'live') return '<button class="small-btn" data-rkfind="1">Match in progress →</button>';
+  if (MQ) return '<button class="small-btn" data-rkfind="1">Searching… →</button>';
+  if (typeof elBusy === 'function' && elBusy()) return '<button class="small-btn accent" data-el="back">Group game in progress →</button>';
+  const m = rkMode();
+  return `<div class="rk-modes" role="radiogroup" aria-label="Queue">${RK_MODES.map(n => `<button class="chip${n === m ? ' on' : ''}" role="radio" aria-checked="${n === m}" data-rkmode="${n}">${n === 1 ? '1v1' : n + ' players'}</button>`).join('')}</div>
+    <div class="rk-fb"><button class="small-btn accent" data-rkfind="1">Find match</button><button class="link-btn" data-el="go">Casual lobbies →</button></div>`;
+}
+// wins and losses for each mode (in a group, a win is finishing 1st)
+function rkModesRender(){
+  const el = $('#rkModes'); if (!el) return;
+  const gm = R.gm || {}, cell = (t, w, l, d) => { const g = w + l + (d || 0), p = g ? (Math.round(w / g * 1000) / 10).toFixed(1) : '0.0';
+    return `<div class="rkm"><small>${t}</small><b>${w}–${l}${d ? '–' + d : ''}</b><span>${p}% wins</span></div>`; };
+  el.innerHTML = `<div class="h first">Record by mode</div><div class="rkm-row">${cell('1v1', R.w, R.l, R.d)}${[4, 8, 16].map(n => { const x = gm[n] || {w: 0, l: 0}; return cell(`${n} players`, x.w, x.l); }).join('')}</div><p class="hint">In group games a win is finishing 1st; anything else counts as a loss.</p>`;
+}
+function rkGroupHist(){
+  const el = $('#rkGHist'); if (!el) return;
+  const gh = (R.gh || []).slice(0, 30);
+  el.closest('.card').hidden = !gh.length;
+  el.innerHTML = gh.map(g => `<li class="hr-${g.p === 1 ? 'W' : 'L'}"><span class="res">${g.p}</span><span class="rkg-n">${g.N}p</span><span class="who"><b>${elOrd(g.p)} of ${g.N}</b><small>${g.pl ? `Placement ${g.pl} of ${PLACE_N}` : 'Ranked group'} · lasted ${elClock(g.dur || 0)}</small></span><span class="tm"></span><span class="dl ${g.d >= 0 ? 'pos' : 'neg'}">${g.pl ? '' : `${g.d > 0 ? '+' : ''}${g.d}<small>${g.m.toLocaleString()}</small>`}</span><span class="when">${winLabel(g.t)}<button class="rp-v" data-rp="el:${g.id}">View</button></span></li>`).join('');
+}
+$('#page-ranked').addEventListener('click', e => {
+  const m = e.target.closest('[data-rkmode]'); if (!m) return;
+  e.stopPropagation(); R.qm = +m.dataset.rkmode; saveRanked(); renderRanked();
+}, true);

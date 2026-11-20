@@ -8,7 +8,7 @@ const EL_PRESETS = {standard: [10, 5, 2.5, 1, 0], relaxed: [15, 10, 5, 2, 0], ha
 const EL_PRESET_NAME = {standard: 'Standard', relaxed: 'Relaxed', hardcore: 'Hardcore', sudden: 'Sudden death', custom: 'Custom'};
 const elAllow = r => (r.preset === 'custom' ? (r.custom && r.custom.length ? r.custom : [10, 5, 2.5, 1, 0]) : EL_PRESETS[r.preset] || EL_PRESETS.standard);
 const elStd = r => r.preset === 'standard' && +r.round === 25;
-const elRated = r => !!r.rated && elStd(r);
+const elRated = r => !!r.ranked && elStd(r);      // only games from the Ranked queue are rated; every other lobby is casual
 let EL = store.get('fb.elim', {G: null, list: [], live: [], hist: [], view: 'browse', tab: 'stand', filt: 'all', form: null});
 EL.list = EL.list || []; EL.live = EL.live || []; EL.hist = EL.hist || [];
 const saveEl = () => { const {_bp, ...rest} = EL; store.set('fb.elim', JSON.parse(JSON.stringify(rest, (k, v) => k === '_bp' ? undefined : v))); };
@@ -189,11 +189,11 @@ function elJoin(L){
   G.L.fillEnd = Math.max(...G.L.joinAt);
   EL.G = G; EL.view = 'game'; EL.tab = 'stand'; saveEl(); showPage('elim'); elRender();
 }
-function elQuick(N){
+// the Ranked queue for 4, 8 or 16: a standard lobby around your rating
+function elQueue(N){
+  if (MQ){ toast('You’re already searching for a 1v1.'); return; }
   if (!elCanJoin()) return;
-  const ok = EL.list.filter(l => l.rules.size === N && elRated(l.rules) && Math.abs(R.mmr - l.center) <= l.rules.range / 2);
-  if (ok.length) return elJoin(ok.sort((a, b) => b.players.length - a.players.length)[0]);
-  const L = elNewLobby({size: N, center: R.mmr}); L.name = 'Quick join'; elJoin(L);
+  const L = elNewLobby({size: N, center: R.mmr, preset: 'standard', round: 25, ranked: true}); L.name = `Ranked · ${N} players`; elJoin(L);
 }
 function elCreate(f){
   if (!elCanJoin()) return;
@@ -283,12 +283,19 @@ function elFinishMe(G, won){
     delta = Math.round(K / (N - 1) * delta);
     R.mmr = clampN(R.mmr + delta, 100, 5000); R.best = Math.max(R.best, R.mmr);
   }
+  let pl = 0, placed = null;
+  if (elRated(L.rules)){
+    pl = rkUnplaced() ? R.played + 1 : 0; R.played++; placed = rkPlace();
+    const gm = R.gm || (R.gm = {}), x = gm[N] || (gm[N] = {w: 0, l: 0}); if (place === 1) x.w++; else x.l++;
+    (R.gh || (R.gh = [])).unshift({id: L.id, t, t0: L.t0, N, p: place, d: delta, m: R.mmr, dur: t - L.t0, ...(pl ? {pl} : {})}); R.gh = R.gh.slice(0, 300);
+  }
   const el = R.el || (R.el = {played: 0, wins: 0, top3: 0, best: 99, longest: 0, sd: 0});
   el.played++; if (place === 1) el.wins++; if (place <= 3) el.top3++; el.best = Math.min(el.best, place);
   el.longest = Math.max(el.longest, t - L.t0); if (elState(G, t - 1000).sd) el.sd++;
-  G.result = {place, N, delta, rated: elRated(L.rules), t, why: won ? 'won' : G.me.out.why, xp: G.xp};
-  saveRanked(); saveEl();
-  toast(won ? `You won the lobby! 🏆 ${delta ? `${delta > 0 ? '+' : ''}${delta} Elo · ` : ''}+${G.xp} XP` : `You’re out: ${elOrd(place)} of ${N}. ${delta ? `${delta > 0 ? '+' : ''}${delta} Elo · ` : ''}+${G.xp} XP`);
+  G.result = {place, N, delta, rated: elRated(L.rules), t, why: won ? 'won' : G.me.out.why, xp: G.xp, pl, placed: placed && placed.full};
+  saveRanked(); saveEl(); try { renderRankChip(); } catch(e){}
+  const elo = pl ? (placed ? `Placed: ${placed.full} · ` : `Placement ${pl} of ${PLACE_N} · `) : delta ? `${delta > 0 ? '+' : ''}${delta} Elo · ` : '';
+  toast(won ? `You won the lobby! 🏆 ${elo}+${G.xp} XP` : `You’re out: ${elOrd(place)} of ${N}. ${elo}+${G.xp} XP`);
   if (won) try { fx.burst(); } catch(e){}
   elHistAdd(G);
   try { renderRanked(); } catch(e){}
@@ -375,8 +382,8 @@ function elRender(){
       <small class="el-rr">${Math.round(lo).toLocaleString()}–${Math.round(hi).toLocaleString()}</small>
       <button class="small-btn${ok ? ' accent' : ''}" data-el="join" data-id="${l.id}" ${ok ? '' : 'disabled title="Your rating is outside this lobby’s range"'}>Join</button></li>`; };
   const now = Date.now(), live = EL.live.filter(L => L.rules.spect !== false).map(L => { const S = elState({L, me: {ev: []}}, now); return {L, S}; }).filter(x => !x.S.over || now - x.S.over.t < 60000);
-  box.innerHTML = `<div class="el-top card"><div><div class="h first">Elimination</div><p class="hint">Everyone studies at once. Each round allows a little break time; go over it or stop and you're out. Last one studying wins.</p></div>
-      <div class="el-quick"><span>Quick join</span>${[4, 8, 16].map(n => `<button class="small-btn accent" data-el="quick" data-n="${n}">${n} players</button>`).join('')}<button class="small-btn" data-el="create">Create lobby</button></div></div>
+  box.innerHTML = `<div class="el-top card"><div><div class="h first">Elimination</div><p class="hint">Everyone studies at once. Each round allows a little break time; go over it or stop and you're out. Last one studying wins. Lobbies here are casual and don't change your Elo; for rated 4, 8 and 16-player games, pick them in the Ranked queue.</p></div>
+      <div class="el-quick"><button class="small-btn accent" data-el="create">Create lobby</button><button class="small-btn" data-go="ranked">Ranked group games →</button></div></div>
     ${EL.G ? `<div class="card el-cur"><b>You're in a lobby.</b> <button class="small-btn accent" data-el="back">Back to your game →</button></div>` : ''}
     <div class="el-cols"><div class="card"><div class="h first el-lh"><span>Open lobbies</span><span class="el-filt">${[['all', 'All'], ['join', 'Joinable'], ['s', '3–6'], ['m', '7–11'], ['l', '12–16']].map(([k, t]) => `<button class="chip${f === k ? ' on' : ''}" data-el="filt" data-f="${k}">${t}</button>`).join('')}</span></div>
       <ul class="el-list">${list.map(row).join('') || '<li class="hint">No lobbies right now. Create one!</li>'}</ul><p class="hint">Your rating: ${R.mmr.toLocaleString()} Elo. Lobbies are open to players within their rating range.</p></div>
@@ -386,7 +393,7 @@ function elRender(){
 function elRenderCreate(){
   const box = $('#elBody'), f = EL.form || (EL.form = {size: 8, round: 25, preset: 'standard', custom: [10, 5, 2.5, 1, 0], rated: true, range: 300, privacy: 'public', subject: '', name: '', start: 'full', at: '', chat: 'break', spect: true, inv: []});
   const std = f.preset === 'standard' && +f.round === 25;
-  const subjects = [...new Set((typeof MAJORS !== 'undefined' ? [] : []).concat(BOTS.slice(0, 2000).map(b => b.subject)))].sort();
+  const subjects = [...new Set(Array.from({length: 2000}, (_, i) => bot(i).subject).filter(Boolean))].sort();
   const cands = [...new Set([...(typeof FD !== 'undefined' ? FD.follows : []), ...Object.keys(R.rec || {}).map(Number)])].filter(w => w >= 0).slice(0, 40);
   const opt = (k, v, t) => `<option value="${v}"${String(f[k]) === String(v) ? ' selected' : ''}>${t}</option>`;
   box.innerHTML = `<div class="card el-form"><div class="h first">Create a lobby</div>
@@ -395,7 +402,7 @@ function elRenderCreate(){
     <label>Round length<select id="elfRound">${[10, 15, 25, 45, 60].map(m => opt('round', m, `${m} minutes`)).join('')}</select></label>
     <label>Break allowance<select id="elfPre">${Object.keys(EL_PRESET_NAME).map(k => opt('preset', k, `${EL_PRESET_NAME[k]}${EL_PRESETS[k] ? ' · ' + EL_PRESETS[k].join(' → ') + ' min' : ''}`)).join('')}</select></label>
     ${f.preset === 'custom' ? `<label>Your allowance per round (minutes, the last one repeats)<input id="elfCustom" value="${f.custom.join(', ')}" placeholder="10, 5, 2.5, 1, 0"></label>` : ''}
-    <label class="el-chk"><input type="checkbox" id="elfRated" ${f.rated && std ? 'checked' : ''} ${std ? '' : 'disabled'}> Rated (changes Elo)${std ? '' : ' <small>only with Standard breaks and 25-minute rounds</small>'}</label>
+    <p class="hint">Custom lobbies are casual: they don’t change your Elo.</p>
     <label>Rating range<select id="elfRange">${opt('range', 100, '±50 (within 100)') + opt('range', 200, '±100 (within 200)') + opt('range', 300, '±150 (within 300)')}</select></label>
     <label>Who can join<select id="elfPriv">${opt('privacy', 'public', 'Public: shows in the lobby list') + opt('privacy', 'followers', 'Followers only: people you follow') + opt('privacy', 'invite', 'Invite only')}</select></label>
     ${f.privacy === 'invite' ? `<div class="el-inv">${cands.length ? cands.map(w => `<label class="chip${f.inv.includes(w) ? ' on' : ''}"><input type="checkbox" data-inv="${w}" ${f.inv.includes(w) ? 'checked' : ''} hidden>${esc(bot(w).name)}</label>`).join('') : '<p class="hint">Follow people or play ranked to have people to invite.</p>'}</div>` : ''}
@@ -439,7 +446,7 @@ function elGameHtml(G, t, opts = {}){
   if (mine && me){
     const left = Math.max(0, S.a - me.used), pct = S.a > 0 ? left / S.a * 100 : 0, studied = elMeStudied(G, now);
     card = `<div class="card el-me ${me.st}"><div><small>${me.st === 'out' ? `Out · ${elOrd(me.place || 0)} of ${L.players.length}` : me.st === 'break' ? 'On a break' : 'Studying'}</small><b>${elClock(studied)}</b>
-      ${me.st !== 'out' && !S.over ? (S.a > 0 ? `<div class="el-al"><span>Break left this round</span><b>${elClock(left)}</b></div><div class="el-alb ${pct < 20 ? 'red' : pct < 50 ? 'amb' : ''}"><i style="width:${pct}%"></i></div>` : '<div class="el-al"><span>Sudden death: any break knocks you out</span></div>') : G.result ? `<p class="hint">${G.result.rated ? `${G.result.delta > 0 ? '+' : ''}${G.result.delta} Elo · ` : ''}+${G.xp} XP</p>` : ''}</div>
+      ${me.st !== 'out' && !S.over ? (S.a > 0 ? `<div class="el-al"><span>Break left this round</span><b>${elClock(left)}</b></div><div class="el-alb ${pct < 20 ? 'red' : pct < 50 ? 'amb' : ''}"><i style="width:${pct}%"></i></div>` : '<div class="el-al"><span>Sudden death: any break knocks you out</span></div>') : G.result ? `<p class="hint">${G.result.placed ? `Placed: ${esc(G.result.placed)} · ` : G.result.pl ? `Placement ${G.result.pl} of ${PLACE_N} · ` : G.result.rated ? `${G.result.delta > 0 ? '+' : ''}${G.result.delta} Elo · ` : ''}+${G.xp} XP</p>` : ''}</div>
       ${opts.replay ? '' : me.st === 'out' || S.over ? `<div class="el-btns"><button class="small-btn" data-el="browse">Back to lobbies</button>${G.done || me.st === 'out' ? `<button class="small-btn" data-el="share">Share to Feed</button><button class="small-btn" data-rp="el:${L.id}">View replay</button><button class="small-btn" data-el="close">Close</button>` : ''}</div>` : `<div class="el-btns"><button class="small-btn accent" data-el="brk">${me.st === 'break' ? 'Back to studying' : 'Take a break'}</button><button class="small-btn danger" data-el="stop">Stop (you're out)</button></div>`}</div>`;
   }
   const order = S.ps.slice().sort((a, b) => (a.out ? 1 : 0) - (b.out ? 1 : 0) || (b.out || 0) - (a.out || 0) || elR(b.w) - elR(a.w));
@@ -487,7 +494,7 @@ function elLiveHtml(){
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-el]'); if (!b) return;
   const k = b.dataset.el;
-  if (k === 'quick') elQuick(+b.dataset.n);
+  if (k === 'quick') elQueue(+b.dataset.n);
   else if (k === 'go'){ EL.view = EL.G ? 'game' : 'browse'; showPage('elim'); elRender(); }
   else if (k === 'back'){ EL.view = 'game'; showPage('elim'); elRender(); }
   else if (k === 'browse'){ EL.view = 'browse'; EL.watch = null; elRender(); }
