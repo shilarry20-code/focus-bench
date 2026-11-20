@@ -140,7 +140,7 @@ function elListTick(){
     const casual = Math.random() < .2, pre = casual ? ['relaxed', 'hardcore', 'sudden', 'standard'][Math.floor(Math.random() * 4)] : 'standard';
     const L = elNewLobby({size: N, preset: pre, round: casual && pre === 'standard' ? [15, 45, 60][Math.floor(Math.random() * 3)] : 25, rated: !casual});
     const ppl = elPickPlayers(L.id, L.center, 300, N, ''), host = ppl[0];
-    L.host = host; L.pool = ppl; L.name = (Math.random() < .5 ? `${bot(host).name}'s lobby` : EL_SUBJ_NAMES[Math.floor(Math.random() * EL_SUBJ_NAMES.length)]);
+    L.host = host; L.pool = ppl; L.name = lobbyName(host, BOTS[host].subject);
     L.rules.subject = Math.random() < .25 ? BOTS[host].subject : '';
     L.players = [host]; L.joinAt = [now];
     // people trickle in over a few minutes
@@ -160,7 +160,7 @@ function elListTick(){
     for (let k = 0; k < 4; k++){
       const N = [4, 8, 16, 6, 12][Math.floor(Math.random() * 5)], L = elNewLobby({size: N}), ppl = elPickPlayers(L.id, L.center, 300, N, '');
       if (ppl.length < N) continue;
-      L.host = ppl[0]; L.players = ppl; L.name = Math.random() < .5 ? `${bot(ppl[0]).name}'s lobby` : EL_SUBJ_NAMES[Math.floor(Math.random() * EL_SUBJ_NAMES.length)];
+      L.host = ppl[0]; L.players = ppl; L.name = lobbyName(ppl[0], BOTS[ppl[0]].subject);
       L.t0 = now - (5 + Math.random() * 80) * 60000; L.joinAt = ppl.map(() => L.t0 - 3000);
       const S = elState({L, me: {ev: []}}, now); if (!S.over) EL.live.push(L);
     }
@@ -489,6 +489,14 @@ function elLiveHtml(){
   if (!live.length) return '';
   return `<div class="lf-sub lf-livehd"><i class="lf-dot" aria-hidden="true"></i>Elimination lobbies</div><ul class="el-list el-lf">${live.map(({L, S}) => `<li class="el-row"><div class="el-rn"><b>${esc(L.name)}</b><small>Round ${S.r + 1} · ${S.alive} of ${L.players.length} left${S.sd ? ' · sudden death' : ''}</small></div><button class="small-btn" data-el="watch" data-id="${L.id}">Watch</button></li>`).join('')}</ul>`;
 }
+
+// is this player in an Elimination game right now (yours, or one running)? 'study', 'break' or null
+function elPresence(w){
+  const now = Date.now(), games = [EL.G && EL.G.L, ...(EL.live || []), EL.watch && EL.watch.L].filter(L => L && L.t0 && now >= L.t0 && L.players.includes(w));
+  for (const L of games){ const p = elBotPlan(L, w); if (p.out <= now) continue; return p.br.some(([s, e]) => now >= s && now < e) ? 'break' : 'study'; }
+  return null;
+}
+{ const _b = botLiveNow; botLiveNow = function(i){ return elPresence(i) === 'study' || _b.apply(this, arguments); }; }
 
 /* ---- taps ---- */
 document.addEventListener('click', e => {
