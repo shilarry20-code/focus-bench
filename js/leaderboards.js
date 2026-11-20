@@ -35,8 +35,10 @@ function rkArrs(){
   for (let i = 0; i < N; i++){
     const o = i * BF, games = Math.floor(BS[o + F.sessions] * .9);
     let h = Math.imul(i ^ 0x5bd1e995, 2654435761) >>> 0; const u = () => (h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0, h / 4294967296);
-    const luck = (u() + u() + u() - 1.5) * 2 * .5 / Math.sqrt(Math.max(1, games));                 // about one standard deviation of chance
-    const pct = Math.max(.2, Math.min(.8, .5 + .06 * Math.tanh((BS[o] - 1500) / 1200) + luck + (u() - .5) * .03));
+    const z = Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u());                       // chance, one standard deviation = 1
+    const z2 = Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u());
+    const skill = Math.max(.1, Math.min(.95, .5 + .1 * Math.tanh((BS[o] - 1500) / 1100) + .065 * z2));     // some players are simply better at it
+    const pct = Math.max(.03, Math.min(.99, skill + z * Math.sqrt(skill * (1 - skill) / Math.max(1, games))));
     const wins = Math.round(games * pct);
     w[i] = wins; p[i] = games >= 20 ? Math.round(wins / games * 1000) : 0;
   }
