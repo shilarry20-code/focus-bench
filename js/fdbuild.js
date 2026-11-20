@@ -66,7 +66,7 @@ async function cbJob(p){
 Comments so far (${have.length}; the most liked first):\n${lines.join('\n') || '(none yet)'}{MORE}
 
 Write {N} more. About ${Math.round(replyShare * 100)}% of them answer a comment (replyTo "@<name>"), the rest are new comments (replyTo "new").
-They come from: ${who}. Most of them comment once; a few come back to answer people.${poster != null ? ` ${fdNameOf(poster)} (who posted it) can answer a couple of comments too.` : ''}`;
+They come from: ${who}. Most of them comment once; a few come back to answer people.${poster != null ? ` ${fdNameOf(poster)} (who posted it) never writes a new comment, only answers (replyTo "@<name>"), at most one or two.` : ''}`;
   return {pid: p.id, sys: CB_SYS(myName()), user, names, need: target - have.length};
 }
 // turn Gemini's messages into comments on the post (also used for comments written overnight); returns how many were added
@@ -76,6 +76,7 @@ function cbApply(p, got, names, now){
     const w = names[String(x && x.from || '').toLowerCase().trim()]; if (w == null) return;
     let text = emotionOnly(stripSegue(String(x.text || '').replace(/https?:\/\/\S+/g, '').replace(/#\w+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240))); if (!text) return;
     const to = String(x.replyTo || '').trim(), at = /^@/.test(to) ? to.slice(1) : '', a = fdAnswerTo(p, at, text, me); text = a.text; if (!text) return;
+    if (!fdSelfOk(p, w, a.re)) return;
     const par = a.re ? p.cm.find(c => c.id === a.re) : null, u = Math.random();
     // when it was written: early comments bunch up near the post; answers come after what they answer
     let t = par ? par.t + (1 + Math.random() * 90) * 60000 : p.t + span * (1 - Math.pow(1 - u, 2.2));
