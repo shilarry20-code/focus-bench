@@ -5,6 +5,7 @@
 const UPDATES = [
   {n: 16, name: 'Shared Feed', when: 'Nov 20', secs: [
     ['Shared feed', ['Turn it on in Settings → Shared feed and sign in with Google: your feed (posts, comments, likes, follows and notifications) lives in your own free Firebase database, so every device shows the same thing', 'One device writes new posts and comments at a time: whichever you used last. The others follow along, so your free Gemini requests aren’t spent twice', 'The first device to sign in uploads its feed; other devices switch to it (your own posts are kept)', 'Settings shows today’s reads and writes against Firebase’s free daily limits']],
+    ['Usernames', ['Many more kinds of usernames: much bigger word lists (nicknames, foods, animals, gamer words, aesthetic words, jokes) and new combo styles like bagelfrog or sleepy.otter, so far fewer people share a name with just a different number. Everyone has a new username']],
     ['Feed', ['Posts now stay for 90 days (the top posts of all time, your own posts and ones you liked stay longer)']]],
     fixes: []},
   {n: 15, name: 'Levels', when: 'Nov 20', secs: [
