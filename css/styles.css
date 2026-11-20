@@ -401,8 +401,9 @@ body:not(.m-off) .live-dot::before{animation:flicker 1.4s ease-in-out infinite}
   .rk-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .rk-kpis .stat:last-child{grid-column:auto}
   #goalDots{display:none}
-  .rk-hist li{grid-template-columns:22px minmax(0,1fr) auto 3em;}
-  .rk-hist li .av,.rk-hist li .when{display:none}
+  .rk-hist li:not(.empty-li){grid-template-columns:22px minmax(0,1fr) auto 3em auto;}
+  .rk-hist li .av,.rk-hist li .rkg-n{display:none}
+  .rk-hist li .when{font-size:0}.rk-hist li .when .rp-v{font-size:11px;margin:0}
   .ladder li{grid-template-columns:3.2em 1em minmax(0,1fr) 16px 3em}
   .ladder li .av,.ladder li .bdg{display:none}
   .bm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -2004,3 +2005,16 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 button.rp-v{display:inline-block;margin-left:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--r-pill);padding:1px 8px;font:inherit;font-size:11px;font-weight:600;cursor:pointer}
 button.rp-v:hover{border-color:var(--muted)}
 #rpModal{z-index:65}
+/* ranked queue picker and per-mode records */
+.rk-hero{flex-wrap:wrap}
+.rk-hero .rk-find{flex:1 1 100%;margin:0;display:flex;flex-direction:row;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:14px}
+.rk-hero .rk-hero-tx{flex:1;min-width:0}
+.rk-modes{display:flex;gap:6px;flex-wrap:wrap}
+.rk-modes .chip{font-size:13px;padding:5px 12px}
+.rk-fb{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rkm-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:600px){.rkm-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rkm{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
+.rkm small{color:var(--muted);font-weight:600;font-size:12px}.rkm b{font-size:20px;font-variant-numeric:tabular-nums}.rkm span{font-size:12.5px;color:var(--muted)}
+.rkg-n{font-size:11px;font-weight:700;color:var(--muted);width:26px;text-align:center}
+.emb.un text{font-family:var(--f-display,inherit)}
