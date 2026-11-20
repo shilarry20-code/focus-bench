@@ -25,24 +25,14 @@ const LB = [
 const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : u === 'pct' ? (v ? (v / 10).toFixed(1) + '%' : '–') : v.toLocaleString();
 const botVal = (c, i) => c.g ? c.g()[i] : c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f];
 const lbReady = c => c.f != null || !!c.g || !!lbPts;
-/* ranked wins and win rate for everyone: one rated match per study sitting of 10+ minutes since they joined. Matches
-   are against players near your own rating, so everyone sits near 50%: stronger players a few points above, weaker
-   ones a few below, and luck spreads out people with fewer games */
+/* ranked wins and win rate for everyone, from each player's real win/loss record (RK_W / RK_L in ranked.js) */
 let RKA = null;
 function rkArrs(){
-  if (RKA && RKA.v === botsVer) return RKA;
+  rkCounts();
+  if (RKA && RKA.v === botsVer && RKA.src === RK_W) return RKA;
   const N = ROSTER_N, w = new Int32Array(N), p = new Int16Array(N);
-  for (let i = 0; i < N; i++){
-    const o = i * BF, games = Math.floor(BS[o + F.sessions] * .9);
-    let h = Math.imul(i ^ 0x5bd1e995, 2654435761) >>> 0; const u = () => (h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0, h / 4294967296);
-    const z = Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u());                       // chance, one standard deviation = 1
-    const z2 = Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u());
-    const skill = Math.max(.1, Math.min(.95, .5 + .1 * Math.tanh((BS[o] - 1500) / 1100) + .065 * z2));     // some players are simply better at it
-    const pct = Math.max(.03, Math.min(.99, skill + z * Math.sqrt(skill * (1 - skill) / Math.max(1, games))));
-    const wins = Math.round(games * pct);
-    w[i] = wins; p[i] = games >= 20 ? Math.round(wins / games * 1000) : 0;
-  }
-  return (RKA = {v: botsVer, w, p});
+  if (RK_W) for (let i = 0; i < N; i++){ const g = RK_W[i] + RK_L[i]; w[i] = RK_W[i]; p[i] = g >= 20 ? Math.max(1, Math.round(RK_W[i] / g * 1000)) : 0; }
+  return (RKA = {v: botsVer, src: RK_W, w, p});
 }
 const myGames = () => R.w + R.l + R.d;
 const myWinP10 = () => myGames() >= 20 ? Math.round(R.w / myGames() * 1000) : 0;
