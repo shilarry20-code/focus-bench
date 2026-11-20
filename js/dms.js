@@ -14,7 +14,7 @@ const DM_MAX = 800, CH_MINE = 15 * 60000, CH_THEIRS = 10 * 60000;
 let DMS = store.get('fb.dms', null) || {msgs: [], q: [], read: {}};
 if (!DMS.read) DMS.read = {}; if (!DMS.q) DMS.q = [];
 const saveDms = () => { if (DMS.msgs.length > DM_MAX) DMS.msgs.splice(0, DMS.msgs.length - DM_MAX); store.set('fb.dms', DMS); };
-let CHAT_TAB = 'global', DM_OPEN = null, dmChalOpen = false;
+let CHAT_TAB = 'dm', DM_OPEN = null, dmChalOpen = false;      // global chat was replaced by the Feed: the chat page is just Messages
 const dmLoadT = Date.now(), dmGenBusy = {};
 
 /* ---- facts the players know ---- */
@@ -337,7 +337,7 @@ $('#chatPop').addEventListener('click', () => { const w = $('#chatPop').dataset.
 const dmUnread = w => thread(w).filter(m => !m.me && m.t > (DMS.read[w] || 0)).length;
 const dmUnreadAll = () => { const s = new Set(DMS.msgs.filter(m => !m.me && !m.del).map(m => m.w)); let n = 0; s.forEach(w => { if (!(CHAT_TAB === 'dm' && DM_OPEN === w && chatPageOpen())) n += dmUnread(w); }); return n; };
 chatBadge = function(){
-  const g = chatPageOpen() && CHAT_TAB === 'global' ? 0 : chatUnread(), n = g + dmUnreadAll(), txt = n > 99 ? '99+' : n ? String(n) : '';
+  const g = 0, n = g + dmUnreadAll(), txt = n > 99 ? '99+' : n ? String(n) : '';
   document.querySelectorAll('.chat-badge').forEach(b => { b.textContent = txt; b.hidden = !n; });
   renderChatTabs();
 };
@@ -345,6 +345,8 @@ chatBadge = function(){
 /* ---- the Chat page: Global and Messages tabs ---- */
 function renderChatTabs(){
   const el = $('#chatTabs'); if (!el) return;
+  if (CHAT_TAB !== 'dm') CHAT_TAB = 'dm';
+  el.innerHTML = ''; el.hidden = true; return;
   const n = dmUnreadAll(), g = CHAT_TAB === 'global' ? 0 : chatUnread();
   el.innerHTML = `<button class="ct-btn${CHAT_TAB === 'global' ? ' on' : ''}" data-tab="global">Global${g ? `<b>${g > 99 ? '99+' : g}</b>` : ''}</button><button class="ct-btn${CHAT_TAB === 'dm' ? ' on' : ''}" data-tab="dm">Messages${n ? `<b>${n > 99 ? '99+' : n}</b>` : ''}</button>`;
 }
