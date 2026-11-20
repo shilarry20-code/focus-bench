@@ -5,7 +5,7 @@
 const UPDATES = [
   {n: 12, name: 'New Faces', when: 'Nov 19', secs: [
     ['Profile pictures', ['About 120 new picture designs: food (donuts, ramen, bubble tea, sushi and more), new animals (foxes, axolotls, otters, sloths, bees…), everyday things, places and skies, little blob characters, sports balls and patterns', 'Each design picks its own colours, details and moods per player, so far fewer people share a lookalike picture']]],
-    fixes: ['Posters kept commenting on their own posts: now they only answer a few comments, and the extra ones were cleared from existing posts']},
+    fixes: ['Posters kept commenting on their own posts: now they only answer a few comments, and the extra ones were cleared from existing posts', 'Players coming back online almost always opened DM replies with “sorry, just saw this”: now most just answer what you said']},
   {n: 11, name: 'Your Own Clock', when: 'Nov 19', secs: [
     ['Ranked matches', ['You and your opponent each study on your own clock: yours counts while you focus, theirs runs on their own schedule of study blocks and breaks, even while you’re on a break or away', 'The match card shows their time, and whether they’re studying, on a break or stopped', 'Stopping your timer (pause, log or finish) locks in your time; the match waits for them to finish, and if they pass you, you lose', 'If they stop first and you’re ahead, you win right away and your time keeps counting until you stop', 'Some opponents push on for another block when they’d stop behind you', 'Close the app after stopping and the match still settles: their time comes from their schedule, so the result is there when you come back, dated when it was decided']]],
     fixes: []},
