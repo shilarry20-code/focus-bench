@@ -543,17 +543,18 @@ function scFace(e, cx, cy, s, skin){
     tongue: ['wink', 'tongue'], wink: ['wink', 'smile'], duck: ['dot', 'duck', 'blush'], side: ['side', 'flat']}[e] || ['dot', 'smile'];
   return E[map[0]]() + M[map[1]]() + (map[2] ? X[map[2]]() : '');
 }
-function scHead(L, cx, cy, s, expr, tilt = 0){
+function scHead(L, cx, cy, s, expr, tilt = 0, neckTo = cy + s * 1.2){
+  const neck = rc(cx - s * .28, cy + s * .5, s * .56, Math.max(s * .6, neckTo - cy - s * .5 + s * .12), L.skin, s * .2);   // neck, reaching the shoulders
   let g = scHairBack(L, cx, cy, s);
-  g += rc(cx - s * .28, cy + s * .6, s * .56, s * .6, L.skin, s * .2);                       // neck
   g += `<ellipse cx="${cx}" cy="${cy}" rx="${s * .95}" ry="${s * 1.05}" fill="${L.skin}"/>`;
   g += ci(cx - s * .95, cy + s * .05, s * .17, L.skin) + ci(cx + s * .95, cy + s * .05, s * .17, L.skin);
   g += scFace(expr, cx, cy, s, L.skin) + scHairFront(L, cx, cy, s);
   if (L.glasses) g += ci(cx - s * .36, cy - s * .05, s * .22, 'none', ` stroke="#2c2c2a" stroke-width="${Math.max(1.5, s * .05)}"`) + ci(cx + s * .36, cy - s * .05, s * .22, 'none', ` stroke="#2c2c2a" stroke-width="${Math.max(1.5, s * .05)}"`) + ln(cx - s * .14, cy - s * .05, cx + s * .14, cy - s * .05, '#2c2c2a', Math.max(1.5, s * .05));
-  return tilt ? `<g transform="rotate(${tilt} ${cx} ${cy})">${g}</g>` : g;
+  return neck + (tilt ? `<g transform="rotate(${tilt} ${cx} ${cy})">${g}</g>` : g);
 }
-function scBody(L, cx, top, w){
-  return pa(`M${cx - w / 2} 300 q0 ${-(300 - top) * .85} ${w * .22} ${-(300 - top)} h${w * .56} q${w * .22} ${(300 - top) * .15} ${w * .22} ${300 - top}z`, L.outfit) + (L.hood ? pa(`M${cx - w * .22} ${top + 4} q${w * .22} ${30} ${w * .44} 0`, 'none', ' stroke="#000" stroke-width="3" opacity=".18"') : '');
+function scBody(L, cx, top, w, bot = 300){
+  const h = bot - top;
+  return pa(`M${cx - w / 2} ${bot} q0 ${-h * .85} ${w * .22} ${-h} h${w * .56} q${w * .22} ${h * .15} ${w * .22} ${h}z`, L.outfit) + (L.hood ? pa(`M${cx - w * .22} ${top + 4} q${w * .22} ${30} ${w * .44} 0`, 'none', ' stroke="#000" stroke-width="3" opacity=".18"') : '');
 }
 // hands: s = size, (x, y) the hand's center
 function scHand(kind, L, x, y, s, c){
@@ -633,34 +634,55 @@ function scTop(S, c, L, r, id){
 }
 function scPerson(S, c, L, r){
   const look = S.look, pose = S.pose, e = S.expr, hand = scHandOk(S.pose, S.hand) ? S.hand : 'none';
-  let cx = 150, cy = 140, s = 62, tilt = 0, bodyW = 230, top = 222, g = '', front = '';
-  const P = {high: () => { s = 70; cy = 150; bodyW = 190; top = 245; }, low: () => { s = 54; cy = 122; bodyW = 260; top = 200; }, mirror: () => { s = 50; cy = 115; bodyW = 200; top = 185; },
-    bedtop: () => { s = 64; cy = 145; }, half: () => { cx = 40; cy = 165; s = 92; bodyW = 260; top = 270; }, books: () => { cx = 165; cy = 150; tilt = -14; s = 58; },
-    chin: () => {}, slump: () => { cy = 205; tilt = 18; s = 60; top = 270; }, stretch: () => { cy = 150; s = 56; }, blanket: () => { s = 58; cy = 145; }, cross: () => { s = 34; cy = 112; bodyW = 120; top = 152; },
+  let cx = 150, cy = 140, s = 62, tilt = 0, bodyW = null, top = null, bot = 300, g = '', front = '';
+  const P = {high: () => { s = 70; cy = 150; bodyW = 190; }, low: () => { s = 54; cy = 122; bodyW = 260; }, mirror: () => { s = 50; cy = 115; },
+    bedtop: () => { s = 64; cy = 135; bodyW = 210; }, half: () => { cx = 40; cy = 165; s = 92; bodyW = 260; }, books: () => { cx = 165; cy = 150; tilt = -14; s = 58; },
+    chin: () => {}, slump: () => { cy = 205; tilt = 18; s = 60; top = 270; }, stretch: () => { cy = 150; s = 56; }, blanket: () => { s = 58; cy = 145; }, cross: () => { s = 34; cy = 112; bodyW = 120; bot = 240; },
     friend: () => { cx = 125; }, petarms: () => { cy = 125; s = 56; }, petbomb: () => {}, point: () => { cx = 110; s = 56; }, arm: () => {}};
   (P[pose] || P.arm)();
-  if (pose === 'bedtop') g += `<ellipse cx="${cx}" cy="${cy + 20}" rx="120" ry="70" fill="#f4f1ea"/>` + scHairBack({...look, style: 'long'}, cx, cy, s * 1.1);
-  if (pose === 'friend'){ const f = scLook(S.seed + 7); g += scBody(f, 255, 235, 150) + scHead(f, 262, 150, 50, scPick(r, ['laugh', 'tongue', 'grin', 'wink']), 10); }
-  if (pose === 'cross') g += rc(cx - 70, top + 70, 140, 34, look.outfit, 16) + pa(`M${cx - 70} ${top + 104} q70 30 140 0`, '#3c4a5c');
-  if (pose !== 'bedtop') g += scBody(look, cx, top, bodyW);
+  if (top == null) top = cy + s * 1.32;
+  if (bodyW == null) bodyW = s * 3.7;
+  // arms: sleeves from the shoulders (with an outline so they don't blend into the shirt), hands on the end
+  const sw = s * .3, hs = s * .42, used = new Set();
+  const sleeve = d => `<path d="${d}" fill="none" stroke="rgba(20,16,12,.7)" stroke-width="${(sw + 2.8).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${look.outfit}" stroke-width="${sw.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const sh = side => [cx + side * bodyW * .27, top + sw * .7];
+  const f1 = v => v.toFixed(1);
+  const arm = (side, x, y, ex, ey) => { used.add(side); const [a, b] = sh(side); return sleeve(ex == null ? `M${f1(a)} ${f1(b)} L${f1(x)} ${f1(y)}` : `M${f1(a)} ${f1(b)} L${f1(ex)} ${f1(ey)} L${f1(x)} ${f1(y)}`); };
+  const fist = (x, y, k = 1) => ci(x, y, hs * .48 * k, look.skin);
+  if (pose === 'bedtop') g += `<ellipse cx="${cx}" cy="${cy + 10}" rx="125" ry="72" fill="#f4f1ea"/>` + scHairBack({...look, style: 'long'}, cx, cy, s * 1.1);
+  if (pose === 'friend'){ const f = scLook(S.seed + 7); g += scBody(f, 255, 222, 150) + scHead(f, 262, 150, 50, scPick(r, ['laugh', 'tongue', 'grin', 'wink']), 10, 222); }
+  g += scBody(look, cx, top, bodyW, bot);
+  if (pose === 'cross') g += rc(cx - 72, bot - 22, 144, 34, '#3c4a5c', 16) + ci(cx - 56, bot - 5, 15, '#3c4a5c') + ci(cx + 56, bot - 5, 15, '#3c4a5c');
+  if (pose === 'bedtop') g += pa(`M-10 ${f1(top + 34)} q160 -34 320 0 V310 H-10z`, c.a3) + pa(`M-10 ${f1(top + 34)} q160 -34 320 0`, 'none', ` stroke="#fff" stroke-width="6" opacity=".5"`);
   if (pose === 'blanket') g += pa(`M${cx - 120} 300 q-10 -160 120 -${300 - cy + s * 1.35} q130 ${10} 120 ${300 - cy + s * 1.35}z`, c.a3);
-  g += scHead(look, cx, cy, s, e, tilt);
+  g += scHead(look, cx, cy, s, e, tilt, top);
   if (pose === 'blanket') g += pa(`M${cx - s * 1.25} ${cy + s * .9} q-6 ${-s * 1.9} ${s * 1.25} ${-s * 2.1} q${s * 1.35} ${s * .2} ${s * 1.25} ${s * 2.1}`, 'none', ` stroke="${c.a3}" stroke-width="${s * .5}"`);
-  // things in front: hands, pets, the phone in a mirror, books
-  const hs = s * .42;
-  if (pose === 'chin') front += scHand('pray', look, cx, cy + s * 1.35, hs * 1.1, c);
-  if (pose === 'stretch') front += ln(cx - s * .9, cy + s * 1.4, cx - s * 1.4, cy - s * 1.4, look.outfit, s * .35) + ln(cx + s * .9, cy + s * 1.4, cx + s * 1.4, cy - s * 1.4, look.outfit, s * .35) + ci(cx - s * 1.4, cy - s * 1.5, s * .22, look.skin) + ci(cx + s * 1.4, cy - s * 1.5, s * .22, look.skin);
+  // the arm holding the phone for a selfie reaches out of the frame
+  if (pose === 'arm' || pose === 'low') front += arm(-1, cx - s * 2.6, 330);
+  if (pose === 'high') front += arm(-1, -20, top - s * .9);
+  if (pose === 'bedtop') front += arm(-1, cx - s * 2.2, -20, cx - s * 1.5, top - s * .2);
+  // poses that use hands
+  if (pose === 'chin'){ const hy = cy + s * 1.38; front += arm(-1, cx - hs * .2, hy + hs * .3, cx - s * .95, cy + s * 2.45) + arm(1, cx + hs * .2, hy + hs * .3, cx + s * .95, cy + s * 2.45) + scHand('pray', look, cx, hy, hs * 1.1, c); }
+  if (pose === 'stretch') [-1, 1].forEach(d => { front += arm(d, cx + d * s * 1.45, cy - s * 1.4, cx + d * s * 1.55, cy + s * .2) + fist(cx + d * s * 1.45, cy - s * 1.55); });
   if (pose === 'books') front += `<g transform="translate(20 ${cy + s * .9}) scale(2.2)">${SC.PROP.books.d(c)}</g>`;
   if (pose === 'slump') front += pa('M20 300 L60 255 H250 L280 300z', '#4a4a4a');
   if (pose === 'petarms' || pose === 'petbomb'){ const px = pose === 'petarms' ? cx - 40 : 205, py = pose === 'petarms' ? 300 : 95, sc = pose === 'petarms' ? 2.4 : 1.8; front += `<g transform="translate(${px} ${py}) scale(${sc})">${SC.PROP[r() < .5 ? 'cat' : 'dog'].d(c)}</g>`; }
-  if (pose === 'mirror') front += rc(cx - 22, cy + s * 1.5, 44, 74, '#1f1f1f', 7) + scHand('thumbup', look, cx + 26, cy + s * 2.3, hs, c);
-  if (pose === 'point') front += ln(cx + s * .7, cy + s * 1.6, 260, cy - s * .4, look.outfit, s * .3) + ln(260, cy - s * .4, 285, cy - s * .7, look.skin, s * .16);
-  if (hand === 'facepalm') front += rc(cx - s * .55, cy - s * .75, s * 1.1, s * .7, look.skin, s * .3);
-  else if (hand === 'mouth') front += rc(cx - s * .45, cy + s * .22, s * .9, s * .5, look.skin, s * .25);
-  else if (hand === 'cheeks') front += rc(cx - s * 1.15, cy, s * .4, s * .7, look.skin, s * .18) + rc(cx + s * .75, cy, s * .4, s * .7, look.skin, s * .18);
-  else if (hand === 'shrug') front += scHand('shrug', look, cx - s * 1.6, cy + s * 1.5, hs, c);
-  else if (hand === 'help') front += scHand('help', look, cx, cy + s * 2.3, hs * 1.4, c);
-  else if (hand !== 'none') front += scHand(hand, look, Math.min(268, cx + s * 1.35), cy + s * .95, hs * 1.15, c);
+  if (pose === 'petarms') front += arm(-1, cx - 40, 272, cx - s * 1.45, top + s * .9) + fist(cx - 40, 272) + arm(1, cx + 44, 266, cx + s * 1.45, top + s * .9) + fist(cx + 44, 266);
+  if (pose === 'mirror'){ const py = cy + s * 1.5; front += arm(1, cx + 20, py + 44, cx + s * 1.25, py + 80) + rc(cx - 22, py, 44, 74, '#1f1f1f', 7) + rc(cx + 10, py + 30, hs * .9, hs * 1.1, look.skin, hs * .3); }
+  if (pose === 'point') front += arm(1, 255, cy - s * .3, cx + s * 1.5, cy + s * 1.5) + ln(255, cy - s * .3, 285, cy - s * .75, look.skin, s * .16) + fist(255, cy - s * .3, .9);
+  // the gesture: one hand on the free side, or both
+  const side = used.has(1) ? -1 : 1, hx = side > 0 ? Math.min(268, cx + s * 1.35) : Math.max(32, cx - s * 1.35), hy = cy + s * .95;
+  if (hand === 'facepalm') front += arm(side, cx + side * s * .25, cy - s * .1, cx + side * s * 1.35, cy + s * 2) + rc(cx - s * .55, cy - s * .75, s * 1.1, s * .7, look.skin, s * .3);
+  else if (hand === 'mouth') front += arm(side, cx + side * s * .2, cy + s * .7, cx + side * s * 1.3, cy + s * 2.2) + rc(cx - s * .45, cy + s * .22, s * .9, s * .5, look.skin, s * .25);
+  else if (hand === 'cheeks') [-1, 1].forEach(d => { front += arm(d, cx + d * s * .95, cy + s * .62, cx + d * s * 1.45, cy + s * 2.1) + rc(cx + d * s * .95 - s * .2, cy, s * .4, s * .7, look.skin, s * .18); });
+  else if (hand === 'pray'){ const py = cy + s * 1.75; front += arm(-1, cx - hs * .2, py + hs * .3, cx - s * .95, cy + s * 2.6) + arm(1, cx + hs * .2, py + hs * .3, cx + s * .95, cy + s * 2.6) + scHand('pray', look, cx, py, hs * 1.1, c); }
+  else if (hand === 'shrug') [-1, 1].forEach(d => { const x = cx + d * s * 1.6, y = cy + s * 1.3; front += arm(d, x, y + hs * .25, cx + d * s * 1.4, cy + s * 2.15) + `<g transform="rotate(${d * 20} ${f1(x)} ${f1(y)})">${rc(x - hs * .5, y - hs * .3, hs, hs * .6, look.skin, hs * .25)}${ln(x + d * hs * .45, y - hs * .1, x + d * hs * .7, y - hs * .55, look.skin, hs * .26)}</g>`; });
+  else if (hand === 'help'){ const y = cy + s * 2.3, k = hs * 1.4; front += arm(-1, cx - k * 1.4, y, cx - s * 1.3, y + s * .5) + arm(1, cx + k * 1.4, y, cx + s * 1.3, y + s * .5) + scHand('help', look, cx, y, k, c); }
+  else if (hand === 'flex'){ const [a0, b0] = sh(side), ex = cx + side * s * 1.75, ey = cy + s * 1.45, fx = cx + side * s * 1.55, fy = cy + s * .5;
+    front += arm(side, fx, fy + hs * .3, ex, ey) + `<ellipse cx="${f1((a0 + ex) / 2)}" cy="${f1((b0 + ey) / 2 - sw * .45)}" rx="${f1(sw * .75)}" ry="${f1(sw * .55)}" fill="${look.outfit}"/>` + fist(fx, fy, 1.05); }
+  else if (hand !== 'none') front += arm(side, hx, hy + hs * .55, cx + side * s * 1.5, cy + s * 2.1) + scHand(hand, look, hx, hy, hs * 1.15, c);
+  // sitting cross-legged: free hands rest on the knees
+  if (pose === 'cross') [-1, 1].forEach(d => { if (!used.has(d)) front += arm(d, cx + d * 52, bot - 16, cx + d * 66, top + 40) + fist(cx + d * 52, bot - 16, .8); });
   // skin (face, ears, neck, hands, arms) has no outline, only hair, clothes and things do
   const skins = [look.skin]; if (pose === 'friend') skins.push(scLook(S.seed + 7).skin);
   let out = g + front; skins.forEach(k => { out = out.split(`fill="${k}"`).join(`fill="${k}" stroke="none"`); });
