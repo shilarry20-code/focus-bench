@@ -581,6 +581,32 @@ function scHand(kind, L, x, y, s, c){
   }
 }
 
+// standing in the hallway, looking into the room through its open door
+function scDoor(S, c, L, r, id, light){
+  const night = L.t === 'n' || L.t === 'e', hall = scH(c.wall ? 30 : 30, 14, night ? 52 : 74), hall2 = scH(30, 12, night ? 44 : 66);
+  const x0 = 92, x1 = 216, y0 = 46, y1 = 262, wood = scPick(r, ['#8a5a36', '#9b6b45', '#6f4a2f', '#b08060', '#e9e4da']), trim = scPick(r, ['#efeae0', '#d9cbb6', '#5d3b25']);
+  const tag = scPick(r, ['#f9e27a', '#9fd3f0', '#f4b6c2', '#c7e9b0']);
+  let g = `<defs><clipPath id="${id}dc"><rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}"/></clipPath></defs>`;
+  // the room, seen through the doorway
+  g += `<g clip-path="url(#${id}dc)"><g transform="translate(34 ${y1 - 240}) scale(.8)">${scFront(S, c, L, r, id)}${light}</g></g>`;
+  // hallway: wall, baseboard, floor in perspective
+  g += pa(`M0 0 H300 V268 H0z M${x0} ${y0} V${y1} H${x1} V${y0}z`, hall, ' fill-rule="evenodd"');
+  g += pa('M0 0 L60 26 V258 L0 300z', hall2) + pa('M300 0 L250 22 V262 L300 300z', hall2, ' opacity=".9"');   // the hallway's side walls
+  g += pa('M0 300 L60 258 H250 L300 300z', scH(28, 22, night ? 28 : 40)) + rc(60, 252, 190, 8, scH(30, 10, night ? 36 : 58), 0);
+  // light from the room spilling onto the hallway floor
+  g += pa(`M${x0} ${y1} L${x1} ${y1} L${x1 + 26} 300 L${x0 - 30} 300z`, L.lamp || night ? '#ffd27a' : '#fff6dd', ` opacity="${night ? .28 : .16}"`);
+  // door frame (trim) and the open door, swung into the room on its hinges
+  g += `<g class="ol">${rc(x0 - 9, y0 - 9, x1 - x0 + 18, 9, trim, 1)}${rc(x0 - 9, y0 - 9, 9, y1 - y0 + 9, trim, 1)}${rc(x1, y0 - 9, 9, y1 - y0 + 9, trim, 1)}`;
+  g += pa(`M${x0} ${y0} L${x0 + 34} ${y0 + 12} L${x0 + 34} ${y1 - 8} L${x0} ${y1}z`, wood);
+  g += pa(`M${x0 + 6} ${y0 + 22} L${x0 + 28} ${y0 + 29} L${x0 + 28} ${y0 + 92} L${x0 + 6} ${y0 + 90}z M${x0 + 6} ${y0 + 112} L${x0 + 28} ${y0 + 113} L${x0 + 28} ${y1 - 30} L${x0 + 6} ${y1 - 24}z`, 'none', ' stroke="#000" stroke-opacity=".18" stroke-width="2"');
+  g += ci(x0 + 29, y0 + 106, 3.6, '#d9b45a') + ci(x0 - 3, y0 + 30, 2, '#9a9a9a') + ci(x0 - 3, y1 - 30, 2, '#9a9a9a');
+  // a nameplate by the door and a light switch, like a dorm hallway
+  g += rc(x1 + 16, y0 + 40, 26, 18, tag, 2) + ln(x1 + 20, y0 + 47, x1 + 38, y0 + 47, '#555', 1.2) + ln(x1 + 20, y0 + 52, x1 + 34, y0 + 52, '#555', 1.2);
+  g += rc(x1 + 20, y0 + 92, 11, 18, '#f4f1ea', 2) + rc(x1 + 24, y0 + 96, 3, 9, '#cfc8bb', 1) + '</g>';
+  if (night) g += rc(0, 0, 300, 300, '#0b0b1a', 0, ' opacity=".18"');
+  return g;
+}
+
 /* ---- putting a picture together ---- */
 function scPalette(h, r){
   return {a1: scH(h, 65, 55), a2: scH(h + 40, 45, 42), a3: scH(h - 50, 55, 72), wall: scH(h + 15, 22, 80), couch: scH(h + 160, 25, 45),
@@ -700,7 +726,7 @@ function sceneSvg(S, uid){
     case 'top': body = scTop(S, c, L, r, id) + amb; break;
     case 'close': body = `<g transform="translate(-180 -330) scale(2.1)">${scFront(S, c, L, r, id)}</g>` + light; break;
     case 'wide': body = rc(0, 0, 300, 300, '#b98e5c', 0) + `<g transform="translate(40 18) scale(.73)">${scFront(S, c, L, r, id)}</g>` + rc(0, 236, 300, 64, '#b98e5c', 0) + rc(20, 250, 120, 40, c.a3, 8, ' opacity=".7"') + light; break;
-    case 'door': body = `<g transform="translate(30 30) scale(.8)">${scFront(S, c, L, r, id)}</g>` + light + pa('M0 0 H300 V300 H0z M70 40 V300 H230 V40z', '#2c241e', ' fill-rule="evenodd"') + rc(64, 34, 172, 266, 'none', 0, ' stroke="#5d3b25" stroke-width="12"'); break;
+    case 'door': body = scDoor(S, c, L, r, id, light); break;
     case 'shoulder': body = scFront(S, c, L, r, id) + light + `<g class="ol">${scHairBack({...S.look, style: S.look.style === 'buzz' ? 'short' : S.look.style}, 70, 250, 70) + ci(70, 250, 66, S.look.hair) + pa('M-40 300 q40 -70 120 -70 q60 0 90 70z', S.look.outfit)}</g>`; break;
     case 'selfie': body = `<g transform="translate(-30 -60) scale(1.2)">${scFront(S, c, L, r, id, false)}</g>` + rc(0, 0, 300, 300, '#fff', 0, ' opacity=".12"') + light + scPerson(S, c, L, r); break;
     default: body = scFront(S, c, L, r, id) + light;
