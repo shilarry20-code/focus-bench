@@ -1651,3 +1651,17 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 .fv-vrep i{display:inline-block;width:24px;height:1px;background:var(--muted)}
 .fv-morec{align-self:center;background:none;border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--text);font:inherit;font-size:13px;cursor:pointer}
 .fd-topwin button{white-space:nowrap;font-size:13px;padding:6px 4px}
+.fd-ti{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px;vertical-align:-3px}
+.fd-act-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;margin-left:auto}
+.fd-act-btn .fd-ti{margin:0;width:19px;height:19px}
+.fd-act-btn.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.fd-act-btn b{position:absolute;top:-4px;right:-6px;margin:0;font-size:10px;min-width:16px;height:16px;line-height:16px;padding:0 4px;border-radius:8px}
+.fd-tabs .fd-act-btn+.fd-new{margin-left:0}
+.fd-tabs{max-width:880px;flex-wrap:wrap;overflow:visible;justify-content:center}
+.fd-tabrow{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-width:0;max-width:100%;padding:4px 2px}.fd-tabrow::-webkit-scrollbar{display:none}
+.fd-tabrow>*{flex:none}
+.fd-acts{display:flex;gap:8px;align-items:center;padding:4px 2px}
+.fd-acts .fd-act-btn,.fd-acts .fd-new{margin-left:0}
+.fd-n .av{flex:none}
+@media (max-width:640px){.fd-tabs{justify-content:flex-start}.fd-acts{width:100%;justify-content:flex-end;order:-1}}
+@media (max-width:640px){.fd-tabs{width:100%;max-width:100%;box-sizing:border-box}.fd-tabrow{flex:1 1 100%;width:100%}}
