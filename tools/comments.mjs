@@ -20,11 +20,17 @@ const ptDay = () => { const p = pt(); return `${p.year}-${p.month}-${p.day}`; };
 const late = () => { const p = pt(); return +p.hour >= 22; };          // the last two hours before midnight Pacific
 
 // find the sync gist: the one holding the app's sync file
-let gist = null;
-for (let page = 1; page <= 5 && !gist; page++){ const list = await gh(`/gists?per_page=100&page=${page}`); const g = list.find(x => x.files && x.files[SYNC_FILE]); if (g) gist = g.id; if (list.length < 100) break; }
+// (the one the app writes its to-do list to; if there are several, the most recently updated)
+let gist = null, cands = [];
+for (let page = 1; page <= 5; page++){ const list = await gh(`/gists?per_page=100&page=${page}`); cands.push(...list.filter(x => x.files && (x.files[TODO] || x.files[SYNC_FILE]))); if (list.length < 100) break; }
+cands.sort((a, b) => (!!b.files[TODO] - !!a.files[TODO]) || (Date.parse(b.updated_at) - Date.parse(a.updated_at)));
+if (cands.length) gist = cands[0].id;
+console.log(`${cands.length} sync gist${cands.length === 1 ? '' : 's'} found; using the one updated ${cands[0] ? cands[0].updated_at : '-'}${cands[0] && cands[0].files[TODO] ? ' (has the to-do list)' : ''}.`);
 if (!gist){ console.log('No sync gist found.'); process.exit(0); }
 const g = await gh('/gists/' + gist), todo = await file(g, TODO);
-if (!todo || !Array.isArray(todo.jobs) || !todo.jobs.length){ console.log('Nothing on the to-do list.'); process.exit(0); }
+if (!todo){ console.log('No to-do list in the gist yet (open the app once).'); process.exit(0); }
+console.log(`To-do list from ${new Date(todo.at).toISOString()}: ${(todo.jobs || []).length} posts need comments (${(todo.jobs || []).reduce((n, j) => n + Math.max(0, j.need), 0)} comments in all).`);
+if (!Array.isArray(todo.jobs) || !todo.jobs.length){ console.log('Nothing to write yet: no post is far enough behind its comment count.'); process.exit(0); }
 if (todo.off){ console.log('The comment builder is turned off in the app.'); process.exit(0); }
 const day = ptDay();
 let use = await file(g, USAGE); if (!use || use.day !== day) use = {day, n: {}, req: 0, c: 0};
