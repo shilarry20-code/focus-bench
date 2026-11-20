@@ -8,7 +8,7 @@ const LB_GROUPS = [
   ['Time', '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', [['hours', 'All time'], ['week', 'This week'], ['month', 'This month']]],
   ['Streaks', '<path d="M12 21c-4 0-6.5-2.7-6.5-6.2 0-3.6 2.7-5.5 3.6-9.3 1.9 1.2 3 3 3 5 1-.6 1.6-1.8 1.7-3.2 2.4 1.8 4.7 4.5 4.7 7.6C18.5 18.4 16 21 12 21z"/>', [['cur', 'Current'], ['best', 'Best']]],
   ['Records', '<circle cx="12" cy="14" r="5.5"/><path d="M9 3h6l-1.5 5.5h-3zM12 11.5v2.5l1.5 1"/>', [['sess', 'Longest session'], ['day', 'Biggest day'], ['days', 'Most days'], ['count', 'Sessions']]],
-  ['Awards', '<path d="M7 4h10v4.5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4M12 13.5V17M8.5 20h7M10 17h4"/>', [['pts', 'Points']]]];
+  ['Awards', '<path d="M7 4h10v4.5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4M12 13.5V17M8.5 20h7M10 17h4"/>', [['pts', 'Points'], ['lvl', 'Level']]]];
 const LB_FILTERS = [['all', 'Everyone'], ['following', 'Following'], ['major', 'Your major'], ['rivals', 'Rivals']];
 const lbIcon = d => `<svg class="lb2-ic" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
 
@@ -99,7 +99,7 @@ function lbSub(w){
   const rk = w === ME ? myRk() : rkOf(w);
   return `${emblem(rk, 'xs')} ${esc(rk.full)}${w === ME ? '' : ` · ${esc(bot(w).style)}`}`;
 }
-const lbGapTxt = (u, d) => u === 'elo' ? `+${d.toLocaleString()} Elo` : u === 'min' ? `${lbFmt('min', d)} more` : u === 'd' ? `${d} more day${d === 1 ? '' : 's'}` : u === 'pts' ? `+${d.toLocaleString()} pts` : u === 'pct' ? `+${(d / 10).toFixed(1)} points of win rate` : `${d.toLocaleString()} more`;
+const lbGapTxt = (u, d) => u === 'elo' ? `+${d.toLocaleString()} Elo` : u === 'min' ? `${lbFmt('min', d)} more` : u === 'd' ? `${d} more day${d === 1 ? '' : 's'}` : u === 'pts' ? `+${d.toLocaleString()} pts` : u === 'pct' ? `+${(d / 10).toFixed(1)} points of win rate` : u === 'xp' ? `+${d.toLocaleString()} XP` : `${d.toLocaleString()} more`;
 
 /* ---- drawing ---- */
 const LBV = {from: 3, to: 53, cat: null, filt: null};

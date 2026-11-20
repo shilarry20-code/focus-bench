@@ -47,7 +47,7 @@
           <div class="sw-row" id="streakWeek"></div>
           <p id="streakMsg"></p>
           <small>A day counts once you've studied 10 minutes.</small>
-        </div></div><span class="today-min"><b id="todayMin">0m</b> today</span><span class="dots" id="goalDots" title="Daily goal"></span><button class="rank-chip" id="rankChip" data-go="ranked" hidden></button><button class="me-btn" id="meBtn" title="Your profile" aria-label="Your profile"></button><button class="ach-btn" id="achBtn" title="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><b>0</b><span>/0</span></button></div>
+        </div></div><span class="today-min"><b id="todayMin">0m</b> today</span><span class="dots" id="goalDots" title="Daily goal"></span><button class="lv-chip" id="lvChip" hidden aria-label="Your level"></button><button class="rank-chip" id="rankChip" data-go="ranked" hidden></button><button class="me-btn" id="meBtn" title="Your profile" aria-label="Your profile"></button><button class="ach-btn" id="achBtn" title="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3M18 6h3v1a3 3 0 0 1-3 3"/></svg><b>0</b><span>/0</span></button></div>
     </header>
 
     <section class="page page-focus" id="page-focus" data-title="Focus">
@@ -79,6 +79,7 @@
             <button class="dock-btn" id="miniBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="12" width="7" height="5" rx="1" fill="currentColor"/></svg><span>Mini clock</span><small>Pop out</small></button>
             <button class="dock-btn" id="focusBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Focus mode</span><small>Full screen</small></button>
           </div>
+      <div id="lvSlot"></div>
       <div class="sp-wrap" id="spWrap" hidden>
         <div class="sp-now" id="spNow"></div>
         <div id="spPlayer"></div>
@@ -118,7 +119,7 @@
     <section class="page" id="page-stats" data-title="Stats" hidden>
       <div class="kpis">
         <div class="stat"><b id="stToday">0m</b><span>today</span></div>
-        <div class="stat"><b id="stBlocks">0/6</b><span>blocks vs goal</span></div>
+        <div class="stat"><b id="stBlocks">0m / 2h</b><span>daily goal</span></div>
         <div class="stat"><b id="stStreak">0</b><span>day streak</span></div>
         <div class="stat"><b id="stWeek">0m</b><span>this week</span></div>
         <div class="stat"><b id="stBest">0m</b><span>best day ever</span></div>
@@ -286,7 +287,7 @@
         <div class="h">Flow between blocks</div>
         <div class="row" id="rowAutoBreak"><label for="autoBreak">Start breaks automatically</label><input type="checkbox" class="switch" id="autoBreak"></div>
         <div class="row" id="rowAutoFocus"><label for="autoFocus">Start next focus block automatically</label><input type="checkbox" class="switch" id="autoFocus"></div>
-        <div class="row"><label for="goal">Daily goal<span class="sub">Focus blocks per day</span></label><input type="number" id="goal" min="1" max="30"></div>
+        <div class="row"><label for="goal">Daily goal<span class="sub">Minutes of focus per day</span></label><input type="number" id="goal" min="15" max="720" step="15"></div>
         </section>
         <section class="card set" id="set-activities"><h2>Activities</h2>
           <p class="lead">What you pick next to the timer. Each one gets its own color in Stats.</p>
@@ -407,6 +408,7 @@
 <script src="js/fdbuild.js"></script>
 <script src="js/insights.js"></script>
 <script src="js/challenges.js"></script>
+<script src="js/levels.js"></script>
 <script src="js/whatsnew.js"></script>
 <script src="js/app.js"></script>
 
