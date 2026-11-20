@@ -179,15 +179,20 @@
     </section>
 
     <section class="page" id="page-leaders" data-title="Leaderboards" hidden>
-      <div class="lb-cats" id="lbCats" role="group" aria-label="Leaderboard category"></div>
-      <div class="lb-grid">
-        <div class="card lb-main">
-          <div class="lb-head"><div><h2 id="lbTitle"></h2><small id="lbDesc"></small></div></div>
-          <p class="lb-you" id="lbYou"></p>
-          <ol class="lb-list" id="lbList"></ol>
-          <div class="lb-actions"><button class="small-btn" id="lbMore">Show more</button><button class="small-btn" id="lbJump">Jump to me</button></div>
+      <div class="lb2-cats" id="lbCats" role="group" aria-label="Leaderboard category"></div>
+      <div class="lb2-filt" id="lbFilt"></div>
+      <div class="lb2-grid">
+        <div class="lb2-main">
+          <div class="card lb2-podcard"><div class="lb-head"><div><h2 id="lbTitle"></h2><small id="lbDesc"></small></div><button class="small-btn" id="lbJump">Jump to me</button></div><div id="lbPod"></div></div>
+          <div class="card lb2-listcard"><ol class="lb-list" id="lbList"></ol><div id="lbPin" class="lb2-pin"></div></div>
+          <p class="lb-you" id="lbYou" hidden></p><button id="lbMore" hidden></button>
         </div>
-        <div class="card lb-side"><div class="h first">Your standings</div><ul class="lb-mine" id="lbMine"></ul><p class="hint">Out of <span class="n-players">682,926</span> players. Your numbers update as you study.</p></div>
+        <div class="lb2-side">
+          <div class="card" id="lbYouCard"></div>
+          <div class="card" id="lbPer" hidden></div>
+          <div class="card" id="lbDist" hidden></div>
+          <div class="card lb-side"><div class="h first">Your standings</div><ul class="lb-mine" id="lbMine"></ul><p class="hint">Out of <span class="n-players">682,926</span> players. Your numbers update as you study.</p></div>
+        </div>
       </div>
     </section>
 
@@ -392,6 +397,7 @@
 <script src="js/dms.js"></script>
 <script src="js/matchchat.js"></script>
 <script src="js/leaderboards.js"></script>
+<script src="js/lb2.js"></script>
 <script src="js/livefeed.js"></script>
 <script src="js/watch.js"></script>
 <script src="js/feed.js"></script>
