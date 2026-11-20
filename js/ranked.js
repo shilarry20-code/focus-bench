@@ -945,12 +945,30 @@ function rollTarget(i){
   }
   return Math.round(clampN(t, 12, 600) * 60000);
 }
+// your opponent studies on their own clock: focus blocks and breaks in real time, shaped by their style and favorite mode,
+// adding up to the sitting they rolled. It runs whether you're focusing, on a break or away.
+function oppPlan(b, target, t0){
+  const B = BOTS[b], rnd = Math.random, blocks = []; let t = t0 + (30 + rnd() * 150) * 1000, left = target, k = 0;
+  const lens = {pomodoro: [25, 5], fifty: [50, 10], flow: [75, 12], timebox: [45, 10], custom: [35, 7], stopwatch: [55, 10]}[B.fav] || [40, 8];
+  while (left > 0 && k < 200){
+    let f = lens[0] * (B.style === 'Grinder' ? 1.4 : B.style === 'Sprinter' ? (k === 0 ? 1.6 : .8) : 1) * (.75 + rnd() * .5) * 60000;
+    if (B.fav === 'pomodoro') f = 25 * 60000;
+    f = Math.min(left, Math.max(5 * 60000, f)); blocks.push([Math.round(t), Math.round(t + f)]); left -= f; t += f;
+    let br = lens[1] * (.7 + rnd() * .8) * 60000; if (B.fav === 'pomodoro' && k % 4 === 3) br = 15 * 60000;
+    if (B.style === 'Wildcard' && rnd() < .15) br *= 3;
+    t += br; k++;
+  }
+  return blocks;
+}
+const oppThem = (c, now) => c.plan.reduce((n, [a, b]) => n + Math.max(0, Math.min(now, b) - a), 0);
+const oppState = (c, now) => now >= c.plan[c.plan.length - 1][1] ? 'stopped' : c.plan.some(([a, b]) => now >= a && now < b) ? 'studying' : now < c.plan[0][0] ? 'starting' : 'break';
 const kFactor = () => R.played < 5 ? 40 : 24;
 function stakes(br){ const E = 1 / (1 + Math.pow(10, (br - R.mmr) / 400)), K = kFactor(); return {E, win: Math.round(K * (1 - E)), loss: Math.round(K * E), draw: Math.round(K * (.5 - E))}; }
 function startMatch(found, friendly){
   const b = found != null ? found : findOpponent(), br = botRating(b), now = Date.now();
   const lines = [...CHAT].sort(() => Math.random() - .5).slice(0, 6);
-  R.cur = {pl: R.played < 5 && !friendly ? R.played + 1 : 0, friendly: !!friendly, b, br, mmr0: R.mmr, target: rollTarget(b), you: 0, them: 0, t0: now, last: now, tick: now, state: 'live', tapped: false, lines, tap: pick(Math.random, TAPS), feat: botFeatured(b), mine: myFeatured()};
+  R.cur = {pl: R.played < 5 && !friendly ? R.played + 1 : 0, friendly: !!friendly, b, br, mmr0: R.mmr, target: 0, you: 0, them: 0, t0: now, last: now, tick: now, state: 'live', tapped: false, lines, tap: pick(Math.random, TAPS), feat: botFeatured(b), mine: myFeatured()};
+  R.cur.target = rollTarget(b); R.cur.plan = oppPlan(b, R.cur.target, now);
   R.last = b; saveRanked();
   const B = BOTS[b];
   if ($('#page-focus').hidden) toast(`Match started: ${B.name} (${rankOf(br).full} · ${br.toLocaleString()})`);
@@ -1047,12 +1065,23 @@ function openClose(){
 }
 // you pausing, logging, stopping or switching modes is what sets the time
 ['pause', 'reset', 'finishStopwatch'].forEach(fn => { const orig = window[fn]; if (typeof orig !== 'function') return;
-  window[fn] = function(){ try { rankedTick(); } catch(e){} const r = orig.apply(this, arguments); try { openClose(); } catch(e){} return r; }; });
+  window[fn] = function(){ try { rankedTick(); } catch(e){} const r = orig.apply(this, arguments); try { openClose(); } catch(e){}
+    try { const c = R && R.cur; if (c && c.state === 'live' && c.plan && c.you > 0 && !c.youDone) endMatch('stop'); } catch(e){} return r; }; });
 function nemesis(){ let best = -1, n = 4; Object.entries(R.rec).forEach(([i, r]) => { if (r[1] > n){ n = r[1]; best = +i; } }); return best; }
 function endMatch(why){
   const c = R.cur; if (!c || c.state !== 'live') return;
-  if (c.won || (c.tapped && c.you > c.target)) return finalize('W', why);
-  finalize('L', why);
+  if (!c.plan || why === 'off'){ if (c.won || (c.tapped && c.you > c.target)) return finalize('W', why); return finalize('L', why); }
+  if (!c.youDone){ c.youDone = true; c.youAt = Date.now(); saveRanked(); }
+  matchResolve(Date.now(), why);
+}
+// settle the match once it's decided: they've stopped and you're ahead (you win now; your time keeps counting as TBD
+// unless you've stopped too), or you've stopped and they pass you, or you've both stopped
+function matchResolve(now, why){
+  const c = R.cur; if (!c || c.state !== 'live' || !c.plan) return false;
+  if (!c.youDone){ if (c.tapped && c.you > c.target){ finalize('W', 'open'); return true; } return false; }
+  if (c.them > c.you){ finalize('L', why || 'passed'); return true; }
+  if (c.tapped){ finalize(c.you >= c.target ? 'W' : 'L', why || 'both'); return true; }
+  return false;
 }
 // runs inside the timer loop
 let rkLastRender = 0, rkLastSave = 0;
@@ -1061,7 +1090,18 @@ function rankedTick(){
   const now = Date.now(), running = S.running && S.phase === 'focus';
   openTick(now, running);
   const c = R.cur; if (!c) return;
-  if (c.state === 'live'){
+  if (c.state === 'live' && c.plan){
+    // they might push on for another block if they'd stop behind you
+    if (!c.ext && now >= c.plan[c.plan.length - 1][1] - 1000 && c.you > c.target && (BOTS[c.b].style === 'Grinder' || BOTS[c.b].style === 'Wildcard') && Math.random() < .5){
+      const a = now + (4 + Math.random() * 8) * 60000, len = (25 + Math.random() * 30) * 60000; c.plan.push([Math.round(a), Math.round(a + len)]); c.target += Math.round(len); c.ext = 1; }
+    else if (now >= c.plan[c.plan.length - 1][1] - 1000) c.ext = c.ext || 2;
+    c.them = oppThem(c, now);
+    const was = c.tapped; c.tapped = now >= c.plan[c.plan.length - 1][1]; if (c.tapped && !was) renderMatch();
+    if (running && !c.youDone){ const dt = Math.min(2000, Math.max(0, now - c.tick)); c.you += dt; c.last = now; }
+    else if (!c.youDone && !S.running && now - c.last > 30 * 60000){ c.youDone = true; c.youAt = c.last; }
+    if (matchResolve(now)) return;
+    if (now - rkLastSave > 5000){ rkLastSave = now; saveRanked(); }
+  } else if (c.state === 'live'){
     if (running){
       const dt = Math.min(2000, Math.max(0, now - c.tick));
       c.you += dt; if (c.them < c.target) c.them = Math.min(c.target, c.them + dt); c.last = now;
@@ -1124,7 +1164,13 @@ function renderMatch(fresh){
   const tired = B.style === 'Steady' && !c.tapped && c.them > c.target * .85;
   const botLine = c.tapped ? `“${c.tap}”` : tired ? '“starting to slow down…”' : c.them > 60000 ? `“${c.lines[lineIdx]}”` : '“gl hf”';
   const waiting = live && c.you === 0 && !(S.running && S.phase === 'focus');
-  const status = !live ? '' : waiting ? 'Press Start to begin. Time only counts while you’re focusing, for both of you.' : c.tapped ? `${esc(B.name)} stopped at ${mm(c.target)}. Pass them to win.` : `${esc(B.name)} is still going. Keep studying: if they stop first, you win.`;
+  const os = c.plan ? oppState(c, Date.now()) : null, gap = Math.abs(c.you - c.them), ahead = c.you >= c.them;
+  const them = esc(B.name), osTxt = os === 'studying' ? `${them} is studying` : os === 'break' ? `${them} is on a break` : os === 'starting' ? `${them} is getting started` : `${them} stopped at ${mm(c.target)}`;
+  const status = !live ? '' : !c.plan ? (waiting ? 'Press Start to begin.' : c.tapped ? `${them} stopped at ${mm(c.target)}. Pass them to win.` : `${them} is still going. Keep studying: if they stop first, you win.`)
+    : c.youDone ? `You stopped at ${mm(c.you)}. ${osTxt}: ${c.them > c.you ? 'they passed you' : `they need ${mm(c.you - c.them + 60000)} more to pass you`}. Waiting for them to finish.`
+    : waiting ? `${osTxt}. Press Start: your time counts while you focus, theirs runs on their own schedule.`
+    : os === 'stopped' ? `${osTxt}. ${ahead ? 'You’re ahead: you win.' : `Pass them to win: ${mm(gap + 60000)} to go.`}`
+    : `${osTxt}. ${ahead ? `You’re ahead by ${mm(gap)}.` : `You’re behind by ${mm(gap)}.`} Stopping your timer locks in your time.`;
   let result = '';
   if (!live){
     const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
@@ -1142,6 +1188,7 @@ function renderMatch(fresh){
     const bars = slot.querySelectorAll('.m-bar');
     bars[0].querySelector('i').style.width = `${c.you / max * 100}%`; bars[0].querySelector('b').textContent = mm(c.you);
     bars[1].querySelector('i').style.width = `${(c.tapped ? c.target : c.them) / max * 100}%`;
+    if (c.plan){ const tb = bars[1].querySelector('b'); if (tb) tb.textContent = mm(c.tapped ? c.target : c.them); const st = slot.querySelector('.m-status'); if (st && st.innerHTML !== status) st.innerHTML = status; }
     if (typeof mcRender === 'function') mcRender();
     return;
   }
@@ -1158,7 +1205,7 @@ function renderMatch(fresh){
     </div>
     <div class="m-bars">
       <div class="m-bar"><span>You</span><span class="trk"><i style="width:${c.you / max * 100}%"></i></span><b>${mm(c.you)}</b></div>
-      <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.tapped ? mm(c.target) : waiting ? 'ready' : live ? 'going…' : '?'}</b></div>
+      <div class="m-bar bot"><span>${esc(B.name)}</span><span class="trk"><i style="width:${(c.tapped ? c.target : c.them) / max * 100}%"></i>${c.tapped ? `<em style="left:${c.target / max * 100}%"></em>` : ''}</span><b>${c.plan && live ? mm(c.tapped ? c.target : c.them) : c.tapped ? mm(c.target) : waiting ? 'ready' : live ? 'going…' : '?'}</b></div>
     </div>
     ${live ? `${typeof mcBox === 'function' ? mcBox(c) : `<p class="m-chat">${esc(B.name)}: ${esc(botLine)}</p>`}<p class="m-status">${status}</p>
     <div class="m-foot"><span class="stakes">${c.friendly ? 'Friendly · no Elo change' : `Win <b class="pos">+${s.win}</b> · Loss <b class="neg">−${s.loss}</b>`}</span><span class="m-foot-btns"><button class="small-btn" data-dm="${c.b}">Message</button><button class="small-btn" data-act="m-end">End match</button></span></div>` : result + (typeof mcBox === 'function' ? mcBox(c) : '')}

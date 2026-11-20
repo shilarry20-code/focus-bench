@@ -3,6 +3,9 @@
    something big starts the next one. A dot on the panel button (and on More on phones) shows until you've opened
    the page, and after a change ships you get a one-time note. Whether you've seen it is kept per device. */
 const UPDATES = [
+  {n: 11, name: 'Your Own Clock', when: 'Nov 19', secs: [
+    ['Ranked matches', ['You and your opponent each study on your own clock: yours counts while you focus, theirs runs on their own schedule of study blocks and breaks, even while you’re on a break or away', 'The match card shows their time, and whether they’re studying, on a break or stopped', 'Stopping your timer (pause, log or finish) locks in your time; the match waits for them to finish, and if they pass you, you lose', 'If they stop first and you’re ahead, you win right away and your time keeps counting until you stop', 'Some opponents push on for another block when they’d stop behind you']]],
+    fixes: []},
   {n: 10, name: 'The Podium', when: 'Nov 19', secs: [
     ['Leaderboards', ['Categories grouped with icons: Rating, Time, Streaks, Records and Awards', 'Filter by Everyone, Following, Your major or Rivals', 'A podium for the top 3, with a crown for #1 and dots for anyone studying right now', 'Your standing card: your place, a chart of your rank over the last two weeks, and how far to the next player and the next top-% mark', 'Cybersecurity is a new major, and the major list is in alphabetical order', 'Arrows showing who moved up or down since yesterday, and New for anyone who just entered the top 50', 'Scroll the whole board from #1 to the last player, jump to yourself, and keep your own row pinned while you scroll', 'A chart of where everyone stands, reset countdowns on the weekly and monthly boards, and last period’s top 3', 'Streak flames, “still going” tags, record dates and rarest badges on the boards they fit']]],
     fixes: []},
