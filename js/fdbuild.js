@@ -106,7 +106,7 @@ function cbSettingsHtml(){
   return `<div class="ai-usage cb-set"><div class="h">Comment builder</div>
     <div class="row"><label for="cbOn">Fill big posts with comments in the background<span class="sub">Only uses leftover requests: up to the cap below, never past half of today’s limit (in the last 2 hours before the reset it can use the rest, keeping 30). Pauses whenever anything else needs Gemini.</span></label><input type="checkbox" id="cbOn" ${GEM.bOff ? '' : 'checked'}></div>
     <div class="row"><label for="cbCap">Requests per day<span class="sub">Today: ${b.n} request${b.n === 1 ? '' : 's'}, ${b.c.toLocaleString()} comment${b.c === 1 ? '' : 's'}${q.late ? ' · reset is close, so it can use what’s left' : ''}</span></label><input type="number" id="cbCap" min="0" max="2000" step="10" value="${cbCap()}" style="width:90px"></div>
-    <p class="hint">Overnight (while the app is closed): ${!cbSyncOn() ? 'needs gist sync turned on.' : GEM.ext && GEM.ext.day === ptDay() ? `${GEM.ext.req || 0} request${GEM.ext.req === 1 ? '' : 's'} today.` : 'nothing yet today.'}${GEM.todoAt ? ` To-do list sent ${Date.now() - GEM.todoAt < 60000 ? 'just now' : fdAgo(GEM.todoAt) + ' ago'}.` : ''}${cbSyncOn() ? ' <button class="link-btn" id="cbCopyTok">Copy gist token</button> (for the GIST_TOKEN secret)' : ''}</p>
+    <p class="hint">Overnight (while the app is closed): ${!cbSyncOn() ? 'needs gist sync turned on.' : GEM.ext && GEM.ext.day === ptDay() ? `${GEM.ext.req || 0} request${GEM.ext.req === 1 ? '' : 's'} today.` : 'nothing yet today.'}${GEM.todoAt ? ` To-do list sent ${Date.now() - GEM.todoAt < 60000 ? 'just now' : fdAgo(GEM.todoAt) + ' ago'}${GEM.todoN != null ? ` (${GEM.todoN} post${GEM.todoN === 1 ? '' : 's'}, ${(GEM.todoC || 0).toLocaleString()} comments to write)` : ''}.` : ''}${cbSyncOn() ? ' <button class="link-btn" id="cbCopyTok">Copy gist token</button> (for the GIST_TOKEN secret)' : ''}</p>
     <p class="hint">Feed storage: ${fdStorageTxt()}</p></div>`;
 }
 function fdStorageTxt(){
@@ -136,7 +136,7 @@ async function cbTodoUpload(){
   list.sort((a, b) => b[0] - a[0]);
   const jobs = []; for (const [, p] of list.slice(0, 60)) jobs.push(await cbJob(p));
   const todo = {v: 1, at: now, day: ptDay(), models: GEMINI_MODELS, use: GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n : {}, bld: cbDay().n, lim: GEM.lim || {}, cap: cbCap(), off: !!GEM.bOff, out: GEM.out || {}, jobs};
-  try { await gh('/gists/' + SYNC.gist, {method: 'PATCH', body: JSON.stringify({files: {[CB_TODO]: {content: JSON.stringify(todo)}}})}); GEM.todoAt = now; saveAI(); } catch(e){ console.error(e); }
+  try { await gh('/gists/' + SYNC.gist, {method: 'PATCH', body: JSON.stringify({files: {[CB_TODO]: {content: JSON.stringify(todo)}}})}); GEM.todoAt = now; GEM.todoN = jobs.length; GEM.todoC = jobs.reduce((n, j) => n + Math.max(0, j.need), 0); saveAI(); } catch(e){ console.error(e); }
 }
 async function cbGistFile(g, name){ const f = g.files && g.files[name]; if (!f) return null; let t = f.content; if (f.truncated) t = await (await fetch(f.raw_url, {cache: 'no-store'})).text(); try { return JSON.parse(t); } catch(e){ return null; } }
 async function cbInboxMerge(){
