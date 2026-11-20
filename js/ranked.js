@@ -1542,7 +1542,7 @@ function profileHead(w, big){
 }
 // online / studying / offline, next to their name
 function pfPresence(w){
-  let st = 'off'; try { st = botLiveNow(w) || (typeof dmStudying === 'function' && dmStudying(w)) ? 'busy' : typeof dmOnline === 'function' && dmOnline(w) ? 'on' : 'off'; } catch(e){}
+  let st = 'off'; try { st = typeof elPresence === 'function' && elPresence(w) === 'break' ? 'on' : botLiveNow(w) || (typeof dmStudying === 'function' && dmStudying(w)) ? 'busy' : typeof dmOnline === 'function' && dmOnline(w) ? 'on' : 'off'; } catch(e){}
   return ` <span class="pf-pres ${st}"><i></i>${st === 'busy' ? 'Studying' : st === 'on' ? 'Online' : 'Offline'}</span>`;
 }
 // the popup
