@@ -44,6 +44,8 @@ const MAJORS = [
     t: 'treehugger rainforest carbon.zero glacier'},
   {k: 'it', n: 'Computer and information technology', w: 4, stem: 1, rel: ['cs', 'biz'], c: 'Networking:C|Cybersecurity:C|IT architecture|Web development:C|Data analytics:C|Cloud computing:C|Systems analysis:D|Python programming:C|Database administration:C',
     t: 'packetloss firewall localhost ping404 sysadmin pingpong.tcp'},
+  {k: 'cyber', n: 'Cybersecurity', w: 0, stem: 1, rel: ['it', 'cs', 'math'], c: 'Network security:C|Cryptography|Ethical hacking:C|Digital forensics:C|Security operations:C|Malware analysis:C|Secure software development:C|Incident response|Cyber risk management|Cyber law and policy:W',
+    t: 'phishing zeroday rootkit hashcrack ctf.flag sudo_rm redteam blueteam'},
   {k: 'aviation', n: 'Aviation', w: 2, stem: 1, rel: ['aero', 'phys', 'biz'], c: 'Flight theory|Aviation weather|Air traffic control|Aircraft systems|Aviation safety:W',
     t: 'cleared4takeoff runway27 tailwind mayday.mayday cockpit'},
   {k: 'biz', n: 'Business', w: 8, rel: ['econ', 'math', 'comm'], c: 'Accounting|Marketing:W|Finance|Business law:W|Management:W|Supply chain|Investments|Corporate finance|Business analytics:C|Entrepreneurship:W|Organizational behavior:W|Intermediate accounting|Auditing',
@@ -84,7 +86,9 @@ const FOUND = FOUNDATION.map(x => x.split(':')[0]), GEN = GENEDS.map(x => x.spli
 const SUBJECTS = [...CLASS_KIND.keys()];
 const MAJ_W = MAJORS.reduce((n, m) => n + m.w, 0);
 // one random number in, one major out (weighted, so business and CS are common and philosophy is rare)
-function majorAt(u){ let x = u * MAJ_W; for (const m of MAJORS){ x -= m.w; if (x < 0) return m; } return MAJORS[0]; }
+function majorAt(u){ let x = u * MAJ_W; for (const m of MAJORS){ x -= m.w; if (x < 0) return majorSplit(m, (x + m.w) / m.w); } return MAJORS[0]; }
+// Cybersecurity (added later, weight 0 so nobody else's major moved) takes a slice of CS and IT students
+function majorSplit(m, r){ return (m.k === 'it' && r < .3) || (m.k === 'cs' && r < .1) ? MAJOR_BY.cyber : m; }
 const semIndex = d => d.getFullYear() * 3 + (d.getMonth() >= 7 ? 2 : d.getMonth() >= 4 ? 1 : 0);
 // a player's classes for the semester holding date d: the first is the one they study most
 function scheduleFor(i, maj, d){

@@ -162,8 +162,10 @@ function lfTopRow(ev){
   return `<li>${side(p.a, p.ra, p.ma, p.dlt)}<span class="lft-vs">${draw ? 'Draw' : 'vs'}<time>${ago === 'now' ? 'just now' : ago + ' ago'}</time></span>${side(p.c, p.rc, p.mc, -p.dlt)}</li>`;
 }
 function renderLive(force){
-  const el = $('#rkLive'); if (!el || !RK_READY) return;
-  const page = $('#page-ranked'), shown = page && !page.hidden;
+  // it's drawn on Ranked, and in the Feed's Live tab
+  const rk = $('#rkLive'), fl = $('#fdLive'), rkOn = rk && !$('#page-ranked').hidden, flOn = fl && !$('#page-feed').hidden;
+  const el = rkOn ? rk : flOn ? fl : rk; if (!el || !RK_READY) return;
+  const shown = rkOn || flOn;
   if (!force && (!shown || (lfFocusing() && el.firstChild))){ lfSide(); if (shown && lfFocusing() && !LF.frozen){ LF.frozen = true; const n = el.querySelector('.lf-pause'); if (n) n.hidden = false; } return; }
   LF.frozen = false;
   if (Date.now() - LF.at > 25000 || !LF.hours){
@@ -201,7 +203,17 @@ function renderLive(force){
     <p class="hint lf-pause" hidden>Paused while you focus.</p>
     ${list}
     <div class="lf-btns"><button class="small-btn accent" data-lfa="join">Join them</button><button class="small-btn" data-lfa="match">Find a match</button></div>`;
+  if (rkOn && flOn) fl.innerHTML = el.innerHTML; else if (el === rk && fl) fl.innerHTML = el.innerHTML; else if (el === fl && rk) rk.innerHTML = el.innerHTML;
   lfSide();
+}
+// keep the numbers fresh for the Feed (count, hours, trending, events); calls back once a slow first prep is done
+function lfFresh(cb){
+  if (!RK_READY) return false;
+  if (LF.hours && Date.now() - LF.at < 25000) return true;
+  const {dk, m, h} = lfNow(), ready = planDay === dk && LF.pairKey === dk + '|' + Math.floor(m / 120) * 120 && LF.hDay === dk && LF.hUpTo >= h && LF.ix && LF.ix.day === dk;
+  if (!ready){ lfPrep().then(ok => { if (ok){ LF.at = 0; cb && cb(); } }); return !!LF.hours; }
+  try { lfCompute(); } catch(e){ console.error(e); }
+  return !!LF.hours;
 }
 const hourLabel = x => x === 0 ? '12 AM' : x < 12 ? `${x} AM` : x === 12 ? 'noon' : `${x - 12} PM`;
 function lfSide(){
@@ -229,7 +241,7 @@ document.addEventListener('click', e => {
     return;
   }
   if (e.target.closest('#navLive')){ showPage('ranked'); setTimeout(() => { const c = $('#rkLive'); if (c) c.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 50); }
-  const bb = e.target.closest('#rkLive [data-bot]'); if (bb){ e.stopPropagation(); openProfile(+bb.dataset.bot); }
+  const bb = e.target.closest('#rkLive [data-bot], #fdLive [data-bot], #fdSide [data-bot], #fdStrip [data-bot]'); if (bb){ e.stopPropagation(); openProfile(+bb.dataset.bot); }
 });
 setInterval(() => { try { renderLive(); } catch(e){ console.error(e); } }, 30000);
 // draw it with the rest of the Ranked page
