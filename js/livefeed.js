@@ -253,15 +253,49 @@ setInterval(() => { try { renderLive(); } catch(e){ console.error(e); } }, 30000
 const _renderRanked0 = renderRanked;
 renderRanked = function(){ const r = _renderRanked0.apply(this, arguments); try { renderLive(); } catch(e){ console.error(e); } return r; };
 
-// the subject tooltip floats above everything, so scrolling lists can't cut it off
-{ let tipEl = null;
-  const show = el => { if (!tipEl){ tipEl = document.createElement('div'); tipEl.className = 'lf-float'; document.body.appendChild(tipEl); }
-    const r = el.getBoundingClientRect(); tipEl.textContent = el.dataset.tip; tipEl.style.left = (r.left + r.width / 2) + 'px'; tipEl.style.top = (r.top - 6) + 'px'; tipEl.hidden = false; };
-  const hide = () => { if (tipEl) tipEl.hidden = true; };
+// today's picture for every subject, from a sample of everyone who has studied so far today (scaled up): how many studied
+// it, when, and which majors. Worked out on the first hover and kept for 10 minutes.
+let LFS = null;
+function lfSubjDay(){
+  const {dk, m} = lfNow();
+  if (LFS && LFS.dk === dk && Date.now() - LFS.at < 600000) return LFS;
+  if (planDay !== dk || !SCH_O) return null;
+  let active = 0; const act = [];
+  for (let i = 0; i < ROSTER_N; i++){ const a = SCH_O[i], b = SCH_O[i + 1]; if (b > a && SCH_A[a] <= m){ active++; if ((i * 2654435761 >>> 0) % 260 === 0) act.push(i); } }
+  const map = new Map(); let seen = 0;
+  for (const i of act.slice(0, 3000)){
+    const d = botDay(i, dk); if (!d) continue; seen++;
+    const subs = new Set(); d.sessions.forEach(x => { if (x.a > m) return; subs.add(x.subj);
+      const e = map.get(x.subj) || {n: 0, h: new Array(24).fill(0), maj: new Map()}; for (let t = x.a; t < Math.min(x.b, m); t += 30) e.h[Math.floor(t / 60) % 24]++; map.set(x.subj, e); });
+    subs.forEach(sj => { const e = map.get(sj); e.n++; const mj = bot(i).major; e.maj.set(mj, (e.maj.get(mj) || 0) + 1); });
+  }
+  LFS = {dk, at: Date.now(), map, k: active / Math.max(1, seen), active}; return LFS;
+}
+function lfSubjCard(sj){
+  const now = LF.subj && LF.subj.get(sj), D = lfSubjDay(), e = D && D.map.get(sj), {h} = lfNow();
+  const today = e ? Math.max(now || 0, Math.round(e.n * D.k)) : null, mx = e ? Math.max(1, ...e.h) : 1;
+  const bars = e ? e.h.map((v, x) => `<i class="${x > h ? 'fut' : x === h ? 'now' : ''}" style="--v:${x > h ? .04 : Math.max(.04, v / mx).toFixed(3)}"></i>`).join('') : '';
+  const majors = e ? [...e.maj.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => (MAJOR_BY[k] || {}).n).filter(Boolean) : [];
+  let pk = 0; if (e) e.h.forEach((v, x) => { if (x <= h && v > e.h[pk]) pk = x; });
+  return `<div class="lfc-t">${esc(sj)}</div>
+    <div class="lfc-nums"><div><b><i class="lf-dot" aria-hidden="true"></i>${now ? now.toLocaleString() : `<${(LF.subjMin || 1).toLocaleString()}`}</b><small>studying now</small></div>
+      <div><b>${today != null ? today.toLocaleString() : '…'}</b><small>studied it today</small></div></div>
+    ${e ? `<div class="lfc-bars">${bars}</div><div class="lfc-axis"><span>12 AM</span><span>noon</span><span>11 PM</span></div>
+      <div class="lfc-foot">${e.h[pk] ? `Busiest at ${hourLabel(pk)}` : ''}${majors.length ? `${e.h[pk] ? ' · ' : ''}Mostly ${majors.map(esc).join(', ')}` : ''}</div>` : '<div class="lfc-foot">Too few people studied this today to say more.</div>'}`;
+}
+// the card floats above everything, so scrolling lists can't cut it off
+{ let card = null, cur = null, hideT = null;
+  const show = el => { clearTimeout(hideT); if (!card){ card = document.createElement('div'); card.className = 'lf-card-pop'; document.body.appendChild(card);
+      card.addEventListener('mouseenter', () => clearTimeout(hideT)); card.addEventListener('mouseleave', () => hide()); }
+    const sj = el.textContent; if (cur !== el || card.hidden){ card.innerHTML = lfSubjCard(sj); cur = el; }
+    card.hidden = false; const r = el.getBoundingClientRect(), w = card.offsetWidth, hgt = card.offsetHeight;
+    let x = r.left + r.width / 2 - w / 2; x = Math.max(8, Math.min(window.innerWidth - w - 8, x));
+    let y = r.top - hgt - 8; if (y < 8) y = r.bottom + 8;
+    card.style.left = x + 'px'; card.style.top = y + 'px'; };
+  const hide = (later) => { clearTimeout(hideT); hideT = setTimeout(() => { if (card) card.hidden = true; cur = null; }, later ? 160 : 0); };
   document.addEventListener('mouseover', e => { const el = e.target.closest('.lf-subj'); if (el) show(el); });
-  document.addEventListener('mouseout', e => { if (e.target.closest('.lf-subj')) hide(); });
+  document.addEventListener('mouseout', e => { if (e.target.closest('.lf-subj')) hide(true); });
   document.addEventListener('focusin', e => { const el = e.target.closest('.lf-subj'); if (el) show(el); });
-  document.addEventListener('focusout', hide);
-  document.addEventListener('click', e => { const el = e.target.closest('.lf-subj'); if (el) show(el); else hide(); });
-  window.addEventListener('scroll', hide, true);
+  document.addEventListener('click', e => { const el = e.target.closest('.lf-subj'); if (el) show(el); else if (!e.target.closest('.lf-card-pop')) hide(); });
+  window.addEventListener('scroll', () => hide(), true);
 }
