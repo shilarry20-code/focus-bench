@@ -20,9 +20,10 @@ const LB = [
   {id:'sess',  name:'Longest single session', desc:'The longest one sitting',               u:'min', f:F.maxSess,  me:t => t.maxSess},
   {id:'day',   name:'Biggest single day',     desc:'Most study time in one day',            u:'min', f:F.maxDay,   me:t => t.maxDay},
   {id:'count', name:'Most sessions',          desc:'Focus sessions logged, all time',       u:'n',   f:F.sessions, me:t => t.sessions},
+  {id:'lvl',   name:'Highest level',          desc:'Level from XP: studying, daily goals, ranked wins, challenges and achievements', u:'xp', f:null, g:() => lvArrs().xp, me:t => myXp()},
   {id:'pts',   name:'Achievement points',     desc:'Points from unlocked achievements',     u:'pts', f:null,       me:t => t.pts}
 ];
-const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : u === 'pct' ? (v ? (v / 10).toFixed(1) + '%' : '–') : v.toLocaleString();
+const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : u === 'pct' ? (v ? (v / 10).toFixed(1) + '%' : '–') : u === 'xp' ? `Lv ${lvOf(v)} · ${v.toLocaleString()} XP` : v.toLocaleString();
 const botVal = (c, i) => c.g ? c.g()[i] : c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f];
 const lbReady = c => c.f != null || !!c.g || !!lbPts;
 /* ranked wins and win rate for everyone, from each player's real win/loss record (RK_EW/RK_EL estimated, RK_LW/RK_LL counted live, in ranked.js) */

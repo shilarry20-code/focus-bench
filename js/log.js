@@ -8,12 +8,11 @@ function renderLog(){
   const todayMin = todays.reduce((a,s) => a + s.min, 0);
   $('#todayMin').textContent = fmtMin(todayMin);
   $('#stToday').textContent = fmtMin(todayMin);
-  $('#stBlocks').textContent = `${todays.length}/${P.goal}`;
-  // goal dots
-  let dh = '';
-  for (let i = 0; i < Math.min(P.goal, 12); i++) dh += `<i class="${i < todays.length ? 'on' : ''}"></i>`;
-  if (todays.length > P.goal) dh += `<em>+${todays.length - P.goal}</em>`;
-  $('#goalDots').innerHTML = dh; $('#goalDots').title = `${todays.length} of ${P.goal} blocks today`;
+  $('#stBlocks').textContent = `${fmtMin(todayMin)} / ${fmtMin(P.goalMin)}`;
+  // daily goal: minutes studied today against the goal
+  const gp = Math.min(1, todayMin / P.goalMin);
+  $('#goalDots').innerHTML = `<span class="gbar${gp >= 1 ? ' full' : ''}"><i style="width:${gp * 100}%"></i></span>${gp >= 1 ? '<em>✓</em>' : ''}`;
+  $('#goalDots').title = `Daily goal: ${fmtMin(todayMin)} of ${fmtMin(P.goalMin)}`;
   // streak (10 minutes or more counts as a day)
   $('#stStreak').textContent = streakInfo().cur;
   renderStreak();

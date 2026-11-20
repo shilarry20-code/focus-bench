@@ -155,7 +155,7 @@ $('#task').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.bl
 $('#tagSel').addEventListener('change', e => { P.tag = e.target.value; saveP(); flushTaskSwitch(); });
 $('#autoBreak').onchange = e => { P.autoBreak = e.target.checked; saveP(); };
 $('#autoFocus').onchange = e => { P.autoFocus = e.target.checked; saveP(); };
-$('#goal').onchange = e => { P.goal = Math.min(30, Math.max(1, parseInt(e.target.value,10) || 6)); e.target.value = P.goal; saveP(); renderLog(); };
+$('#goal').onchange = e => { P.goalMin = Math.min(720, Math.max(15, Math.round((parseInt(e.target.value,10) || 120) / 5) * 5)); e.target.value = P.goalMin; saveP(); renderLog(); };
 $('#tagList').onclick = e => { const b = e.target.closest('button'); if (!b) return; P.tags.splice(+b.dataset.i, 1); saveP(); renderTags(); };
 function addTag(){ const v = $('#newTag').value.trim(); if (!v) return; if (!P.tags.includes(v)){ P.tags.push(v); achBump('tagsAdded'); } P.tag = v; $('#newTag').value = ''; saveP(); renderTags(); }
 $('#addTag').onclick = addTag;

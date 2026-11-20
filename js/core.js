@@ -63,7 +63,7 @@ const LOOK_KEYS = ['motion','theme','accent','customAccent','breakColor','style'
 const DEFAULTS = {
   mode:'pomodoro',
   modes:{ pomodoro:{focus:25,short:5,long:15,rounds:4}, fifty:{focus:52,short:17}, custom:{focus:45,short:10,long:20,rounds:3}, timebox:{focus:60}, flow:{ratio:5,minBreak:3} },
-  autoBreak:true, autoFocus:false, goal:6,
+  autoBreak:true, autoFocus:false, goal:6, goalMin:120,
   chime:'bell', volume:.7, tick:false, ambient:'off', thunder:'some', ambVol:.35, ambFocusOnly:true,
   accent:'cobalt', customAccent:'#e0457b', breakColor:'auto', theme:'auto', style:'ring', digits:'condensed', weight:'bold', uiFont:'figtree', timerSize:1, ring:'medium', ticks:true, radius:'soft', texture:'none', showSeconds:true, mini:'m', calView:'week', motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full',
   tags:['Homework','Reading','Project','Exam prep'], tag:'Homework', task:'',
@@ -71,6 +71,8 @@ const DEFAULTS = {
 };
 let P = merge(clone(DEFAULTS), store.get('fb.settings', {}));
 if (JSON.stringify(P.tags) === JSON.stringify(['CNIT 17600','Design project','General'])){ P.tags = clone(DEFAULTS.tags); P.tag = DEFAULTS.tag; }
+// the daily goal is minutes studied now (it used to be a number of focus blocks): start from about what the old one meant
+if (!P.goalMinV){ P.goalMin = Math.min(720, Math.max(15, Math.round((P.goal || 6) * 25 / 15) * 15)); P.goalMinV = 1; store.set('fb.settings', P); }
 let LOG = store.get('fb.log', []);
 let NOTES = store.get('fb.notes', []);
 const saveP = () => store.set('fb.settings', P);
@@ -381,7 +383,7 @@ function renderTimerPane(){
   }));
   $('#rowAutoBreak').hidden = m === 'timebox' || m === 'stopwatch';
   $('#rowAutoFocus').hidden = m === 'timebox' || m === 'stopwatch';
-  $('#autoBreak').checked = P.autoBreak; $('#autoFocus').checked = P.autoFocus; $('#goal').value = P.goal;
+  $('#autoBreak').checked = P.autoBreak; $('#autoFocus').checked = P.autoFocus; $('#goal').value = P.goalMin;
   renderTags();
 }
 function renderTags(){

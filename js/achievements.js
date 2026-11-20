@@ -258,7 +258,7 @@ function achStats(){
   const keys = Object.keys(days).sort();
   st.daysActive = keys.length;
   st.bestStreak = streakOf(keys.filter(k => days[k].min >= 10));
-  const goalKeys = keys.filter(k => days[k].n >= P.goal);
+  const goalKeys = keys.filter(k => days[k].min >= P.goalMin);
   st.goalDays = goalKeys.length; st.goalStreak = streakOf(goalKeys);
   st.maxDay = 0; st.maxDayN = 0; st.comeback = 0; st.lucky7 = 0; st.fullWeekend = 0;
   const weekMin = {}, weekDays = {}, monthMin = {};
