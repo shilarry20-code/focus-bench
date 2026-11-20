@@ -13,6 +13,26 @@ let FD = store.get('fb.feed', null);
 if (!FD || FD.v !== FD_V) FD = {v: FD_V, posts: [], follows: [], followers: [], notif: [], filled: 0, nseen: 0, pend: [], liked: {}};
 const saveFeed = () => { if (FD.notif.length > 150) FD.notif = FD.notif.slice(-150); const {posts, ...rest} = FD; store.set('fb.feed', {...rest, posts: FD_READY ? [] : posts}); fdPersistSoon(); };
 
+/* ---- sync: your own posts travel with your other data (see the feed section in sync.js) ---- */
+let FD_SYNC_PEND = null;
+// a post as synced: everything but the working fields, with its comments (comments still to come stay on the device that wrote them)
+function fdSyncPost(p){ const o = {}; for (const k in p) if (k !== 'k' && k[0] !== '_' && k !== 'pv' && k !== 'cn' && k !== 'cm') o[k] = p[k]; o.cm = (p.cm || []).filter(c => c.t <= Date.now() || c.w === -1); return o; }
+// replace = the merged set is the whole truth (posts missing from it were deleted elsewhere); otherwise only add and update
+function fdSyncPut(o, replace){
+  const mine = Object.keys(o).filter(k => k.startsWith('p:')).map(k => o[k]);
+  const ids = new Set(mine.map(p => p.id));
+  if (replace) FD.posts = FD.posts.filter(p => p.w !== -1 || ids.has(p.id) || p.t > Date.now() - 60000);
+  mine.forEach(r => {
+    const i = FD.posts.findIndex(p => p.id === r.id), local = i >= 0 ? FD.posts[i] : null;
+    const later = local && local.cm ? local.cm.filter(c => c.t > Date.now() && !r.cm.some(x => x.id === c.id)) : [];    // comments here that haven't arrived yet
+    const p = {...r, cm: r.cm.concat(later).sort((a, b) => a.t - b.t)};
+    if (i >= 0) FD.posts[i] = p; else FD.posts.push(p);
+  });
+  if (Array.isArray(o.follows)) FD.follows = o.follows.slice();
+  if (Array.isArray(o.followers)) FD.followers = o.followers.slice();
+  saveFeed(); fdPersist(); renderFeed();
+}
+
 /* ---- storage: IndexedDB, only what changed ---- */
 let FD_READY = false, fdSaveT = null;
 const FD_PS = new Map(), FD_CS = new Map();                 // what was last written for each post and its comments
@@ -50,7 +70,7 @@ function fdPrune(){
   const top = new Set(FD.posts.filter(p => !p.del).sort((a, b) => fdLikes(b) - fdLikes(a)).slice(0, 1000).map(p => p.id));
   FD.posts = FD.posts.filter(p => { const keep = p.del ? now - p.t < 864e5 * 2 : (now - p.t < 30 * 864e5 || p.w === -1 || FD.liked[p.id] || top.has(p.id)); if (!keep) gone.push(p.id); return keep; });
   if (gone.length){ gone.forEach(id => { FD_PS.delete(id); FD_CS.delete(id); }); IDB.setMany(gone.flatMap(id => [['fp:' + id, undefined], ['fc:' + id, undefined]])).catch(console.error); }
-  FD.posts.forEach(p => { if (p.cm && p.cm.length > 30 && now - p.t > 3 * 864e5 && FDV.view !== p.id && FD_CS.get(p.id) === fdCSig(p)){ p.pv = fdMeta(p).pv; p.cn = p.cm.length; delete p.cm; } });
+  FD.posts.forEach(p => { if (p.w !== -1 && p.cm && p.cm.length > 30 && now - p.t > 3 * 864e5 && FDV.view !== p.id && FD_CS.get(p.id) === fdCSig(p)){ p.pv = fdMeta(p).pv; p.cn = p.cm.length; delete p.cm; } });
 }
 (async function fdLoad(){
   try {
@@ -61,7 +81,9 @@ function fdPrune(){
     metas.forEach(p => { FD_PS.set(p.id, fdPSig(p)); if (p.cm) FD_CS.set(p.id, fdCSig(p)); if (p.pv && p.w >= 0) p.pv = p.pv.filter(c => c.w !== p.w || c.re); fdTidySelf(p); });
     FD.posts = metas.concat(old);
   } catch(e){ console.error(e); }
-  FD_READY = true; fdPrune(); saveFeed(); fdPersist(); renderFeed();
+  // your own posts keep all their comments in memory (they sync with them)
+  try { await Promise.all(FD.posts.filter(p => p.w === -1 && !p.cm).map(p => fdCm(p))); } catch(e){}
+  FD_READY = true; if (FD_SYNC_PEND){ const o = FD_SYNC_PEND; FD_SYNC_PEND = null; fdSyncPut(o, false); } fdPrune(); saveFeed(); fdPersist(); renderFeed();
 })();
 setInterval(() => { fdPrune(); fdPersistSoon(); }, 10 * 60000);
 const fdId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -551,7 +573,8 @@ function fdView(p, focus){
   if (!p.cm) fdCm(p).then(() => fdViewRefresh());
   FDV.view = p.id; $('#fdView').hidden = false; $('#fdViewBody').innerHTML = fdViewHtml(p);
   const box = $('#fdViewBody .fv-cms'); if (box) box.scrollTop = 0;
-  if (focus){ const i = $('#fdViewBody .fd-form input'); if (i) i.focus({preventScroll: true}); }
+  // on phones the keyboard would cover the comments, so only jump into the box on bigger screens
+  if (focus && !matchMedia('(max-width: 760px), (pointer: coarse)').matches){ const i = $('#fdViewBody .fd-form input'); if (i) i.focus({preventScroll: true}); }
 }
 // redraw the open viewer without losing what you're typing or where you scrolled
 function fdViewRefresh(){

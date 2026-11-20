@@ -129,7 +129,7 @@ document.addEventListener('click', e => { const b = e.target.closest('.lk-who[da
   fdViewHtml = function(p){
     const html = _vh(p), t = document.createElement('template'); t.innerHTML = html;
     const act = t.content.querySelector('.fv-foot .fd-act');
-    if (act) act.insertAdjacentHTML('beforeend', `<button class="fd-insb${FDV.ins === p.id ? ' on' : ''}" data-ins="${FDV.ins === p.id ? 'back' : 'open'}" aria-label="${p.w === -1 ? 'Insights' : 'Post info'}" title="${p.w === -1 ? 'Insights' : 'Post info'}"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>`);
+    if (act && p.w === -1) act.insertAdjacentHTML('beforeend', `<button class="fd-insb${FDV.ins === p.id ? ' on' : ''}" data-ins="${FDV.ins === p.id ? 'back' : 'open'}" aria-label="${p.w === -1 ? 'Insights' : 'Post info'}" title="${p.w === -1 ? 'Insights' : 'Post info'}"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>`);
     const lc = t.content.querySelector('.fv-foot .fd-likes'); if (lc && fdLikes(p)) lc.classList.add('lk-open'), lc.setAttribute('data-ins', 'likers'), lc.setAttribute('role', 'button'), lc.setAttribute('tabindex', '0');
     if (FDV.likers === p.id){ const box = t.content.querySelector('.fv-cms'); if (box){ box.classList.add('ins-on'); box.innerHTML = insLikersHtml(p); } }
     else if (FDV.ins === p.id){ const box = t.content.querySelector('.fv-cms'); if (box){ box.classList.add('ins-on'); box.innerHTML = insHtml(p); } const f = t.content.querySelector('.fv-foot .fd-form'); if (f) f.hidden = true; }
