@@ -68,7 +68,9 @@ function lfTrend(dk, m){
     const d = botDay(i, dk), s = d && d.sessions.find(x => x.a <= m && x.b >= m);
     if (s){ cnt.set(s.subj, (cnt.get(s.subj) || 0) + 1); seen++; }
   }
-  LF.trend = [...cnt.entries()].sort((x, y) => y[1] - x[1]).slice(0, 5).map(([s, n]) => [s, Math.round(n / Math.max(1, seen) * LF.live)]);
+  const k0 = LF.live / Math.max(1, seen);
+  LF.subj = new Map([...cnt.entries()].map(([s, n]) => [s, Math.round(n * k0)])); LF.subjMin = Math.max(1, Math.round(k0));
+  LF.trend = [...cnt.entries()].sort((x, y) => y[1] - x[1]).slice(0, 5).map(([s, n]) => [s, Math.round(n * k0)]);
 }
 // who counts as "for you": near your rating, people you've played, rivals, people you've messaged
 function lfMine(){
@@ -142,11 +144,13 @@ function lfRankUps(out, p, t, mine, near){
   up(p.ra, p.ra + p.dlt, p.a); up(p.rc, p.rc - p.dlt, p.c);
 }
 function lfAgo(t){ const d = LF.m - t; return d <= 0 ? 'now' : d < 60 ? `${d}m` : `${Math.floor(d / 60)}h`; }
+// a subject you can hover (or tap) to see how many are studying it right now
+const lfSubj = s => { const n = LF.subj && LF.subj.get(s), tip = n ? `${n.toLocaleString()} studying ${s} right now` : `Under ${(LF.subjMin || 1).toLocaleString()} studying ${s} right now`; return `<span class="lf-subj" tabindex="0" data-tip="${esc(tip)}">${esc(s)}</span>`; };
 const lfName = i => `<button class="lnk" data-bot="${i}">${esc(bot(i).name)}</button>`;
 function lfRow(ev){
   let ic = 'play', txt = '';
-  if (ev.kind === 'start'){ const d = botDay(ev.i, LF.dk), s = d && d.sessions.find(x => x.a === SCH_A[ev.k]); txt = `${lfName(ev.i)} <span>started ${s ? `${esc(MODE_NAMES[s.mode] || 'a session')} on ${esc(s.subj)}` : 'studying'}</span>`; }
-  else if (ev.kind === 'end'){ const d = botDay(ev.i, LF.dk), s = d && d.sessions.find(x => x.a === SCH_A[ev.k]); ic = 'check'; txt = `${lfName(ev.i)} <span>finished ${ev.min >= 90 ? `${Math.floor(ev.min / 60)} h ${ev.min % 60 ? `${ev.min % 60} min` : ''}` : `${ev.min} min`}${s ? ` of ${esc(s.subj)}` : ''}</span>`; }
+  if (ev.kind === 'start'){ const d = botDay(ev.i, LF.dk), s = d && d.sessions.find(x => x.a === SCH_A[ev.k]); txt = `${lfName(ev.i)} <span>started ${s ? `${esc(MODE_NAMES[s.mode] || 'a session')} on ${lfSubj(s.subj)}` : 'studying'}</span>`; }
+  else if (ev.kind === 'end'){ const d = botDay(ev.i, LF.dk), s = d && d.sessions.find(x => x.a === SCH_A[ev.k]); ic = 'check'; txt = `${lfName(ev.i)} <span>finished ${ev.min >= 90 ? `${Math.floor(ev.min / 60)} h ${ev.min % 60 ? `${ev.min % 60} min` : ''}` : `${ev.min} min`}${s ? ` of ${lfSubj(s.subj)}` : ''}</span>`; }
   else if (ev.kind === 'hours'){ ic = 'flame'; txt = `${lfName(ev.i)} <span>passed ${ev.h} hours today</span>`; }
   else if (ev.kind === 'rank'){ ic = 'up'; txt = `${lfName(ev.i)} <span>reached ${emblem(ev.rk, 'xs')} ${esc(ev.rk.full)}</span>`; }
   else if (ev.kind === 'match'){ const p = ev.p, aw = p.ma >= p.mc, w = aw ? p.a : p.c, l = aw ? p.c : p.a, wm = Math.max(p.ma, p.mc), lm = Math.min(p.ma, p.mc), d = Math.abs(p.dlt);
@@ -198,7 +202,7 @@ function renderLive(force){
     <p class="hint lf-peak">${LF.peak && LF.peak.h !== h ? `Busiest so far today: ${hourLabel(LF.peak.h)}, ${LF.peak.n.toLocaleString()} studying.` : 'This is the busiest hour so far today.'}</p>
     <div class="lf-bars" aria-label="Players studying in each hour today">${bars}</div>
     <div class="lf-axis"><span>12 AM</span><span>6 AM</span><span>noon</span><span>6 PM</span><span>11 PM</span></div>
-    ${LF.trend.length ? `<div class="lf-sub">Trending right now</div><div class="lf-trend">${LF.trend.map(([s, n]) => `<div><span>${esc(s)}</span><i><b style="width:${Math.round(n / tmax * 100)}%"></b></i><em>${n.toLocaleString()}</em></div>`).join('')}</div>` : ''}
+    ${LF.trend.length ? `<div class="lf-sub">Trending right now</div><div class="lf-trend">${LF.trend.map(([s, n]) => `<div><span>${lfSubj(s)}</span><i><b style="width:${Math.round(n / tmax * 100)}%"></b></i><em>${n.toLocaleString()}</em></div>`).join('')}</div>` : ''}
     <div class="lf-tabs" role="tablist">${LF_TABS.map(([k, n]) => `<button role="tab" data-lft="${k}" aria-selected="${LF.tab === k}">${n}</button>`).join('')}</div>
     <p class="hint lf-pause" hidden>Paused while you focus.</p>
     ${list}
@@ -231,6 +235,7 @@ document.addEventListener('click', e => {
   const bar = e.target.closest('.lf-bars span[data-tip]');
   document.querySelectorAll('.lf-bars .tip').forEach(x => { if (x !== bar) x.classList.remove('tip'); });
   if (bar){ bar.classList.toggle('tip'); return; }
+  const sj = e.target.closest('.lf-subj'); document.querySelectorAll('.lf-subj.tip').forEach(x => { if (x !== sj) x.classList.remove('tip'); }); if (sj){ sj.classList.toggle('tip'); return; }
   const t = e.target.closest('[data-lft]');
   if (t){ LF.tab = t.dataset.lft; P.lfTab = LF.tab; try { saveP(); } catch(err){} renderLive(true); return; }
   const a = e.target.closest('[data-lfa]');
@@ -240,10 +245,23 @@ document.addEventListener('click', e => {
     else { showPage('focus'); startSearch(); }
     return;
   }
-  if (e.target.closest('#navLive')){ showPage('ranked'); setTimeout(() => { const c = $('#rkLive'); if (c) c.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 50); }
+  if (e.target.closest('#navLive')){ if (typeof FDV !== 'undefined') FDV.tab = 'live'; showPage('feed'); }
   const bb = e.target.closest('#rkLive [data-bot], #fdLive [data-bot], #fdSide [data-bot], #fdStrip [data-bot]'); if (bb){ e.stopPropagation(); openProfile(+bb.dataset.bot); }
 });
 setInterval(() => { try { renderLive(); } catch(e){ console.error(e); } }, 30000);
 // draw it with the rest of the Ranked page
 const _renderRanked0 = renderRanked;
 renderRanked = function(){ const r = _renderRanked0.apply(this, arguments); try { renderLive(); } catch(e){ console.error(e); } return r; };
+
+// the subject tooltip floats above everything, so scrolling lists can't cut it off
+{ let tipEl = null;
+  const show = el => { if (!tipEl){ tipEl = document.createElement('div'); tipEl.className = 'lf-float'; document.body.appendChild(tipEl); }
+    const r = el.getBoundingClientRect(); tipEl.textContent = el.dataset.tip; tipEl.style.left = (r.left + r.width / 2) + 'px'; tipEl.style.top = (r.top - 6) + 'px'; tipEl.hidden = false; };
+  const hide = () => { if (tipEl) tipEl.hidden = true; };
+  document.addEventListener('mouseover', e => { const el = e.target.closest('.lf-subj'); if (el) show(el); });
+  document.addEventListener('mouseout', e => { if (e.target.closest('.lf-subj')) hide(); });
+  document.addEventListener('focusin', e => { const el = e.target.closest('.lf-subj'); if (el) show(el); });
+  document.addEventListener('focusout', hide);
+  document.addEventListener('click', e => { const el = e.target.closest('.lf-subj'); if (el) show(el); else hide(); });
+  window.addEventListener('scroll', hide, true);
+}
