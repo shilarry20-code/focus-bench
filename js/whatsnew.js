@@ -3,6 +3,10 @@
    something big starts the next one. A dot on the panel button (and on More on phones) shows until you've opened
    the page, and after a change ships you get a one-time note. Whether you've seen it is kept per device. */
 const UPDATES = [
+  {n: 16, name: 'Shared Feed', when: 'Nov 20', secs: [
+    ['Shared feed', ['Turn it on in Settings → Shared feed and sign in with Google: your feed (posts, comments, likes, follows and notifications) lives in your own free Firebase database, so every device shows the same thing', 'One device writes new posts and comments at a time: whichever you used last. The others follow along, so your free Gemini requests aren’t spent twice', 'The first device to sign in uploads its feed; other devices switch to it (your own posts are kept)', 'Settings shows today’s reads and writes against Firebase’s free daily limits']],
+    ['Feed', ['Posts now stay for 90 days (the top posts of all time, your own posts and ones you liked stay longer)']]],
+    fixes: []},
   {n: 15, name: 'Levels', when: 'Nov 20', secs: [
     ['Levels', ['Earn XP and level up: 1 XP per minute studied, +25 for hitting your daily goal, +30 per ranked win, XP for every challenge, and +25 to +500 for achievements', 'Your whole history counts, so you start at the level you’ve already earned', 'Early levels come quickly, then each one takes a bit more (40 XP more than the last)', 'Your level and XP bar sit in the top bar and under the timer, with +XP pops and a level-up banner', 'A level card on your profile shows today’s XP and where all your XP came from', 'Level badges next to names in the Feed, leaderboards, chat, DMs and profiles, coloured by tier: Grey, Bronze (10), Silver (25), Gold (50), Diamond (75) and Legendary (100)', 'Everyone else has a level too, and there’s a new Level board under Awards']],
     ['Challenges', ['Each challenge gives XP by how hard it is (daily 20–40, weekly 100–150, monthly 300–400), plus a bonus for finishing a whole set (+50, +200, +500)', 'Only daily challenges can be rerolled now']],

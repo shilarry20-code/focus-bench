@@ -16,7 +16,7 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 20 · 69';
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 20 · 70';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -69,7 +69,7 @@ const SECTIONS = {
     items: () => { const o = {}; if (typeof FD === 'undefined' || !FD_READY) return o;
       FD.posts.forEach(p => { if (p.w === -1 && p.id) o['p:' + p.id] = fdSyncPost(p); });
       o.follows = FD.follows.slice().sort((a, b) => a - b); o.followers = FD.followers.slice().sort((a, b) => a - b); return o; },
-    put: o => { if (typeof FD === 'undefined') return; if (!FD_READY){ FD_SYNC_PEND = o; return; } fdSyncPut(o, true); }
+    put: o => { if (typeof FD === 'undefined' || (typeof CL !== 'undefined' && CL.on && CL.ready)) return; if (!FD_READY){ FD_SYNC_PEND = o; return; } fdSyncPut(o, true); }
   },
   guides: {
     items: () => { const o = {}; GUIDES.forEach(g => { if (g && g.id) o[g.id] = g; }); return o; },
@@ -85,6 +85,7 @@ function noteChange(sec){
   if (!syncSnap) return;
   if (sec === 'ach'){ markDirty(); return; }
   if (!syncSnap[sec]){ syncSnap[sec] = takeSnap(sec); return; }
+  if (sec === 'feed' && typeof CL !== 'undefined' && CL.on && CL.ready) return;     // the shared feed (Firebase) carries it instead
   const now = Date.now(), before = syncSnap[sec], after = takeSnap(sec);
   syncSnap[sec] = after;
   if (syncApplying) return;
