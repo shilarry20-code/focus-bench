@@ -327,7 +327,7 @@ function fdComposerHtml(){
     body = `<div class="fd-build"><div class="fd-prev">${sceneSvg(S, 'prev')}</div><div class="fd-opts">
       <div class="fd-row"><button type="button" class="small-btn" data-fda="rand">Shuffle everything</button></div>
       ${sel('set', SC.SETTING, S.set, 'Where')}${sel('light', SC.LIGHT, S.light, 'Lighting')}${sel('angle', SC.ANGLE, S.angle, 'Camera')}
-      ${self ? sel('expr', SC.EXPR, S.expr, 'Face') + sel('pose', SC.POSE, S.pose, 'Pose') + sel('hand', Object.fromEntries(Object.entries(SC.HAND).map(([k, v]) => [k, v || 'no gesture'])), S.hand, 'Hands')
+      ${self ? sel('expr', SC.EXPR, S.expr, 'Face') + sel('pose', SC.POSE, S.pose, 'Pose') + `<label>Hands<select data-fdw="hand">${Object.entries(SC.HAND).map(([k, v]) => { const ok = scHandOk(S.pose, k); return `<option value="${k}"${k === S.hand ? ' selected' : ''}${ok ? '' : ' disabled'}>${esc(v || 'no gesture')}${ok ? '' : ' (hands are busy)'}</option>`; }).join('')}</select></label>`
         + `<details class="fd-look"><summary>How you look</summary>${sel('lk:skin', Object.fromEntries(SKIN.map((c, k) => [c, ['Lightest', 'Light', 'Light-medium', 'Medium', 'Medium-deep', 'Deep', 'Deepest'][k]])), L.skin, 'Skin tone')}${sel('lk:hair', Object.fromEntries(HAIR.map((c, k) => [c, ['Black', 'Dark brown', 'Brown', 'Light brown', 'Dirty blond', 'Blond', 'Red', 'Gray', 'Blue', 'Purple', 'Green', 'White', 'Pink'][k] || c])), L.hair, 'Hair color')}${sel('lk:style', {short: 'Short', long: 'Long', bun: 'Bun', curly: 'Curly', buzz: 'Buzz cut', side: 'Side part', afro: 'Afro', bob: 'Bob', spiky: 'Spiky', pony: 'Ponytail'}, L.style, 'Hair style')}<label class="fd-chk"><input type="checkbox" data-fdw="lk:glasses"${L.glasses ? ' checked' : ''}> Glasses</label></details>`
         : [0, 1, 2, 3, 4, 5].map(k => sel('prop' + k, props, S.props[k] || '', `Thing ${k + 1}`, 'nothing')).join('') + `<label>Note<input data-fdw="cls" maxlength="24" value="${esc(S.cls || '')}" placeholder="what the sticky note says"></label>`}
       ${sel('season', SC.SEASON, S.season || '', 'Season', 'none')}
@@ -396,7 +396,8 @@ document.addEventListener('input', e => {
   else if (k === 'season') S.season = v || null;
   else S[k] = v;
   if (k === 'angle' && v === 'selfie') S.look = fdMyLook();
-  if (k === 'angle' || k.startsWith('lk:')) fdComposerRedraw();
+  if (k === 'pose' && !scHandOk(S.pose, S.hand)) S.hand = 'none';
+  if (k === 'angle' || k === 'pose' || k.startsWith('lk:')) fdComposerRedraw();
   else { const pv = document.querySelector('#fdComp .fd-prev'); if (pv) pv.innerHTML = sceneSvg(S, 'prev'); }
 });
 
