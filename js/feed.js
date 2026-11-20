@@ -124,6 +124,10 @@ const fdCount = p => Math.max(fdTarget(p), fdWritten(p));
 // likes on a comment: set when it's written (older comments get a stable stand-in)
 const fdCmLikes = (p, reply) => Math.round(Math.max(0, fdLikes(p) * .004 * Math.exp((Math.random() + Math.random() + Math.random() - 1.5) * 1.6) * (reply ? .25 : 1)));
 const fdLk = (c, p) => c.lk != null ? c.lk : Math.floor(Math.max(1, fdLikes(p)) * .006 * Math.pow((fdHash(c.id) % 1000) / 1000, 3) * (c.re ? .3 : 1));
+// a comment's heart: tap to like it; the count sits under the heart, like Instagram
+const fdCmLiked = c => !!(FD.cliked && FD.cliked[c.id]);
+const fdCmCount = (c, p) => fdLk(c, p) + (fdCmLiked(c) ? 1 : 0);
+const fdHeart = (c, p) => { const n = fdCmCount(c, p), on = fdCmLiked(c); return `<button class="fd-cheart${on ? ' on' : ''}" data-fda="clike" aria-label="${on ? 'Unlike' : 'Like'} comment" aria-pressed="${on}"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9-8.6C1.6 8.4 3.4 5 6.7 5c1.9 0 3.3 1.1 4.3 2.5C12 6.1 13.4 5 15.3 5c3.3 0 5.1 3.4 3.7 6.4C17 15.6 12 20 12 20z"/></svg>${n ? `<small>${fdFmtN(n)}</small>` : ''}</button>`; };
 const fdFmtN = n => n >= 1e4 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'K' : n.toLocaleString();
 const fdShownComments = p => (p.cm || p.pv || []).filter(c => c.t <= Date.now() && !c.del);
 // which comment an answer belongs under: the latest one by the named person (also catches text that starts with @name)
@@ -286,8 +290,8 @@ function fdPostHtml(p){
     <div class="fd-b"><div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9.1C1.2 8.6 3.1 5 6.6 5c2 0 3.4 1.2 4.4 2.6C12 6.2 13.4 5 15.4 5c3.5 0 5.4 3.6 3.9 6.9C19 16.4 12 21 12 21z"/></svg></button><button class="fd-cbtn" data-fda="comments" aria-label="Comments"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/></svg></button></div>
     <div class="fd-likes">${likes.toLocaleString()} like${likes === 1 ? '' : 's'}</div>
     ${p.type !== 'text' && p.cap ? `<p class="fd-cap">${fdWho(p.w)} ${esc(p.cap)}</p>` : !p.cap && !p.gen && !me ? '<p class="fd-cap hint">…</p>' : ''}
-    ${nc > show.length ? `<button class="fd-more" data-fda="comments">View all ${nc.toLocaleString()} comments</button>` : ''}
-    ${show.map(c => `<div class="fd-c${c.w === -1 ? ' me' : ''}" data-cid="${c.id}">${fdWho(c.w)} <span>${esc(c.text)}</span><small>${fdAgo(c.t)}${c.w !== -1 ? ` · <button data-fda="reply">Reply</button>` : ''}</small></div>`).join('')}
+    ${nc > show.length ? `<button class="fd-more" data-fda="comments">${nc === 1 ? 'View 1 comment' : `View all ${nc.toLocaleString()} comments`}</button>` : ''}
+    ${show.map(c => `<div class="fd-c${c.w === -1 ? ' me' : ''}" data-cid="${c.id}">${fdWho(c.w)} <span>${esc(c.text)}</span><small>${fdAgo(c.t)}${c.w !== -1 ? ` · <button data-fda="reply">Reply</button>` : ''}</small>${fdHeart(c, p)}</div>`).join('')}
     </div></article>`;
 }
 // tabs and their icons
@@ -497,7 +501,7 @@ function fdViewHtml(p){
   const av = w => w === -1 ? myAvatar('sm') : avatar(bot(w), 'sm'), nc = fdCount(p);
   // top-level comments: yours first, then the most liked; answers stay folded under each one until you open them
   const tree = p.cm ? fdTree(cms).sort((a, b) => (b.c.w === -1) - (a.c.w === -1) || fdLk(b.c, p) - fdLk(a.c, p)) : [];
-  const cmHtml = (c, to) => { const lk = fdLk(c, p); return `<div class="fv-c${c.w === -1 ? ' me' : ''}${to !== 0 ? ' sub' : ''}" data-cid="${c.id}">${av(c.w)}<div>${fdWho(c.w)} <span>${to && to.w !== c.w ? `<b class="fv-at">@${esc(fdNameOf(to.w))}</b> ` : ''}${esc(c.text)}</span><small>${fdAgo(c.t)}${lk ? ` · ${fdFmtN(lk)} like${lk === 1 ? '' : 's'}` : ''}${c.w !== -1 ? ' · <button data-fda="reply">Reply</button>' : ''}</small></div></div>`; };
+  const cmHtml = (c, to) => { const lk = fdLk(c, p); return `<div class="fv-c${c.w === -1 ? ' me' : ''}${to !== 0 ? ' sub' : ''}" data-cid="${c.id}">${av(c.w)}<div>${fdWho(c.w)} <span>${to && to.w !== c.w ? `<b class="fv-at">@${esc(fdNameOf(to.w))}</b> ` : ''}${esc(c.text)}</span><small>${fdAgo(c.t)}${c.w !== -1 ? ' · <button data-fda="reply">Reply</button>' : ''}</small></div>${fdHeart(c, p)}</div>`; };
   return `<div class="fv" data-pid="${p.id}">
     <div class="fv-media fd-media" data-fda="dbl">${fdMedia(p)}</div>
     <div class="fv-side">
@@ -562,6 +566,9 @@ document.addEventListener('click', e => {
   if (act === 'focus'){ const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); return; }
   if (act === 'reply'){ const c = a.closest('[data-cid]'), cm = (p.cm || p.pv || []).find(x => x.id === c.dataset.cid); if (!cm) return; FDV.re[p.id] = {cid: cm.id, w: cm.w, name: bot(cm.w).name}; if (!inView) return fdView(p, true); fdViewRefresh(); const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); return; }
   if (act === 'unre'){ delete FDV.re[p.id]; fdViewRefresh(); return; }
+  if (act === 'clike'){ const el = a.closest('[data-cid]'), c = (p.cm || p.pv || []).find(x => x.id === el.dataset.cid); if (!c) return;
+    FD.cliked = FD.cliked || {}; if (FD.cliked[c.id]) delete FD.cliked[c.id]; else FD.cliked[c.id] = 1; saveFeed();
+    document.querySelectorAll(`[data-cid="${c.id}"] > .fd-cheart`).forEach(b => { b.outerHTML = fdHeart(c, p); }); return; }
   if (act === 'vmore'){ FDV.vn += 30; fdViewRefresh(); return; }
   if (act === 'vrep'){ const id = a.dataset.root, n = +a.dataset.n, k = FDV.vexp[id] || 0; FDV.vexp[id] = k >= n ? 0 : Math.min(n, k + 10); fdViewRefresh(); return; }
   if (act === 'del'){ if (!confirmDel(p)) return; if (inView) $('#fdView').hidden = true; p.del = 1; FD.pend = FD.pend.filter(j => j.pid !== p.id); saveFeed(); renderFeed(); undoToast && undoToast('Post deleted.', () => { delete p.del; saveFeed(); renderFeed(); }); return; }
