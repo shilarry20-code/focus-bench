@@ -960,6 +960,8 @@ function oppPlan(b, target, t0){
   }
   return blocks;
 }
+// the moment their time reached ms
+function oppReach(c, ms){ let acc = 0; for (const [a, b] of c.plan){ if (acc + (b - a) >= ms) return Math.round(a + (ms - acc)); acc += b - a; } return c.plan[c.plan.length - 1][1]; }
 const oppThem = (c, now) => c.plan.reduce((n, [a, b]) => n + Math.max(0, Math.min(now, b) - a), 0);
 const oppState = (c, now) => now >= c.plan[c.plan.length - 1][1] ? 'stopped' : c.plan.some(([a, b]) => now >= a && now < b) ? 'studying' : now < c.plan[0][0] ? 'starting' : 'break';
 const kFactor = () => R.played < 5 ? 40 : 24;
@@ -1034,7 +1036,7 @@ function finalize(res, why){
   else { R.d++; rec[2]++; }
   const after = rankOf(R.mmr);
   R.hist.forEach(x => { if (x.open){ x.ys = Math.round(x.ys); delete x.open; } });      // only one open at a time
-  R.hist.unshift({t: Date.now(), b: c.b, br: c.br, you: youMin, them: themMin, ys: Math.round(c.you / 1000), ts: Math.round(c.target / 1000), r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0, ...(c.friendly ? {f: 1} : {}), ...(why === 'open' ? {open: 1, c0: c.t0} : {})});
+  R.hist.unshift({t: Math.min(Date.now(), c.decT || Date.now()), b: c.b, br: c.br, you: youMin, them: themMin, ys: Math.round(c.you / 1000), ts: Math.round(c.target / 1000), r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0, ...(c.friendly ? {f: 1} : {}), ...(why === 'open' ? {open: 1, c0: c.t0} : {})});
   if (why === 'open') openAt = Date.now();
   if (R.hist.length > 500) R.hist.length = 500;
   if (worldT(R.hist[0].t) >= WORLD_START) applyEvent(R.hist[0]);      // your opponent's rating and the sitting they studied
@@ -1079,8 +1081,8 @@ function endMatch(why){
 function matchResolve(now, why){
   const c = R.cur; if (!c || c.state !== 'live' || !c.plan) return false;
   if (!c.youDone){ if (c.tapped && c.you > c.target){ finalize('W', 'open'); return true; } return false; }
-  if (c.them > c.you){ finalize('L', why || 'passed'); return true; }
-  if (c.tapped){ finalize(c.you >= c.target ? 'W' : 'L', why || 'both'); return true; }
+  if (c.them > c.you){ c.decT = oppReach(c, c.you); finalize('L', why || 'passed'); return true; }
+  if (c.tapped){ c.decT = Math.max(c.youAt || 0, c.plan[c.plan.length - 1][1]); finalize(c.you >= c.target ? 'W' : 'L', why || 'both'); return true; }
   return false;
 }
 // runs inside the timer loop
@@ -1093,7 +1095,7 @@ function rankedTick(){
   if (c.state === 'live' && c.plan){
     // they might push on for another block if they'd stop behind you
     if (!c.ext && now >= c.plan[c.plan.length - 1][1] - 1000 && c.you > c.target && (BOTS[c.b].style === 'Grinder' || BOTS[c.b].style === 'Wildcard') && Math.random() < .5){
-      const a = now + (4 + Math.random() * 8) * 60000, len = (25 + Math.random() * 30) * 60000; c.plan.push([Math.round(a), Math.round(a + len)]); c.target += Math.round(len); c.ext = 1; }
+      const end = c.plan[c.plan.length - 1][1], a = Math.max(end, Math.min(now, end + 60000)) + (4 + Math.random() * 8) * 60000, len = (25 + Math.random() * 30) * 60000; c.plan.push([Math.round(a), Math.round(a + len)]); c.target += Math.round(len); c.ext = 1; }
     else if (now >= c.plan[c.plan.length - 1][1] - 1000) c.ext = c.ext || 2;
     c.them = oppThem(c, now);
     const was = c.tapped; c.tapped = now >= c.plan[c.plan.length - 1][1]; if (c.tapped && !was) renderMatch();
