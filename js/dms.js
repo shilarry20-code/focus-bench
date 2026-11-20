@@ -19,7 +19,21 @@ const dmLoadT = Date.now(), dmGenBusy = {};
 
 /* ---- facts the players know ---- */
 const thread = w => DMS.msgs.filter(m => m.w === w && !m.del);
-const dmOnline = w => { try { return chatWhoOnline().includes(w); } catch(e){ return false; } };
+// online: in the chat right now, or they just did something (liked, commented, followed, messaged) and are still around
+// for a while after (each person lingers 8 to 25 minutes)
+let dmActC = {at: 0, m: null};
+function dmLastAct(w){
+  const now = Date.now();
+  if (!dmActC.m || now - dmActC.at > 5000){
+    const m = new Map(), put = (x, t) => { if (x != null && x >= 0 && t <= now && t > (m.get(x) || 0)) m.set(x, t); };
+    try { FD.notif.forEach(n => put(n.w, n.t)); } catch(e){}
+    try { DMS.msgs.forEach(x => { if (!x.me) put(x.w, x.t); }); } catch(e){}
+    dmActC = {at: now, m};
+  }
+  return dmActC.m.get(w) || 0;
+}
+const dmLinger = w => (8 + ((w * 7919) % 18)) * 60000;
+const dmOnline = w => { try { if (chatWhoOnline().includes(w)) return true; } catch(e){} const t = dmLastAct(w); return !!t && Date.now() - t < dmLinger(w); };
 const dmStudying = w => { try { return botLiveNow(w); } catch(e){ return false; } };
 const isRival = w => { const r = R.rec[w]; return w === nemesis() || !!(r && r[0] + r[1] + r[2] >= 3); };
 const recStr = w => { const r = R.rec[w]; return r ? `${r[0]}–${r[1]}${r[2] ? '–' + r[2] : ''}` : 'never played'; };
