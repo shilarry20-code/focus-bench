@@ -16,7 +16,7 @@ const saveFeed = () => { if (FD.notif.length > 150) FD.notif = FD.notif.slice(-1
 /* ---- storage: IndexedDB, only what changed ---- */
 let FD_READY = false, fdSaveT = null;
 const FD_PS = new Map(), FD_CS = new Map();                 // what was last written for each post and its comments
-const fdPSig = p => `${p.cap || ''}|${p.del ? 1 : 0}|${p.gen ? 1 : 0}|${p.L}|${p.ln || 0}|${p.cm ? p.cm.length : p.cn || 0}|${p.bg ? 1 : 0}`;
+const fdPSig = p => `${p.cap || ''}|${p.del ? 1 : 0}|${p.gen ? 1 : 0}|${p.L}|${p.ln || 0}|${p.cm ? p.cm.length : p.cn || 0}|${p.bg ? 1 : 0}|${p.fg || 0}`;
 const fdCSig = p => p.cm ? p.cm.length + ':' + (p.cm.length ? p.cm[p.cm.length - 1].id : '') + ':' + p.cm.filter(c => c.del).length : null;
 function fdMeta(p){
   const o = {}; for (const k in p) if (k !== 'cm' && k !== 'k' && k[0] !== '_') o[k] = p[k];
@@ -327,12 +327,19 @@ function fdList(){
   const sc = p => p.t / 3600e3 + (FD.follows.includes(p.w) ? 1.5 : 0) + Math.log10(1 + p.L) * .35 + (p.w === -1 ? 2 : 0);
   return vis.sort((a, b) => sc(b) - sc(a));
 }
+// the name in a notification opens their profile
+function fdNoteHtml(n){
+  if (n.w == null || n.w < 0) return n.html;
+  const nm = `<b>${esc(bot(n.w).name)}</b>`;
+  return n.html.includes(nm) ? n.html.replace(nm, `<button class="lnk fd-nname" data-bot="${n.w}">${esc(bot(n.w).name)}</button>`) : n.html;
+}
+document.addEventListener('click', e => { if (!e.target.closest('[data-fdclr]')) return; FD.notif = []; FD.nseen = Date.now(); saveFeed(); fdBadge(); renderFeed(); toast('Notifications cleared.'); });
 function fdNotifHtml(){
   const ns = FD.notif.slice(-40).reverse();
   // likes, comments and replies show a small picture of the post; tapping the row opens it with its comments
   const row = n => { const p = n.pid ? FD.posts.find(x => x.id === n.pid && !x.del) : null;
-    return `<div class="fd-n${n.t > FD.nseen ? ' new' : ''}${p ? ' go' : ''}"${p ? ` data-open-post="${p.id}" role="button" tabindex="0"` : ''}>${n.w != null && n.w >= 0 ? avatar(bot(n.w), 'sm') : '<span class="fd-ndot"></span>'}<span>${n.html} <small>${fdAgo(n.t)}</small></span>${p ? `<span class="fd-nthumb">${fdMedia(p)}</span>` : ''}</div>`; };
-  return `<div class="card fd-notifs"><div class="h first">Activity</div>${ns.length ? ns.map(row).join('') : '<p class="hint">Likes, comments and new followers show up here.</p>'}</div>`;
+    return `<div class="fd-n${n.t > FD.nseen ? ' new' : ''}${p ? ' go' : ''}"${p ? ` data-open-post="${p.id}" role="button" tabindex="0"` : ''}>${n.w != null && n.w >= 0 ? `<button class="fd-nav" data-bot="${n.w}" aria-label="Open ${esc(bot(n.w).name)}'s profile">${avatar(bot(n.w), 'sm')}</button>` : '<span class="fd-ndot"></span>'}<span>${fdNoteHtml(n)} <small>${fdAgo(n.t)}</small></span>${p ? `<span class="fd-nthumb">${fdMedia(p)}</span>` : ''}</div>`; };
+  return `<div class="card fd-notifs"><div class="fd-nhead"><div class="h first">Activity</div>${ns.length ? '<button class="small-btn" data-fdclr>Clear</button>' : ''}</div>${ns.length ? ns.map(row).join('') : '<p class="hint">Likes, comments and new followers show up here.</p>'}</div>`;
 }
 document.addEventListener('click', e => { const r = e.target.closest('[data-open-post]'); if (!r || e.target.closest('[data-bot]')) return; const p = FD.posts.find(x => x.id === r.dataset.openPost); if (p) fdView(p); });
 function renderFeed(){
@@ -441,7 +448,7 @@ async function fdTick(){
     }
     // new followers, more often the higher you climb and the more you post
     const rate = .12 + fdMyPop() / 500 + FD.posts.filter(p => p.w === -1 && now - p.t < 864e5).length * .15;
-    if (Math.random() < rate / 60){ const pool = fdPool().filter(w => !FD.followers.includes(w)); if (pool.length){ const w = pool[Math.floor(Math.random() * pool.length)]; FD.followers.push(w); fdNote('follow', w, `<b>${esc(bot(w).name)}</b> started following you`); } }
+    if (Math.random() < rate / 60){ const pool = fdPool().filter(w => !FD.followers.includes(w)); if (pool.length){ const w = pool[Math.floor(Math.random() * pool.length)]; FD.followers.push(w); if (typeof insFollowed === 'function') insFollowed(); fdNote('follow', w, `<b>${esc(bot(w).name)}</b> started following you`); } }
     // likes on your posts: a note at 1, 5, 10, 25, 50, 100…
     FD.posts.filter(p => p.w === -1 && !p.del).forEach(p => { const n = fdLikes(p) - (FD.liked[p.id] ? 1 : 0), marks = [1, 5, 10, 25, 50, 100, 250, 500, 1000], hit = marks.filter(x => x <= n).pop();
       if (hit && hit > (p.ln || 0)){ p.ln = hit; const w = fdCommenters(p, 1)[0]; fdNote('like', w, hit === 1 ? `<b>${esc(bot(w).name)}</b> liked your post` : `<b>${esc(bot(w).name)}</b> and ${hit - 1} others liked your post`, p.id); } });
@@ -496,7 +503,7 @@ function fdComposerHtml(){
 function fdTextBgC(C){ return C.bg || (C.bg = fdTextBgNew()); }
 function fdPublish(){
   const C = FDV.composer, now = Date.now(), cap = (C.cap || '').replace(/\s+/g, ' ').trim();
-  let p = {id: fdId(), w: -1, t: now, cm: [], cap, gen: 1};
+  let p = {id: fdId(), w: -1, t: now, cm: [], cap, gen: 1, fg: 0};
   if (C.mode === 'pic') p = {...p, type: 'scene', spec: {...C.S, look: C.S.angle === 'selfie' ? fdMyLook() : C.S.look}};
   else if (C.mode === 'share'){ const it = fdShareItems()[C.share]; if (!it) return toast('Nothing to share yet.'); p = {...p, type: it.type, d: it.d}; }
   else { if (!cap) return toast('Write something first.'); p.type = 'text'; p.bg = fdTextBgC(C); }
@@ -540,16 +547,16 @@ function fdView(p, focus){
   if (FDV.view !== p.id){ FDV.vn = 30; FDV.vexp = {}; }
   if (!p.cm) fdCm(p).then(() => fdViewRefresh());
   FDV.view = p.id; $('#fdView').hidden = false; $('#fdViewBody').innerHTML = fdViewHtml(p);
-  const box = $('#fdViewBody .fv-cms'); if (box) box.scrollTop = box.scrollHeight;
-  if (focus){ const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); }
+  const box = $('#fdViewBody .fv-cms'); if (box) box.scrollTop = 0;
+  if (focus){ const i = $('#fdViewBody .fd-form input'); if (i) i.focus({preventScroll: true}); }
 }
 // redraw the open viewer without losing what you're typing or where you scrolled
 function fdViewRefresh(){
   if (!fdViewOpen()) return; const p = FD.posts.find(x => x.id === FDV.view); if (!p || p.del) return fdViewClose();
   const host = $('#fdViewBody'), i = host.querySelector('.fd-form input'), val = i ? i.value : '', foc = i && document.activeElement === i, box = host.querySelector('.fv-cms');
-  const atEnd = box ? box.scrollTop + box.clientHeight >= box.scrollHeight - 30 : true, top = box ? box.scrollTop : 0;
+  const top = box ? box.scrollTop : 0;
   host.innerHTML = fdViewHtml(p);
-  const i2 = host.querySelector('.fd-form input'), b2 = host.querySelector('.fv-cms'); if (i2){ i2.value = val; if (foc) i2.focus(); } if (b2) b2.scrollTop = atEnd ? b2.scrollHeight : top;
+  const i2 = host.querySelector('.fd-form input'), b2 = host.querySelector('.fv-cms'); if (i2){ i2.value = val; if (foc) i2.focus(); } if (b2) b2.scrollTop = top;
 }
 function fdViewClose(){ $('#fdView').hidden = true; FDV.view = null; renderFeed(); if (!$('#page-profile').hidden && typeof renderProfilePage === 'function') renderProfilePage(); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && fdViewOpen()) fdViewClose(); });
@@ -591,7 +598,9 @@ function confirmDel(){ return true; }
 document.addEventListener('submit', e => {
   const f = e.target.closest('.fd-form'); if (!f) return; e.preventDefault();
   const p = FD.posts.find(x => x.id === f.closest('[data-pid]').dataset.pid), i = f.querySelector('input'), text = i.value.replace(/\s+/g, ' ').trim();
-  if (p && text) fdComment(p, text);
+  if (p && text){ fdComment(p, text);
+    // show what you just wrote
+    const c = p.cm && p.cm[p.cm.length - 1], el = c && document.querySelector(`#fdViewBody [data-cid="${c.id}"]`); if (el) el.scrollIntoView({block: 'nearest'}); }
 });
 // the picture builder: every change redraws the preview
 document.addEventListener('input', e => {
