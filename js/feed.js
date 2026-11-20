@@ -74,14 +74,35 @@ function fdAbout(p){
   if (p.type === 'scene') return sceneDesc(fdSpec(p));
   if (p.type === 'session') return `A session receipt card: ${who} just finished ${p.d.min} min of ${p.d.subj} (${MODE_NAMES[p.d.mode] || 'a session'}), ${Math.floor(p.d.tot / 60)}h ${p.d.tot % 60}m today so far.`;
   if (p.type === 'match' || p.type === 'rank'){ const won = p.d.ys > p.d.ts; return `A ranked match result card: ${who} ${won ? 'beat' : 'lost to'} ${p.d.opp === -1 ? myName() : bot(p.d.opp).name}, ${p.d.ys}–${p.d.ts} min, ${p.d.dl > 0 ? '+' : ''}${p.d.dl} Elo${p.type === 'rank' ? `, and it ranked them up to ${p.d.rk}` : ''}.`; }
-  if (p.type === 'text'){ let bg = ''; try { bg = sceneDesc(fdTextSpec(p)).split('. ')[0]; } catch(e){} return (p.cap ? `A text post: "${p.cap}"` : 'A text post (the words are the post).') + (bg ? ` The words sit over a dimmed background photo (${bg.toLowerCase()}).` : ''); }
+  if (p.type === 'text') return p.cap ? `A text post (just big words on a colored card, no photo): "${p.cap}"` : 'A text post (just big words on a colored card, no photo).';
   return '';
 }
-function fdTextSpec(p){
-  if (p.spec) return p.spec; if (p._spec) return p._spec;
-  const me = p.w === -1, B = me ? null : bot(p.w), d = new Date(p.t), ang = ['front', 'top', 'wide', 'front', 'door', 'shoulder'][fdHash(p.id + 'a') % 6];
-  const sc = p.sc || {seed: fdHash(p.id), hue: me ? 220 : B.hue, maj: me ? 'cs' : B.major, hour: d.getHours(), month: d.getMonth()};
-  return (p._spec = sceneSpec({...sc, look: me ? fdMyLook() : scLook(p.w), want: sc.outgoing ? {} : {angle: ang}}));
+const FD_BG_KINDS = ['solid', 'grad', 'grad', 'radial', 'dots', 'stripes', 'grid', 'lined', 'waves', 'confetti', 'blobs', 'sunset', 'checker', 'duo'];
+// which card a text post uses: yours is what you picked; everyone else's comes from the post id
+function fdTextBg0(p){ if (p.bg) return p.bg; const h = fdHash(p.id + 'bg'); return {k: FD_BG_KINDS[h % FD_BG_KINDS.length], h: (h >>> 8) % 360, h2: ((h >>> 8) % 360 + 40 + (h >>> 16) % 120) % 360}; }
+function fdTextBgNew(){ const h = Math.floor(Math.random() * 360); return {k: FD_BG_KINDS[Math.floor(Math.random() * FD_BG_KINDS.length)], h, h2: (h + 40 + Math.floor(Math.random() * 120)) % 360}; }
+function fdTextBgSvg(b, id){
+  const g = 'tg' + String(id).replace(/[^a-z0-9]/gi, ''), c1 = scH(b.h, 62, 45), c2 = scH(b.h2, 62, 42), lt = scH(b.h, 70, 93), mid = scH(b.h, 55, 70);
+  const lin = (a, z, x2 = 1, y2 = 1) => `<defs><linearGradient id="${g}" x1="0" y1="0" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${z}"/></linearGradient></defs>`;
+  const full = f => rc(0, 0, 300, 300, f, 0);
+  let svg = '', ink = 'light';
+  switch (b.k){
+    case 'solid': svg = full(c1); break;
+    case 'grad': svg = lin(c1, c2) + full(`url(#${g})`); break;
+    case 'radial': svg = `<defs><radialGradient id="${g}" cx=".3" cy=".25" r=".95"><stop offset="0" stop-color="${scH(b.h, 70, 66)}"/><stop offset="1" stop-color="${scH(b.h2, 55, 30)}"/></radialGradient></defs>` + full(`url(#${g})`); break;
+    case 'sunset': svg = lin(scH(b.h, 75, 62), scH(b.h + 50, 70, 45), 0, 1) + full(`url(#${g})`); break;
+    case 'dots': svg = full(c1) + Array.from({length: 100}, (_, k) => ci(15 + (k % 10) * 30 + (Math.floor(k / 10) % 2) * 15, 15 + Math.floor(k / 10) * 30, 4, '#fff', ' opacity=".18"')).join(''); break;
+    case 'stripes': svg = full(c1) + `<g opacity=".14">${Array.from({length: 14}, (_, k) => `<path d="M${k * 46 - 300} 300 L${k * 46} 0 h22 L${k * 46 - 278} 300z" fill="#fff"/>`).join('')}</g>`; break;
+    case 'checker': svg = full(c1) + Array.from({length: 36}, (_, k) => (k + Math.floor(k / 6)) % 2 ? rc((k % 6) * 50, Math.floor(k / 6) * 50, 50, 50, '#fff', 0, ' opacity=".1"') : '').join(''); break;
+    case 'grid': ink = 'dark'; svg = full(lt) + `<g stroke="${mid}" stroke-width="1" opacity=".55">${Array.from({length: 15}, (_, k) => `<line x1="${k * 20 + 10}" y1="0" x2="${k * 20 + 10}" y2="300"/><line x1="0" y1="${k * 20 + 10}" x2="300" y2="${k * 20 + 10}"/>`).join('')}</g>`; break;
+    case 'lined': ink = 'dark'; svg = full('#fbf8ef') + `<g stroke="#9cc3e6" stroke-width="1.2">${Array.from({length: 13}, (_, k) => `<line x1="0" y1="${40 + k * 22}" x2="300" y2="${40 + k * 22}"/>`).join('')}</g><line x1="38" y1="0" x2="38" y2="300" stroke="#e58a8a" stroke-width="1.5"/>` + [80, 150, 220].map(y => ci(14, y, 6, '#e9e4d6')).join(''); break;
+    case 'waves': svg = full(c1) + [0, 1, 2, 3].map(k => `<path d="M0 ${150 + k * 40} q37 -26 75 0 t75 0 t75 0 t75 0 V300 H0z" fill="${k % 2 ? c2 : '#fff'}" opacity="${.12 + k * .05}"/>`).join(''); break;
+    case 'confetti': { const r = mulberry32(b.h * 977 + b.h2); svg = full(c1) + Array.from({length: 40}, () => { const x = r() * 300, y = r() * 300, col = ['#fff', '#ffd166', '#06d6a0', '#ef476f', '#118ab2'][Math.floor(r() * 5)]; return r() < .5 ? ci(x, y, 2 + r() * 3, col, ' opacity=".7"') : rc(x, y, 4 + r() * 6, 3, col, 1, ` opacity=".7" transform="rotate(${Math.floor(r() * 180)} ${x.toFixed(0)} ${y.toFixed(0)})"`); }).join(''); break; }
+    case 'blobs': svg = full(c1) + ci(40, 50, 90, c2, ' opacity=".55"') + ci(270, 260, 110, scH(b.h + 180, 60, 60), ' opacity=".35"') + ci(250, 40, 50, '#fff', ' opacity=".12"'); break;
+    case 'duo': svg = full(c1) + pa('M0 300 L300 0 V300z', c2, ' opacity=".8"'); break;
+    default: svg = full(c1);
+  }
+  return {svg, ink};
 }
 function fdSpec(p){ if (p.spec) return p.spec; return (p._spec = p._spec || sceneSpec({...p.sc, look: scLook(p.w)})); }
 // who comments: people who'd plausibly see it (followers of theirs are everyone near them, people online now)
@@ -162,11 +183,11 @@ function fdCard(p){
       + tx(80, 154, esc(who.slice(0, 14)), 11, '#fff') + tx(220, 154, esc(opp.slice(0, 14)), 11, '#fff', ' opacity=".8"') + rc(95, 190, 110, 34, '#fff', 17, ' opacity=".15"') + tx(150, 213, `${won ? '+' : '−'}${dl} Elo`, 16, won ? '#b9f6ca' : '#ffcdd2') + tx(150, 262, esc(rankOf(d.r).full), 11, '#fff', ' opacity=".75"');
     return svg(b);
   }
-  // a text post: the words over a dimmed picture
+  // a text post: big words on a color, gradient or pattern card
   const raw = p.cap || '…', size = raw.length > 110 ? 15 : raw.length > 70 ? 18 : raw.length > 35 ? 21 : 25, lines = [], per = size >= 25 ? 16 : size >= 21 ? 19 : size >= 18 ? 23 : 27;
   let cur = ''; raw.split(' ').forEach(w => { if (cur && (cur + ' ' + w).length > per){ lines.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; }); if (cur) lines.push(cur);
-  const n = Math.min(9, lines.length), bg = sceneSvg(fdTextSpec(p), p.id + 'b').replace('<svg ', '<svg x="0" y="0" width="300" height="300" ');
-  return svg(bg + rc(0, 0, 300, 300, '#0b0b12', 0, ' opacity=".5"') + lines.slice(0, 9).map((l, k) => tx(150, 150 - (n - 1) * size * .65 + k * size * 1.3 + size * .35, esc(l), size, '#fff', ' font-weight="800" stroke="rgba(0,0,0,.35)" stroke-width="3" paint-order="stroke"')).join(''));
+  const n = Math.min(9, lines.length), bg = fdTextBgSvg(fdTextBg0(p), p.id), dark = bg.ink === 'dark';
+  return svg(bg.svg + lines.slice(0, 9).map((l, k) => tx(150, 150 - (n - 1) * size * .65 + k * size * 1.3 + size * .35, esc(l), size, dark ? '#24221f' : '#fff', ` font-weight="800"${dark ? '' : ' stroke="rgba(0,0,0,.18)" stroke-width="2" paint-order="stroke"'}`)).join(''));
 }
 const fdMedia = p => p.type === 'scene' ? sceneSvg(fdSpec(p), p.id) : fdCard(p);
 
@@ -346,17 +367,17 @@ function fdComposerHtml(){
   }
   return `<div class="card fd-comp"><div class="fd-comp-h"><b>New post</b><button class="fd-x" data-fda="close" aria-label="Close">×</button></div>
     <div class="ct-tabs fd-ctabs">${[['pic', 'Picture'], ['share', 'Share'], ['text', 'Text']].map(([k, t]) => `<button class="ct-btn${C.mode === k ? ' on' : ''}" data-fdm="${k}">${t}</button>`).join('')}</div>
-    ${C.mode === 'text' ? `<div class="fd-tprev"><div class="fd-prev">${fdCard({id: 'prevt', w: -1, t: Date.now(), type: 'text', cap: C.cap || 'What’s on your mind?', spec: fdTextBg(C)})}</div><button type="button" class="small-btn" data-fda="rand">New background</button></div>` : ''}
+    ${C.mode === 'text' ? `<div class="fd-tprev"><div class="fd-prev">${fdCard({id: 'prevt', w: -1, t: Date.now(), type: 'text', cap: C.cap || 'What’s on your mind?', bg: fdTextBgC(C)})}</div><button type="button" class="small-btn" data-fda="newbg">New background</button></div>` : ''}
     ${body}<textarea data-fdw="cap" maxlength="220" rows="2" placeholder="${C.mode === 'text' ? 'What’s on your mind?' : 'Write a caption…'}">${esc(C.cap)}</textarea>
     <div class="fd-row"><button class="small-btn accent" data-fda="post">Post</button></div></div>`;
 }
-function fdTextBg(C){ const S = C.S; return S.angle === 'selfie' ? {...S, look: fdMyLook()} : S; }
+function fdTextBgC(C){ return C.bg || (C.bg = fdTextBgNew()); }
 function fdPublish(){
   const C = FDV.composer, now = Date.now(), cap = (C.cap || '').replace(/\s+/g, ' ').trim();
   let p = {id: fdId(), w: -1, t: now, cm: [], cap, gen: 1};
   if (C.mode === 'pic') p = {...p, type: 'scene', spec: {...C.S, look: C.S.angle === 'selfie' ? fdMyLook() : C.S.look}};
   else if (C.mode === 'share'){ const it = fdShareItems()[C.share]; if (!it) return toast('Nothing to share yet.'); p = {...p, type: it.type, d: it.d}; }
-  else { if (!cap) return toast('Write something first.'); p.type = 'text'; p.spec = fdTextBg(C); }
+  else { if (!cap) return toast('Write something first.'); p.type = 'text'; p.bg = fdTextBgC(C); }
   p.L = Math.round(fdMyPop() * ({scene: 1, text: .6, session: .8, match: 1.1, rank: 1.8}[p.type] || 1) * (.6 + Math.random() * .8) * (p.spec && p.spec.angle === 'selfie' ? 1.25 : 1));
   FD.posts.push(p);
   [[0, 60 + Math.random() * 120], [1, (20 + Math.random() * 40) * 60], [2, (120 + Math.random() * 120) * 60]].forEach(([n, s]) => FD.pend.push({kind: 'eng', pid: p.id, n, due: now + s * 1000}));
@@ -417,6 +438,7 @@ document.addEventListener('click', e => {
   if (act === 'close'){ FDV.composer = null; fdComposerRedraw(); return; }
   if (act === 'rand'){ const k = FDV.composer.mode; FDV.composer = {...fdNewComposer(), mode: k, cap: FDV.composer.cap}; fdComposerRedraw(); return; }
   if (act === 'post'){ fdPublish(); return; }
+  if (act === 'newbg'){ FDV.composer.bg = fdTextBgNew(); fdComposerRedraw(); return; }
   if (act === 'more'){ FDV.shown += 16; renderFeed(); return; }
   if (!p) return;
   if (act === 'like' || (act === 'dbl' && e.detail === 2)){ if (act === 'dbl' && FD.liked[p.id]) return; FD.liked[p.id] = !FD.liked[p.id]; saveFeed();
@@ -438,7 +460,7 @@ document.addEventListener('submit', e => {
 document.addEventListener('input', e => {
   const k = e.target.dataset && e.target.dataset.fdw; if (!k || !FDV.composer) return;
   const C = FDV.composer, S = C.S, v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-  if (k === 'cap'){ C.cap = v; if (C.mode === 'text'){ const pv = document.querySelector('#fdComp .fd-tprev .fd-prev'); if (pv) pv.innerHTML = fdCard({id: 'prevt', w: -1, t: Date.now(), type: 'text', cap: v || 'What’s on your mind?', spec: fdTextBg(C)}); } return; }
+  if (k === 'cap'){ C.cap = v; if (C.mode === 'text'){ const pv = document.querySelector('#fdComp .fd-tprev .fd-prev'); if (pv) pv.innerHTML = fdCard({id: 'prevt', w: -1, t: Date.now(), type: 'text', cap: v || 'What’s on your mind?', bg: fdTextBgC(C)}); } return; }
   if (k === 'share'){ C.share = v; fdComposerRedraw(); return; }
   if (k.startsWith('lk:')){ FD.look = {...fdMyLook(), [k.slice(3)]: v}; S.look = fdMyLook(); saveFeed(); }
   else if (k.startsWith('prop')){ const n = +k.slice(4), a = S.props.slice(); a[n] = v; S.props = a.filter(Boolean); }
