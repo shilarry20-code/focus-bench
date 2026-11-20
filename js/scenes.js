@@ -155,6 +155,10 @@ SC.POSE = {arm: "from arm's length", high: 'from a high angle', low: 'from a low
 SC.HAND = {none: '', peace: 'throwing a peace sign', thumbup: 'giving a thumbs up', thumbdown: 'giving a thumbs down', guns: 'doing finger guns', ok: 'making an OK sign', wave: 'waving',
   facepalm: 'facepalming', mouth: 'with a hand over their mouth', cheeks: 'with both hands on their cheeks', shrug: 'shrugging', pray: 'with praying hands', flex: 'flexing',
   coffee: 'raising a coffee', pentwirl: 'twirling a pen', cards: 'fanning out flashcards', test: 'holding up a test (score covered)', energy: 'holding an energy drink', help: 'holding a "send help" sign'};
+// two hands per person: poses that already use some (holding the phone, stretching, chin on hands, a pet) leave fewer for a gesture
+SC.POSE_HANDS = {arm: 1, high: 1, low: 1, half: 1, bedtop: 1, mirror: 1, point: 1, chin: 2, stretch: 2, petarms: 2};
+SC.HAND_NEED = {none: 0, cheeks: 2, shrug: 2, pray: 2, help: 2};
+const scHandOk = (pose, hand) => (SC.HAND_NEED[hand] ?? 1) <= 2 - (SC.POSE_HANDS[pose] || 0);
 SC.EXPR_KEYS = Object.keys(SC.EXPR); SC.POSE_KEYS = Object.keys(SC.POSE); SC.HAND_KEYS = Object.keys(SC.HAND);
 
 /* ---- props (85): drawn in a local box, (0,0) at bottom-left, y going up as negative. c = palette ----
@@ -175,9 +179,9 @@ SC.PROP = {
   energy:     PR('an energy drink', 14, 34, 'drink', c => rc(0, -34, 14, 34, c.a1, 3) + rc(0, -26, 14, 10, '#111', 1) + tx(7, -18, 'ZAP', 6, '#fff')),
   energy3:    PR('a stack of empty energy drink cans', 44, 34, 'drink', c => [0, 15, 30].map((x, k) => rc(x, -34, 14, 34, k % 2 ? c.a1 : c.a2, 3)).join('')),
   water:      PR('a water bottle', 16, 46, 'drink', c => rc(0, -40, 16, 40, c.a3, 5) + rc(3, -46, 10, 7, '#2c2c2a', 2), c => ci(10, 10, 9, c.a3) + ci(10, 10, 5, '#2c2c2a')),
-  tea:        PR('a cup of tea', 30, 24, 'drink', c => pa('M0 -22 h24 v10 q0 12 -12 12 q-12 0 -12 -12z', '#f1efe8') + ln(18, -26, 26, -34, '#c9a26a', 1.5) + rc(24, -38, 6, 6, '#c9a26a', 1)),
+  tea:        PR('a cup of tea', 30, 24, 'drink', c => pa('M0 -22 h24 v10 q0 12 -12 12 q-12 0 -12 -12z', '#f1efe8') + ln(15, -18, 26, -34, '#c9a26a', 1.5) + rc(24, -38, 6, 6, '#c9a26a', 1)),
   soda:       PR('a soda can', 14, 26, 'drink', c => rc(0, -26, 14, 26, '#d03a3a', 3) + ln(2, -14, 12, -14, '#fff', 2)),
-  ramen:      PR('a cup of instant ramen', 30, 30, 'food', c => pa('M0 -26 h30 l-4 26 h-22z', '#f4f1ea') + rc(0, -30, 30, 6, '#d24a3a', 2) + ln(10, -34, 22, -46, '#c9a26a', 2) + ln(14, -34, 26, -46, '#c9a26a', 2), c => ci(16, 16, 15, '#f4f1ea') + ci(16, 16, 11, '#e7c27a')),
+  ramen:      PR('a cup of instant ramen', 30, 30, 'food', c => pa('M0 -26 h30 l-4 26 h-22z', '#f4f1ea') + rc(0, -30, 30, 6, '#d24a3a', 2) + ln(9, -26, 22, -46, '#c9a26a', 2) + ln(13, -26, 26, -46, '#c9a26a', 2), c => ci(16, 16, 15, '#f4f1ea') + ci(16, 16, 11, '#e7c27a')),
   pizza:      PR('a slice of pizza', 34, 18, 'food', c => pa('M0 0 L34 0 L17 -18z', '#f2c14e') + ci(12, -5, 3, '#c0392b') + ci(20, -7, 3, '#c0392b') + ln(0, 0, 34, 0, '#c98b3c', 4), c => pa('M0 30 L30 30 L15 0z', '#f2c14e') + ci(12, 22, 3, '#c0392b')),
   takeout:    PR('takeout boxes', 34, 30, 'food', c => pa('M2 -24 h30 l-3 24 h-24z', '#f4f1ea') + pa('M2 -24 l6 -6 h18 l6 6z', '#e8e3d8') + rc(14, -18, 6, 6, '#c0392b', 1)),
   snacks:     PR('a bag of chips', 28, 32, 'food', c => pa('M2 -30 h24 l2 30 h-28z', c.a1) + rc(6, -22, 16, 10, '#fff', 3) + tx(14, -14, 'chips', 6, c.a1)),
@@ -212,9 +216,9 @@ SC.PROP = {
   earbuds:    PR('an earbuds case', 14, 10, 'tech', c => rc(0, -10, 14, 10, '#f4f4f4', 5), c => rc(0, 0, 14, 12, '#f4f4f4', 5)),
   keyboard:   PR('a mechanical keyboard', 54, 10, 'tech', c => rc(0, -10, 54, 10, '#3a3a3a', 2) + [0, 1, 2, 3, 4, 5, 6, 7].map(k => rc(3 + k * 6.3, -8, 5, 4, k === 3 ? c.a1 : '#d6d6d6', 1)).join(''), c => rc(0, 0, 64, 22, '#3a3a3a', 2) + [0, 1, 2].map(r => [...Array(9)].map((_, k) => rc(3 + k * 6.6, 3 + r * 6, 5, 4.5, (r + k) % 7 ? '#d6d6d6' : c.a1, 1)).join('')).join('')),
   mouse:      PR('a mouse', 14, 8, 'tech', c => pa('M0 0 q0 -8 7 -8 q7 0 7 8z', '#4a4a4a'), c => rc(0, 0, 12, 18, '#4a4a4a', 6)),
-  charger:    PR('a tangled charger cable', 30, 8, 'tech', c => pa('M0 -2 q6 -8 12 0 t12 0 t6 -4', 'none', ' stroke="#f4f4f4" stroke-width="2"') + rc(24, -8, 6, 6, '#f4f4f4', 1)),
+  charger:    PR('a tangled charger cable', 30, 8, 'tech', c => pa('M0 -2 q6 -8 12 0 t12 0 t6 -4', 'none', ' stroke="#f4f4f4" stroke-width="2"') + rc(28, -9, 6, 6, '#f4f4f4', 1)),
   controller: PR('a game controller (put away… mostly)', 30, 14, 'tech', c => pa('M2 -2 q-4 -12 8 -12 h10 q12 0 8 12 q-3 4 -8 0 h-10 q-5 4 -8 0z', '#3a3a3a') + ci(21, -8, 1.6, c.a1) + ci(8, -8, 1.6, '#ddd')),
-  lamp:       PR('a desk lamp', 34, 56, 'decor', c => ln(8, 0, 16, -40, '#2c2c2a', 4) + pa('M8 -50 h26 l-6 -12 h-14z', c.a1, ' transform="rotate(20 21 -52)"') + rc(0, -4, 18, 4, '#2c2c2a', 2)),
+  lamp:       PR('a desk lamp', 34, 56, 'decor', c => rc(0, -5, 20, 5, '#2c2c2a', 2) + ln(10, -4, 5, -30, '#2c2c2a', 3.5) + ln(5, -30, 20, -47, '#2c2c2a', 3.5) + ci(5, -30, 3, '#2c2c2a') + pa('M15 -50 h10 l7 15 h-24z', c.a1) + ci(20, -48, 2.6, '#2c2c2a')),
   plant:      PR('a little plant', 22, 34, 'decor', c => pa('M2 -14 h18 l-3 14 h-12z', '#c97b4a') + pa('M11 -14 q-12 -10 -6 -20 q8 4 6 20z M11 -14 q12 -12 6 -20 q-8 4 -6 20z M11 -14 q0 -14 0 -18', '#5aa469'), c => ci(12, 12, 11, '#c97b4a') + ci(12, 12, 9, '#5aa469')),
   succulent:  PR('a succulent', 18, 18, 'decor', c => rc(2, -8, 14, 8, '#e8dcc8', 2) + ci(9, -11, 6, '#7fb08a') + ci(5, -10, 3.5, '#9cc8a4') + ci(13, -10, 3.5, '#9cc8a4'), c => ci(10, 10, 9, '#e8dcc8') + ci(10, 10, 6, '#7fb08a')),
   cactus:     PR('a tiny cactus', 16, 28, 'decor', c => pa('M2 -10 h12 l-2 10 h-8z', '#c97b4a') + rc(5, -26, 6, 16, '#5aa469', 3) + rc(1, -21, 4, 7, '#5aa469', 2)),
@@ -628,7 +632,7 @@ function scTop(S, c, L, r, id){
   return g;
 }
 function scPerson(S, c, L, r){
-  const look = S.look, pose = S.pose, e = S.expr, hand = S.hand;
+  const look = S.look, pose = S.pose, e = S.expr, hand = scHandOk(S.pose, S.hand) ? S.hand : 'none';
   let cx = 150, cy = 140, s = 62, tilt = 0, bodyW = 230, top = 222, g = '', front = '';
   const P = {high: () => { s = 70; cy = 150; bodyW = 190; top = 245; }, low: () => { s = 54; cy = 122; bodyW = 260; top = 200; }, mirror: () => { s = 50; cy = 115; bodyW = 200; top = 185; },
     bedtop: () => { s = 64; cy = 145; }, half: () => { cx = 40; cy = 165; s = 92; bodyW = 260; top = 270; }, books: () => { cx = 165; cy = 150; tilt = -14; s = 58; },
@@ -656,7 +660,7 @@ function scPerson(S, c, L, r){
   else if (hand === 'cheeks') front += rc(cx - s * 1.15, cy, s * .4, s * .7, look.skin, s * .18) + rc(cx + s * .75, cy, s * .4, s * .7, look.skin, s * .18);
   else if (hand === 'shrug') front += scHand('shrug', look, cx - s * 1.6, cy + s * 1.5, hs, c);
   else if (hand === 'help') front += scHand('help', look, cx, cy + s * 2.3, hs * 1.4, c);
-  else if (hand !== 'none' && pose !== 'mirror') front += scHand(hand, look, Math.min(268, cx + s * 1.35), cy + s * .95, hs * 1.15, c);
+  else if (hand !== 'none') front += scHand(hand, look, Math.min(268, cx + s * 1.35), cy + s * .95, hs * 1.15, c);
   // skin (face, ears, neck, hands, arms) has no outline, only hair, clothes and things do
   const skins = [look.skin]; if (pose === 'friend') skins.push(scLook(S.seed + 7).skin);
   let out = g + front; skins.forEach(k => { out = out.split(`fill="${k}"`).join(`fill="${k}" stroke="none"`); });
@@ -725,15 +729,16 @@ function sceneSpec(ctx){
   const EXP = {win: ['proud', 'grin', 'laugh', 'smirk', 'smile'], exam: ['panic', 'fakecry', 'grimace', 'fine', 'sweat', 'locked'], tired: ['sleepy', 'yawn', 'dead', 'melt', 'fine', 'soft']}[mood];
   const expr = w.expr || (EXP && r() < .7 ? scPick(r, EXP) : scPick(r, SC.EXPR_KEYS));
   const HND = {win: ['flex', 'guns', 'peace', 'thumbup'], exam: ['pray', 'help', 'facepalm', 'cheeks'], tired: ['coffee', 'energy', 'none', 'facepalm']}[mood];
-  const hand = w.hand || (HND && r() < .6 ? scPick(r, HND) : (r() < .3 ? 'none' : scPick(r, SC.HAND_KEYS)));
+  let hand = w.hand || (HND && r() < .6 ? scPick(r, HND) : (r() < .3 ? 'none' : scPick(r, SC.HAND_KEYS)));
   const pose = w.pose || scPick(r, SC.POSE_KEYS);
+  if (!scHandOk(pose, hand)) hand = 'none';
   return {seed: ctx.seed >>> 0, hue: ctx.hue || 0, maj, set, light, angle, props, season, cls, look: ctx.look || scLook(ctx.seed), expr, pose, hand};
 }
 // plain words for the players writing captions and comments
 function sceneDesc(S){
   const set = SC.SETTING[S.set], L = SC.LIGHT[S.light], list = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
   const props = S.props.map(k => SC.PROP[k] && SC.PROP[k].n).filter(Boolean);
-  let d = S.angle === 'selfie' ? `A selfie ${SC.POSE[S.pose]}. They're ${SC.EXPR[S.expr]}${SC.HAND[S.hand] ? `, ${SC.HAND[S.hand]}` : ''}.` : `A photo taken ${SC.ANGLE[S.angle] === 'straight on' ? 'straight on' : SC.ANGLE[S.angle].replace(/^a /, 'as a ')}.`;
+  let d = S.angle === 'selfie' ? `A selfie ${SC.POSE[S.pose]}. They're ${SC.EXPR[S.expr]}${SC.HAND[S.hand] && scHandOk(S.pose, S.hand) ? `, ${SC.HAND[S.hand]}` : ''}.` : `A photo taken ${SC.ANGLE[S.angle] === 'straight on' ? 'straight on' : SC.ANGLE[S.angle].replace(/^a /, 'as a ')}.`;
   d += ` Setting: ${set.n}, ${L.n}.`;
   if (props.length && S.angle !== 'selfie') d += ` In the picture: ${list(props)}.`;
   if (S.cls && S.angle !== 'selfie') d += ` A note says "${S.cls}".`;
