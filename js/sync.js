@@ -16,7 +16,7 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 20 · 81';
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 20 · 82';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -71,12 +71,23 @@ const SECTIONS = {
       o.follows = FD.follows.slice().sort((a, b) => a - b); o.followers = FD.followers.slice().sort((a, b) => a - b); return o; },
     put: o => { if (typeof FD === 'undefined' || (typeof CL !== 'undefined' && CL.on && CL.ready)) return; if (!FD_READY){ FD_SYNC_PEND = o; return; } fdSyncPut(o, true); }
   },
+  chal: {          // challenges: this period's sets (the same on every device), the daily reroll, and finished ones
+    items: () => { const o = {}; if (typeof CHL === 'undefined') return o;
+      ['d', 'w', 'm'].forEach(p => { if (CHL.sets[p]) o['set:' + p] = CHL.sets[p]; });
+      o.rr = CHL.rr; o.total = CHL.total || 0; o.base = CHL.base || 0;
+      Object.entries(CHL.done || {}).forEach(([k, t]) => { o['d:' + k] = t; }); Object.entries(CHL.led || {}).forEach(([k, x]) => { o['l:' + k] = x; }); return o; },
+    put: o => { if (typeof CHL === 'undefined') return;
+      const done = {}, led = {};
+      Object.entries(o).forEach(([k, v]) => { if (k.startsWith('set:')) CHL.sets[k.slice(4)] = v; else if (k.startsWith('d:')) done[k.slice(2)] = v; else if (k.startsWith('l:')) led[k.slice(2)] = v; });
+      CHL.done = done; CHL.led = led; if (o.rr) CHL.rr = o.rr; CHL.total = o.total || 0; CHL.base = o.base || 0; chXpSum(); saveChl();
+      try { chRender(); lvRender(); } catch(e){} }
+  },
   guides: {
     items: () => { const o = {}; GUIDES.forEach(g => { if (g && g.id) o[g.id] = g; }); return o; },
     put: o => { const order = GUIDES.map(g => g.id); GUIDES.length = 0; Object.values(o).sort((a, b) => (order.indexOf(a.id) + 1 || 1e9) - (order.indexOf(b.id) + 1 || 1e9)).forEach(g => GUIDES.push(g)); saveGuidesRaw(); }
   }
 };
-const STORE_SECTION = {'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked', 'fb.chat': 'chat', 'fb.dms': 'dms', 'fb.feed': 'feed'};
+const STORE_SECTION = {'fb.chal': 'chal', 'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked', 'fb.chat': 'chat', 'fb.dms': 'dms', 'fb.feed': 'feed'};
 let syncFirstDone = false;     // the chat waits for the first sync before filling in a catch-up
 
 // what each section looked like last time, to see which items changed
@@ -137,6 +148,20 @@ function mergeAch(a, b){
 // The winner is then stamped, so the decision can't flip back on a later sync.
 let tieRankedB = false, tieSettingsB = null;
 const isDefault = (k, v) => k in DEFAULTS ? JSON.stringify(DEFAULTS[k]) === JSON.stringify(v) : v == null || v === '' || (Array.isArray(v) && !v.length);
+// challenges: both devices end up with the same set (the one rerolled more, else the first one made for the period),
+// the reroll counts as used if it was used on either, and totals never go down
+function chalMerge(k, va, vb, v){
+  if (k.startsWith('set:')){
+    if (!va || !vb) return va || vb;
+    if (va.k !== vb.k) return va.k > vb.k ? va : vb;
+    if ((va.rv || 0) !== (vb.rv || 0)) return (va.rv || 0) > (vb.rv || 0) ? va : vb;
+    if ((va.at || 0) !== (vb.at || 0)) return (va.at || 0) && (va.at < vb.at || !vb.at) ? va : vb;
+    return JSON.stringify(va) < JSON.stringify(vb) ? va : vb;
+  }
+  if (k === 'rr'){ if (!va || !vb) return va || vb; if (va.day !== vb.day) return va.day > vb.day ? va : vb; return {day: va.day, used: Math.max(va.used || 0, vb.used || 0)}; }
+  if (k === 'total' || k === 'base') return Math.max(va || 0, vb || 0);
+  return v;
+}
 function tieB(sec, k, va, vb){
   if (JSON.stringify(va) === JSON.stringify(vb)) return false;
   if (sec === 'settings') return tieSettingsB !== null ? tieSettingsB : isDefault(k, va) && !isDefault(k, vb);
@@ -162,6 +187,7 @@ function mergePayload(L, Rm){
         v = useB ? b[k] : a[k]; t = Math.max(ta, tb);
         if (!t && sec !== 'log' && JSON.stringify(a[k]) !== JSON.stringify(b[k])) t = Date.now();   // settle the tie for good
         if (sec === 'guides') v = mergeGuide(v, useB ? a[k] : b[k]);
+        if (sec === 'chal') v = chalMerge(k, a[k], b[k], v);
       } else if (inA){ v = a[k]; t = ta; } else { v = b[k]; t = tb; }
       const dt = Math.max(da[k] || 0, db[k] || 0);
       if (dt && dt >= t) return;               // deleted after its last change
