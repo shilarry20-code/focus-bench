@@ -236,7 +236,7 @@ async function aiCall(sys, user){
         last = `${model} · ${em}`.slice(0, 260); GEM.detail = last;
         if (r.status === 429){
           // the day's allowance for this model is gone: switch to the next one until the reset; a per-minute limit just waits a minute
-          if (/per ?day|PerDay|daily/i.test(em + ' ' + raw)){ GEM.out = GEM.out || {}; GEM.out[model] = ptResetAt(); saveAI(); break; }
+          if (/per ?day|PerDay|daily/i.test(em + ' ' + raw)){ GEM.out = GEM.out || {}; GEM.out[model] = ptResetAt(); const used = GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n[model] || 0 : 0; if (used >= 20){ GEM.lim = GEM.lim || {}; GEM.lim[model] = used; } saveAI(); break; }
           throw {kind: 'busy', short: true, msg: last};
         }
         if (/API key|API_KEY|api_key|unauthenticated|credential/i.test(em) || r.status === 401) throw {kind: 'key', msg: last};
@@ -557,16 +557,17 @@ setInterval(() => { if (chatPageOpen()) chatLive(); }, 500);
 function aiUsageHtml(){
   const n = GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n : {}, reset = new Date(ptResetAt() - 60000).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
   return `<div class="ai-usage"><div class="h">Gemini requests today</div>${GEMINI_MODELS.map(m => { const c = n[m] || 0, out = modelOut(m);
-    return `<div class="ai-u-row"><span>${MODEL_NAMES[m]}${m === GEMINI_MODELS[0] ? ' <small class="hint">(used first)</small>' : ''}</span><span class="bar2"><i style="width:${Math.min(100, c / 5)}%"></i></span><b>${out ? 'used up' : `${c} / ~500`}</b></div>`; }).join('')}
+    return `<div class="ai-u-row"><span>${MODEL_NAMES[m]}${m === GEMINI_MODELS[0] ? ' <small class="hint">(used first)</small>' : ''}</span><span class="bar2"><i style="width:${Math.min(100, c / ((GEM.lim && GEM.lim[m]) || 500) * 100)}%"></i></span><b>${out ? 'used up' : `${c} / ${GEM.lim && GEM.lim[m] ? GEM.lim[m] : '~500'}`}</b></div>`; }).join('')}
     <p class="hint">Counts this device only; your other devices share the same daily allowance. Resets at ${reset}.</p></div>`;
 }
 function renderChatSettings(){
   const el = $('#chatSetBody'); if (!el) return;
-  el.innerHTML = `<p class="lead">The global chat is written by Gemini: the players talk to each other and answer what you say. It needs a free Gemini key; without one the room stays quiet.</p>
+  el.innerHTML = `<p class="lead">Gemini writes what the players say: Feed captions and comments, DMs and match chat. It needs a free Gemini key; without one they stay quiet.</p>
     ${GEM.key ? `<div class="sync-status ${GEM.err ? 'bad' : ''}"><span class="sync-dot${GEM.err ? ' off' : ''}"></span><span><b>${GEM.err ? esc(GEM.err) : 'Gemini is on'}</b><small>${GEM.model ? `Model: ${esc(GEM.model)}` : 'Not used yet'}${GEM.ok ? ` · last used ${syncAgo(GEM.ok)}` : ''}</small></span></div>
       ${GEM.err && GEM.detail ? `<p class="hint ai-detail">Google said: <code>${esc(GEM.detail)}</code></p>` : ''}
       ${GEM.last ? `<p class="hint ai-detail">Last chat request ${syncAgo(GEM.last.at)}: ${GEM.last.used ? `${GEM.last.got} message${GEM.last.got === 1 ? '' : 's'}, ${GEM.last.used} used` : esc(GEM.last.why || 'nothing came back')}.</p>` : ''}
       ${aiUsageHtml()}
+      ${typeof cbSettingsHtml === 'function' ? cbSettingsHtml() : ''}
       <div class="confirm"><button class="small-btn" id="aiTest">Test it</button><button class="small-btn" id="aiOff">Remove key</button></div>`
     : `<ol class="sync-steps"><li><b>Get a free key.</b> <a class="small-btn" href="${GEMINI_KEY_URL}" target="_blank" rel="noopener">Google AI Studio ↗</a><small class="hint">Sign in with Google, click <b>Create API key</b>, and copy it. Use a key from a project with <b>no billing</b> set up, so nothing can ever be charged.</small></li>
       <li><b>Paste it here.</b><span class="sync-row"><input type="password" id="aiKey" placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false" aria-label="Gemini API key"><button class="small-btn accent" id="aiSave">Save</button></span><small class="hint">It stays in this browser only. Paste it on each device you use.</small></li></ol>`}

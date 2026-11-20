@@ -331,7 +331,9 @@ const IDB = (() => {
     const t = db.transaction('kv', mode), req = fn(t.objectStore('kv'));
     t.oncomplete = () => res(req && mode === 'readonly' ? req.result : undefined); t.onerror = t.onabort = () => rej(t.error);
   }));
-  return {get: k => tx('readonly', st => st.get(k)), set: (k, v) => tx('readwrite', st => st.put(v, k)), del: k => tx('readwrite', st => st.delete(k))};
+  return {get: k => tx('readonly', st => st.get(k)), set: (k, v) => tx('readwrite', st => st.put(v, k)), del: k => tx('readwrite', st => st.delete(k)),
+    all: (lo, hi) => tx('readonly', st => st.getAll(IDBKeyRange.bound(lo, hi))),                       // every value with a key in [lo, hi]
+    setMany: list => tx('readwrite', st => { list.forEach(([k, v]) => v === undefined ? st.delete(k) : st.put(v, k)); return null; })};
 })();
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
 
