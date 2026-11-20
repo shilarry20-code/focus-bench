@@ -78,6 +78,8 @@ const RP_IC = {
   speed: '<path d="M4.5 16a8 8 0 1 1 15 0"/><path d="M12 15.5l4-5"/>'};
 const rpIc = (k, n) => `<svg viewBox="0 0 24 24" aria-hidden="true">${RP_IC[k]}${n ? `<text x="12" y="15.3" text-anchor="middle">${n}</text>` : ''}</svg>`;
 const rpNm = w => w === -1 ? 'You' : bot(w).name;
+// verbs that change for "You": rpV(w, 'wins', 'win')
+const rpV = (w, he, you) => w === -1 ? you : he;
 
 /* the match as timelines: each player's states over time (S studying, B on a break, X done) */
 function rpTracks(d){
@@ -112,7 +114,7 @@ function rpEvents(d, tr){
     add(d.start, 'start', 'The match starts');
     tr.forEach(p => { for (let k = 1; k < p.ev.length; k++){ const [t, s] = p.ev[k], prev = p.ev[k - 1][1];
       if (s === 'B' && (k + 1 >= p.ev.length || p.ev[k + 1][0] - t >= 5000)) add(t, 'brk', `${rpNm(p.w)} took a break`, p.w);
-      else if (s === 'S' && prev === 'B' && t - p.ev[k - 1][0] >= 5000) add(t, 'back', `${rpNm(p.w)} is back studying`, p.w);
+      else if (s === 'S' && prev === 'B' && t - p.ev[k - 1][0] >= 5000) add(t, 'back', `${rpNm(p.w)} ${rpV(p.w, 'is', 'are')} back studying`, p.w);
       else if (s === 'X') add(t, 'stop', `${rpNm(p.w)} stopped · ${elClock(rpStud(p.ev, t))} studied`, p.w); } });
     // lead changes: the lead is exact and straight between state changes
     const ts = [...new Set([...tr[0].ev, ...tr[1].ev].map(x => x[0]))].sort((a, b) => a - b), lead = t => rpStud(tr[0].ev, t) - rpStud(tr[1].ev, t);
@@ -120,10 +122,10 @@ function rpEvents(d, tr){
     for (let k = 0; k < ts.length - 1; k++){
       const a = ts[k], b = ts[k + 1], la = lead(a), lb = lead(b);
       if (la !== 0) last = Math.sign(la);
-      if (lb !== 0 && Math.sign(lb) !== last && last !== 0){ const x = a + Math.abs(la) / Math.abs(lb - la) * (b - a); add(Math.round(x), 'lead', `${rpNm(lb > 0 ? tr[0].w : tr[1].w)} takes the lead`, lb > 0 ? tr[0].w : tr[1].w); last = Math.sign(lb); }
+      if (lb !== 0 && Math.sign(lb) !== last && last !== 0){ const x = a + Math.abs(la) / Math.abs(lb - la) * (b - a); add(Math.round(x), 'lead', `${rpNm(lb > 0 ? tr[0].w : tr[1].w)} ${rpV(lb > 0 ? tr[0].w : tr[1].w, 'takes', 'take')} the lead`, lb > 0 ? tr[0].w : tr[1].w); last = Math.sign(lb); }
       else if (lb !== 0 && last === 0){ last = Math.sign(lb); }
     }
-    add(d.end, 'win', d.res === 'D' ? 'Draw' : `${rpNm(d.res === 'W' ? d.A : d.C)} wins · ${elClock(d.totA)} vs ${elClock(d.totC)}`, d.res === 'W' ? d.A : d.C);
+    add(d.end, 'win', d.res === 'D' ? 'Draw' : `${rpNm(d.res === 'W' ? d.A : d.C)} ${rpV(d.res === 'W' ? d.A : d.C, 'wins', 'win')} · ${elClock(d.totA)} vs ${elClock(d.totC)}`, d.res === 'W' ? d.A : d.C);
   } else {
     const G = d.G, L = G.L, RL = L.rules.round * 60000, A = elAllow(L.rules), N = L.players.length;
     add(L.t0, 'start', `The game starts · ${N} players · ${elFmtA(A[0])} of breaks`);
@@ -131,9 +133,9 @@ function rpEvents(d, tr){
       if (a <= 0 && prevA > 0) add(L.t0 + r * RL, 'sd', `Round ${r + 1} · sudden death: no more breaks`); else if (a > 0 || prevA > 0) add(L.t0 + r * RL, 'round', `Round ${r + 1} · ${elFmtA(a)} of breaks`); }
     tr.forEach(p => { for (let k = 1; k < p.ev.length; k++){ const [t, s] = p.ev[k];
       if (s === 'B' && (k + 1 >= p.ev.length || p.ev[k + 1][0] - t >= 5000)) add(t, 'brk', `${rpNm(p.w)} took a break`, p.w);
-      else if (s === 'S' && p.ev[k - 1][1] === 'B' && t - p.ev[k - 1][0] >= 5000) add(t, 'back', `${rpNm(p.w)} is back studying`, p.w); } });
+      else if (s === 'S' && p.ev[k - 1][1] === 'B' && t - p.ev[k - 1][0] >= 5000) add(t, 'back', `${rpNm(p.w)} ${rpV(p.w, 'is', 'are')} back studying`, p.w); } });
     const outs = tr.filter(p => p.out).sort((a, b) => a.out - b.out);
-    outs.forEach((p, k) => add(p.out, 'ko', `Player ${String(p.n).padStart(3, '0')} · ${rpNm(p.w)} ${p.why === 'stopped' ? 'ended their session' : p.why === 'left' ? 'left' : 'went over the break allowance'} · ${N - k - 1} left`, p.w));
+    outs.forEach((p, k) => add(p.out, 'ko', `Player ${String(p.n).padStart(3, '0')} · ${rpNm(p.w)} ${p.why === 'stopped' ? (p.w === -1 ? 'ended your session' : 'ended their session') : p.why === 'left' ? 'left' : 'went over the break allowance'} · ${N - k - 1} left`, p.w));
     const win = tr.find(p => !p.out) || outs[outs.length - 1];
     if (win) add(d.end, 'win', `${rpNm(win.w)} ${win.w === -1 ? 'win' : 'wins'}!`, win.w);
     (G.chat || []).filter(m => !m.sys).forEach(m => add(m.t, 'chat', `${m.w === -1 ? myName() : bot(m.w).name}: ${m.text}`, m.w));
@@ -211,7 +213,7 @@ function rpDraw(force){
   } else {
     const [a, c] = RP.tr, sA = rpSt(a.ev, t), sC = rpSt(c.ev, t), yA = rpStud(a.ev, t), yC = rpStud(c.ev, t), gap = yA - yC;
     const side = (p, s, y, k) => `<div class="rp-side ${s === 'X' ? 'out' : s === 'S' ? 'study' : 'break'} s${k}">${p.w === -1 ? myAvatar('lg') : avatar(bot(p.w), 'lg')}<b>${p.w === -1 ? 'You' : `<button class="lnk" data-bot="${p.w}">${esc(rpNm(p.w))}</button>`}</b><span class="rp-clk">${elClock(y)}</span><small>${s === 'X' ? 'Stopped' : s === 'S' ? 'Studying' : 'On a break'}</small></div>`;
-    body = `<div class="card rp-vs">${side(a, sA, yA, 0)}<div class="rp-mid"><span class="rp-vsx">vs</span><small>${gap === 0 ? 'Even' : `${esc(rpNm(gap > 0 ? a.w : c.w))} ahead by ${elClock(Math.abs(gap))}`}</small></div>${side(c, sC, yC, 1)}</div>`;
+    body = `<div class="card rp-vs">${side(a, sA, yA, 0)}<div class="rp-mid"><span class="rp-vsx">vs</span><small>${gap === 0 ? 'Even' : `${(gap > 0 ? a.w : c.w) === -1 ? 'You’re' : esc(rpNm(gap > 0 ? a.w : c.w))} ahead by ${elClock(Math.abs(gap))}`}</small></div>${side(c, sC, yC, 1)}</div>`;
   }
   $('#rpView').innerHTML = body;
   if (d.kind === 'el'){ const f = RP.follow; $('#rpView').querySelectorAll('.el-tile').forEach((x, k) => { x.dataset.tile = d.G.L.players[k]; x.classList.toggle('fol', +x.dataset.tile === f); }); }
