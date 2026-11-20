@@ -1665,3 +1665,7 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 .fd-n .av{flex:none}
 @media (max-width:640px){.fd-tabs{justify-content:flex-start}.fd-acts{width:100%;justify-content:flex-end;order:-1}}
 @media (max-width:640px){.fd-tabs{width:100%;max-width:100%;box-sizing:border-box}.fd-tabrow{flex:1 1 100%;width:100%}}
+.fd-n.go{cursor:pointer;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}.fd-n.go:hover{background:var(--soft)}
+.fd-n>span:nth-child(2){flex:1;min-width:0}
+.fd-n>span small{color:var(--muted);margin-left:4px}
+.fd-n .fd-nthumb{flex:none;width:44px;height:44px;border-radius:6px;overflow:hidden;line-height:0}.fd-nthumb svg{width:100%;height:100%}

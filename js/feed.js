@@ -313,8 +313,12 @@ function fdList(){
 }
 function fdNotifHtml(){
   const ns = FD.notif.slice(-40).reverse();
-  return `<div class="card fd-notifs"><div class="h first">Activity</div>${ns.length ? ns.map(n => `<div class="fd-n${n.t > FD.nseen ? ' new' : ''}">${n.w != null && n.w >= 0 ? avatar(bot(n.w), 'sm') : '<span class="fd-ndot"></span>'}<span>${n.html}</span><small>${fdAgo(n.t)}</small></div>`).join('') : '<p class="hint">Likes, comments and new followers show up here.</p>'}</div>`;
+  // likes, comments and replies show a small picture of the post; tapping the row opens it with its comments
+  const row = n => { const p = n.pid ? FD.posts.find(x => x.id === n.pid && !x.del) : null;
+    return `<div class="fd-n${n.t > FD.nseen ? ' new' : ''}${p ? ' go' : ''}"${p ? ` data-open-post="${p.id}" role="button" tabindex="0"` : ''}>${n.w != null && n.w >= 0 ? avatar(bot(n.w), 'sm') : '<span class="fd-ndot"></span>'}<span>${n.html} <small>${fdAgo(n.t)}</small></span>${p ? `<span class="fd-nthumb">${fdMedia(p)}</span>` : ''}</div>`; };
+  return `<div class="card fd-notifs"><div class="h first">Activity</div>${ns.length ? ns.map(row).join('') : '<p class="hint">Likes, comments and new followers show up here.</p>'}</div>`;
 }
+document.addEventListener('click', e => { const r = e.target.closest('[data-open-post]'); if (!r || e.target.closest('[data-bot]')) return; const p = FD.posts.find(x => x.id === r.dataset.openPost); if (p) fdView(p); });
 function renderFeed(){
   fdViewRefresh();
   const el = $('#fdBody'); if (!el || $('#page-feed').hidden) return;
