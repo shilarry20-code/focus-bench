@@ -98,14 +98,14 @@ function fdMake(w, t, light){
   return {...base, type: r() < .5 ? 'text' : 'scene', sc: {seed: fdHash(id), hue: B.hue, maj: B.major, hour: h, month: mo, mood, outgoing: emojiHabit(w) === 'often' || r() < .35}};
 }
 // posts appear at a real-world pace: more in the evening, few at 4 AM
-const FD_RATE = [3, 2, 1.4, 1, .8, .8, 1.2, 2.2, 3, 3.4, 3.6, 4, 4.4, 4.4, 4.6, 5, 5.2, 5.6, 6, 6.4, 6.6, 6.4, 5.6, 4.2];
+const FD_RATE = [3, 2, 1.4, 1, .8, .8, 1.2, 2.2, 3, 3.4, 3.6, 4, 4.4, 4.4, 4.6, 5, 5.2, 5.6, 6, 6.4, 6.6, 6.4, 5.6, 4.2].map(x => x * 1.3);
 // while the world is still catching up, fill with posts that don't need today's matches and sessions (no waiting)
 function fdFill(){
   if (!RK_READY) return false; const light = !!simBusy;
   const now = Date.now(), from = Math.max(FD.filled || now - 8 * 3600e3, now - 12 * 3600e3);
   if (now - from < 4 * 60000) return false;
   const pool = fdPool(); let made = 0;
-  for (let t = from; t < now && made < 45; ){
+  for (let t = from; t < now && made < 60; ){
     const h = new Date(worldT(t)).getHours(), gap = 3600e3 / FD_RATE[h] * (.4 + Math.random() * 1.2);
     t += gap; if (t >= now) break;
     const w = pool[Math.floor(Math.random() * pool.length)];
@@ -290,11 +290,19 @@ function fdPostHtml(p){
     ${show.map(c => `<div class="fd-c${c.w === -1 ? ' me' : ''}" data-cid="${c.id}">${fdWho(c.w)} <span>${esc(c.text)}</span><small>${fdAgo(c.t)}${c.w !== -1 ? ` · <button data-fda="reply">Reply</button>` : ''}</small></div>`).join('')}
     </div></article>`;
 }
+// tabs and their icons
+const FD_TABS = [
+  ['for', 'For you', '<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.5L12 15l-1.8-4.5L5.5 9l4.7-1.4z"/><path d="M18.5 15l.8 2 2 .8-2 .7-.8 2-.7-2-2-.7 2-.8z"/>'],
+  ['following', 'Following', '<circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c.6-3.6 3.2-5.6 6.5-5.6s5.9 2 6.5 5.6"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.6c3 .1 5 1.9 5.5 5"/>'],
+  ['hot', 'Hot', '<path d="M12 21c-4 0-6.5-2.7-6.5-6.2 0-3.6 2.7-5.5 3.6-9.3 1.9 1.2 3 3 3 5 1-.6 1.6-1.8 1.7-3.2 2.4 1.8 4.7 4.5 4.7 7.6C18.5 18.4 16 21 12 21z"/>'],
+  ['top', 'Top', '<path d="M7 4h10v4.5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4M12 13.5V17M8.5 20h7M10 17h4"/>'],
+  ['new', 'New', '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>']];
+if (FDV.tab === 'you') FDV.tab = 'for';
 const FD_TOP = {day: ['Today', 864e5], week: ['This week', 7 * 864e5], month: ['This month', 30 * 864e5], all: ['All time', 0]};
 function fdList(){
   const now = Date.now(), vis = FD.posts.filter(p => p.t <= now && !p.del);
   if (FDV.tab === 'following') return vis.filter(p => FD.follows.includes(p.w)).sort((a, b) => b.t - a.t);
-  if (FDV.tab === 'you') return vis.filter(p => p.w === -1).sort((a, b) => b.t - a.t);
+  if (FDV.tab === 'act') return [];
   if (FDV.tab === 'new') return vis.sort((a, b) => b.t - a.t);
   // Hot: likes and comments for how old the post is, so something blowing up right now beats a big post from this morning
   if (FDV.tab === 'hot'){ const hs = p => (fdLikes(p) + 3 * fdCount(p)) / Math.pow((now - p.t) / 3600e3 + 2, 1.5); return vis.filter(p => now - p.t < 2 * 864e5).sort((a, b) => hs(b) - hs(a)); }
@@ -312,13 +320,14 @@ function renderFeed(){
   const el = $('#fdBody'); if (!el || $('#page-feed').hidden) return;
   if (!RK_READY || !FD_READY){ el.innerHTML = '<p class="hint">Loading the feed…</p>'; return; }
   const n = FD.notif.filter(x => x.t > FD.nseen).length;
-  $('#fdTabs').innerHTML = [['for', 'For you'], ['following', 'Following'], ['hot', 'Hot'], ['top', 'Top'], ['new', 'New'], ['you', `You${n ? ` <b>${n}</b>` : ''}`]].map(([k, t]) => `<button class="ct-btn${FDV.tab === k ? ' on' : ''}" data-fdt="${k}">${t}</button>`).join('') + `<button class="small-btn accent fd-new" data-fda="compose">New post</button>`;
+  $('#fdTabs').innerHTML = '<div class="fd-tabrow">' + FD_TABS.map(([k, t, ic]) => `<button class="ct-btn${FDV.tab === k ? ' on' : ''}" data-fdt="${k}"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${t}</button>`).join('') + '</div>'
+    + `<div class="fd-acts"><button class="fd-act-btn${FDV.tab === 'act' ? ' on' : ''}" data-fdt="act" aria-label="Activity" title="Activity"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-9-8.6C1.6 8.4 3.4 5 6.7 5c1.9 0 3.3 1.1 4.2 2.4h2.2C14 6.1 15.4 5 17.3 5c3.3 0 5.1 3.4 3.7 6.4C19 15.6 12 20 12 20z"/></svg>${n ? `<b>${n > 99 ? '99+' : n}</b>` : ''}</button><button class="small-btn accent fd-new" data-fda="compose">New post</button></div>`;
   const list = fdList(), page = list.slice(0, FDV.shown);
-  const top = FDV.tab === 'top' ? `<div class="seg fd-topwin" role="group" aria-label="Top posts from">${Object.entries(FD_TOP).map(([k, [l]]) => `<button data-fdtop="${k}" aria-pressed="${FDV.top === k}">${l}</button>`).join('')}</div>` : FDV.tab === 'you' ? `<div class="card fd-me">${myAvatar('md')}<div><b>${esc(myName())}</b><small>${list.length} post${list.length === 1 ? '' : 's'} · ${FD.followers.length} follower${FD.followers.length === 1 ? '' : 's'} · ${FD.follows.length} following</small></div></div>` + fdNotifHtml() : '';
-  el.innerHTML = `<div id="fdComp">${FDV.composer ? fdComposerHtml() : ''}</div>` + top + (page.length ? page.map(fdPostHtml).join('') : `<p class="hint fd-empty">${FDV.tab === 'following' ? 'Follow people from their posts or profiles to see them here.' : FDV.tab === 'you' ? 'Your posts show up here. Tap <b>New post</b> to make one.' : 'Nothing yet.'}</p>`)
+  const top = FDV.tab === 'top' ? `<div class="seg fd-topwin" role="group" aria-label="Top posts from">${Object.entries(FD_TOP).map(([k, [l]]) => `<button data-fdtop="${k}" aria-pressed="${FDV.top === k}">${l}</button>`).join('')}</div>` : FDV.tab === 'act' ? fdNotifHtml() : '';
+  el.innerHTML = `<div id="fdComp">${FDV.composer ? fdComposerHtml() : ''}</div>` + top + (FDV.tab === 'act' ? '' : page.length ? page.map(fdPostHtml).join('') : `<p class="hint fd-empty">${FDV.tab === 'following' ? 'Follow people from their posts or profiles to see them here.' : 'Nothing yet.'}</p>`)
     + (list.length > FDV.shown ? '<button class="small-btn fd-load" data-fda="more">Show more</button>' : '')
     + (!GEM.key ? '<p class="hint ch-hint">Captions and comments are written once Gemini is set up in <button class="link-btn" data-go="settings" data-sec="set-chat">Settings → Chat</button>.</p>' : '');
-  if (FDV.tab === 'you'){ FD.nseen = Date.now(); saveFeed(); fdBadge(); }
+  if (FDV.tab === 'act'){ FD.nseen = Date.now(); saveFeed(); fdBadge(); }
   fdWriteVisible(page);
 }
 function fdBadge(){ const n = FD.notif.filter(x => x.t > FD.nseen).length; document.querySelectorAll('.feed-badge').forEach(b => { b.textContent = n > 99 ? '99+' : n || ''; b.hidden = !n; }); }
@@ -472,7 +481,7 @@ function fdPublish(){
   p.L = Math.round(fdMyPop() * ({scene: 1, text: .6, session: .8, match: 1.1, rank: 1.8}[p.type] || 1) * (.6 + Math.random() * .8) * (p.spec && p.spec.angle === 'selfie' ? 1.25 : 1));
   FD.posts.push(p);
   [[0, 60 + Math.random() * 120], [1, (20 + Math.random() * 40) * 60], [2, (120 + Math.random() * 120) * 60]].forEach(([n, s]) => FD.pend.push({kind: 'eng', pid: p.id, n, due: now + s * 1000}));
-  FDV.composer = null; FDV.tab = 'you'; saveFeed(); renderFeed(); toast('Posted.');
+  FDV.composer = null; FDV.tab = 'new'; saveFeed(); renderFeed(); toast('Posted.');
 }
 // redraw just the composer (keeps the feed below as it is)
 function fdComposerRedraw(){ const el = $('#fdComp'); if (el) el.innerHTML = FDV.composer ? fdComposerHtml() : ''; }
@@ -579,7 +588,7 @@ document.addEventListener('input', e => {
 function fdUserPosts(w){ return FD.posts.filter(p => !p.del && p.t <= Date.now() && (w === ME ? p.w === -1 : p.w === w)).sort((a, b) => b.t - a.t); }
 document.addEventListener('click', e => { const b = e.target.closest('[data-goto-post]'); if (!b) return; const p = FD.posts.find(x => x.id === b.dataset.gotoPost); if (!p) return;
   if (b.closest('#page-profile')) return fdView(p);
-  FDV.tab = p.w === -1 ? 'you' : 'for'; FDV.shown = Math.max(FDV.shown, fdList().indexOf(p) + 4); showPage('feed'); setTimeout(() => { const el = document.querySelector(`[data-pid="${p.id}"]`); if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 80); });
+  FDV.tab = 'new'; FDV.shown = Math.max(FDV.shown, fdList().indexOf(p) + 4); showPage('feed'); setTimeout(() => { const el = document.querySelector(`[data-pid="${p.id}"]`); if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 80); });
 
 const _fdShown = onPageShown;
 // the world may still be catching up when you open the Feed: fill it as soon as it's ready
