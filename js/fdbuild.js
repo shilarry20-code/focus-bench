@@ -21,9 +21,10 @@ function cbQuota(){
   const n = aiTotals(); let lim = 0, used = 0;
   // the count can still miss things (a device that hasn't reported yet, requests before counting was fixed), so assume more:
   // a quarter more with gist sync, double without it
-  const k = cbSyncOn() ? 1.25 : 2;
+  // (except in the last two hours before the reset: then the real count, so it uses all but the 30 it keeps)
+  const late = ptResetAt() - Date.now() < 2 * 3600e3, k = late ? 1 : cbSyncOn() ? 1.25 : 2;
   GEMINI_MODELS.forEach(m => { const L = (GEM.lim && GEM.lim[m]) || CB_LIM0; lim += L; used += modelOut(m) ? L : Math.min(L, Math.round((n[m] || 0) * k)); });
-  return {lim, used, late: ptResetAt() - Date.now() < 2 * 3600e3};
+  return {lim, used, late};
 }
 function cbAllowed(){
   const q = cbQuota(), b = cbDay();

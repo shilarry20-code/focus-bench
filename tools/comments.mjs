@@ -43,7 +43,7 @@ else if (todo.day === day) Object.assign(appUse, todo.use || {});
 const appBld = todo.day === day ? todo.bld || 0 : 0;
 if (au && au.day === day && Object.values(au.devs || {}).some(v => v.bld && Date.now() - v.bld < 6 * 60000)){ console.log('A device is building comments right now; skipping this run.'); process.exit(0); }
 const budgetOk = () => {
-  let lim = 0, used = 0; models.forEach(m => { const L = (todo.lim && todo.lim[m]) || 500; lim += L; used += out.has(m) ? L : Math.min(L, Math.round(((appUse[m] || 0) + (use.n[m] || 0)) * 1.25)); });
+  let lim = 0, used = 0; models.forEach(m => { const L = (todo.lim && todo.lim[m]) || 500; lim += L; used += out.has(m) ? L : Math.min(L, Math.round(((appUse[m] || 0) + (use.n[m] || 0)) * (late() ? 1 : 1.25))); });
   return late() ? used < lim - 30 : (appBld + use.req < (todo.cap ?? 150) && used < lim * .5);
 };
 const schema = {type: 'OBJECT', properties: {messages: {type: 'ARRAY', items: {type: 'OBJECT', properties: {from: {type: 'STRING'}, text: {type: 'STRING'}, replyTo: {type: 'STRING'}}, required: ['from', 'text']}}}, required: ['messages']};
