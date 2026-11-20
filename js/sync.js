@@ -16,7 +16,7 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 20 · 64';
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 20 · 65';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -65,12 +65,18 @@ const SECTIONS = {
       Object.entries(o).forEach(([k, v]) => { if (/^r\d+$/.test(k) && v && v.r) read[k.slice(1)] = v.r; else if (v && v.id) msgs.push(v); });
       DMS.msgs = msgs.sort((a, b) => a.t - b.t).slice(-DM_MAX); DMS.read = read; saveDms(); }
   },
+  feed: {           // your own posts (with their comments), who you follow and who follows you
+    items: () => { const o = {}; if (typeof FD === 'undefined' || !FD_READY) return o;
+      FD.posts.forEach(p => { if (p.w === -1 && p.id) o['p:' + p.id] = fdSyncPost(p); });
+      o.follows = FD.follows.slice().sort((a, b) => a - b); o.followers = FD.followers.slice().sort((a, b) => a - b); return o; },
+    put: o => { if (typeof FD === 'undefined') return; if (!FD_READY){ FD_SYNC_PEND = o; return; } fdSyncPut(o, true); }
+  },
   guides: {
     items: () => { const o = {}; GUIDES.forEach(g => { if (g && g.id) o[g.id] = g; }); return o; },
     put: o => { const order = GUIDES.map(g => g.id); GUIDES.length = 0; Object.values(o).sort((a, b) => (order.indexOf(a.id) + 1 || 1e9) - (order.indexOf(b.id) + 1 || 1e9)).forEach(g => GUIDES.push(g)); saveGuidesRaw(); }
   }
 };
-const STORE_SECTION = {'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked', 'fb.chat': 'chat', 'fb.dms': 'dms'};
+const STORE_SECTION = {'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked', 'fb.chat': 'chat', 'fb.dms': 'dms', 'fb.feed': 'feed'};
 let syncFirstDone = false;     // the chat waits for the first sync before filling in a catch-up
 
 // what each section looked like last time, to see which items changed
@@ -78,6 +84,7 @@ function takeSnap(sec){ const m = new Map(); Object.entries(SECTIONS[sec].items(
 function noteChange(sec){
   if (!syncSnap) return;
   if (sec === 'ach'){ markDirty(); return; }
+  if (!syncSnap[sec]){ syncSnap[sec] = takeSnap(sec); return; }
   const now = Date.now(), before = syncSnap[sec], after = takeSnap(sec);
   syncSnap[sec] = after;
   if (syncApplying) return;

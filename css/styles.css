@@ -1893,3 +1893,4 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 .lv-up span{display:inline-flex;gap:6px;align-items:center;margin-top:4px;font-size:13px;font-weight:600}
 .chl-xp{font-size:11px;font-weight:700;color:var(--ic);white-space:nowrap}
 #lvSlot{width:100%;align-self:stretch}
+.modal{overscroll-behavior:contain}
