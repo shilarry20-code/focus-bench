@@ -25,14 +25,26 @@ const LB = [
 const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : u === 'pct' ? (v ? (v / 10).toFixed(1) + '%' : '–') : v.toLocaleString();
 const botVal = (c, i) => c.g ? c.g()[i] : c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f];
 const lbReady = c => c.f != null || !!c.g || !!lbPts;
-/* ranked wins and win rate for everyone, from each player's real win/loss record (RK_W / RK_L in ranked.js) */
+/* ranked wins and win rate for everyone, from each player's real win/loss record (RK_EW/RK_EL estimated, RK_LW/RK_LL counted live, in ranked.js) */
 let RKA = null;
 function rkArrs(){
   rkCounts();
-  if (RKA && RKA.v === botsVer && RKA.src === RK_W) return RKA;
+  if (RKA && RKA.v === botsVer && RKA.src === RK_EW) return RKA;
   const N = ROSTER_N, w = new Int32Array(N), p = new Int16Array(N);
-  if (RK_W) for (let i = 0; i < N; i++){ const g = RK_W[i] + RK_L[i]; w[i] = RK_W[i]; p[i] = g >= 20 ? Math.max(1, Math.round(RK_W[i] / g * 1000)) : 0; }
-  return (RKA = {v: botsVer, src: RK_W, w, p});
+  const fill = i => { const g = rkGames(i); w[i] = rkWins(i); p[i] = g >= 20 ? Math.max(1, Math.round(w[i] / g * 1000)) : 0; };
+  if (RK_EW){
+    for (let i = 0; i < N; i++) fill(i);
+    // the players at the top of either board get their visible history put in exactly (a few passes until it settles)
+    for (let pass = 0; pass < 4; pass++){
+      let changed = 0;
+      for (const arr of [p, w]){
+        const top = []; for (let i = 0; i < N; i++){ const v = arr[i]; if (top.length < 150 || v > top[top.length - 1][0]){ top.push([v, i]); top.sort((a, b) => b[0] - a[0]); if (top.length > 150) top.pop(); } }
+        top.forEach(([, i]) => { if (rkReconcile(i)){ fill(i); changed++; } });
+      }
+      if (!changed) break;
+    }
+  }
+  return (RKA = {v: botsVer, src: RK_EW, w, p});
 }
 const myGames = () => R.w + R.l + R.d;
 const myWinP10 = () => myGames() >= 20 ? Math.round(R.w / myGames() * 1000) : 0;

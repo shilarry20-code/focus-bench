@@ -315,7 +315,7 @@ async function loadSnapshot(meta){
     BS = new Int32Array(N * BF); PREV = new Int16Array(N);
     for (let k = 0; k < BF; k++){ const base = k * N * 4; for (let i = 0; i < N; i++) BS[i * BF + k] = init[i * BF + k] + (sh[base + i] | sh[base + N + i] << 8 | sh[base + 2 * N + i] << 16 | sh[base + 3 * N + i] << 24); }
     for (let i = 0; i < N; i++) PREV[i] = BS[i * BF];
-    R.lastSlice = snapT(meta); R.lastSim = meta.day; WAP = new Set(); OV_R = new Int16Array(N); m5Init(null); RK_W = null;     // your matches are added back on top
+    R.lastSlice = snapT(meta); R.lastSim = meta.day; WAP = new Set(); OV_R = new Int16Array(N); m5Init(null); RK_EW = null;     // your matches are added back on top
     return true;
   } catch(e){ console.error(e); return false; }
 }
@@ -372,13 +372,13 @@ async function loadBots(){
     BS = new Int32Array(rec.bs); PREV = new Int16Array(rec.prev);
     R.lastSlice = rec.lastSlice; R.lastSim = rec.lastSim; WAP = new Set(rec.ap || []);
     OV_R = rec.ov && rec.ov.byteLength === ROSTER_N * 2 ? new Int16Array(rec.ov) : new Int16Array(ROSTER_N);
-    m5Init(rec.m5); RK_W = null; rkCounts(rec);
+    m5Init(rec.m5); RK_EW = null; rkCounts(rec);
   } else {
     // the shared world, from its fixed start (the same on every device)
     BS = new Int32Array(ROSTER_N * BF); PREV = new Int16Array(ROSTER_N);
     await initBotStats(BS, 0);
     for (let i = 0; i < ROSTER_N; i++) PREV[i] = BS[i * BF];
-    R.lastSlice = WORLD_START; R.lastSim = dayKey(WORLD_START); WAP = new Set(); OV_R = new Int16Array(ROSTER_N); m5Init(null); RK_W = null;
+    R.lastSlice = WORLD_START; R.lastSim = dayKey(WORLD_START); WAP = new Set(); OV_R = new Int16Array(ROSTER_N); m5Init(null); RK_EW = null;
     IDB.del('worldcp').catch(() => {});
     botsDirty = true;
   }
@@ -412,10 +412,10 @@ function saveBots(force){
     botsSavedAt = Date.now();
     botsDirty = false;
     IDB.set('bots', {n: ROSTER_N, w: WORLD_V, ap: [...WAP], ov: OV_R.buffer, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(),
-      m5: m5Save(), ...(RK_W ? {rw: RK_W.buffer, rl: RK_L.buffer} : {})}).catch(e => { console.error(e); botsDirty = true; });
+      m5: m5Save(), ...rkSave()}).catch(e => { console.error(e); botsDirty = true; });
   }, 600);
 }
-addEventListener('pagehide', () => { if (botsDirty && RK_READY && idbOk){ clearTimeout(botsSaveT); botsDirty = false; IDB.set('bots', {n: ROSTER_N, w: WORLD_V, ap: [...WAP], ov: OV_R.buffer, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(), m5: m5Save(), ...(RK_W ? {rw: RK_W.buffer, rl: RK_L.buffer} : {})}).catch(() => {}); } });
+addEventListener('pagehide', () => { if (botsDirty && RK_READY && idbOk){ clearTimeout(botsSaveT); botsDirty = false; IDB.set('bots', {n: ROSTER_N, w: WORLD_V, ap: [...WAP], ov: OV_R.buffer, bs: BS.buffer, prev: PREV.buffer, lastSlice: R.lastSlice, lastSim: R.lastSim, t: Date.now(), m5: m5Save(), ...rkSave()}).catch(() => {}); } });
 const botRating = i => BS[i * BF];
 
 /* bots update every 2 hours. Each bot has a plan for each day (study or not, how long), worked out
@@ -554,26 +554,43 @@ function addStudy(i, add, longest){
 const M5 = 5, M5_V = 3, BOT_K = 24;    // K-factor for matches between other players, same as yours after placements
 let M5_OPP = null, M5_T = null, M5_A = null, M5_B = null, M5_D = null, M5_R = null, M5_O = null, M5_H = null;
 /* every player's ranked record: wins and losses. Matches are won by whoever studied longer, so players who sit longer
-   than others around their rating win more. Records from before they were counted are estimated once (the same on
-   every device); from then on every match adds a real win or loss: the same ones in their match history. */
-let RK_W = null, RK_L = null;
+   than others around their rating win more. Records from before counting began (RK_T0) are estimated (the same on every
+   device); any of those older matches that shows in someone's match history is put in exactly once it's been looked up
+   (RK_REC), so a record never contradicts the history. From RK_T0 on, every match adds a real win or loss. */
+let RK_EW = null, RK_EL = null, RK_LW = null, RK_LL = null, RK_REC = null, RK_T0 = 0;
+function rkEst(i, g){
+  if (g <= 0) return [0, 0];
+  let h = Math.imul(i ^ 0x5bd1e995, 2654435761) >>> 0; const u = () => (h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0, h / 4294967296);
+  const fav = T_FAV[i] <= 2 ? -.02 : 0;                               // fixed-length timers don't stretch a sitting
+  const e = clampN(.5 + (T_SIT[i] - 1) * .9 + fav + (u() - .5) * .06, .3, .7);
+  const z = Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u());
+  const w = Math.round(g * clampN(e + z * Math.sqrt(e * (1 - e) / g), 0, 1));
+  return [w, g - w];
+}
 function rkCounts(rec){
-  if (RK_W && RK_W.length === ROSTER_N) return;
-  if (rec && rec.rw && rec.rw.byteLength === ROSTER_N * 4 && rec.rl && rec.rl.byteLength === ROSTER_N * 4){ RK_W = new Int32Array(rec.rw); RK_L = new Int32Array(rec.rl); return; }
-  if (!BS || !T_SIT) return;
-  RK_W = new Int32Array(ROSTER_N); RK_L = new Int32Array(ROSTER_N);
-  for (let i = 0; i < ROSTER_N; i++){
-    const o = i * BF, g = Math.floor(BS[o + F.sessions] * .9); if (g <= 0) continue;
-    let h = Math.imul(i ^ 0x5bd1e995, 2654435761) >>> 0; const u = () => (h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0, h / 4294967296);
-    const fav = T_FAV[i] <= 2 ? -.02 : 0;                             // fixed-length timers don't stretch a sitting
-    const e = clampN(.5 + (T_SIT[i] - 1) * .9 + fav + (u() - .5) * .06, .3, .7);
-    const z = Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u());
-    const p = clampN(e + z * Math.sqrt(e * (1 - e) / g), 0, 1);
-    RK_W[i] = Math.round(g * p); RK_L[i] = g - RK_W[i];
+  if (RK_EW && RK_EW.length === ROSTER_N) return;
+  const ok = b => b && b.byteLength === ROSTER_N * 4;
+  if (rec && rec.rk && rec.rk.v === 2 && ok(rec.rk.ew) && ok(rec.rk.el) && ok(rec.rk.lw) && ok(rec.rk.ll) && rec.rk.rec && rec.rk.rec.byteLength === ROSTER_N){
+    RK_EW = new Int32Array(rec.rk.ew); RK_EL = new Int32Array(rec.rk.el); RK_LW = new Int32Array(rec.rk.lw); RK_LL = new Int32Array(rec.rk.ll); RK_REC = new Uint8Array(rec.rk.rec); RK_T0 = rec.rk.t0; return;
   }
+  if (!BS || !T_SIT) return;
+  const N = ROSTER_N; RK_EW = new Int32Array(N); RK_EL = new Int32Array(N); RK_LW = new Int32Array(N); RK_LL = new Int32Array(N); RK_REC = new Uint8Array(N);
+  RK_T0 = R.lastSlice || Date.now();
+  for (let i = 0; i < N; i++){ const [w, l] = rkEst(i, Math.floor(BS[i * BF + F.sessions] * .9)); RK_EW[i] = w; RK_EL[i] = l; }
   markBots();
 }
-const rkTally = (win, lose) => { if (!RK_W) return; RK_W[win]++; RK_L[lose]++; };
+const rkSave = () => RK_EW ? {rk: {v: 2, t0: RK_T0, ew: RK_EW.buffer, el: RK_EL.buffer, lw: RK_LW.buffer, ll: RK_LL.buffer, rec: RK_REC.buffer}} : {};
+const rkTally = (win, lose) => { if (!RK_LW) return; RK_LW[win]++; RK_LL[lose]++; };
+const rkWins = i => RK_EW[i] + RK_LW[i], rkGames = i => RK_EW[i] + RK_EL[i] + RK_LW[i] + RK_LL[i];
+// put the older matches someone's history shows into their record exactly
+function rkReconcile(i){
+  if (!RK_EW || RK_REC[i]) return false;
+  try { m5Backfill(i); } catch(e){}
+  const old = m5List(i).filter(m => m.t < RK_T0), w = old.filter(m => m.a > m.b).length, l = old.length - w;
+  const g0 = RK_EW[i] + RK_EL[i], [we, le] = rkEst(i, Math.max(0, g0 - old.length));
+  RK_EW[i] = we + w; RK_EL[i] = le + l; RK_REC[i] = 1; markBots();
+  return true;
+}
 function m5Init(rec){
   const n = ROSTER_N * M5;
   const ok = rec && rec.v === M5_V && rec.opp && rec.opp.byteLength === n * 4 && rec.h && rec.h.byteLength === ROSTER_N;   // older formats start fresh
@@ -1053,7 +1070,7 @@ function finalize(res, why){
   const rec = R.rec[c.b] || (R.rec[c.b] = [0, 0, 0]);
   const nem = nemesis();
   if (c.friendly){ if (res === 'W') rec[0]++; else if (res === 'L') rec[1]++; else rec[2]++; }
-  if (!c.friendly && RK_W && c.b >= 0 && c.b < ROSTER_N){ if (res === 'W') RK_L[c.b]++; else if (res === 'L') RK_W[c.b]++; markBots(); }
+  if (!c.friendly && RK_LW && c.b >= 0 && c.b < ROSTER_N){ if (res === 'W') RK_LL[c.b]++; else if (res === 'L') RK_LW[c.b]++; markBots(); }
   else if (res === 'W'){ R.w++; R.ws++; R.bestWs = Math.max(R.bestWs, R.ws); rec[0]++; R.bestUpset = Math.max(R.bestUpset, c.br - c.mmr0); if (nem === c.b) R.revenge = 1; if (c.mmr0 >= 2400) R.profWins++; }
   else if (res === 'L'){ R.l++; R.ws = 0; rec[1]++; }
   else { R.d++; rec[2]++; }
@@ -1600,7 +1617,7 @@ function renderProfilePage(){
   const fb = soc ? socFollowedBy(w) : [], fbTxt = fb.length ? `Followed by ${fb.slice(0, 2).map(a => `<button class="lnk" data-bot="${a}">${esc(bot(a).name)}</button>`).join(', ')}${fb.length > 2 ? ` and ${fb.length - 2} other${fb.length - 2 === 1 ? '' : 's'} you follow` : ''}` : '';
   let wr = '–';
   if (w === ME){ const g = R.w + R.l + R.d; if (g) wr = winPct(R.w, g); }
-  else { try { const A = rkArrs(); if (A.p[w]) wr = (A.p[w] / 10).toFixed(1) + '%'; } catch(e){} }
+  else { try { rkCounts(); if (rkReconcile(w)) RKA = null; const g = rkGames(w); if (g >= 20) wr = winPct(rkWins(w), g); } catch(e){} }
   const chips = [[st.total >= 60 ? Math.floor(st.total / 60).toLocaleString() + 'h' : st.total + 'm', 'studied'], [`${st.cur}d`, 'streak'], [wr, 'win rate'], ['#' + place.toLocaleString(), 'overall']];
   const bio = w === ME ? (P.myBio || '') : B.bio;
   const cnt = (n, l, kind) => kind ? `<button class="pf-cnt" data-soc="${kind}" data-soc-w="${w === ME ? 'me' : w}"><b>${fmtCount(n)}</b><small>${l}</small></button>` : `<span class="pf-cnt"><b>${n.toLocaleString()}</b><small>${l}</small></span>`;
