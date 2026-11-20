@@ -418,12 +418,14 @@ async function fdEngage(job){
   const ask = /\b(play|match|1v1|challenge|duel|ranked|anyone up)\b/i.test(p.cap || '') && R.on;
   const user = `Post ${p.id} by ${me} (the user). What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${p.cm.filter(x => x.t <= Date.now()).slice(-8).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(none)'}\n\nWrite one comment each from: ${cs.map(w => { const f = chatFacts(w); return `${f.name} (${f.rank}${Math.random() < .15 ? ', ' + f.subj : ''}, emojis: ${emojiStyle(w)})`; }).join('; ')}. replyTo "${p.id}" for a new comment, or "${p.id} @<name>" to answer someone's comment.${ask ? ` ${me} is asking for a match: anyone who'd play starts their comment with [play].` : ''}`;
   try {
-    const got = await aiCall(FD_SYS(me), user), names = new Map(cs.map(w => [bot(w).name.toLowerCase(), w])), players = [];
+    const got = await aiCall(FD_SYS(me), user), names = new Map(cs.map(w => [bot(w).name.toLowerCase(), w])), players = []; let when = 0;
     (Array.isArray(got) ? got : []).forEach((x, k) => { const w = names.get(String(x && x.from || '').toLowerCase().trim()); if (w == null) return;
       let text = emotionOnly(stripSegue(String(x.text || '').replace(/#\w+/g, '').trim().slice(0, 240))); const play = /^\[play\]/i.test(text); text = text.replace(/^\[play\]\s*/i, ''); if (!text) return;
       const at = String(x && x.replyTo || '').split(/\s*@\s*/)[1], a = fdAnswerTo(p, at, text, me); text = a.text;
-      p.cm.push({id: p.id + 'e' + Date.now().toString(36) + k, w, t: Date.now() + k * 20000, text, re: a.re, lk: fdCmLikes(p, !!a.re)}); if (play) players.push(w);
-      setTimeout(() => { fdNote('comment', w, `<b>${esc(bot(w).name)}</b> commented: ${esc(text.slice(0, 80))}`, p.id); renderFeed(); }, k * 20000); });
+      // people find the post at different moments: each comment a minute or several after the last
+      when = when ? when + (45 + Math.random() * 270) * 1000 : Date.now();
+      p.cm.push({id: p.id + 'e' + Date.now().toString(36) + k, w, t: Math.round(when), text, re: a.re, lk: fdCmLikes(p, !!a.re)}); if (play) players.push(w);
+      FD.pend.push({kind: 'note', due: Math.round(when), w, pid: p.id, html: `<b>${esc(bot(w).name)}</b> commented: ${esc(text.slice(0, 80))}`}); });
     if (players.length) fdChallenge(players);
     saveFeed(); return true;
   } catch(e){ if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); return e.kind !== 'offline' && e.kind !== 'busy'; }
@@ -440,6 +442,7 @@ async function fdTick(){
     // jobs that are due (people offline answer once they're back)
     for (const job of FD.pend.slice()){
       if (job.due > now) continue;
+      if (job.kind === 'note'){ fdNote('comment', job.w, job.html, job.pid); FD.pend.splice(FD.pend.indexOf(job), 1); renderFeed(); continue; }
       if (job.kind !== 'eng' && job.kind !== 'fb' && !(dmOnline(job.w) || dmStudying(job.w)) && now - job.due < 12 * 3600e3) continue;
       if (job.kind === 'fb'){ if (!FD.followers.includes(job.w)){ FD.followers.push(job.w); fdNote('follow', job.w, `<b>${esc(bot(job.w).name)}</b> followed you back`); } FD.pend.splice(FD.pend.indexOf(job), 1); continue; }
       const done = job.kind === 'reply' ? await fdReply(job) : await fdEngage(job);
