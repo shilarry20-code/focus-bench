@@ -211,7 +211,7 @@ async function aiCall(sys, user){
   const schema = {type: 'OBJECT', properties: {messages: {type: 'ARRAY', items: {type: 'OBJECT',
     properties: {from: {type: 'STRING'}, text: {type: 'STRING'}, replyTo: {type: 'STRING'}}, required: ['from', 'text']}}}, required: ['messages']};
   const configs = [{responseMimeType: 'application/json', responseSchema: schema}, {responseMimeType: 'application/json'}, {}];
-  let last = null;
+  let last = null, busy = 0;
   for (const model of models){
     for (const extra of configs){
       let r, raw = '', netErr = null;
@@ -242,6 +242,9 @@ async function aiCall(sys, user){
         }
         if (/API key|API_KEY|api_key|unauthenticated|credential/i.test(em) || r.status === 401) throw {kind: 'key', msg: last};
         if (r.status === 404 || /not found|not supported|is not available|unsupported model/i.test(em)) break;   // next model
+        // Google's servers are overloaded (503) or erroring (5xx): asking again in a different shape won't help, so go
+        // straight to the next model, and if every model is overloaded, wait a few minutes before trying again
+        if (r.status >= 500){ busy++; break; }
         continue;                                                                  // same model, looser request
       }
       const cand = ((j && j.candidates) || [])[0];
@@ -257,6 +260,7 @@ async function aiCall(sys, user){
     }
   }
   saveAI();
+  if (busy && busy >= models.length) throw {kind: 'busy', over: 1, until: Date.now() + 4 * 60000, msg: `${last} (Google’s servers are busy; trying again in a few minutes)`};
   if (!GEMINI_MODELS.some(m => !modelOut(m))){ const until = Math.min(...GEMINI_MODELS.map(m => GEM.out[m])); throw {kind: 'busy', until, msg: 'Both Gemini models have used up today’s free requests.'}; }
   throw {kind: 'other', msg: last || 'No Gemini model answered'};
 }
@@ -361,7 +365,7 @@ async function chatGenerate(forUser, away){
     if (forUser && acts.length) chatSendChallenges(acts);
   } catch(e){
     GEM.last = {at: Date.now(), got: 0, used: 0, why: e.msg || (e.kind === 'offline' ? 'couldn’t reach Gemini' : e.kind)};
-    GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? (e.until ? `Both models used up today’s free requests. The chat is quiet until ${new Date(e.until).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.` : e.short ? null : 'Gemini’s free limit is used up for now. The chat is quiet until it resets.') : e.kind === 'offline' ? null : 'Gemini had a problem. The chat is quiet for a bit.';
+    GEM.err = e.kind === 'key' ? 'Gemini didn’t accept that key.' : e.kind === 'busy' ? (e.over ? null : e.until ? `Both models used up today’s free requests. The chat is quiet until ${new Date(e.until).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.` : e.short ? null : 'Gemini’s free limit is used up for now. The chat is quiet until it resets.') : e.kind === 'offline' ? null : 'Gemini had a problem. The chat is quiet for a bit.';
     if (e.msg) GEM.detail = e.msg;
     GEM.wait = aiBackoff(e);
     if (e.kind === 'offline') CHATS.next = GEM.wait;
