@@ -1868,9 +1868,13 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 :root[data-theme="dark"] .lv-grey{background:#3a3a37;color:#e3e1d8}:root[data-theme="dark"] .lv-bronze{background:#5a2d1a;color:#f5c4b3}:root[data-theme="dark"] .lv-silver{background:#163a5c;color:#b5d4f4}
 :root[data-theme="dark"] .lv-gold{background:#5a3a0e;color:#fac775}:root[data-theme="dark"] .lv-dia{background:#0d4a3b;color:#9fe1cb}:root[data-theme="dark"] .lv-leg{background:#352e7a;color:#cecbf6}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .lv-grey{background:#3a3a37;color:#e3e1d8}:root:not([data-theme="light"]) .lv-bronze{background:#5a2d1a;color:#f5c4b3}:root:not([data-theme="light"]) .lv-silver{background:#163a5c;color:#b5d4f4}:root:not([data-theme="light"]) .lv-gold{background:#5a3a0e;color:#fac775}:root:not([data-theme="light"]) .lv-dia{background:#0d4a3b;color:#9fe1cb}:root:not([data-theme="light"]) .lv-leg{background:#352e7a;color:#cecbf6}}
-.lv-chip{position:relative;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 9px 3px 4px;cursor:pointer;color:var(--ink)}
-.lv-chip .lvb{height:20px}
-.lv-mini{width:44px;height:5px;border-radius:999px;background:var(--soft);overflow:hidden}.lv-mini i{display:block;height:100%;background:var(--accent)}
+.lv-chip{position:relative;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:4px 12px 4px 8px;font-size:13px;color:var(--muted);white-space:nowrap;cursor:pointer;font-family:inherit}
+.lv-chip:hover{border-color:var(--muted)}
+.lv-chip b{color:var(--ink);font-weight:700}
+.lv-chip .lv-ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.lv-chip[data-tier="grey"] .lv-ic{color:#9aa3b2}.lv-chip[data-tier="bronze"] .lv-ic{color:#c9783f}.lv-chip[data-tier="silver"] .lv-ic{color:#8fb3d9}
+.lv-chip[data-tier="gold"] .lv-ic{color:#e0a630}.lv-chip[data-tier="dia"] .lv-ic{color:#3cc4a0}.lv-chip[data-tier="leg"] .lv-ic{color:#8f84f0}
+.lv-mini{width:44px;height:4px;border-radius:var(--r-pill);background:var(--soft);overflow:hidden}.lv-mini i{display:block;height:100%;background:var(--accent)}
 .lv-pop{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:4px;font-size:12px;font-weight:800;color:var(--accent);white-space:nowrap;pointer-events:none;animation:lvpop 1.9s ease-out forwards}
 @keyframes lvpop{0%{opacity:0;transform:translate(-50%,-4px)}15%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,10px)}}
 .lv-strip{display:flex;align-items:center;gap:10px;margin:14px auto 0;max-width:420px;width:100%}
@@ -1894,3 +1898,8 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 .chl-xp{font-size:11px;font-weight:700;color:var(--ic);white-space:nowrap}
 #lvSlot{width:100%;align-self:stretch}
 .modal{overscroll-behavior:contain}
+#botModal,#socModal{z-index:60}
+#bmName .lvb{vertical-align:4px;margin-left:4px}
+.lvb{width:fit-content;flex:none}
+.lv-nm{display:inline-flex;align-items:center;gap:5px;vertical-align:baseline;max-width:100%}
+.lv-nm>:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

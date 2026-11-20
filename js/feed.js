@@ -585,7 +585,10 @@ function fdViewRefresh(){
   const i2 = host.querySelector('.fd-form input'), b2 = host.querySelector('.fv-cms'); if (i2){ i2.value = val; if (foc) i2.focus(); } if (b2) b2.scrollTop = top;
 }
 function fdViewClose(){ $('#fdView').hidden = true; FDV.view = null; renderFeed(); if (!$('#page-profile').hidden && typeof renderProfilePage === 'function') renderProfilePage(); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && fdViewOpen()) fdViewClose(); });
+// Escape closes only the top window: a profile opened over a post closes first
+let fdEscTop = false;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fdEscTop = !$('#botModal').hidden || !$('#socModal').hidden; }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && fdViewOpen() && !fdEscTop) fdViewClose(); });
 
 /* ---- taps ---- */
 document.addEventListener('click', e => {
@@ -654,7 +657,7 @@ const _fdShown = onPageShown;
 // the world may still be catching up when you open the Feed: fill it as soon as it's ready
 function fdOpen(){ if ($('#page-feed').hidden) return; if (!RK_READY){ renderFeed(); return setTimeout(fdOpen, 1500); } fdFill(); FDV.drawn = Date.now(); renderFeed(); }
 onPageShown = function(name){ if (fdViewOpen()){ $('#fdView').hidden = true; FDV.view = null; } _fdShown(name); if (name === 'feed') fdOpen(); };
-if (typeof openProfile === 'function'){ const _fdOP = openProfile; openProfile = function(){ if (fdViewOpen()){ $('#fdView').hidden = true; FDV.view = null; } return _fdOP.apply(this, arguments); }; }
+// a mini profile opens on top of an open post (the post stays put underneath); a full profile is a page change, which closes it
 setTimeout(fdBadge, 3000);
 
 /* ---- live, in the Feed: a strip of who's live (like stories), and a side column on wide screens ---- */
