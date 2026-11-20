@@ -234,7 +234,7 @@ async function dmAway(){
       dmGenBusy[w] = 1;
       const texts = await dmWrite(w, `${bot(w).name} messaged ${myName()} a while ago, around ${new Date(when).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}, and ${myName()} is only now seeing it. Write the 1 or 2 short texts ${bot(w).name} sent then. ${Math.random() < .25 ? 'Follow up on what they last talked about, or their last match.' : `Starting point: ${pickTopic(w)}. Take it wherever feels natural for them.`} Don't mention ${myName()} being away or offline.${openerAvoid()}`);
       dmGenBusy[w] = 0;
-      if (texts.length){ noteOpener(texts[0]); const base = Date.now() + 2500 + k * 4000; texts.forEach((text, j) => DMS.q.push({id: chatId() + 'a' + j, t: base + j * 900, at: Math.round(when + j * (20 + Math.random() * 60) * 1000), w, text})); }
+      if (texts.length){ noteOpener(texts[0]); const base = Date.now() + 2500 + k * 4000; texts.forEach((text, j) => DMS.q.push({id: chatId() + 'a' + j, t: base + j * (4000 + Math.random() * 5000), at: Math.round(when + j * (20 + Math.random() * 60) * 1000), w, text})); }
     }
     DMS.q.sort((a, b) => a.t - b.t); saveDms(); dmRefresh();
   } catch(e){ console.error(e); } finally { dmAwayBusy = false; }
@@ -285,8 +285,12 @@ function dmTick(){
     if (changed) DMS.q.sort((a, b) => a.t - b.t);
   }
   DMS.q.forEach(m => { if (focusing() && m.t <= now) m.t = now + 5000; });     // nothing arrives during a focus block: it waits for your break
+  // one text at a time from each person: if they have several due at once, the rest follow a few seconds apart
+  const gapOk = new Map(), holdT = new Map(); let held = [];
   while (DMS.q.length && DMS.q[0].t <= now){
     const q = DMS.q.shift();
+    const last = gapOk.has(q.w) ? gapOk.get(q.w) : Math.max(0, ...DMS.msgs.filter(x => x.w === q.w && !x.me).slice(-1).map(x => x.got || 0));
+    if (!q.upd && now - last < 2500){ q.t = Math.max(last, holdT.get(q.w) || 0) + 2500 + (1 + Math.random() * 4 + (q.text || '').length * .05) * 1000; holdT.set(q.w, q.t); held.push(q); changed = true; continue; }
     if (q.upd){                                 // their answer to your challenge; too late if it already ran out
       const c = DMS.msgs.find(x => x.id === q.upd.id);
       if (!(c && c.ch && c.ch.st === 'p' && now < c.ch.exp)){ changed = true; continue; }
@@ -295,9 +299,10 @@ function dmTick(){
     }
     const m = {id: q.id, t: q.at && q.at < now ? q.at : now, w: q.w, text: q.text || '', ai: 1};      // messages sent while you were away keep their time
     if (q.ch) m.ch = {mode: q.ch.mode, exp: now + CH_THEIRS, st: 'p', by: 'them'};
-    if (m.text || m.ch){ DMS.msgs.push(m); fresh.push(m); }
+    if (m.text || m.ch){ m.got = now; DMS.msgs.push(m); fresh.push(m); gapOk.set(q.w, now); }
     changed = true;
   }
+  if (held.length){ DMS.q.push(...held); DMS.q.sort((a, b) => a.t - b.t); }
   DMS.msgs.forEach(m => { if (m.ch && m.ch.st === 'p' && now >= m.ch.exp){ m.ch.st = 'x'; changed = true; } });
   if (changed){
     DMS.msgs.sort((a, b) => a.t - b.t);
