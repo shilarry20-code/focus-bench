@@ -37,9 +37,13 @@ let use = await file(g, USAGE); if (!use || use.day !== day) use = {day, n: {}, 
 let inbox = (await file(g, INBOX)) || [];
 const models = (todo.models && todo.models.length ? todo.models : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']);
 const out = new Set(models.filter(m => todo.out && todo.out[m] > Date.now()));
-const appUse = todo.day === day ? todo.use || {} : {}, appBld = todo.day === day ? todo.bld || 0 : 0;
+const au = await file(g, 'fb-ai-usage.json'), appUse = {};
+if (au && au.day === day) Object.values(au.devs || {}).forEach(v => Object.entries(v.n || {}).forEach(([m, c]) => appUse[m] = (appUse[m] || 0) + c));
+else if (todo.day === day) Object.assign(appUse, todo.use || {});
+const appBld = todo.day === day ? todo.bld || 0 : 0;
+if (au && au.day === day && Object.values(au.devs || {}).some(v => v.bld && Date.now() - v.bld < 6 * 60000)){ console.log('A device is building comments right now; skipping this run.'); process.exit(0); }
 const budgetOk = () => {
-  let lim = 0, used = 0; models.forEach(m => { const L = (todo.lim && todo.lim[m]) || 500; lim += L; used += out.has(m) ? L : Math.min(L, (appUse[m] || 0) + (use.n[m] || 0)); });
+  let lim = 0, used = 0; models.forEach(m => { const L = (todo.lim && todo.lim[m]) || 500; lim += L; used += out.has(m) ? L : Math.min(L, Math.round(((appUse[m] || 0) + (use.n[m] || 0)) * 1.25)); });
   return late() ? used < lim - 30 : (appBld + use.req < (todo.cap ?? 150) && used < lim * .5);
 };
 const schema = {type: 'OBJECT', properties: {messages: {type: 'ARRAY', items: {type: 'OBJECT', properties: {from: {type: 'STRING'}, text: {type: 'STRING'}, replyTo: {type: 'STRING'}}, required: ['from', 'text']}}}, required: ['messages']};

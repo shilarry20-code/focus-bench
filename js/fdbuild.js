@@ -11,10 +11,18 @@ let AI_FLIGHT = 0, AI_LAST = 0;
 const CB_LIM0 = 500;                                       // guess for a model's daily limit until one has actually run out
 const cbDay = () => { if (!GEM.bld || GEM.bld.day !== ptDay()) GEM.bld = {day: ptDay(), n: 0, c: 0}; return GEM.bld; };
 const cbCap = () => GEM.bCap != null ? GEM.bCap : 150;
+// requests today per model: this device + your other devices (from the gist) + the overnight runner
+function aiTotals(){
+  const d = ptDay(), out = {}, add = o => Object.entries(o || {}).forEach(([m, c]) => out[m] = (out[m] || 0) + c);
+  add(GEM.cnt && GEM.cnt.day === d ? GEM.cnt.n : {}); add(GEM.oth && GEM.oth.day === d ? GEM.oth.n : {}); add(GEM.ext && GEM.ext.day === d ? GEM.ext.n : {});
+  return out;
+}
 function cbQuota(){
-  const n = GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n : {}; let lim = 0, used = 0;
-  const x = GEM.ext && GEM.ext.day === ptDay() ? GEM.ext.n || {} : {};       // requests the overnight runner made today
-  GEMINI_MODELS.forEach(m => { const L = (GEM.lim && GEM.lim[m]) || CB_LIM0; lim += L; used += modelOut(m) ? L : Math.min(L, (n[m] || 0) + (x[m] || 0)); });
+  const n = aiTotals(); let lim = 0, used = 0;
+  // the count can still miss things (a device that hasn't reported yet, requests before counting was fixed), so assume more:
+  // a quarter more with gist sync, double without it
+  const k = cbSyncOn() ? 1.25 : 2;
+  GEMINI_MODELS.forEach(m => { const L = (GEM.lim && GEM.lim[m]) || CB_LIM0; lim += L; used += modelOut(m) ? L : Math.min(L, Math.round((n[m] || 0) * k)); });
   return {lim, used, late: ptResetAt() - Date.now() < 2 * 3600e3};
 }
 function cbAllowed(){
@@ -81,13 +89,14 @@ async function cbRun(){
   const now = Date.now();
   if (cbBusy || now < cbNext || !GEM.key || GEM.bOff || (GEM.wait && GEM.wait > now) || !RK_READY || !FD_READY || simBusy) return;
   if (AI_FLIGHT || now - AI_LAST < 30000 || !cbAllowed()) return;
+  if (GEM.bldOther && GEM.bldOther.day === ptDay() && now - GEM.bldOther.at < 6 * 60000) return;      // another device is building right now
   const p = cbPick(); if (!p){ cbNext = now + 60000; return; }
   cbBusy = true;
   try {
     const job = await cbJob(p), n = Math.min(35, job.need);
     const got = await aiCall(job.sys, job.user.replace('{MORE}', '').replace('{N}', n), {bld: true});
     const added = cbApply(p, got, job.names, now), b = cbDay();
-    b.n++; b.c += added; saveAI(); saveFeed();
+    b.n++; b.c += added; GEM.bldAt = Date.now(); saveAI(); saveFeed();
     if (FDV.view === p.id) fdViewRefresh(); else if (!$('#page-feed').hidden && !document.hidden) renderFeed();
     cbNext = Date.now() + (added ? 6000 : 60000);
   } catch(e){
@@ -163,3 +172,24 @@ async function cbInboxMerge(){
 // Settings → Chat was drawn before this file loaded: draw it again now, and whenever Settings opens (counts stay fresh)
 renderChatSettings();
 { const _sh = onPageShown; onPageShown = function(name){ _sh.apply(this, arguments); if (name === 'settings') renderChatSettings(); }; }
+
+/* ---- counting across devices: each device keeps its count for today in the sync gist (fb-ai-usage.json) ---- */
+const AU_FILE = 'fb-ai-usage.json';
+const devId = (() => { let d = store.get('fb.devId', null); if (!d){ d = 'd' + Math.random().toString(36).slice(2, 10); store.set('fb.devId', d); } return d; })();
+let auBusy = false;
+async function auSync(){
+  if (auBusy || !cbSyncOn()) return; auBusy = true;
+  try {
+    const d = ptDay(), g = await gh('/gists/' + SYNC.gist), cur = (await cbGistFile(g, AU_FILE)) || {};
+    const devs = cur.day === d ? cur.devs || {} : {}, mine = GEM.cnt && GEM.cnt.day === d ? GEM.cnt.n : {};
+    // the others: their counts, and whether one of them is running the comment builder
+    const oth = {}; let bo = null;
+    Object.entries(devs).forEach(([id, v]) => { if (id === devId) return; Object.entries(v.n || {}).forEach(([m, c]) => oth[m] = (oth[m] || 0) + c); if (v.bld && (!bo || v.bld > bo)) bo = v.bld; });
+    GEM.oth = {day: d, n: oth}; GEM.bldOther = bo ? {day: d, at: bo} : null; saveAI();
+    devs[devId] = {n: mine, at: Date.now(), bld: GEM.bldAt && Date.now() - GEM.bldAt < 6 * 60000 ? GEM.bldAt : 0, name: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 'phone' : 'computer'};
+    await gh('/gists/' + SYNC.gist, {method: 'PATCH', body: JSON.stringify({files: {[AU_FILE]: {content: JSON.stringify({day: d, devs})}}})});
+    if (!$('#page-settings').hidden) renderChatSettings();
+  } catch(e){ console.error(e); } finally { auBusy = false; }
+}
+(function auStart(){ if (!RK_READY) return setTimeout(auStart, 4000); setTimeout(auSync, 5000); setInterval(auSync, 2 * 60000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) auSync(); }); })();
