@@ -33,7 +33,17 @@ async function fdPersist(){
   if (list.length) try { await IDB.setMany(list); } catch(e){ console.error(e); FD_PS.clear(); FD_CS.clear(); }
 }
 // a post's comments, loading them if they aren't in memory
-async function fdCm(p){ if (p.cm) return p.cm; let cm = []; try { cm = (await IDB.get('fc:' + p.id)) || []; } catch(e){} if (!p.cm){ p.cm = cm; FD_CS.set(p.id, fdCSig(p)); } return p.cm; }
+// a poster only answers people on their own post, and only a few times: no new comments of their own, at most 3 answers
+const FD_SELF_MAX = 3;
+function fdSelfOk(p, w, re){ return w < 0 || w !== p.w || (re && (p.cm || []).filter(c => c.w === w && !c.del).length < FD_SELF_MAX); }
+function fdTidySelf(p){
+  if (!p.cm || p.w < 0) return;
+  const mine = p.cm.filter(c => c.w === p.w), keep = new Set(mine.filter(c => c.re).sort((a, b) => (b.lk || 0) - (a.lk || 0)).slice(0, FD_SELF_MAX).map(c => c.id));
+  const gone = new Set(mine.filter(c => !keep.has(c.id)).map(c => c.id)); if (!gone.size) return;
+  let grew = true; while (grew){ grew = false; p.cm.forEach(c => { if (c.re && gone.has(c.re) && !gone.has(c.id)){ gone.add(c.id); grew = true; } }); }
+  p.cm = p.cm.filter(c => !gone.has(c.id)); if (p.pv) p.pv = p.pv.filter(c => !gone.has(c.id));
+}
+async function fdCm(p){ if (p.cm) return p.cm; let cm = []; try { cm = (await IDB.get('fc:' + p.id)) || []; } catch(e){} if (!p.cm){ p.cm = cm; FD_CS.set(p.id, fdCSig(p)); fdTidySelf(p); } return p.cm; }
 // keep 30 days, plus the all-time top 1,000, your own posts and ones you liked; big old comment lists leave memory
 function fdPrune(){
   if (!FD_READY) return; const now = Date.now(), gone = [];
@@ -48,7 +58,7 @@ function fdPrune(){
     const old = FD.posts.filter(p => !have.has(p.id));        // from before the move to IndexedDB
     const now = Date.now();
     await Promise.all(metas.filter(p => now - p.t < 3 * 864e5 || (p.cn || 0) <= 30).map(async p => { try { p.cm = (await IDB.get('fc:' + p.id)) || []; } catch(e){ p.cm = []; } }));
-    metas.forEach(p => { FD_PS.set(p.id, fdPSig(p)); if (p.cm) FD_CS.set(p.id, fdCSig(p)); });
+    metas.forEach(p => { FD_PS.set(p.id, fdPSig(p)); if (p.cm) FD_CS.set(p.id, fdCSig(p)); if (p.pv && p.w >= 0) p.pv = p.pv.filter(c => c.w !== p.w || c.re); fdTidySelf(p); });
     FD.posts = metas.concat(old);
   } catch(e){ console.error(e); }
   FD_READY = true; fdPrune(); saveFeed(); fdPersist(); renderFeed();
@@ -228,6 +238,7 @@ ${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w
       if (cap && w === p.w){ if (!p.cap) p.cap = text; return; }
       if (p.cm.length >= 10) return;
       const {re, text: t2} = fdAnswerTo(p, at, text, me);
+      if (!fdSelfOk(p, w, re)) return;
       const prev = p.cm.length ? p.cm[p.cm.length - 1].t : p.t;
       p.cm.push({id: p.id + 'c' + p.cm.length, w, t: Math.round(Math.max(prev, p.t) + (2 + Math.random() * 40) * 60000), text: t2.replace(/^\[play\]\s*/i, ''), play: /^\[play\]/i.test(t2), re, lk: fdCmLikes(p, !!re)});
     });
