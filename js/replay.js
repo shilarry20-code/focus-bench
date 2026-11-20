@@ -72,13 +72,13 @@ async function rpOpen(key){
   if (!d) return toast('That replay isn’t available.');
   d.start = d.kind === 'el' ? d.G.L.t0 - 5000 : d.t0; d.end = Math.max(d.end, d.start + 60000);
   RP = {d, t: d.start, play: true, speed: 60, tab: 'arena', last: performance.now()};
-  $('#rpModal').hidden = false; rpDraw(true); rpLoop();
+  $('#rpModal').hidden = false; rpDraw('shell'); rpLoop();
 }
 function rpClose(){ $('#rpModal').hidden = true; RP = null; }
 function rpLoop(){
   if (!RP) return;
   const now = performance.now(), dt = now - RP.last; RP.last = now;
-  if (RP.play){ RP.t = Math.min(RP.d.end, RP.t + dt * RP.speed); if (RP.t >= RP.d.end) RP.play = false; rpDraw(); }
+  if (RP.play && !RP.drag){ RP.t = Math.min(RP.d.end, RP.t + dt * RP.speed); if (RP.t >= RP.d.end){ RP.play = false; rpDraw(true); } else { rpBar(); rpDraw(); } }
   requestAnimationFrame(rpLoop);
 }
 const rpStateAt = (ev, t) => { let s = 'B'; for (const [x, st] of ev){ if (x > t) break; s = st; } return s; };
@@ -102,12 +102,24 @@ function rpDraw(force){
       ${t >= d.end ? `<p class="rp-res">${d.res === 'D' ? 'Draw' : `${esc(nm(d.res === 'W' ? d.A : d.C))} won`} · ${elClock(d.totA)} vs ${elClock(d.totC)}${d.friendly ? ' · friendly' : d.d != null ? ` · ${d.d > 0 ? '+' : ''}${d.d} Elo` : ''}</p>` : ''}
       ${d.exact ? '' : '<p class="hint">Start, end and both totals are from the match; the breaks in between are filled in from each player’s usual timer.</p>'}</div>`;
   }
-  const head = `<div class="rp-ctl"><button class="small-btn accent" data-rp-act="play">${RP.play ? 'Pause' : t >= d.end ? 'Replay' : 'Play'}</button>
-    <select data-rp-act="speed" aria-label="Speed">${[1, 10, 60, 300, 600].map(s => `<option value="${s}"${RP.speed === s ? ' selected' : ''}>${s}×</option>`).join('')}</select>
-    ${d.kind === 'el' ? `<button class="small-btn" data-rp-act="next">Next knockout</button><button class="small-btn" data-rp-act="sd">Skip to sudden death</button>` : ''}<button class="small-btn" data-rp-act="end">Skip to the end</button>
-    <span class="rp-time">${elClock(t - (d.kind === 'el' ? d.G.L.t0 : d.start))} / ${elClock(d.end - (d.kind === 'el' ? d.G.L.t0 : d.start))}</span></div>
-    <div class="rp-scrub" data-rp-act="seek">${marks}<b style="width:${(t - d.start) / span * 100}%"></b></div>`;
-  box.innerHTML = head + body;
+  // the controls are built once (so the speed menu and a drag on the bar aren't interrupted); only their values change
+  if (!box.querySelector('.rp-ctl') || force === 'shell'){
+    box.innerHTML = `<div class="rp-ctl"><button class="small-btn accent" data-rp-act="play"></button>
+      <select data-rp-sel aria-label="Speed">${[1, 10, 60, 300, 600].map(s => `<option value="${s}"${RP.speed === s ? ' selected' : ''}>${s}×</option>`).join('')}</select>
+      ${d.kind === 'el' ? `<button class="small-btn" data-rp-act="next">Next knockout</button><button class="small-btn" data-rp-act="sd">Skip to sudden death</button>` : ''}<button class="small-btn" data-rp-act="end">Skip to the end</button>
+      <span class="rp-time"></span></div>
+      <div class="rp-scrub" role="slider" tabindex="0" aria-label="Replay position"><span class="rp-track">${marks}<b></b></span><i class="rp-knob"></i></div><div id="rpView"></div>`;
+  }
+  rpBar();
+  const pb = box.querySelector('[data-rp-act="play"]'), lbl = RP.play ? 'Pause' : t >= d.end ? 'Replay' : 'Play'; if (pb.textContent !== lbl) pb.textContent = lbl;
+  $('#rpView').innerHTML = body;
+}
+// the bar and the clock: cheap, so they update every frame
+function rpBar(){
+  const box = $('#rpBody'), d = RP.d, t = RP.t, f = clampN((t - d.start) / (d.end - d.start), 0, 1), z = d.kind === 'el' ? d.G.L.t0 : d.start;
+  const b = box.querySelector('.rp-track b'), k = box.querySelector('.rp-knob'), tm = box.querySelector('.rp-time'), sc = box.querySelector('.rp-scrub'); if (!b) return;
+  b.style.width = f * 100 + '%'; k.style.left = f * 100 + '%';
+  tm.textContent = `${elClock(t - z)} / ${elClock(d.end - z)}`; sc.setAttribute('aria-valuenow', Math.round(f * 100));
 }
 document.addEventListener('click', e => {
   const v = e.target.closest('[data-rp]'); if (v){ e.preventDefault(); rpOpen(v.dataset.rp); return; }
@@ -119,10 +131,24 @@ document.addEventListener('click', e => {
   else if (k === 'end'){ RP.t = d.end; RP.play = false; }
   else if (k === 'next' && d.kind === 'el'){ const outs = d.G.L.players.map(w => w === -1 ? (d.G.me.out ? d.G.me.out.t : 0) : elBotPlan(d.G.L, w).out).filter(x => x > RP.t + 1000).sort((x, y) => x - y); if (outs.length) RP.t = outs[0] - 3000; }
   else if (k === 'sd' && d.kind === 'el'){ const A = elAllow(d.G.L.rules), i = A.findIndex(x => x <= 0); if (i >= 0) RP.t = Math.min(d.end, d.G.L.t0 + i * d.G.L.rules.round * 60000); }
-  else if (k === 'seek'){ const r = a.getBoundingClientRect(); RP.t = d.start + clampN((e.clientX - r.left) / r.width, 0, 1) * (d.end - d.start); }
   rpDraw(true);
 }, true);
-document.addEventListener('change', e => { const s = e.target.closest('[data-rp-act="speed"]'); if (s && RP){ RP.speed = +s.value; } });
+document.addEventListener('change', e => { const s = e.target.closest('[data-rp-sel]'); if (s && RP){ RP.speed = +s.value; RP.last = performance.now(); } });
+// drag (or tap) anywhere on the bar to move through the replay
+{
+  const seek = (e, bar) => { const r = bar.getBoundingClientRect(); RP.t = RP.d.start + clampN((e.clientX - r.left) / r.width, 0, 1) * (RP.d.end - RP.d.start); rpBar(); rpDraw(); };
+  document.addEventListener('pointerdown', e => {
+    const bar = e.target.closest('#rpBody .rp-scrub'); if (!bar || !RP) return;
+    e.preventDefault(); RP.drag = bar; bar.classList.add('drag'); try { bar.setPointerCapture(e.pointerId); } catch(err){} seek(e, bar);
+  });
+  document.addEventListener('pointermove', e => { if (RP && RP.drag) seek(e, RP.drag); });
+  const up = () => { if (!RP || !RP.drag) return; RP.drag.classList.remove('drag'); RP.drag = null; RP.last = performance.now(); rpDraw(true); };
+  document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+  document.addEventListener('keydown', e => {
+    if (!RP || !e.target.closest || !e.target.closest('#rpBody .rp-scrub') || !/^Arrow(Left|Right)$/.test(e.key)) return;
+    e.preventDefault(); RP.t = clampN(RP.t + (e.key === 'ArrowRight' ? 1 : -1) * (RP.d.end - RP.d.start) / 100, RP.d.start, RP.d.end); rpDraw(true);
+  });
+}
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && RP) rpClose(); });
 
 /* ---- View buttons on match histories ---- */
