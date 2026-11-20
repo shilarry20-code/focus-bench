@@ -198,6 +198,7 @@ const FD_SYS = me => `You write posts and comments for the Feed on Focus Bench, 
 Write like real college students on Instagram: short, casual, lowercase is common, slang is fine, inside jokes about classes, finals, coffee, sleep. Captions are usually a few words to one sentence. Comments are short reactions or questions about the post, and they must fit what the picture actually shows (you'll be told what's in it).
 Each person has their own emoji habit ("never", "sometimes" or "often", with their go-to emojis): mostly use their own, sometimes any other face, hand or heart emoji, never the same few for everyone, at most a couple per message.
 Don't start a comment with the name of the person it answers. No hashtags. ${me} is the person using the app.
+${TALK_RULES}
 Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…","replyTo":"…"}]}; replyTo says what each message is: "cap <post id>" for a post's caption (from the poster), "<post id>" for a new comment on it, and "<post id> @<name>" for an answer to that person's comment (answers go under the comment they answer, so never write an answer as a new comment, and don't start the text with @name).`;
 async function fdWrite(posts){
   if (!posts.length || !GEM.key || GEM.wait > Date.now()) return false;
@@ -209,10 +210,10 @@ async function fdWrite(posts){
     const f = chatFacts(p.w);
     blocks.push(`Post ${p.k} by ${f.name} (${f.rank}, ${f.subj}, emojis: ${emojiStyle(p.w)}), posted at ${new Date(p.t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
 What it is: ${fdAbout(p)}
-${p.type === 'text' ? `Write the post itself as its caption (one or two short sentences, something on their mind: a class, a vent, a joke, a question).` : 'Write its caption.'}
+${p.type === 'text' ? `Write the post itself as its caption (one or two short sentences). Starting point: ${pickTopic(p.w)}. Take it wherever feels natural for them.` : Math.random() < .3 ? `Write its caption. It can be about the picture or about ${pickTopic(p.w)}.` : 'Write its caption.'}
 ${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w); return `${g.name} (${g.subj}, emojis: ${emojiStyle(w)})`; }).join('; ')}. One of them can answer another's comment, and ${f.name} can answer one comment.` : 'Nobody comments on this one.'}`);
   });
-  const user = `Today is ${new Date().toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}.\n\n${blocks.join('\n\n')}`;
+  const user = `Today is ${new Date().toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}.\n\n${blocks.join('\n\n')}${openerAvoid()}`;
   try {
     const got = await aiCall(FD_SYS(me), user);
     (Array.isArray(got) ? got : []).forEach(x => {
@@ -226,7 +227,7 @@ ${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w
       const prev = p.cm.length ? p.cm[p.cm.length - 1].t : p.t;
       p.cm.push({id: p.id + 'c' + p.cm.length, w, t: Math.round(Math.max(prev, p.t) + (2 + Math.random() * 40) * 60000), text: t2.replace(/^\[play\]\s*/i, ''), play: /^\[play\]/i.test(t2), re, lk: fdCmLikes(p, !!re)});
     });
-    posts.forEach(p => { p.gen = 1; if (!p.cap) p.cap = fdFallbackCap(p); delete p.k; delete p._cs; });
+    posts.forEach(p => { p.gen = 1; if (p.cap) noteOpener(p.cap); else p.cap = fdFallbackCap(p); delete p.k; delete p._cs; });
     return true;
   } catch(e){
     if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); if (e.msg) GEM.detail = e.msg; try { saveAI(); } catch(err){}
