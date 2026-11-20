@@ -1357,6 +1357,8 @@ function botLiveNow(i){
 const MODE_NAMES = {pomodoro:'Pomodoro', fifty:'52/17', custom:'Custom', timebox:'Timebox', stopwatch:'Stopwatch', flow:'Flow'};
 
 /* ---------- profiles: a popup for anyone, which opens into a full page ---------- */
+let profTab = 'posts', profTabWho = null;
+const fmtCount = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M' : n >= 1e4 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'K' : n.toLocaleString();
 let profPrev = 'ranked', profWho = null, profFilter = 'all', profEditing = false, profMatchN = 15;
 const PROFILE_HUES = [null, 0, 22, 42, 95, 150, 180, 205, 228, 262, 292, 330];
 const isBotW = w => w !== ME;
@@ -1404,6 +1406,7 @@ function weekStrip(w, weeks){
 function editForm(){
   return `<div class="pf-edit"><label>Display name<input id="pfName" maxlength="20" placeholder="You" value="${esc(P.myName || '')}"></label>
     <div class="pf-hues" role="radiogroup" aria-label="Avatar color">${PROFILE_HUES.map(hh => `<button data-hue="${hh == null ? '' : hh}" role="radio" aria-checked="${(P.myHue ?? null) === hh}" title="${hh == null ? 'Accent color' : ''}" style="${hh == null ? 'background:var(--accent)' : `background:hsl(${hh} 52% 44%)`}"></button>`).join('')}</div>
+    <label>Bio<textarea id="pfBio" maxlength="150" rows="2" placeholder="what you're studying, your goals, anything">${esc(P.myBio || '')}</textarea></label>
     <div class="pf-edit-btns"><button class="small-btn accent" data-pf="save">Save</button><button class="small-btn" data-pf="cancel">Cancel</button></div></div>`;
 }
 function profileHead(w, big){
@@ -1510,22 +1513,48 @@ function renderProfilePage(){
   let got = w === ME ? [...mine] : botBadges(w);
   if (w !== ME && profFilter === 'missing') got = got.filter(id => !mine.has(id));
   const tiers = ['legendary', 'platinum', 'gold', 'silver', 'bronze'].map(tr => { const ids = got.filter(id => achById(id).tier === tr); return ids.length ? `<div class="pf-tier"><span style="color:${TIERS[tr].c}">${TIERS[tr].name} · ${ids.length}</span><div class="bdgs wrap">${rareSort(ids).map(id => badgeHtml(id)).join('')}</div></div>` : ''; }).join('');
-  $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button>${w === ME ? '' : `<span class="hint">Player profile</span>${typeof dmButtons === 'function' ? dmButtons(w) : ''}`}</div>
-    <div class="pf-grid">
-      <div class="pf-main">
-        <div class="card pf-hero">${profileHead(w, true)}<div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('')}</div></div>
-        <div class="card"><div class="h first">Study stats</div><div class="pf-stats">${stats.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div></div>
-        <div class="card"><div class="h first">Activity · last 6 months</div>
-          <div class="hm-cal"><div class="hm-months">${months}</div><div class="hm-days"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div><div class="hm-grid">${cells}</div></div>
-          <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
-        <div class="card" id="pfCal"></div>
-        <div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>
-        <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>
-      </div>
-      <div class="pf-side">
-        <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of ${(ROSTER_N + 1).toLocaleString()} players. Click one to open that leaderboard.</p></div>
-        <div class="card"><div class="h first">Ranked</div>${ranked}</div>
-      </div>
+  // header like a social app: picture and counts, who they are, buttons, a few numbers, then tabs
+  if (profTabWho !== w){ profTabWho = w; profTab = 'posts'; }
+  const soc = typeof socFollowers === 'function', nf = soc ? socFollowers(w) : 0, ng = soc ? socFollowing(w) : 0, posts = typeof fdUserPosts === 'function' ? fdUserPosts(w) : [];
+  const rk = rkOf(w), elo = w === ME ? R.mmr : botRating(w), live = B && botLiveNow(w), place = placeOf(w);
+  const fy = w !== ME && typeof FD !== 'undefined' && FD.followers.includes(w);
+  const fb = soc ? socFollowedBy(w) : [], fbTxt = fb.length ? `Followed by ${fb.slice(0, 2).map(a => `<button class="lnk" data-bot="${a}">${esc(bot(a).name)}</button>`).join(', ')}${fb.length > 2 ? ` and ${fb.length - 2} other${fb.length - 2 === 1 ? '' : 's'} you follow` : ''}` : '';
+  let wr = '–';
+  if (w === ME){ const g = R.w + R.l + R.d; if (g) wr = Math.round(R.w / g * 100) + '%'; }
+  else { try { m5Backfill(w); const ms = m5List(w); if (ms.length >= 3) wr = Math.round(ms.filter(m => m.a > m.b).length / ms.length * 100) + '%'; } catch(e){} }
+  const chips = [[st.total >= 60 ? Math.floor(st.total / 60).toLocaleString() + 'h' : st.total + 'm', 'studied'], [`${st.cur}d`, 'streak'], [wr, 'win rate'], ['#' + place.toLocaleString(), 'overall']];
+  const bio = w === ME ? (P.myBio || '') : B.bio;
+  const cnt = (n, l, kind) => kind ? `<button class="pf-cnt" data-soc="${kind}" data-soc-w="${w === ME ? 'me' : w}"><b>${fmtCount(n)}</b><small>${l}</small></button>` : `<span class="pf-cnt"><b>${n.toLocaleString()}</b><small>${l}</small></span>`;
+  const TABS = [['posts', 'Posts'], ['stats', 'Stats'], ['ranked', 'Ranked'], ['awards', 'Awards']];
+  const tabBody = {
+    posts: () => posts.length ? `<div class="fd-grid pf-posts">${posts.map(p => `<button class="fd-thumb" data-goto-post="${p.id}" aria-label="Open post">${fdMedia(p)}</button>`).join('')}</div>`
+      : `<p class="hint pf-empty">${w === ME ? 'No posts yet. Make one from the Feed.' : 'No posts yet.'}</p>`,
+    stats: () => `<div class="card"><div class="h first">Study stats</div><div class="pf-stats">${stats.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div></div>
+      <div class="card"><div class="h first">Activity · last 6 months</div>
+        <div class="hm-cal"><div class="hm-months">${months}</div><div class="hm-days"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div><div class="hm-grid">${cells}</div></div>
+        <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
+      <div class="card" id="pfCal"></div>
+      <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of ${(ROSTER_N + 1).toLocaleString()} players. Click one to open that leaderboard.</p></div>`,
+    ranked: () => `<div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>`,
+    awards: () => `<div class="card"><div class="h first">Featured</div><div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('') || '<span class="hint">Nothing featured yet.</span>'}</div></div>
+      <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>`
+  };
+  $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button></div>
+    <div class="pf-wrap">
+    <div class="card pf-head">
+      <div class="pf-h1"><span class="pf-pic">${pAvatar(w, 'xl')}${live ? '<i class="pf-livedot" title="Studying now"></i>' : ''}</span>
+        <div class="pf-cnts">${cnt(posts.length, posts.length === 1 ? 'post' : 'posts')}${cnt(nf, nf === 1 ? 'follower' : 'followers', 'followers')}${cnt(ng, 'following', 'following')}</div></div>
+      <div class="pf-id"><b id="bmName">${esc(pName(w))}</b>${fy ? '<i class="soc-fy">Follows you</i>' : ''}</div>
+      <div class="pf-meta">${emblem(rk, 'xs')} ${esc(rk.full)} · ${elo.toLocaleString()} Elo${B && B.subject ? ` · ${esc(B.subject)}` : ''}</div>
+      ${bio && !(w === ME && profEditing) ? `<p class="pf-bio">${esc(bio)}</p>` : ''}
+      ${B ? `<small class="pf-cls">${esc(B.style)} · studies in the ${esc(B.peak.toLowerCase())} · this semester: ${botClasses(w).map(esc).join(', ')}</small>` : ''}
+      ${live ? `<span class="pf-live">● ${R.cur && R.cur.b === w && R.cur.state === 'live' && !R.cur.tapped ? 'Studying now · in a ranked match with you' : 'Studying now'}</span>` : ''}
+      ${paraLine(w)}${fbTxt ? `<small class="pf-fb">${fbTxt}</small>` : ''}
+      ${w === ME ? (profEditing ? editForm() : '<div class="pf-btns"><button class="small-btn" data-pf="edit">Edit profile</button></div>') : `<div class="pf-btns">${typeof dmButtons === 'function' ? dmButtons(w) : ''}</div>`}
+      <div class="pf-chips">${chips.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div>
+    </div>
+    <div class="pf-tabs" role="tablist">${TABS.map(([k, l]) => `<button data-pft="${k}" role="tab" aria-selected="${profTab === k}">${l}</button>`).join('')}</div>
+    <div class="pf-tabbody">${tabBody[profTab]()}</div>
     </div>`;
   $('#pageTitle').textContent = w === ME ? (P.myName ? myName() : 'Your profile') : B.name;
   renderProfileCal();
@@ -1611,12 +1640,13 @@ function pcAct(a, dk){
 function openFullProfile(w){ if (profWho !== w || !pc) pcReset(); if (profWho !== w) profMatchN = 15; profWho = w; $('#botModal').hidden = true; showPage('profile'); }
 function saveProfileEdit(){
   const n = ($('#pfName').value || '').trim().slice(0, 20), on = document.querySelector('.pf-hues [aria-checked="true"]');
-  P.myName = n; P.myHue = on && on.dataset.hue !== '' ? +on.dataset.hue : null; saveP(); profEditing = false;
+  P.myName = n; P.myHue = on && on.dataset.hue !== '' ? +on.dataset.hue : null; const bi = $('#pfBio'); if (bi) P.myBio = bi.value.replace(/\s+/g, ' ').trim().slice(0, 150); saveP(); profEditing = false;
   renderMeBtn(); renderMatch(); renderRankChip();
   if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders();
   toast('Profile saved');
 }
 function profClick(e){
+  const tb = e.target.closest('[data-pft]'); if (tb){ profTab = tb.dataset.pft; renderProfilePage(); return; }
   const b = e.target.closest('[data-pf]'), hue = e.target.closest('[data-hue]');
   if (hue){ hue.parentNode.querySelectorAll('[data-hue]').forEach(x => x.setAttribute('aria-checked', x === hue)); return; }
   if (!b) return;
