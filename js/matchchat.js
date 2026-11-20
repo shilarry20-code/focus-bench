@@ -81,8 +81,8 @@ async function mcSay(kind, delay){
   }
   const cur = mcCur(); if (cur !== c) return;                      // the match changed meanwhile
   if (focusing() && c.state === 'live') return;                    // you started focusing: they're studying too
-  let t = Date.now() + delay;
   c.cq = c.cq || [];
+  let t = Math.max(Date.now() + delay, ...c.cq.map(x => x.t + 2000));    // after anything already waiting
   texts.forEach(text => { c.cq.push({t: Math.round(t), text, ...(kind === 'reply' ? {re: 1} : {})}); t += (3 + text.length * .07 + Math.random() * 3) * 1000; });
   saveRanked(); mcRender();
 }
@@ -104,7 +104,9 @@ function mcTick(){
   c.cq = c.cq || []; c.chat = c.chat || [];
   // during a focus block you're both studying: anything they hadn't sent yet is dropped (and they don't start anything)
   if (foc && c.state === 'live' && c.cq.length){ c.cq = []; changed = true; }
-  while (c.cq.length && c.cq[0].t <= now && !foc){ const q = c.cq.shift(); c.chat.push({t: now, text: q.text}); changed = true; }
+  // one message at a time, a couple of seconds apart
+  if (c.cq.length && c.cq[0].t <= now && !foc && now - (c.lastMsg || 0) >= 2200){ const q = c.cq.shift(); c.chat.push({t: now, text: q.text}); c.lastMsg = now; changed = true;
+    if (c.cq.length && c.cq[0].t < now + 2200) c.cq[0].t = now + 2200 + Math.random() * 2500; }
   if (c.state === 'live'){
     if (mcPrevFoc && !foc && c.you > 0 && !c.mcBrk){ c.mcBrk = 1; changed = true; if (Math.random() < .35) mcSay('brk', (6 + Math.random() * 25) * 1000); }
     if (foc && c.mcBrk){ c.mcBrk = 0; changed = true; }
