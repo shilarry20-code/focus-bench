@@ -5,14 +5,58 @@
    shows (sceneDesc), so what people say fits the picture. Likes build up over a few hours, more for popular players.
    You can follow people, like and comment (people answer, later if they're offline), and post your own: pictures you
    put together from the same presets, shares of your sessions, matches and rank-ups, or plain text.
-   Everything lives in fb.feed on this device (and syncs with the rest of your data). */
+   Posts and comments live in IndexedDB on this device (fp:<id> for a post, fc:<id> for its comments; big comment lists
+   load only when needed); follows, notifications and the rest stay in fb.feed. Posts are kept 30 days, plus the all-time
+   top 1,000, your own and ones you liked. */
 const FD_V = 1;
 let FD = store.get('fb.feed', null);
 if (!FD || FD.v !== FD_V) FD = {v: FD_V, posts: [], follows: [], followers: [], notif: [], filled: 0, nseen: 0, pend: [], liked: {}};
-const saveFeed = () => { if (FD.posts.length > 260) FD.posts = FD.posts.sort((a, b) => b.t - a.t).slice(0, 240).concat(FD.posts.filter(p => p.w === -1 && !FD.posts.slice(0, 240).includes(p))); if (FD.notif.length > 150) FD.notif = FD.notif.slice(-150); store.set('fb.feed', FD); };
+const saveFeed = () => { if (FD.notif.length > 150) FD.notif = FD.notif.slice(-150); const {posts, ...rest} = FD; store.set('fb.feed', {...rest, posts: FD_READY ? [] : posts}); fdPersistSoon(); };
+
+/* ---- storage: IndexedDB, only what changed ---- */
+let FD_READY = false, fdSaveT = null;
+const FD_PS = new Map(), FD_CS = new Map();                 // what was last written for each post and its comments
+const fdPSig = p => `${p.cap || ''}|${p.del ? 1 : 0}|${p.gen ? 1 : 0}|${p.L}|${p.ln || 0}|${p.cm ? p.cm.length : p.cn || 0}|${p.bg ? 1 : 0}`;
+const fdCSig = p => p.cm ? p.cm.length + ':' + (p.cm.length ? p.cm[p.cm.length - 1].id : '') + ':' + p.cm.filter(c => c.del).length : null;
+function fdMeta(p){
+  const o = {}; for (const k in p) if (k !== 'cm' && k !== 'k' && k[0] !== '_') o[k] = p[k];
+  if (p.cm){ o.cn = p.cm.length; o.pv = fdTree(p.cm.filter(c => !c.del)).slice(-4).map(r => r.c); }
+  return o;
+}
+function fdPersistSoon(){ if (!FD_READY) return; clearTimeout(fdSaveT); fdSaveT = setTimeout(fdPersist, 1200); }
+async function fdPersist(){
+  if (!FD_READY) return; const list = [];
+  FD.posts.forEach(p => {
+    const ps = fdPSig(p); if (FD_PS.get(p.id) !== ps){ const m = fdMeta(p); list.push(['fp:' + p.id, m]); FD_PS.set(p.id, ps); }
+    const cs = fdCSig(p); if (cs != null && FD_CS.get(p.id) !== cs){ list.push(['fc:' + p.id, p.cm]); FD_CS.set(p.id, cs); p.cb = JSON.stringify(p.cm).length; }
+  });
+  if (list.length) try { await IDB.setMany(list); } catch(e){ console.error(e); FD_PS.clear(); FD_CS.clear(); }
+}
+// a post's comments, loading them if they aren't in memory
+async function fdCm(p){ if (p.cm) return p.cm; let cm = []; try { cm = (await IDB.get('fc:' + p.id)) || []; } catch(e){} if (!p.cm){ p.cm = cm; FD_CS.set(p.id, fdCSig(p)); } return p.cm; }
+// keep 30 days, plus the all-time top 1,000, your own posts and ones you liked; big old comment lists leave memory
+function fdPrune(){
+  if (!FD_READY) return; const now = Date.now(), gone = [];
+  const top = new Set(FD.posts.filter(p => !p.del).sort((a, b) => fdLikes(b) - fdLikes(a)).slice(0, 1000).map(p => p.id));
+  FD.posts = FD.posts.filter(p => { const keep = p.del ? now - p.t < 864e5 * 2 : (now - p.t < 30 * 864e5 || p.w === -1 || FD.liked[p.id] || top.has(p.id)); if (!keep) gone.push(p.id); return keep; });
+  if (gone.length){ gone.forEach(id => { FD_PS.delete(id); FD_CS.delete(id); }); IDB.setMany(gone.flatMap(id => [['fp:' + id, undefined], ['fc:' + id, undefined]])).catch(console.error); }
+  FD.posts.forEach(p => { if (p.cm && p.cm.length > 30 && now - p.t > 3 * 864e5 && FDV.view !== p.id && FD_CS.get(p.id) === fdCSig(p)){ p.pv = fdMeta(p).pv; p.cn = p.cm.length; delete p.cm; } });
+}
+(async function fdLoad(){
+  try {
+    const metas = (await IDB.all('fp:', 'fp:\uffff')) || [], have = new Set(metas.map(p => p.id));
+    const old = FD.posts.filter(p => !have.has(p.id));        // from before the move to IndexedDB
+    const now = Date.now();
+    await Promise.all(metas.filter(p => now - p.t < 3 * 864e5 || (p.cn || 0) <= 30).map(async p => { try { p.cm = (await IDB.get('fc:' + p.id)) || []; } catch(e){ p.cm = []; } }));
+    metas.forEach(p => { FD_PS.set(p.id, fdPSig(p)); if (p.cm) FD_CS.set(p.id, fdCSig(p)); });
+    FD.posts = metas.concat(old);
+  } catch(e){ console.error(e); }
+  FD_READY = true; fdPrune(); saveFeed(); fdPersist(); renderFeed();
+})();
+setInterval(() => { fdPrune(); fdPersistSoon(); }, 10 * 60000);
 const fdId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fdHash = s => { let h = 2166136261; for (let k = 0; k < s.length; k++) h = Math.imul(h ^ s.charCodeAt(k), 16777619); return h >>> 0; };
-let FDV = {tab: 'for', shown: 16, open: {}, re: {}, busy: false, composer: null};
+let FDV = {tab: 'for', top: 'day', shown: 16, open: {}, re: {}, busy: false, composer: null, vn: 30, vexp: {}};
 
 /* ---- who posts ---- */
 function fdPool(){
@@ -28,8 +72,12 @@ function fdPool(){
   for (let k = 0; k < 30; k++) add(sb[clampN(me + Math.floor((Math.random() - .5) * 3000), 0, sb.length - 1)], 1);
   return pool;
 }
-const fdPop = w => w === -1 ? fdMyPop() : 18 + 2600 / Math.sqrt(posOf(w) + 1);
-function fdMyPop(){ return 10 + FD.followers.length * .9 + Math.max(0, (R.mmr - 900) / 25); }
+// likes come from followers: smaller accounts get a bigger share of theirs, big ones far more in total
+const fdPopF = f => 4 + f * (.035 + .11 / (1 + f / 900));
+const fdPop = w => w === -1 ? fdMyPop() : fdPopF(typeof socFollowers === 'function' ? socFollowers(w) : 100);
+function fdMyPop(){ return Math.max(10, fdPopF(FD.followers.length)) + Math.max(0, (R.mmr - 900) / 40); }
+// now and then a post takes off
+const fdViral = () => { const u = Math.random(); return u < .04 ? 4 + Math.random() * 10 : u < .2 ? 1.5 + Math.random() : 1; };
 const fdWorldMin = t => { const d = new Date(worldT(t)); return {dk: dayKey(d.getTime()), m: d.getHours() * 60 + d.getMinutes(), h: d.getHours(), mo: d.getMonth()}; };
 // the post itself: a real session or match when there is one around that time, otherwise a picture or a thought
 function fdMake(w, t, light){
@@ -61,13 +109,23 @@ function fdFill(){
     const h = new Date(worldT(t)).getHours(), gap = 3600e3 / FD_RATE[h] * (.4 + Math.random() * 1.2);
     t += gap; if (t >= now) break;
     const w = pool[Math.floor(Math.random() * pool.length)];
-    try { const p = fdMake(w, Math.round(t), light); p.L = Math.round(fdPop(w) * ({scene: 1, text: .55, session: .8, match: 1.1, rank: 1.7}[p.type] || 1) * (p.sc && p.sc.outgoing ? 1.2 : 1) * (.45 + Math.random())); FD.posts.push(p); made++; } catch(e){ console.error(e); }
+    try { const p = fdMake(w, Math.round(t), light); p.L = Math.round(fdPop(w) * ({scene: 1, text: .8, session: .8, match: 1.1, rank: 1.7}[p.type] || 1) * (p.sc && p.sc.outgoing ? 1.2 : 1) * (.45 + Math.random()) * fdViral()); FD.posts.push(p); made++; } catch(e){ console.error(e); }
   }
   FD.filled = now; saveFeed();
   return made > 0;
 }
-const fdLikes = p => (p.L ? Math.floor(p.L * (1 - Math.exp(-(Date.now() - p.t) / 2700e3))) : 0) + (FD.liked[p.id] ? 1 : 0);
-const fdShownComments = p => p.cm.filter(c => c.t <= Date.now() && !c.del);
+// likes build up over the first hours (longer for big posts)
+const fdLikes = p => (p.L ? Math.floor(p.L * (1 - Math.exp(-(Date.now() - p.t) / (2700e3 * (1 + Math.log10(Math.max(1, p.L / 200))))))) : 0) + (FD.liked[p.id] ? 1 : 0);
+// how many comments a post should end up with (replies included): 2–5% of its likes; the builder writes toward this
+const fdRate = p => .02 + (fdHash(p.id + 'cr') % 1000) / 1000 * .03;
+const fdTarget = p => Math.round(fdLikes(p) * fdRate(p));
+const fdWritten = p => p.cm ? p.cm.filter(c => !c.del && c.t <= Date.now()).length : (p.cn || 0);
+const fdCount = p => Math.max(fdTarget(p), fdWritten(p));
+// likes on a comment: set when it's written (older comments get a stable stand-in)
+const fdCmLikes = (p, reply) => Math.round(Math.max(0, fdLikes(p) * .004 * Math.exp((Math.random() + Math.random() + Math.random() - 1.5) * 1.6) * (reply ? .25 : 1)));
+const fdLk = (c, p) => c.lk != null ? c.lk : Math.floor(Math.max(1, fdLikes(p)) * .006 * Math.pow((fdHash(c.id) % 1000) / 1000, 3) * (c.re ? .3 : 1));
+const fdFmtN = n => n >= 1e4 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'K' : n.toLocaleString();
+const fdShownComments = p => (p.cm || p.pv || []).filter(c => c.t <= Date.now() && !c.del);
 // which comment an answer belongs under: the latest one by the named person (also catches text that starts with @name)
 function fdAnswerTo(p, at, text, me){
   let name = (at || '').trim(); const m = !name && text.match(/^@([\w.]+)\s*/); if (m){ name = m[1]; }
@@ -85,6 +143,11 @@ function fdThread(cms){
   return out;
 }
 const fdNameOf = w => w === -1 ? myName() : bot(w).name;
+function fdTree(cms){
+  const out = [], idx = new Map(); let cur = null;
+  fdThread(cms).forEach(x => { if (!x.sub){ cur = {c: x.c, kids: []}; out.push(cur); idx.set(x.c.id, cur); } else if (cur) cur.kids.push(x); });
+  return out;
+}
 
 /* ---- what each post is about, in words, for the people writing captions and comments ---- */
 function fdAbout(p){
@@ -161,7 +224,7 @@ ${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w
       if (p.cm.length >= 10) return;
       const {re, text: t2} = fdAnswerTo(p, at, text, me);
       const prev = p.cm.length ? p.cm[p.cm.length - 1].t : p.t;
-      p.cm.push({id: p.id + 'c' + p.cm.length, w, t: Math.round(Math.max(prev, p.t) + (2 + Math.random() * 40) * 60000), text: t2.replace(/^\[play\]\s*/i, ''), play: /^\[play\]/i.test(t2), re});
+      p.cm.push({id: p.id + 'c' + p.cm.length, w, t: Math.round(Math.max(prev, p.t) + (2 + Math.random() * 40) * 60000), text: t2.replace(/^\[play\]\s*/i, ''), play: /^\[play\]/i.test(t2), re, lk: fdCmLikes(p, !!re)});
     });
     posts.forEach(p => { p.gen = 1; if (!p.cap) p.cap = fdFallbackCap(p); delete p.k; delete p._cs; });
     return true;
@@ -215,22 +278,26 @@ const fdAgo = t => { const s = (Date.now() - t) / 1000; return s < 60 ? 'now' : 
 const fdWho = w => w === -1 ? `<b>${esc(myName())}</b>` : `<button class="lnk" data-bot="${w}">${esc(bot(w).name)}</button>`;
 function fdPostHtml(p){
   const me = p.w === -1, B = me ? null : bot(p.w), cms = fdShownComments(p), open = FDV.open[p.id], likes = fdLikes(p), fol = !me && FD.follows.includes(p.w);
-  const roots = cms.filter(c => !c.re || !cms.some(x => x.id === c.re)), show = open ? cms : roots.slice(-2), re = FDV.re[p.id];
+  const roots = cms.filter(c => !c.re || !cms.some(x => x.id === c.re)), show = roots.slice().sort((a, b) => fdLk(b, p) - fdLk(a, p)).slice(0, 2), re = FDV.re[p.id], nc = fdCount(p);
   return `<article class="card fd-post" data-pid="${p.id}">
     <header class="fd-h">${me ? myAvatar('sm') : avatar(B, 'sm')}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)} · ${fdAgo(p.t)}</small></span>${me ? `<button class="fd-x" data-fda="del" title="Delete post" aria-label="Delete post">×</button>` : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
     <div class="fd-media" data-fda="dbl">${fdMedia(p)}</div>
     <div class="fd-b"><div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9.1C1.2 8.6 3.1 5 6.6 5c2 0 3.4 1.2 4.4 2.6C12 6.2 13.4 5 15.4 5c3.5 0 5.4 3.6 3.9 6.9C19 16.4 12 21 12 21z"/></svg></button><button class="fd-cbtn" data-fda="comments" aria-label="Comments"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/></svg></button></div>
     <div class="fd-likes">${likes.toLocaleString()} like${likes === 1 ? '' : 's'}</div>
     ${p.type !== 'text' && p.cap ? `<p class="fd-cap">${fdWho(p.w)} ${esc(p.cap)}</p>` : !p.cap && !p.gen && !me ? '<p class="fd-cap hint">…</p>' : ''}
-    ${cms.length > 2 && !open ? `<button class="fd-more" data-fda="comments">View all ${cms.length} comments</button>` : ''}
+    ${nc > show.length ? `<button class="fd-more" data-fda="comments">View all ${nc.toLocaleString()} comments</button>` : ''}
     ${show.map(c => `<div class="fd-c${c.w === -1 ? ' me' : ''}" data-cid="${c.id}">${fdWho(c.w)} <span>${esc(c.text)}</span><small>${fdAgo(c.t)}${c.w !== -1 ? ` · <button data-fda="reply">Reply</button>` : ''}</small></div>`).join('')}
-    ${open ? `<form class="fd-form" data-fda="send">${re ? `<div class="fd-re">Replying to ${esc(re.name)} <button type="button" data-fda="unre" aria-label="Cancel reply">×</button></div>` : ''}<input maxlength="220" placeholder="Add a comment…" aria-label="Add a comment" autocomplete="off"><button class="small-btn accent">Post</button></form>` : ''}
     </div></article>`;
 }
+const FD_TOP = {day: ['Today', 864e5], week: ['This week', 7 * 864e5], month: ['This month', 30 * 864e5], all: ['All time', 0]};
 function fdList(){
   const now = Date.now(), vis = FD.posts.filter(p => p.t <= now && !p.del);
   if (FDV.tab === 'following') return vis.filter(p => FD.follows.includes(p.w)).sort((a, b) => b.t - a.t);
   if (FDV.tab === 'you') return vis.filter(p => p.w === -1).sort((a, b) => b.t - a.t);
+  if (FDV.tab === 'new') return vis.sort((a, b) => b.t - a.t);
+  // Hot: likes and comments for how old the post is, so something blowing up right now beats a big post from this morning
+  if (FDV.tab === 'hot'){ const hs = p => (fdLikes(p) + 3 * fdCount(p)) / Math.pow((now - p.t) / 3600e3 + 2, 1.5); return vis.filter(p => now - p.t < 2 * 864e5).sort((a, b) => hs(b) - hs(a)); }
+  if (FDV.tab === 'top'){ const win = FD_TOP[FDV.top][1]; return vis.filter(p => !win || now - p.t < win).sort((a, b) => fdLikes(b) - fdLikes(a)); }
   // For you: newest first, nudged up for people you follow and popular posts
   const sc = p => p.t / 3600e3 + (FD.follows.includes(p.w) ? 1.5 : 0) + Math.log10(1 + p.L) * .35 + (p.w === -1 ? 2 : 0);
   return vis.sort((a, b) => sc(b) - sc(a));
@@ -242,11 +309,11 @@ function fdNotifHtml(){
 function renderFeed(){
   fdViewRefresh();
   const el = $('#fdBody'); if (!el || $('#page-feed').hidden) return;
-  if (!RK_READY){ el.innerHTML = '<p class="hint">Loading the feed…</p>'; return; }
+  if (!RK_READY || !FD_READY){ el.innerHTML = '<p class="hint">Loading the feed…</p>'; return; }
   const n = FD.notif.filter(x => x.t > FD.nseen).length;
-  $('#fdTabs').innerHTML = [['for', 'For you'], ['following', 'Following'], ['you', `You${n ? ` <b>${n}</b>` : ''}`]].map(([k, t]) => `<button class="ct-btn${FDV.tab === k ? ' on' : ''}" data-fdt="${k}">${t}</button>`).join('') + `<button class="small-btn accent fd-new" data-fda="compose">New post</button>`;
+  $('#fdTabs').innerHTML = [['for', 'For you'], ['following', 'Following'], ['hot', 'Hot'], ['top', 'Top'], ['new', 'New'], ['you', `You${n ? ` <b>${n}</b>` : ''}`]].map(([k, t]) => `<button class="ct-btn${FDV.tab === k ? ' on' : ''}" data-fdt="${k}">${t}</button>`).join('') + `<button class="small-btn accent fd-new" data-fda="compose">New post</button>`;
   const list = fdList(), page = list.slice(0, FDV.shown);
-  const top = FDV.tab === 'you' ? `<div class="card fd-me">${myAvatar('md')}<div><b>${esc(myName())}</b><small>${list.length} post${list.length === 1 ? '' : 's'} · ${FD.followers.length} follower${FD.followers.length === 1 ? '' : 's'} · ${FD.follows.length} following</small></div></div>` + fdNotifHtml() : '';
+  const top = FDV.tab === 'top' ? `<div class="seg fd-topwin" role="group" aria-label="Top posts from">${Object.entries(FD_TOP).map(([k, [l]]) => `<button data-fdtop="${k}" aria-pressed="${FDV.top === k}">${l}</button>`).join('')}</div>` : FDV.tab === 'you' ? `<div class="card fd-me">${myAvatar('md')}<div><b>${esc(myName())}</b><small>${list.length} post${list.length === 1 ? '' : 's'} · ${FD.followers.length} follower${FD.followers.length === 1 ? '' : 's'} · ${FD.follows.length} following</small></div></div>` + fdNotifHtml() : '';
   el.innerHTML = `<div id="fdComp">${FDV.composer ? fdComposerHtml() : ''}</div>` + top + (page.length ? page.map(fdPostHtml).join('') : `<p class="hint fd-empty">${FDV.tab === 'following' ? 'Follow people from their posts or profiles to see them here.' : FDV.tab === 'you' ? 'Your posts show up here. Tap <b>New post</b> to make one.' : 'Nothing yet.'}</p>`)
     + (list.length > FDV.shown ? '<button class="small-btn fd-load" data-fda="more">Show more</button>' : '')
     + (!GEM.key ? '<p class="hint ch-hint">Captions and comments are written once Gemini is set up in <button class="link-btn" data-go="settings" data-sec="set-chat">Settings → Chat</button>.</p>' : '');
@@ -270,15 +337,17 @@ dmButtons = function(w){ const on = FD.follows.includes(w); return `<button clas
 
 /* ---- commenting: people answer you, later if they're offline ---- */
 function fdComment(p, text){
-  const re = FDV.re[p.id], c = {id: p.id + 'm' + Date.now().toString(36), w: -1, t: Date.now(), text, re: re ? re.cid : null};
+  const re = FDV.re[p.id], c = {id: p.id + 'm' + Date.now().toString(36), w: -1, t: Date.now(), text, re: re ? re.cid : null, lk: 0};
   p.cm.push(c); delete FDV.re[p.id];
+  if (re){ const r = fdTree(p.cm).find(x => x.c.id === re.cid || x.kids.some(k => k.c.id === re.cid)); if (r) FDV.vexp[r.c.id] = r.kids.length; }
   // who answers: the person you replied to, or the poster (if it isn't you); on your own post, someone in the comments
   let who = re ? re.w : p.w !== -1 ? p.w : (p.cm.filter(x => x.w >= 0).pop() || {}).w;
   if (who != null && who >= 0 && Math.random() < .9) FD.pend.push({kind: 'reply', pid: p.id, cid: c.id, w: who, due: Date.now() + (40 + Math.random() * 200) * 1000});
   saveFeed(); renderFeed(); const i = $('#fdViewBody .fd-form input'); if (i) i.value = ''; fdViewRefresh();
 }
 async function fdReply(job){
-  const p = FD.posts.find(x => x.id === job.pid), mine = p && p.cm.find(x => x.id === job.cid); if (!p || !mine || !GEM.key) return true;
+  const p0 = FD.posts.find(x => x.id === job.pid); if (p0) await fdCm(p0);
+  const p = p0, mine = p && p.cm.find(x => x.id === job.cid); if (!p || !mine || !GEM.key) return true;
   const me = myName(), B = bot(job.w), f = chatFacts(job.w);
   const thread = p.cm.filter(x => x.t <= Date.now()).slice(-10).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n');
   const user = `Post ${p.id} by ${p.w === -1 ? me : bot(p.w).name}. What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${thread}\n\n${me} just commented "${mine.text}". Write ${B.name}'s answer (${f.rank}, ${f.subj}, emojis: ${emojiStyle(job.w)}) as one short comment, replyTo "${p.id}". It should answer what ${me} said.${/\b(play|match|1v1|challenge|duel|ranked|game)\b/i.test(mine.text) && R.on ? ` If ${me} is asking to play and ${B.name} would, start the comment with [play].` : ''}`;
@@ -287,7 +356,8 @@ async function fdReply(job){
     if (!x) return true;
     let text = emotionOnly(stripSegue(stripLeadName(String(x.text).replace(/#\w+/g, '').trim().slice(0, 240), [me]))); const play = /^\[play\]/i.test(text); text = text.replace(/^\[play\]\s*/i, '');
     if (!text) return true;
-    p.cm.push({id: p.id + 'r' + Date.now().toString(36), w: job.w, t: Date.now(), text, re: mine.id});
+    p.cm.push({id: p.id + 'r' + Date.now().toString(36), w: job.w, t: Date.now(), text, re: mine.id, lk: fdCmLikes(p, true)});
+    const rt = fdTree(p.cm).find(x => x.kids.some(k => k.c.id === mine.id) || x.c.id === mine.id); if (rt) FDV.vexp[rt.c.id] = rt.kids.length;
     fdNote('reply', job.w, `<b>${esc(B.name)}</b> replied: ${esc(text.slice(0, 80))}`, p.id);
     if (play) fdChallenge([job.w]);
     return true;
@@ -300,7 +370,7 @@ function fdChallenge(ws){
 // your own posts: likes build up, and people comment in a few waves (right away, after a while, hours later)
 async function fdEngage(job){
   const p = FD.posts.find(x => x.id === job.pid); if (!p || p.del) return true;
-  if (!GEM.key) return true;
+  if (!GEM.key) return true; await fdCm(p);
   const me = myName(), n = job.n === 0 ? 1 + Math.floor(Math.random() * 3) : Math.floor(Math.random() * 3);
   if (!n) return true;
   const pool = FD.followers.length ? FD.followers : fdCommenters(p, 6), cs = [];
@@ -313,7 +383,7 @@ async function fdEngage(job){
     (Array.isArray(got) ? got : []).forEach((x, k) => { const w = names.get(String(x && x.from || '').toLowerCase().trim()); if (w == null) return;
       let text = emotionOnly(stripSegue(String(x.text || '').replace(/#\w+/g, '').trim().slice(0, 240))); const play = /^\[play\]/i.test(text); text = text.replace(/^\[play\]\s*/i, ''); if (!text) return;
       const at = String(x && x.replyTo || '').split(/\s*@\s*/)[1], a = fdAnswerTo(p, at, text, me); text = a.text;
-      p.cm.push({id: p.id + 'e' + Date.now().toString(36) + k, w, t: Date.now() + k * 20000, text, re: a.re}); if (play) players.push(w);
+      p.cm.push({id: p.id + 'e' + Date.now().toString(36) + k, w, t: Date.now() + k * 20000, text, re: a.re, lk: fdCmLikes(p, !!a.re)}); if (play) players.push(w);
       setTimeout(() => { fdNote('comment', w, `<b>${esc(bot(w).name)}</b> commented: ${esc(text.slice(0, 80))}`, p.id); renderFeed(); }, k * 20000); });
     if (players.length) fdChallenge(players);
     saveFeed(); return true;
@@ -410,24 +480,33 @@ function fdComposerRedraw(){ const el = $('#fdComp'); if (el) el.innerHTML = FDV
 const fdViewOpen = () => $('#fdView') && !$('#fdView').hidden && FDV.view;
 function fdViewHtml(p){
   const me = p.w === -1, B = me ? null : bot(p.w), cms = fdShownComments(p), likes = fdLikes(p), fol = !me && FD.follows.includes(p.w), re = FDV.re[p.id];
-  const av = w => w === -1 ? myAvatar('sm') : avatar(bot(w), 'sm');
+  const av = w => w === -1 ? myAvatar('sm') : avatar(bot(w), 'sm'), nc = fdCount(p);
+  // top-level comments: yours first, then the most liked; answers stay folded under each one until you open them
+  const tree = p.cm ? fdTree(cms).sort((a, b) => (b.c.w === -1) - (a.c.w === -1) || fdLk(b.c, p) - fdLk(a.c, p)) : [];
+  const cmHtml = (c, to) => { const lk = fdLk(c, p); return `<div class="fv-c${c.w === -1 ? ' me' : ''}${to !== 0 ? ' sub' : ''}" data-cid="${c.id}">${av(c.w)}<div>${fdWho(c.w)} <span>${to && to.w !== c.w ? `<b class="fv-at">@${esc(fdNameOf(to.w))}</b> ` : ''}${esc(c.text)}</span><small>${fdAgo(c.t)}${lk ? ` · ${fdFmtN(lk)} like${lk === 1 ? '' : 's'}` : ''}${c.w !== -1 ? ' · <button data-fda="reply">Reply</button>' : ''}</small></div></div>`; };
   return `<div class="fv" data-pid="${p.id}">
     <div class="fv-media fd-media" data-fda="dbl">${fdMedia(p)}</div>
     <div class="fv-side">
       <header class="fd-h">${av(p.w)}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)}</small></span>${me ? '' : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
       <div class="fv-cms">
         ${p.type !== 'text' && p.cap ? `<div class="fv-c">${av(p.w)}<div>${fdWho(p.w)} <span>${esc(p.cap)}</span><small>${fdAgo(p.t)}</small></div></div>` : ''}
-        ${cms.length ? fdThread(cms).map(({c, sub, to}) => `<div class="fv-c${c.w === -1 ? ' me' : ''}${sub ? ' sub' : ''}" data-cid="${c.id}">${av(c.w)}<div>${fdWho(c.w)} <span>${to && to.w !== c.w ? `<b class="fv-at">@${esc(fdNameOf(to.w))}</b> ` : ''}${esc(c.text)}</span><small>${fdAgo(c.t)}${c.w !== -1 ? ' · <button data-fda="reply">Reply</button>' : ''}</small></div></div>`).join('')
+        ${!p.cm ? '<p class="hint fv-none">Loading comments…</p>' : tree.length ? tree.slice(0, FDV.vn).map(r => {
+          const k = Math.min(r.kids.length, FDV.vexp[r.c.id] || 0);
+          return cmHtml(r.c, 0) + (r.kids.length ? `<div class="fv-kids">${r.kids.slice(0, k).map(x => cmHtml(x.c, x.to)).join('')}
+            <button class="fv-vrep" data-fda="vrep" data-root="${r.c.id}" data-n="${r.kids.length}"><i></i>${k >= r.kids.length ? 'Hide replies' : k ? `View ${r.kids.length - k} more repl${r.kids.length - k === 1 ? 'y' : 'ies'}` : `View ${r.kids.length} repl${r.kids.length === 1 ? 'y' : 'ies'}`}</button></div>` : '');
+        }).join('') + (tree.length > FDV.vn ? '<button class="fv-morec" data-fda="vmore">View more comments</button>' : '')
           : `<p class="hint fv-none">No comments yet.${me ? '' : ' Start the conversation.'}</p>`}
       </div>
       <div class="fv-foot">
         <div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9.1C1.2 8.6 3.1 5 6.6 5c2 0 3.4 1.2 4.4 2.6C12 6.2 13.4 5 15.4 5c3.5 0 5.4 3.6 3.9 6.9C19 16.4 12 21 12 21z"/></svg></button><button class="fd-cbtn" data-fda="focus" aria-label="Comment"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4A8 8 0 1 1 20 12z"/></svg></button></div>
-        <div class="fd-likes">${likes.toLocaleString()} like${likes === 1 ? '' : 's'}</div><small class="fv-when">${fdAgo(p.t)}</small>
+        <div class="fd-likes">${likes.toLocaleString()} like${likes === 1 ? '' : 's'}${nc ? ` · ${nc.toLocaleString()} comment${nc === 1 ? '' : 's'}` : ''}</div><small class="fv-when">${fdAgo(p.t)}</small>
         <form class="fd-form" data-fda="send">${re ? `<div class="fd-re">Replying to ${esc(re.name)} <button type="button" data-fda="unre" aria-label="Cancel reply">×</button></div>` : ''}<input maxlength="220" placeholder="Add a comment…" aria-label="Add a comment" autocomplete="off"><button class="small-btn accent">Post</button></form>
       </div>
     </div></div>`;
 }
 function fdView(p, focus){
+  if (FDV.view !== p.id){ FDV.vn = 30; FDV.vexp = {}; }
+  if (!p.cm) fdCm(p).then(() => fdViewRefresh());
   FDV.view = p.id; $('#fdView').hidden = false; $('#fdViewBody').innerHTML = fdViewHtml(p);
   const box = $('#fdViewBody .fv-cms'); if (box) box.scrollTop = box.scrollHeight;
   if (focus){ const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); }
@@ -451,6 +530,7 @@ document.addEventListener('click', e => {
   if (inView && (e.target === $('#fdView') || e.target.closest('#fdView > .modal-card > .x'))){ fdViewClose(); return; }
   if (!pg && !inView) return;
   const t = e.target.closest('[data-fdt]'); if (t){ FDV.tab = t.dataset.fdt; FDV.shown = 16; renderFeed(); return; }
+  const tw = e.target.closest('[data-fdtop]'); if (tw){ FDV.top = tw.dataset.fdtop; FDV.shown = 16; renderFeed(); return; }
   const m = e.target.closest('[data-fdm]'); if (m){ FDV.composer.mode = m.dataset.fdm; fdComposerRedraw(); return; }
   const a = e.target.closest('[data-fda]'); if (!a) return;
   const act = a.dataset.fda, post = a.closest('[data-pid]'), p = post && FD.posts.find(x => x.id === post.dataset.pid);
@@ -466,8 +546,10 @@ document.addEventListener('click', e => {
   if (act === 'follow'){ const on = !FD.follows.includes(p.w); fdFollow(p.w, on); renderFeed(); fdViewRefresh(); return; }
   if (act === 'comments'){ fdView(p, true); return; }
   if (act === 'focus'){ const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); return; }
-  if (act === 'reply'){ const c = a.closest('[data-cid]'), cm = p.cm.find(x => x.id === c.dataset.cid); FDV.re[p.id] = {cid: cm.id, w: cm.w, name: bot(cm.w).name}; if (!inView) return fdView(p, true); fdViewRefresh(); const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); return; }
+  if (act === 'reply'){ const c = a.closest('[data-cid]'), cm = (p.cm || p.pv || []).find(x => x.id === c.dataset.cid); if (!cm) return; FDV.re[p.id] = {cid: cm.id, w: cm.w, name: bot(cm.w).name}; if (!inView) return fdView(p, true); fdViewRefresh(); const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); return; }
   if (act === 'unre'){ delete FDV.re[p.id]; fdViewRefresh(); return; }
+  if (act === 'vmore'){ FDV.vn += 30; fdViewRefresh(); return; }
+  if (act === 'vrep'){ const id = a.dataset.root, n = +a.dataset.n, k = FDV.vexp[id] || 0; FDV.vexp[id] = k >= n ? 0 : Math.min(n, k + 10); fdViewRefresh(); return; }
   if (act === 'del'){ if (!confirmDel(p)) return; if (inView) $('#fdView').hidden = true; p.del = 1; FD.pend = FD.pend.filter(j => j.pid !== p.id); saveFeed(); renderFeed(); undoToast && undoToast('Post deleted.', () => { delete p.del; saveFeed(); renderFeed(); }); return; }
 });
 function confirmDel(){ return true; }

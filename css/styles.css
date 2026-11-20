@@ -1640,3 +1640,14 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 .fv-c.sub{margin-left:42px}
 .fv-c.sub .av.sm{width:24px;height:24px;font-size:10px}
 .fv-at{font-weight:600;color:var(--accent)}
+/* feed tabs: scroll sideways when they don't fit */
+.fd-tabs{overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.fd-tabs::-webkit-scrollbar{display:none}
+.fd-tabs>*{flex:none}
+.fd-topwin{display:flex;max-width:620px;margin:0 auto 12px}.fd-topwin button{flex:1}
+/* comment threads in the post viewer */
+.fv-kids{display:flex;flex-direction:column;gap:12px;margin:-4px 0 0 42px}
+.fv-kids .fv-c.sub{margin-left:0}
+.fv-vrep{display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;color:var(--muted);font:inherit;font-size:12px;font-weight:600;cursor:pointer;align-self:flex-start}
+.fv-vrep i{display:inline-block;width:24px;height:1px;background:var(--muted)}
+.fv-morec{align-self:center;background:none;border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--text);font:inherit;font-size:13px;cursor:pointer}
+.fd-topwin button{white-space:nowrap;font-size:13px;padding:6px 4px}
