@@ -15,7 +15,7 @@ setInterval(() => {
 {
   const _fin = finalize;
   finalize = function(res, why){
-    const c = R.cur, snap = c && c.state === 'live' ? {b: c.b, br: c.br, mmr0: c.mmr0, t0: c.t0, plan: c.plan, target: c.target, yev: c.yev || [[c.t0, 'S']], friendly: c.friendly} : null;
+    const c = R.cur, snap = c && c.state === 'live' ? {b: c.b, br: c.br, mmr0: c.mmr0, t0: c.t0, plan: c.plan, target: c.target, yev: c.yev || [[c.t0, 'S']], friendly: c.friendly, chat: (c.chat || []).map(m => ({t: m.t, me: m.me ? 1 : 0, text: m.text}))} : null;
     const x = _fin.apply(this, arguments);
     if (snap && R.hist[0] && R.hist[0].b === snap.b){
       const h = R.hist[0]; snap.end = h.t; snap.res = h.r; snap.d = h.d; snap.you = (h.ys || h.you * 60) * 1000; snap.them = (h.ts || h.them * 60) * 1000;
@@ -49,7 +49,7 @@ async function rpGetRk(key){
   const [, kind, a, b] = key.split(':');
   if (kind === 'me'){                                                  // one of yours (rk:me:<hist t>)
     const h = R.hist.find(x => x.t === +a); if (!h) return null;
-    if (h.rp){ const s = await rpLoad('rk:' + h.rp); if (s) return {A: -1, C: s.b, t0: s.t0, end: s.end, evA: s.yev, evC: rpEv(s.plan), res: s.res, d: s.d, totA: s.you, totC: s.them, friendly: s.friendly, exact: true}; }
+    if (h.rp){ const s = await rpLoad('rk:' + h.rp); if (s) return {A: -1, C: s.b, t0: s.t0, end: s.end, evA: s.yev, evC: rpEv(s.plan), res: s.res, d: s.d, totA: s.you, totC: s.them, friendly: s.friendly, exact: true, chat: s.chat || []}; }
     const you = (h.ys || h.you * 60) * 1000, them = (h.ts || h.them * 60) * 1000, t0 = h.t - Math.max(you, them) * 1.25;
     const bA = rpBlocks(-1, t0, you, 'me' + h.t, h.t, you >= them), bC = rpBlocks(h.b, t0, them, 'op' + h.t, h.t, them > you);
     return {A: -1, C: h.b, t0, end: h.t, evA: rpEv(bA), evC: rpEv(bC), res: h.r, d: h.d, totA: you, totC: them, friendly: h.f};
@@ -122,9 +122,9 @@ function rpEvents(d, tr){
     for (let k = 0; k < ts.length - 1; k++){
       const a = ts[k], b = ts[k + 1], la = lead(a), lb = lead(b);
       if (la !== 0) last = Math.sign(la);
-      if (lb !== 0 && Math.sign(lb) !== last && last !== 0){ const x = a + Math.abs(la) / Math.abs(lb - la) * (b - a); add(Math.round(x), 'lead', `${rpNm(lb > 0 ? tr[0].w : tr[1].w)} ${rpV(lb > 0 ? tr[0].w : tr[1].w, 'takes', 'take')} the lead`, lb > 0 ? tr[0].w : tr[1].w); last = Math.sign(lb); }
-      else if (lb !== 0 && last === 0){ last = Math.sign(lb); }
+      if (lb !== 0 && Math.sign(lb) !== last){ const x = a + Math.abs(la) / Math.abs(lb - la) * (b - a); add(Math.round(x), 'lead', `${rpNm(lb > 0 ? tr[0].w : tr[1].w)} ${rpV(lb > 0 ? tr[0].w : tr[1].w, 'takes', 'take')} the lead`, lb > 0 ? tr[0].w : tr[1].w); last = Math.sign(lb); }
     }
+    (d.chat || []).forEach(m => add(m.t, 'chat', `${m.me ? myName() : bot(d.C).name}: ${m.text}`, m.me ? -1 : d.C));
     add(d.end, 'win', d.res === 'D' ? 'Draw' : `${rpNm(d.res === 'W' ? d.A : d.C)} ${rpV(d.res === 'W' ? d.A : d.C, 'wins', 'win')} · ${elClock(d.totA)} vs ${elClock(d.totC)}`, d.res === 'W' ? d.A : d.C);
   } else {
     const G = d.G, L = G.L, RL = L.rules.round * 60000, A = elAllow(L.rules), N = L.players.length;
