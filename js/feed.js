@@ -36,19 +36,18 @@ function fdMake(w, t){
   const B = bot(w), {dk, m, h, mo} = fdWorldMin(t), r = mulberry32(fdHash(w + ':' + t)), id = fdId();
   const base = {id, w, t, cm: [], L: 0};
   const u = r();
-  if (u < .28){       // a match they just played
+  if (u < .12){       // a match they just played
     const code = dayIdx(dk) * 1440 + m;
     for (let s = w * M5, e = s + M5; s < e; s++){ const opp = M5_OPP[s]; if (opp < 0) continue; const c = M5_T[s]; if (c <= code && c > code - 90){
       const won = M5_A[s] > M5_B[s], after = M5_R[s], before = after - M5_D[s], up = rankOf(after).i > rankOf(before).i;
       return {...base, type: up && won ? 'rank' : 'match', d: {opp, ys: M5_A[s], ts: M5_B[s], dl: M5_D[s], r: after, rk: rankOf(after).full}}; } }
   }
-  if (u < .62){       // a session they just finished
+  if (u < .25){       // a session they just finished
     const day = botDay(w, dk), s = day && day.sessions.filter(x => !x.live && x.b <= m && x.b > m - 60 && x.min >= 25).pop();
     if (s) return {...base, type: 'session', d: {min: s.min, subj: s.subj, mode: s.mode, a: s.a, tot: day.sessions.filter(x => x.b <= s.b).reduce((n, x) => n + x.min, 0)}};
   }
-  if (r() < .2) return {...base, type: 'text'};
   const mood = h >= 22 || h < 5 ? 'tired' : '';
-  return {...base, type: 'scene', sc: {seed: fdHash(id), hue: B.hue, maj: B.major, hour: h, month: mo, mood, outgoing: emojiHabit(w) === 'often' || r() < .35}};
+  return {...base, type: r() < .78 ? 'text' : 'scene', sc: {seed: fdHash(id), hue: B.hue, maj: B.major, hour: h, month: mo, mood, outgoing: emojiHabit(w) === 'often' || r() < .35}};
 }
 // posts appear at a real-world pace: more in the evening, few at 4 AM
 const FD_RATE = [3, 2, 1.4, 1, .8, .8, 1.2, 2.2, 3, 3.4, 3.6, 4, 4.4, 4.4, 4.6, 5, 5.2, 5.6, 6, 6.4, 6.6, 6.4, 5.6, 4.2];
@@ -75,8 +74,14 @@ function fdAbout(p){
   if (p.type === 'scene') return sceneDesc(fdSpec(p));
   if (p.type === 'session') return `A session receipt card: ${who} just finished ${p.d.min} min of ${p.d.subj} (${MODE_NAMES[p.d.mode] || 'a session'}), ${Math.floor(p.d.tot / 60)}h ${p.d.tot % 60}m today so far.`;
   if (p.type === 'match' || p.type === 'rank'){ const won = p.d.ys > p.d.ts; return `A ranked match result card: ${who} ${won ? 'beat' : 'lost to'} ${p.d.opp === -1 ? myName() : bot(p.d.opp).name}, ${p.d.ys}–${p.d.ts} min, ${p.d.dl > 0 ? '+' : ''}${p.d.dl} Elo${p.type === 'rank' ? `, and it ranked them up to ${p.d.rk}` : ''}.`; }
-  if (p.type === 'text') return p.cap ? `A text post: "${p.cap}"` : 'A text post (just words, no picture).';
+  if (p.type === 'text'){ let bg = ''; try { bg = sceneDesc(fdTextSpec(p)).split('. ')[0]; } catch(e){} return (p.cap ? `A text post: "${p.cap}"` : 'A text post (the words are the post).') + (bg ? ` The words sit over a dimmed background photo (${bg.toLowerCase()}).` : ''); }
   return '';
+}
+function fdTextSpec(p){
+  if (p.spec) return p.spec; if (p._spec) return p._spec;
+  const me = p.w === -1, B = me ? null : bot(p.w), d = new Date(p.t), ang = ['front', 'top', 'wide', 'front', 'door', 'shoulder'][fdHash(p.id + 'a') % 6];
+  const sc = p.sc || {seed: fdHash(p.id), hue: me ? 220 : B.hue, maj: me ? 'cs' : B.major, hour: d.getHours(), month: d.getMonth()};
+  return (p._spec = sceneSpec({...sc, look: me ? fdMyLook() : scLook(p.w), want: sc.outgoing ? {} : {angle: ang}}));
 }
 function fdSpec(p){ if (p.spec) return p.spec; return (p._spec = p._spec || sceneSpec({...p.sc, look: scLook(p.w)})); }
 // who comments: people who'd plausibly see it (followers of theirs are everyone near them, people online now)
@@ -157,10 +162,11 @@ function fdCard(p){
       + tx(80, 154, esc(who.slice(0, 14)), 11, '#fff') + tx(220, 154, esc(opp.slice(0, 14)), 11, '#fff', ' opacity=".8"') + rc(95, 190, 110, 34, '#fff', 17, ' opacity=".15"') + tx(150, 213, `${won ? '+' : '−'}${dl} Elo`, 16, won ? '#b9f6ca' : '#ffcdd2') + tx(150, 262, esc(rankOf(d.r).full), 11, '#fff', ' opacity=".75"');
     return svg(b);
   }
-  // a plain text post: the words on a color card
-  const t = esc(p.cap || '…'), size = t.length > 90 ? 16 : t.length > 50 ? 19 : 23, lines = [];
-  let cur = ''; t.split(' ').forEach(w => { if ((cur + ' ' + w).length > (size > 20 ? 18 : 24)){ lines.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; }); if (cur) lines.push(cur);
-  return svg(rc(0, 0, 300, 300, c1, 0) + ci(270, 30, 90, '#fff', ' opacity=".08"') + lines.slice(0, 8).map((l, k) => tx(150, 150 - (Math.min(8, lines.length) - 1) * size * .65 + k * size * 1.3, l, size, '#fff')).join(''));
+  // a text post: the words over a dimmed picture
+  const raw = p.cap || '…', size = raw.length > 110 ? 15 : raw.length > 70 ? 18 : raw.length > 35 ? 21 : 25, lines = [], per = size >= 25 ? 16 : size >= 21 ? 19 : size >= 18 ? 23 : 27;
+  let cur = ''; raw.split(' ').forEach(w => { if (cur && (cur + ' ' + w).length > per){ lines.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; }); if (cur) lines.push(cur);
+  const n = Math.min(9, lines.length), bg = sceneSvg(fdTextSpec(p), p.id + 'b').replace('<svg ', '<svg x="0" y="0" width="300" height="300" ');
+  return svg(bg + rc(0, 0, 300, 300, '#0b0b12', 0, ' opacity=".5"') + lines.slice(0, 9).map((l, k) => tx(150, 150 - (n - 1) * size * .65 + k * size * 1.3 + size * .35, esc(l), size, '#fff', ' font-weight="800" stroke="rgba(0,0,0,.35)" stroke-width="3" paint-order="stroke"')).join(''));
 }
 const fdMedia = p => p.type === 'scene' ? sceneSvg(fdSpec(p), p.id) : fdCard(p);
 
@@ -194,6 +200,7 @@ function fdNotifHtml(){
   return `<div class="card fd-notifs"><div class="h first">Activity</div>${ns.length ? ns.map(n => `<div class="fd-n${n.t > FD.nseen ? ' new' : ''}">${n.w != null && n.w >= 0 ? avatar(bot(n.w), 'sm') : '<span class="fd-ndot"></span>'}<span>${n.html}</span><small>${fdAgo(n.t)}</small></div>`).join('') : '<p class="hint">Likes, comments and new followers show up here.</p>'}</div>`;
 }
 function renderFeed(){
+  fdViewRefresh();
   const el = $('#fdBody'); if (!el || $('#page-feed').hidden) return;
   if (!RK_READY || (simBusy && !FD.posts.length)){ el.innerHTML = '<p class="hint">Loading the feed…</p>'; return; }
   const n = FD.notif.filter(x => x.t > FD.nseen).length;
@@ -228,7 +235,7 @@ function fdComment(p, text){
   // who answers: the person you replied to, or the poster (if it isn't you); on your own post, someone in the comments
   let who = re ? re.w : p.w !== -1 ? p.w : (p.cm.filter(x => x.w >= 0).pop() || {}).w;
   if (who != null && who >= 0 && Math.random() < .9) FD.pend.push({kind: 'reply', pid: p.id, cid: c.id, w: who, due: Date.now() + (40 + Math.random() * 200) * 1000});
-  saveFeed(); renderFeed();
+  saveFeed(); renderFeed(); const i = $('#fdViewBody .fd-form input'); if (i) i.value = ''; fdViewRefresh();
 }
 async function fdReply(job){
   const p = FD.posts.find(x => x.id === job.pid), mine = p && p.cm.find(x => x.id === job.cid); if (!p || !mine || !GEM.key) return true;
@@ -339,15 +346,17 @@ function fdComposerHtml(){
   }
   return `<div class="card fd-comp"><div class="fd-comp-h"><b>New post</b><button class="fd-x" data-fda="close" aria-label="Close">×</button></div>
     <div class="ct-tabs fd-ctabs">${[['pic', 'Picture'], ['share', 'Share'], ['text', 'Text']].map(([k, t]) => `<button class="ct-btn${C.mode === k ? ' on' : ''}" data-fdm="${k}">${t}</button>`).join('')}</div>
+    ${C.mode === 'text' ? `<div class="fd-tprev"><div class="fd-prev">${fdCard({id: 'prevt', w: -1, t: Date.now(), type: 'text', cap: C.cap || 'What’s on your mind?', spec: fdTextBg(C)})}</div><button type="button" class="small-btn" data-fda="rand">New background</button></div>` : ''}
     ${body}<textarea data-fdw="cap" maxlength="220" rows="2" placeholder="${C.mode === 'text' ? 'What’s on your mind?' : 'Write a caption…'}">${esc(C.cap)}</textarea>
     <div class="fd-row"><button class="small-btn accent" data-fda="post">Post</button></div></div>`;
 }
+function fdTextBg(C){ const S = C.S; return S.angle === 'selfie' ? {...S, look: fdMyLook()} : S; }
 function fdPublish(){
   const C = FDV.composer, now = Date.now(), cap = (C.cap || '').replace(/\s+/g, ' ').trim();
   let p = {id: fdId(), w: -1, t: now, cm: [], cap, gen: 1};
   if (C.mode === 'pic') p = {...p, type: 'scene', spec: {...C.S, look: C.S.angle === 'selfie' ? fdMyLook() : C.S.look}};
   else if (C.mode === 'share'){ const it = fdShareItems()[C.share]; if (!it) return toast('Nothing to share yet.'); p = {...p, type: it.type, d: it.d}; }
-  else { if (!cap) return toast('Write something first.'); p.type = 'text'; }
+  else { if (!cap) return toast('Write something first.'); p.type = 'text'; p.spec = fdTextBg(C); }
   p.L = Math.round(fdMyPop() * ({scene: 1, text: .6, session: .8, match: 1.1, rank: 1.8}[p.type] || 1) * (.6 + Math.random() * .8) * (p.spec && p.spec.angle === 'selfie' ? 1.25 : 1));
   FD.posts.push(p);
   [[0, 60 + Math.random() * 120], [1, (20 + Math.random() * 40) * 60], [2, (120 + Math.random() * 120) * 60]].forEach(([n, s]) => FD.pend.push({kind: 'eng', pid: p.id, n, due: now + s * 1000}));
@@ -356,11 +365,50 @@ function fdPublish(){
 // redraw just the composer (keeps the feed below as it is)
 function fdComposerRedraw(){ const el = $('#fdComp'); if (el) el.innerHTML = FDV.composer ? fdComposerHtml() : ''; }
 
+/* ---- the post viewer: picture on one side, caption and comments on the other ---- */
+const fdViewOpen = () => $('#fdView') && !$('#fdView').hidden && FDV.view;
+function fdViewHtml(p){
+  const me = p.w === -1, B = me ? null : bot(p.w), cms = fdShownComments(p), likes = fdLikes(p), fol = !me && FD.follows.includes(p.w), re = FDV.re[p.id];
+  const av = w => w === -1 ? myAvatar('sm') : avatar(bot(w), 'sm');
+  return `<div class="fv" data-pid="${p.id}">
+    <div class="fv-media fd-media" data-fda="dbl">${fdMedia(p)}</div>
+    <div class="fv-side">
+      <header class="fd-h">${av(p.w)}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)}</small></span>${me ? '' : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
+      <div class="fv-cms">
+        ${p.type !== 'text' && p.cap ? `<div class="fv-c">${av(p.w)}<div>${fdWho(p.w)} <span>${esc(p.cap)}</span><small>${fdAgo(p.t)}</small></div></div>` : ''}
+        ${cms.length ? cms.map(c => `<div class="fv-c${c.w === -1 ? ' me' : ''}" data-cid="${c.id}">${av(c.w)}<div>${fdWho(c.w)} <span>${esc(c.text)}</span><small>${fdAgo(c.t)}${c.w !== -1 ? ' · <button data-fda="reply">Reply</button>' : ''}</small></div></div>`).join('')
+          : `<p class="hint fv-none">No comments yet.${me ? '' : ' Start the conversation.'}</p>`}
+      </div>
+      <div class="fv-foot">
+        <div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9.1C1.2 8.6 3.1 5 6.6 5c2 0 3.4 1.2 4.4 2.6C12 6.2 13.4 5 15.4 5c3.5 0 5.4 3.6 3.9 6.9C19 16.4 12 21 12 21z"/></svg></button><button class="fd-cbtn" data-fda="focus" aria-label="Comment"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4A8 8 0 1 1 20 12z"/></svg></button></div>
+        <div class="fd-likes">${likes.toLocaleString()} like${likes === 1 ? '' : 's'}</div><small class="fv-when">${fdAgo(p.t)}</small>
+        <form class="fd-form" data-fda="send">${re ? `<div class="fd-re">Replying to ${esc(re.name)} <button type="button" data-fda="unre" aria-label="Cancel reply">×</button></div>` : ''}<input maxlength="220" placeholder="Add a comment…" aria-label="Add a comment" autocomplete="off"><button class="small-btn accent">Post</button></form>
+      </div>
+    </div></div>`;
+}
+function fdView(p, focus){
+  FDV.view = p.id; $('#fdView').hidden = false; $('#fdViewBody').innerHTML = fdViewHtml(p);
+  const box = $('#fdViewBody .fv-cms'); if (box) box.scrollTop = box.scrollHeight;
+  if (focus){ const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); }
+}
+// redraw the open viewer without losing what you're typing or where you scrolled
+function fdViewRefresh(){
+  if (!fdViewOpen()) return; const p = FD.posts.find(x => x.id === FDV.view); if (!p || p.del) return fdViewClose();
+  const host = $('#fdViewBody'), i = host.querySelector('.fd-form input'), val = i ? i.value : '', foc = i && document.activeElement === i, box = host.querySelector('.fv-cms');
+  const atEnd = box ? box.scrollTop + box.clientHeight >= box.scrollHeight - 30 : true, top = box ? box.scrollTop : 0;
+  host.innerHTML = fdViewHtml(p);
+  const i2 = host.querySelector('.fd-form input'), b2 = host.querySelector('.fv-cms'); if (i2){ i2.value = val; if (foc) i2.focus(); } if (b2) b2.scrollTop = atEnd ? b2.scrollHeight : top;
+}
+function fdViewClose(){ $('#fdView').hidden = true; FDV.view = null; renderFeed(); if (!$('#page-profile').hidden && typeof renderProfilePage === 'function') renderProfilePage(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && fdViewOpen()) fdViewClose(); });
+
 /* ---- taps ---- */
 document.addEventListener('click', e => {
   const pg = e.target.closest('#page-feed'), ff = e.target.closest('[data-fdf]');
-  if (ff){ const w = +ff.dataset.fdf, on = !FD.follows.includes(w); fdFollow(w, on); ff.textContent = on ? 'Following' : 'Follow'; ff.classList.toggle('accent', !on); renderFeed(); return; }
-  if (!pg) return;
+  if (ff){ const w = +ff.dataset.fdf, on = !FD.follows.includes(w); fdFollow(w, on); ff.textContent = on ? 'Following' : 'Follow'; ff.classList.toggle('accent', !on); renderFeed(); if (!$('#page-profile').hidden && ff.closest('#page-profile')) renderProfilePage(); return; }
+  const inView = e.target.closest('#fdView');
+  if (inView && (e.target === $('#fdView') || e.target.closest('#fdView > .modal-card > .x'))){ fdViewClose(); return; }
+  if (!pg && !inView) return;
   const t = e.target.closest('[data-fdt]'); if (t){ FDV.tab = t.dataset.fdt; FDV.shown = 16; renderFeed(); return; }
   const m = e.target.closest('[data-fdm]'); if (m){ FDV.composer.mode = m.dataset.fdm; fdComposerRedraw(); return; }
   const a = e.target.closest('[data-fda]'); if (!a) return;
@@ -372,12 +420,13 @@ document.addEventListener('click', e => {
   if (act === 'more'){ FDV.shown += 16; renderFeed(); return; }
   if (!p) return;
   if (act === 'like' || (act === 'dbl' && e.detail === 2)){ if (act === 'dbl' && FD.liked[p.id]) return; FD.liked[p.id] = !FD.liked[p.id]; saveFeed();
-    post.querySelector('.fd-like').classList.toggle('on', !!FD.liked[p.id]); const n = fdLikes(p); post.querySelector('.fd-likes').textContent = `${n.toLocaleString()} like${n === 1 ? '' : 's'}`; return; }
-  if (act === 'follow'){ const on = !FD.follows.includes(p.w); fdFollow(p.w, on); renderFeed(); return; }
-  if (act === 'comments'){ FDV.open[p.id] = !FDV.open[p.id]; post.outerHTML = fdPostHtml(p); if (FDV.open[p.id]){ const i = document.querySelector(`[data-pid="${p.id}"] .fd-form input`); if (i) i.focus(); } return; }
-  if (act === 'reply'){ const c = a.closest('[data-cid]'), cm = p.cm.find(x => x.id === c.dataset.cid); FDV.open[p.id] = true; FDV.re[p.id] = {cid: cm.id, w: cm.w, name: bot(cm.w).name}; post.outerHTML = fdPostHtml(p); const i = document.querySelector(`[data-pid="${p.id}"] .fd-form input`); if (i) i.focus(); return; }
-  if (act === 'unre'){ delete FDV.re[p.id]; post.outerHTML = fdPostHtml(p); return; }
-  if (act === 'del'){ if (!confirmDel(p)) return; p.del = 1; FD.pend = FD.pend.filter(j => j.pid !== p.id); saveFeed(); renderFeed(); undoToast && undoToast('Post deleted.', () => { delete p.del; saveFeed(); renderFeed(); }); return; }
+    document.querySelectorAll(`[data-pid="${p.id}"]`).forEach(el => { el.querySelector('.fd-like').classList.toggle('on', !!FD.liked[p.id]); const n = fdLikes(p); el.querySelector('.fd-likes').textContent = `${n.toLocaleString()} like${n === 1 ? '' : 's'}`; }); return; }
+  if (act === 'follow'){ const on = !FD.follows.includes(p.w); fdFollow(p.w, on); renderFeed(); fdViewRefresh(); return; }
+  if (act === 'comments'){ fdView(p, true); return; }
+  if (act === 'focus'){ const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); return; }
+  if (act === 'reply'){ const c = a.closest('[data-cid]'), cm = p.cm.find(x => x.id === c.dataset.cid); FDV.re[p.id] = {cid: cm.id, w: cm.w, name: bot(cm.w).name}; if (!inView) return fdView(p, true); fdViewRefresh(); const i = $('#fdViewBody .fd-form input'); if (i) i.focus(); return; }
+  if (act === 'unre'){ delete FDV.re[p.id]; fdViewRefresh(); return; }
+  if (act === 'del'){ if (!confirmDel(p)) return; if (inView) $('#fdView').hidden = true; p.del = 1; FD.pend = FD.pend.filter(j => j.pid !== p.id); saveFeed(); renderFeed(); undoToast && undoToast('Post deleted.', () => { delete p.del; saveFeed(); renderFeed(); }); return; }
 });
 function confirmDel(){ return true; }
 document.addEventListener('submit', e => {
@@ -389,7 +438,7 @@ document.addEventListener('submit', e => {
 document.addEventListener('input', e => {
   const k = e.target.dataset && e.target.dataset.fdw; if (!k || !FDV.composer) return;
   const C = FDV.composer, S = C.S, v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-  if (k === 'cap'){ C.cap = v; return; }
+  if (k === 'cap'){ C.cap = v; if (C.mode === 'text'){ const pv = document.querySelector('#fdComp .fd-tprev .fd-prev'); if (pv) pv.innerHTML = fdCard({id: 'prevt', w: -1, t: Date.now(), type: 'text', cap: v || 'What’s on your mind?', spec: fdTextBg(C)}); } return; }
   if (k === 'share'){ C.share = v; fdComposerRedraw(); return; }
   if (k.startsWith('lk:')){ FD.look = {...fdMyLook(), [k.slice(3)]: v}; S.look = fdMyLook(); saveFeed(); }
   else if (k.startsWith('prop')){ const n = +k.slice(4), a = S.props.slice(); a[n] = v; S.props = a.filter(Boolean); }
@@ -402,16 +451,9 @@ document.addEventListener('input', e => {
 });
 
 /* ---- a player's posts on their profile ---- */
-const _renderProfilePage = typeof renderProfilePage === 'function' ? renderProfilePage : null;
-if (_renderProfilePage) renderProfilePage = function(){
-  const r = _renderProfilePage.apply(this, arguments);
-  try {
-    const w = profWho, mine = w === ME, ps = FD.posts.filter(p => !p.del && p.t <= Date.now() && (mine ? p.w === -1 : p.w === w)).sort((a, b) => b.t - a.t).slice(0, 12);
-    const host = $('#profBody'); if (host && ps.length) host.insertAdjacentHTML('beforeend', `<div class="card fd-grid-card"><div class="h first">Posts</div><div class="fd-grid">${ps.map(p => `<button class="fd-thumb" data-goto-post="${p.id}" aria-label="Open post">${fdMedia(p)}</button>`).join('')}</div></div>`);
-  } catch(e){ console.error(e); }
-  return r;
-};
+function fdUserPosts(w){ return FD.posts.filter(p => !p.del && p.t <= Date.now() && (w === ME ? p.w === -1 : p.w === w)).sort((a, b) => b.t - a.t); }
 document.addEventListener('click', e => { const b = e.target.closest('[data-goto-post]'); if (!b) return; const p = FD.posts.find(x => x.id === b.dataset.gotoPost); if (!p) return;
+  if (b.closest('#page-profile')) return fdView(p);
   FDV.tab = p.w === -1 ? 'you' : 'for'; FDV.shown = Math.max(FDV.shown, fdList().indexOf(p) + 4); showPage('feed'); setTimeout(() => { const el = document.querySelector(`[data-pid="${p.id}"]`); if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 80); });
 
 const _fdShown = onPageShown;
