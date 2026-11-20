@@ -3,9 +3,11 @@
    counts everything since the period started (midnight, Monday, the 1st). Never anything about gaining Elo or reaching
    a rating: only things that can be done at any rating. One free reroll a day. */
 let CHL = store.get('fb.chal', {sets: {}, done: {}, rr: {day: '', used: 0}, total: 0});
-// XP: each challenge pays by how hard it is (daily 40-60, weekly 250-325, monthly 650-845), and finishing a whole set pays a bonus
+// XP: each challenge pays by how hard it is, and finishing a whole set pays a bonus
 const CHX = {d: 50, w: 250, m: 650}, CHX_ALL = {d: 50, w: 200, m: 500};
-const chXp = (per, id) => { const d = CH_POOL.find(c => c.id === id), w = d ? d.w || 1 : 1; return Math.round(CHX[per] * (per === 'd' ? w : Math.max(1, w)) / 5) * 5; };
+// difficulty (w) sets where in the range a challenge pays: daily 20-40, weekly 100-150, monthly 300-400
+const CHX_RANGE = {d: [20, 40, .8, 1.2], w: [100, 150, 1, 1.3], m: [300, 400, 1, 1.3]};
+const chXp = (per, id) => { const d = CH_POOL.find(c => c.id === id), w = d ? d.w || 1 : 1, [lo, hi, a, b] = CHX_RANGE[per]; return Math.round((lo + (hi - lo) * Math.max(0, Math.min(1, (w - a) / (b - a)))) / 5) * 5; };
 const saveChl = () => store.set('fb.chal', CHL);
 const CH_N = {d: 3, w: 4, m: 5}, CH_NAME = {d: 'Daily', w: 'Weekly', m: 'Monthly'};
 
@@ -93,7 +95,7 @@ const CH_POOL = [
   {id: 'm.post', w: 1, per: 'm', kind: 'feed', key: 'posts', n: () => 8, t: n => `Post to the Feed ${n} times`}
 ];
 const chDef = id => CH_POOL.find(c => c.id === id);
-if (CHL.xp == null) CHL.xp = Object.keys(CHL.done || {}).reduce((n, k) => { const [sk, id] = k.split('|'); return n + chXp(sk[0], id); }, 0);
+if (CHL.xp == null || CHL.xpV !== 2){ CHL.xp = Object.keys(CHL.done || {}).reduce((n, k) => { const [sk, id] = k.split('|'); return n + (id === 'all' ? CHX_ALL[sk[0]] : chXp(sk[0], id)); }, 0); CHL.xpV = 2; }
 // ranked challenges only if ranked is on, and fewer of them if you haven't played lately
 function chRankedMax(per){
   if (!R.on) return 0;
