@@ -88,6 +88,7 @@ function cbApply(p, got, names, now){
 }
 let cbBusy = false, cbNext = 0;
 async function cbRun(){
+  if (typeof cloudWriter === 'function' && !cloudWriter()) return;
   const now = Date.now();
   if (cbBusy || now < cbNext || !GEM.key || GEM.bOff || (GEM.wait && GEM.wait > now) || !RK_READY || !FD_READY || simBusy) return;
   if (AI_FLIGHT || now - AI_LAST < 30000 || !cbAllowed()) return;
@@ -138,6 +139,7 @@ const CB_TODO = 'fb-todo.json', CB_INBOX = 'fb-inbox.json', CB_USAGE = 'fb-usage
 const cbSyncOn = () => typeof SYNC !== 'undefined' && SYNC.token && SYNC.gist;
 let cbOvBusy = false;
 async function cbTodoUpload(){
+  if (typeof cloudWriter === 'function' && !cloudWriter()) return;
   if (!cbSyncOn() || !GEM.key || !FD_READY || !RK_READY) return;
   const now = Date.now(), vis = FD.posts.filter(p => !p.del && p.gen && p.t <= now), list = [];
   const rank = win => new Set(vis.filter(p => !win || now - p.t < win).sort((a, b) => fdLikes(b) - fdLikes(a)).slice(0, 25).map(p => p.id));
@@ -151,6 +153,7 @@ async function cbTodoUpload(){
 }
 async function cbGistFile(g, name){ const f = g.files && g.files[name]; if (!f) return null; let t = f.content; if (f.truncated) t = await (await fetch(f.raw_url, {cache: 'no-store'})).text(); try { return JSON.parse(t); } catch(e){ return null; } }
 async function cbInboxMerge(){
+  if (typeof cloudWriter === 'function' && !cloudWriter()) return;
   if (cbOvBusy || !cbSyncOn() || !FD_READY || !RK_READY) return; cbOvBusy = true;
   try {
     const g = await gh('/gists/' + SYNC.gist), inbox = (await cbGistFile(g, CB_INBOX)) || [], use = await cbGistFile(g, CB_USAGE);

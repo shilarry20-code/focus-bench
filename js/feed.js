@@ -68,7 +68,7 @@ async function fdCm(p){ if (p.cm) return p.cm; let cm = []; try { cm = (await ID
 function fdPrune(){
   if (!FD_READY) return; const now = Date.now(), gone = [];
   const top = new Set(FD.posts.filter(p => !p.del).sort((a, b) => fdLikes(b) - fdLikes(a)).slice(0, 1000).map(p => p.id));
-  FD.posts = FD.posts.filter(p => { const keep = p.del ? now - p.t < 864e5 * 2 : (now - p.t < 30 * 864e5 || p.w === -1 || FD.liked[p.id] || top.has(p.id)); if (!keep) gone.push(p.id); return keep; });
+  FD.posts = FD.posts.filter(p => { const keep = p.del ? now - p.t < 864e5 * 2 : (now - p.t < 90 * 864e5 || p.w === -1 || FD.liked[p.id] || top.has(p.id)); if (!keep) gone.push(p.id); return keep; });
   if (gone.length){ gone.forEach(id => { FD_PS.delete(id); FD_CS.delete(id); }); IDB.setMany(gone.flatMap(id => [['fp:' + id, undefined], ['fc:' + id, undefined]])).catch(console.error); }
   FD.posts.forEach(p => { if (p.w !== -1 && p.cm && p.cm.length > 30 && now - p.t > 3 * 864e5 && FDV.view !== p.id && FD_CS.get(p.id) === fdCSig(p)){ p.pv = fdMeta(p).pv; p.cn = p.cm.length; delete p.cm; } });
 }
@@ -133,7 +133,8 @@ function fdMake(w, t, light){
 const FD_RATE = [3, 2, 1.4, 1, .8, .8, 1.2, 2.2, 3, 3.4, 3.6, 4, 4.4, 4.4, 4.6, 5, 5.2, 5.6, 6, 6.4, 6.6, 6.4, 5.6, 4.2].map(x => x * 1.3);
 // while the world is still catching up, fill with posts that don't need today's matches and sessions (no waiting)
 function fdFill(){
-  if (!RK_READY) return false; const light = !!simBusy;
+  if (!RK_READY) return false; if (typeof cloudWriter === 'function' && !cloudWriter()) return false;          // with the shared feed on, only the writer makes posts
+  const light = !!simBusy;
   const now = Date.now(), from = Math.max(FD.filled || now - 8 * 3600e3, now - 12 * 3600e3);
   if (now - from < 4 * 60000) return false;
   const pool = fdPool(); let made = 0;
@@ -464,7 +465,7 @@ async function fdEngage(job){
 /* ---- every minute: people answering, new followers, likes on your posts ---- */
 let fdTickBusy = false;
 async function fdTick(){
-  if (!RK_READY || fdTickBusy) return; fdTickBusy = true;
+  if (!RK_READY || fdTickBusy) return; if (typeof cloudWriter === 'function' && !cloudWriter()) return; fdTickBusy = true;
   try {
     const now = Date.now();
     // first time: people who already know you follow you
