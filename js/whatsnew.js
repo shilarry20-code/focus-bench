@@ -4,7 +4,7 @@
    the page, and after a change ships you get a one-time note. Whether you've seen it is kept per device. */
 const UPDATES = [
   {n: 14, name: 'Challenges', when: 'Nov 20', secs: [
-    ['Challenges', ['A Challenges card on the Focus page: 3 daily, 4 weekly and 5 monthly challenges with progress bars, resetting at midnight, on Mondays and on the 1st', 'They fit how you study: targets are based on your usual study time, ranked ones only show up if you play ranked, and none of them ask you to gain Elo or reach a rating', 'One free reroll a day to swap a challenge you don’t want', 'Your ranked challenges also show on the Ranked page']],
+    ['Challenges', ['A Challenges card on the Focus page: 3 daily, 4 weekly and 5 monthly challenges with progress bars, resetting at midnight, on Mondays and on the 1st', 'They fit how you study: targets are based on your usual study time, ranked ones only show up if you play ranked, and none of them ask you to gain Elo or reach a rating', 'One free reroll a day to swap a challenge you don’t want', 'Your ranked challenges also show on the Ranked page', 'Each challenge has its own icon, colour-coded: blue for studying, amber for ranked, pink for the Feed']],
     ['Leaderboards', ['Two new Rating boards: Ranked wins and Win % (to one decimal, at least 20 rated games to appear)', 'Win rates on the Ranked page and on profiles now show one decimal, and profiles show each player’s overall win rate']]],
     fixes: []},
   {n: 13, name: 'Insights', when: 'Nov 20', secs: [

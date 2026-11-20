@@ -156,6 +156,26 @@ function chReroll(per, id){
 }
 
 /* ---- drawing ---- */
+// a small icon for each kind of challenge
+const CH_IC = {
+  min: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/>',
+  n: '<path d="M9 3h6M12 3v3"/><circle cx="12" cy="14" r="7"/><path d="M12 14l3-3"/>',
+  long: '<path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9s8 4 8 9"/>',
+  long90: '<path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9s8 4 8 9"/>',
+  goal: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".8"/>',
+  am: '<path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 7V4M5.6 11.6 3.5 9.5M18.4 11.6l2.1-2.1"/>',
+  eve: '<path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
+  tags: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+  days: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+  streak: '<path d="M12 21c-4 0-6.5-2.7-6.5-6.2 0-3.6 2.7-5.5 3.6-9.3 1.9 1.2 3 3 3 5 1-.6 1.6-1.8 1.7-3.2 2.4 1.8 4.7 4.5 4.7 7.6C18.5 18.4 16 21 12 21z"/>',
+  rwin: '<path d="M7 4h10v4.5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4M12 13.5V17M8.5 20h7M10 17h4"/>',
+  rplay: '<path d="M14.5 4.5 20 4l-.5 5.5L9 20l-5-5zM4 20l3-3M13 6l5 5"/>',
+  rclose: '<path d="M12 4v16M5 20h14M6 8h12M6 8l-3 6a3 3 0 0 0 6 0zM18 8l-3 6a3 3 0 0 0 6 0z"/>',
+  rws: '<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>',
+  rrival: '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 11l2 2 4-4"/>',
+  posts: '<rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="16.8" cy="7.2" r=".6"/>'
+};
+
 function chLeft(per){
   const ms = chEnd(per) - Date.now(), h = Math.floor(ms / 3600e3), d = Math.floor(h / 24);
   return d >= 1 ? `${d}d ${h % 24}h left` : h >= 1 ? `${h}h ${Math.floor(ms % 3600e3 / 60000)}m left` : `${Math.max(1, Math.floor(ms / 60000))}m left`;
@@ -163,7 +183,8 @@ function chLeft(per){
 function chItem(per, c, canRr){
   const p = chProg(per, c); if (!p.def) return '';
   const fmt = v => p.def.unit === 'min' ? chHm(v).replace(' min', 'm') : v.toLocaleString();
-  return `<li class="chl-i${p.done ? ' done' : ''}"><span class="chl-ck" aria-hidden="true">${p.done ? '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}</span>
+  const ic = p.done ? '<path d="M5 12.5l4.5 4.5L19 7.5"/>' : (CH_IC[p.def.key] || CH_IC.min);
+  return `<li class="chl-i ${p.def.kind}${p.done ? ' done' : ''}"><span class="chl-ic" aria-hidden="true"><svg viewBox="0 0 24 24">${ic}</svg></span>
     <div class="chl-b"><div class="chl-t">${esc(p.def.t(c.n))}</div><div class="chl-bar"><i style="width:${Math.min(100, p.v / c.n * 100)}%"></i></div></div>
     <small class="chl-v">${p.done ? 'Done' : `${fmt(p.v)} / ${fmt(c.n)}`}</small>
     ${!p.done && canRr ? `<button class="chl-rr" data-chrr="${per}|${c.id}" aria-label="Reroll this challenge" title="Swap for another (1 free a day)"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></button>` : ''}</li>`;
