@@ -230,6 +230,7 @@ async function aiCall(sys, user){
         finally { clearTimeout(timer); }
       }
       if (netErr) throw {kind: 'offline', msg: `couldn’t reach Gemini (${netErr}${navigator.onLine === false ? ', device offline' : ''})`};
+      if (r.status !== 429) countRequest(model);                    // Google counts every request that reaches it, retries and errors included
       let j = null; try { j = JSON.parse(raw); } catch(e){}
       const em = j && j.error ? `${j.error.status || r.status}: ${j.error.message || ''}` : `HTTP ${r.status}`;
       if (!r.ok){
@@ -251,7 +252,6 @@ async function aiCall(sys, user){
         GEM.detail = last; continue;
       }
       if (GEM.model !== model){ GEM.model = model; }
-      countRequest(model);
       GEM.detail = null; saveAI();
       return o.messages;
     }
@@ -558,7 +558,7 @@ function aiUsageHtml(){
   const n = GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n : {}, reset = new Date(ptResetAt() - 60000).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
   return `<div class="ai-usage"><div class="h">Gemini requests today</div>${GEMINI_MODELS.map(m => { const c = n[m] || 0, out = modelOut(m);
     return `<div class="ai-u-row"><span>${MODEL_NAMES[m]}${m === GEMINI_MODELS[0] ? ' <small class="hint">(used first)</small>' : ''}</span><span class="bar2"><i style="width:${Math.min(100, c / ((GEM.lim && GEM.lim[m]) || 500) * 100)}%"></i></span><b>${out ? 'used up' : `${c} / ${GEM.lim && GEM.lim[m] ? GEM.lim[m] : '~500'}`}</b></div>`; }).join('')}
-    <p class="hint">Counts this device only; your other devices share the same daily allowance. Resets at ${reset}.</p></div>`;
+    <p class="hint">Counts every request this device sent (retries and errors included); your phone and other devices share the same daily allowance. Resets at ${reset}.</p></div>`;
 }
 function renderChatSettings(){
   const el = $('#chatSetBody'); if (!el) return;
