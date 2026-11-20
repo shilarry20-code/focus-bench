@@ -44,6 +44,7 @@ function chData(t0){
     rplay: rk.length, rwin: rk.filter(h => h.r === 'W').length, rws: bws,
     rclose: rk.filter(h => h.r === 'W' && Math.abs(h.br - (h.m - h.d)) <= 100).length,
     rrival: rk.filter(h => h.r === 'W' && isRival(h.b)).length,
+    elplay: (R.elh || []).filter(h => h.t >= t0).length, eltop3: (R.elh || []).filter(h => h.t >= t0 && h.p <= 3).length, elsd: (R.elh || []).filter(h => h.t >= t0 && h.sd).length, elwin: (R.elh || []).filter(h => h.t >= t0 && h.p === 1).length,
     posts: typeof FD !== 'undefined' ? FD.posts.filter(p => p.w === -1 && !p.del && p.t >= t0).length : 0
   };
 }
@@ -81,6 +82,8 @@ const CH_POOL = [
   {id: 'w.rplay', w: 1, per: 'w', kind: 'ranked', key: 'rplay', n: () => 8, t: n => `Play ${n} ranked matches`},
   {id: 'w.close', w: 1, per: 'w', kind: 'ranked', key: 'rclose', n: () => 1, t: () => 'Win a close match (opponent within 100 Elo)'},
   {id: 'w.rws', w: 1.2, per: 'w', kind: 'ranked', key: 'rws', n: () => 2, t: n => `Win ${n} ranked matches in a row`, prog: 'max'},
+  {id: 'w.elp', w: 1, per: 'w', kind: 'ranked', key: 'elplay', n: () => 2, t: n => `Play ${n} Elimination lobbies`},
+  {id: 'w.el3', w: 1.2, per: 'w', kind: 'ranked', key: 'eltop3', n: () => 1, t: () => 'Finish top 3 in an Elimination lobby'},
   {id: 'w.post', w: 1, per: 'w', kind: 'feed', key: 'posts', n: () => 3, t: n => `Post to the Feed ${n} times`},
 
   {id: 'm.min', w: 1.3, per: 'm', kind: 'study', key: 'min', n: u => chR60(u.min * 20 * (.8 + Math.random() * .4)), t: n => `Study ${chHm(n)} this month`, unit: 'min', main: 1},
@@ -92,6 +95,9 @@ const CH_POOL = [
   {id: 'm.rws', w: 1.1, per: 'm', kind: 'ranked', key: 'rws', n: () => 3, t: n => `Win ${n} ranked matches in a row`, prog: 'max'},
   {id: 'm.rival', w: 1.2, per: 'm', kind: 'ranked', key: 'rrival', n: () => 3, t: n => `Beat a rival ${n} times`, ok: () => Object.keys(R.rec || {}).some(w => isRival(+w))},
   {id: 'm.close', w: 1.1, per: 'm', kind: 'ranked', key: 'rclose', n: () => 4, t: n => `Win ${n} close matches (within 100 Elo)`},
+  {id: 'm.elsd', w: 1.2, per: 'm', kind: 'ranked', key: 'elsd', n: () => 1, t: () => 'Reach sudden death in Elimination'},
+  {id: 'm.el3', w: 1.1, per: 'm', kind: 'ranked', key: 'eltop3', n: () => 3, t: n => `Finish top 3 in Elimination ${n} times`},
+  {id: 'm.elw', w: 1.3, per: 'm', kind: 'ranked', key: 'elwin', n: () => 1, t: () => 'Win an Elimination lobby'},
   {id: 'm.post', w: 1, per: 'm', kind: 'feed', key: 'posts', n: () => 8, t: n => `Post to the Feed ${n} times`}
 ];
 const chDef = id => CH_POOL.find(c => c.id === id);
@@ -165,6 +171,10 @@ function chReroll(per, id){
 /* ---- drawing ---- */
 // a small icon for each kind of challenge
 const CH_IC = {
+  elplay: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14 14l5 5M19 14l-5 5"/>',
+  eltop3: '<path d="M4 20h16M6 20v-6h4v6M10 20V9h4v11M14 20v-4h4v4"/>',
+  elsd: '<circle cx="12" cy="11" r="7"/><path d="M9 10h.01M15 10h.01M10 15h4M12 18v3"/>',
+  elwin: '<path d="M7 4h10v4.5a5 5 0 0 1-10 0zM12 13.5V17M8.5 20h7"/>',
   min: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/>',
   n: '<path d="M9 3h6M12 3v3"/><circle cx="12" cy="14" r="7"/><path d="M12 14l3-3"/>',
   long: '<path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9s8 4 8 9"/>',

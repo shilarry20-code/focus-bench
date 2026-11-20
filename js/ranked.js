@@ -1029,6 +1029,7 @@ function queueWait(){
 function queueActivity(h){ return [.35,.25,.15,.1,.08,.1,.18,.3,.45,.55,.6,.65,.7,.7,.72,.75,.8,.85,.95,1,1,.9,.75,.5][h]; }
 function startSearch(){
   if (!R.on || !RK_READY || MQ || (R.cur && R.cur.state === 'live')) return;
+  if (typeof elBusy === 'function' && elBusy()) return;            // in an Elimination lobby: no ranked match alongside it
   if (R.cur) R.cur = null;
   const near = sortedBots().filter(i => Math.abs(botRating(i) - R.mmr) <= 250).length;
   MQ = {t0: Date.now(), wait: queueWait(), pool: Math.max(4, Math.round(near * .012 * queueActivity(new Date().getHours()))), b: null, found: 0};
