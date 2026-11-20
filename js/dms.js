@@ -103,7 +103,8 @@ function dmSend(w, text){
     dmGenBusy[w] = 1;
     const B = bot(w), me = myName(), pend = pendingCh(w), mine = pend && pend.ch.by === 'me' && !off, gap = botRating(w) - R.mmr;
     let task = `${me} just messaged. Write ${B.name}'s reply: 1 to 3 short texts.`;
-    if (off) task += ` ${B.name} is offline right now and will only see this later, when they're back on, so write the reply they send then: they can say they just saw it (not every time), and they're answering a while after ${me} wrote.${pend && pend.ch.by === 'me' ? ` ${me}'s challenge will have run out by then.` : ''}`;
+    const seenOk = off && Math.random() < .25;
+    if (off) task += ` ${B.name} is offline right now and will only see this later, when they're back on, so write the reply they send then: ${seenOk ? 'they can mention they only just saw it, in their own words' : `they just answer what ${me} said, with no apology or mention of only just seeing it, being busy or replying late`}.${pend && pend.ch.by === 'me' ? ` ${me}'s challenge will have run out by then.` : ''}`;
     if (mine){
       const {yes, fYes} = chDecide(pend), md = pend.ch.mode === 'f' ? 'friendly' : 'ranked';
       task += ` There's a ${md} challenge from ${me} waiting for ${B.name}'s answer, and ${B.name} ${yes ? 'ACCEPTS it now' : `DECLINES it${pend.ch.mode === 'r' && gap > 150 ? ` (they're ${gap} Elo higher, so a ranked match risks a lot of Elo for little gain${fYes ? '; they would play a friendly instead' : ''})` : ''}`}. The reply must make that answer clear.`;
@@ -112,6 +113,7 @@ function dmSend(w, text){
       task += ` If ${me} is asking to play a match right now: ${B.name} ${rYes ? 'would play ranked' : 'won’t play ranked' + (gap > 150 ? ` (much higher rated, too much Elo to lose)` : '')} and ${fYes ? 'would play a friendly' : 'won’t play a friendly right now'}. If they agree to play, add one more item to the list with "from": "ACTION" and "text": "ranked" or "friendly", and ${B.name} sends the challenge for ${me} to accept. Never say a challenge was sent or accepted without that item. If ${me} isn't asking to play, don't add it.`;
     }
     const {texts, act} = await dmWrite(w, task, true);
+    if (off && !seenOk && texts.length) dmNoLateOpener(texts);
     dmGenBusy[w] = 0;
     const t0 = off ? Date.now() + 7 * 864e5 : Math.max(Date.now() + 2500, Date.now() + d - 4000), had = new Set(DMS.q.map(q => q.id));
     if (mine && pendingCh(w) === pend){
@@ -123,6 +125,12 @@ function dmSend(w, text){
     } else if (texts.length) dmQueue(w, t0, texts);
     if (off){ DMS.q.forEach(q => { if (!had.has(q.id)) q.wake = 1; }); saveDms(); }
   }, 3500);
+}
+
+// drop a "sorry, just saw this" opener the model added anyway (keeps the rest of the text)
+const DM_LATE = /^\s*(?:(?:oh\s+)?(?:sorry|srry|sry|my bad|mb|oops|ah|omg|lol|haha)[\s,!.]*)*(?:(?:i\s+)?(?:just|only just)\s+(?:now\s+)?(?:saw|seeing|seen|got|getting)\s+(?:this|your (?:msg|message|text)|it)(?:\s+now)?|(?:for|about)\s+the\s+late\s+(?:reply|response)|was\s+(?:studying|busy|away|offline|asleep))[\s,!.—-]*/i;
+function dmNoLateOpener(texts){
+  for (let k = texts.length - 1; k >= 0; k--){ const t = texts[k].replace(DM_LATE, ''); if (t === texts[k]) continue; if (t.trim() && !/^\W*(?:lol|lmao|haha+|ha|oops|omg)?\W*$/i.test(t)) texts[k] = t; else if (texts.length > 1) texts.splice(k, 1); }
 }
 
 /* ---- challenges ---- */
