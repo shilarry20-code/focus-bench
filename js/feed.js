@@ -300,13 +300,14 @@ const FD_TABS = [
   ['following', 'Following', '<circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c.6-3.6 3.2-5.6 6.5-5.6s5.9 2 6.5 5.6"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.6c3 .1 5 1.9 5.5 5"/>'],
   ['hot', 'Hot', '<path d="M12 21c-4 0-6.5-2.7-6.5-6.2 0-3.6 2.7-5.5 3.6-9.3 1.9 1.2 3 3 3 5 1-.6 1.6-1.8 1.7-3.2 2.4 1.8 4.7 4.5 4.7 7.6C18.5 18.4 16 21 12 21z"/>'],
   ['top', 'Top', '<path d="M7 4h10v4.5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4M12 13.5V17M8.5 20h7M10 17h4"/>'],
-  ['new', 'New', '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>']];
+  ['new', 'New', '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'],
+  ['live', 'Live', '<circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.3 5.3a9.5 9.5 0 0 0 0 13.4M18.7 5.3a9.5 9.5 0 0 1 0 13.4"/>']];
 if (FDV.tab === 'you') FDV.tab = 'for';
 const FD_TOP = {day: ['Today', 864e5], week: ['This week', 7 * 864e5], month: ['This month', 30 * 864e5], all: ['All time', 0]};
 function fdList(){
   const now = Date.now(), vis = FD.posts.filter(p => p.t <= now && !p.del);
   if (FDV.tab === 'following') return vis.filter(p => FD.follows.includes(p.w)).sort((a, b) => b.t - a.t);
-  if (FDV.tab === 'act') return [];
+  if (FDV.tab === 'act' || FDV.tab === 'live') return [];
   if (FDV.tab === 'new') return vis.sort((a, b) => b.t - a.t);
   // Hot: likes and comments for how old the post is, so something blowing up right now beats a big post from this morning
   if (FDV.tab === 'hot'){ const hs = p => (fdLikes(p) + 3 * fdCount(p)) / Math.pow((now - p.t) / 3600e3 + 2, 1.5); return vis.filter(p => now - p.t < 2 * 864e5).sort((a, b) => hs(b) - hs(a)); }
@@ -332,6 +333,8 @@ function renderFeed(){
     + `<div class="fd-acts"><button class="fd-act-btn${FDV.tab === 'act' ? ' on' : ''}" data-fdt="act" aria-label="Activity" title="Activity"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-9-8.6C1.6 8.4 3.4 5 6.7 5c1.9 0 3.3 1.1 4.2 2.4h2.2C14 6.1 15.4 5 17.3 5c3.3 0 5.1 3.4 3.7 6.4C19 15.6 12 20 12 20z"/></svg>${n ? `<b>${n > 99 ? '99+' : n}</b>` : ''}</button><button class="small-btn accent fd-new" data-fda="compose">New post</button></div>`;
   const list = fdList(), page = list.slice(0, FDV.shown);
   const top = FDV.tab === 'top' ? `<div class="seg fd-topwin" role="group" aria-label="Top posts from">${Object.entries(FD_TOP).map(([k, [l]]) => `<button data-fdtop="${k}" aria-pressed="${FDV.top === k}">${l}</button>`).join('')}</div>` : FDV.tab === 'act' ? fdNotifHtml() : '';
+  fdStrip(); fdSideDraw();
+  if (FDV.tab === 'live'){ el.innerHTML = `<div id="fdComp">${FDV.composer ? fdComposerHtml() : ''}</div><div class="card lf-card" id="fdLive"><p class="hint">Counting who’s studying…</p></div>`; if (lfFresh(() => renderLive(true))) renderLive(true); return; }
   el.innerHTML = `<div id="fdComp">${FDV.composer ? fdComposerHtml() : ''}</div>` + top + (FDV.tab === 'act' ? '' : page.length ? page.map(fdPostHtml).join('') : `<p class="hint fd-empty">${FDV.tab === 'following' ? 'Follow people from their posts or profiles to see them here.' : 'Nothing yet.'}</p>`)
     + (list.length > FDV.shown ? '<button class="small-btn fd-load" data-fda="more">Show more</button>' : '')
     + (!GEM.key ? '<p class="hint ch-hint">Captions and comments are written once Gemini is set up in <button class="link-btn" data-go="settings" data-sec="set-chat">Settings → Chat</button>.</p>' : '');
@@ -607,3 +610,39 @@ function fdOpen(){ if ($('#page-feed').hidden) return; if (!RK_READY){ renderFee
 onPageShown = function(name){ if (fdViewOpen()){ $('#fdView').hidden = true; FDV.view = null; } _fdShown(name); if (name === 'feed') fdOpen(); };
 if (typeof openProfile === 'function'){ const _fdOP = openProfile; openProfile = function(){ if (fdViewOpen()){ $('#fdView').hidden = true; FDV.view = null; } return _fdOP.apply(this, arguments); }; }
 setTimeout(fdBadge, 3000);
+
+/* ---- live, in the Feed: a strip of who's live (like stories), and a side column on wide screens ---- */
+function fdStrip(){
+  const el = $('#fdStrip'); if (!el || !RK_READY) return;
+  if (FDV.tab === 'live' || FDV.tab === 'act'){ el.innerHTML = ''; return; }
+  const live = typeof wLiveTop === 'function' ? wLiveTop().slice(0, 6) : [], seen = new Set(), ppl = [];
+  const add = w => { if (w >= 0 && !seen.has(w) && botLiveNow(w)){ seen.add(w); ppl.push(w); } };
+  FD.follows.forEach(add); Object.keys(R.rec || {}).map(Number).filter(w => isRival(w)).forEach(add);
+  if (ppl.length < 8) FD.followers.forEach(add);
+  const short = n => n.length > 9 ? n.slice(0, 8) + '…' : n;
+  const items = live.map(p => { const top = p.ra >= p.rc ? p.a : p.c, oth = top === p.a ? p.c : p.a;
+      return `<button class="fd-st live" data-watch="${p.a}-${p.c}" title="Watch ${esc(bot(p.a).name)} vs ${esc(bot(p.c).name)}"><span class="fd-ring">${avatar(bot(top), 'md')}</span><b class="fd-livetag">LIVE</b><small>${esc(short(bot(top).name))} vs ${esc(short(bot(oth).name))}</small></button>`; })
+    .concat(ppl.slice(0, 24).map(w => `<button class="fd-st" data-bot="${w}" title="${esc(bot(w).name)} is studying"><span class="fd-ring">${avatar(bot(w), 'md')}</span><small>${esc(short(bot(w).name))}</small></button>`));
+  el.innerHTML = items.length ? `<div class="card fd-strip-card"><div class="fd-strip-h">Live now</div><div class="fd-strip-row">${items.join('')}</div></div>` : '';
+}
+function fdSideDraw(){
+  const el = $('#fdSide'); if (!el || !RK_READY || $('#page-feed').hidden) return;
+  el.hidden = FDV.tab === 'live';                                        // the Live tab already shows all of it
+  if (el.hidden) return;
+  if (getComputedStyle(el).display === 'none') return;                  // narrow screens: no side column
+  if (!lfFresh(fdSideDraw)){ el.innerHTML = '<div class="card"><p class="hint">Counting who’s studying…</p></div>'; return; }
+  const H = LF.hours, mx = Math.max(1, ...H), {h} = lfNow();
+  const bars = Array.from({length: 24}, (_, x) => x > h ? '<span class="fut"><i></i></span>' : `<span class="${x === h ? 'now' : ''}${x < 4 ? ' tl' : x > 19 ? ' tr' : ''}" tabindex="0" data-tip="${x === h ? 'Now' : hourLabel(x)}: ${H[x].toLocaleString()} studying"><i style="--v:${Math.max(.04, H[x] / mx).toFixed(3)}"></i></span>`).join('');
+  const tab = LF.tab || 'you', live = typeof wLiveTop === 'function' ? wLiveTop().slice(0, 2) : [];
+  const evs = (tab === 'top' ? LF.events.filter(x => x.kind === 'match' && Math.max(x.p.ra, x.p.rc) >= LF.top) : LF.events.filter(x => tab === 'you' ? x.you : x.all)).slice(0, 7);
+  el.innerHTML = `<div class="card fd-side-card"><div class="h first lf-h"><span><i class="lf-dot" aria-hidden="true"></i>Studying now</span></div>
+      <div class="lf-count"><b>${LF.live.toLocaleString()}</b><span>studying</span></div>
+      <div class="lf-bars sm" aria-label="Players studying in each hour today">${bars}</div>
+      ${LF.trend.length ? `<div class="fd-chips">${LF.trend.slice(0, 4).map(([s]) => `<span>${esc(s)}</span>`).join('')}</div>` : ''}</div>
+    <div class="card fd-side-card"><div class="fd-side-hd"><span class="h first">Happening now</span><span class="fd-mini-tabs">${LF_TABS.map(([k, n]) => `<button data-lft="${k}" aria-pressed="${tab === k}">${k === 'you' ? 'For you' : k === 'top' ? 'Top' : 'All'}</button>`).join('')}</span></div>
+      ${live.length ? `<ul class="fd-livem">${live.map(p => `<li><span class="lf-dot" aria-hidden="true"></span><span><b>${esc(bot(p.a).name)}</b> vs <b>${esc(bot(p.c).name)}</b></span><button class="small-btn" data-watch="${p.a}-${p.c}">Watch</button></li>`).join('')}</ul>` : ''}
+      ${evs.length ? `<ul class="lf-feed sm">${evs.map(ev => ev.kind === 'match' && tab === 'top' ? lfRow(ev) : lfRow(ev)).join('')}</ul>` : '<p class="hint">It’s quiet right now.</p>'}
+      <button class="link-btn fd-seeall" data-fdt="live">See all →</button></div>`;
+}
+setInterval(() => { if (!$('#page-feed').hidden && !document.hidden){ fdStrip(); fdSideDraw(); if (FDV.tab === 'live') renderLive(); } }, 30000);
+document.addEventListener('click', e => { if (e.target.closest('#fdSide [data-lft]')) setTimeout(fdSideDraw, 0); });
