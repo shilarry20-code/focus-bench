@@ -9,6 +9,8 @@ function myTotals(){
 }
 const LB = [
   {id:'elo',   name:'Highest Elo',            desc:'Current ranked rating',                 u:'elo', f:F.rating,   me:t => R.mmr},
+  {id:'rkw',   name:'Most ranked wins',       desc:'Ranked matches won, all time',          u:'n',   f:null, g:() => rkArrs().w, me:t => R.w},
+  {id:'rkp',   name:'Best win rate',          desc:'Ranked win rate · at least 20 rated games', u:'pct', f:null, g:() => rkArrs().p, me:t => myWinP10()},
   {id:'hours', name:'Most hours studied',     desc:'All-time study time',                   u:'min', f:F.total,    me:t => t.total},
   {id:'week',  name:'Hours this week',        desc:'Since Sunday · resets every week',      u:'min', f:F.week,     me:t => t.week},
   {id:'month', name:'Hours this month',       desc:'Since the 1st · resets every month',    u:'min', f:F.month,    me:t => t.month},
@@ -20,8 +22,29 @@ const LB = [
   {id:'count', name:'Most sessions',          desc:'Focus sessions logged, all time',       u:'n',   f:F.sessions, me:t => t.sessions},
   {id:'pts',   name:'Achievement points',     desc:'Points from unlocked achievements',     u:'pts', f:null,       me:t => t.pts}
 ];
-const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : v.toLocaleString();
-const botVal = (c, i) => c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f];
+const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : u === 'pct' ? (v ? (v / 10).toFixed(1) + '%' : '–') : v.toLocaleString();
+const botVal = (c, i) => c.g ? c.g()[i] : c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f];
+const lbReady = c => c.f != null || !!c.g || !!lbPts;
+/* ranked wins and win rate for everyone: one rated match per study sitting of 10+ minutes since they joined. Matches
+   are against players near your own rating, so everyone sits near 50%: stronger players a few points above, weaker
+   ones a few below, and luck spreads out people with fewer games */
+let RKA = null;
+function rkArrs(){
+  if (RKA && RKA.v === botsVer) return RKA;
+  const N = ROSTER_N, w = new Int32Array(N), p = new Int16Array(N);
+  for (let i = 0; i < N; i++){
+    const o = i * BF, games = Math.floor(BS[o + F.sessions] * .9);
+    let h = Math.imul(i ^ 0x5bd1e995, 2654435761) >>> 0; const u = () => (h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0, h / 4294967296);
+    const luck = (u() + u() + u() - 1.5) * 2 * .5 / Math.sqrt(Math.max(1, games));                 // about one standard deviation of chance
+    const pct = Math.max(.2, Math.min(.8, .5 + .06 * Math.tanh((BS[o] - 1500) / 1200) + luck + (u() - .5) * .03));
+    const wins = Math.round(games * pct);
+    w[i] = wins; p[i] = games >= 20 ? Math.round(wins / games * 1000) : 0;
+  }
+  return (RKA = {v: botsVer, w, p});
+}
+const myGames = () => R.w + R.l + R.d;
+const myWinP10 = () => myGames() >= 20 ? Math.round(R.w / myGames() * 1000) : 0;
+const winPct = (w, g) => g ? (Math.round(w / g * 1000) / 10).toFixed(1) + '%' : '–';
 // the board only ever shows the top 50 and the few players around you, so instead of sorting all 682,925 players,
 // one pass picks those out and counts how many are ahead of you (ties: Elo, then bot number). Cached until the world changes.
 const lbSel = {};
@@ -54,9 +77,9 @@ let lbPlaces = null;
 function myPlace(c, t){
   const mes = LB.map(x => x.me(t)), key = `${botsVer}|${lbPts ? 1 : 0}|${R.mmr}|${mes.join(',')}`;
   if (!lbPlaces || lbPlaces.key !== key){
-    const n = new Int32Array(LB.length), fs = LB.map(x => x.f), mm = R.mmr;
+    const n = new Int32Array(LB.length), fs = LB.map(x => x.f), gs = LB.map(x => x.g ? x.g() : null), mm = R.mmr;
     for (let i = 0; i < ROSTER_N; i++){ const o = i * BF, e = BS[o];
-      for (let k = 0; k < fs.length; k++){ const v = fs[k] == null ? (lbPts ? lbPts[i] : 0) : BS[o + fs[k]], me = mes[k]; if (v > me || (v === me && e > mm)) n[k]++; } }
+      for (let k = 0; k < fs.length; k++){ const v = gs[k] ? gs[k][i] : fs[k] == null ? (lbPts ? lbPts[i] : 0) : BS[o + fs[k]], me = mes[k]; if (v > me || (v === me && e > mm)) n[k]++; } }
     lbPlaces = {key, n};
   }
   return lbPlaces.n[LB.indexOf(c)] + 1;
@@ -79,7 +102,7 @@ function renderLeaders(){
   $('#lbCats').innerHTML = LB.map(x => `<button data-v="${x.id}" aria-pressed="${x.id === c.id}">${x.name}</button>`).join('');
   $('#lbTitle').textContent = c.name; $('#lbDesc').textContent = c.desc;
   const tm = x => new Date(x).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
-  if (c.f == null && !lbPts){ $('#lbList').innerHTML = '<li class="lb-wait">Adding up everyone\'s achievement points…</li>'; ensureBotPoints(() => { if (!$('#page-leaders').hidden) renderLeaders(); }); }
+  if (!lbReady(c)){ $('#lbList').innerHTML = '<li class="lb-wait">Adding up everyone\'s achievement points…</li>'; ensureBotPoints(() => { if (!$('#page-leaders').hidden) renderLeaders(); }); }
   else {
     const {at, val, mine} = lbRanking(c, t);
     let from = 0, to = lbShown;
@@ -95,7 +118,7 @@ function renderLeaders(){
   }
   // your place in every category
   $('#lbMine').innerHTML = LB.map(x => {
-    const ready = x.f != null || lbPts, place = ready ? myPlace(x, t) : null;
+    const ready = lbReady(x), place = ready ? myPlace(x, t) : null;
     return `<li><button class="${x.id === c.id ? 'on' : ''}" data-v="${x.id}"><span class="nm">${x.name}</span><span class="mv2">${lbFmt(x.u, x.me(t))}</span><span class="pl2">${place ? `#${place.toLocaleString()} · ${topPct(place)}` : '…'}</span></button></li>`;
   }).join('');
 }

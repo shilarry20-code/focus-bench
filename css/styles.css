@@ -1831,3 +1831,23 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 .ins-leg i.a,.ins-leg i.b,.ins-leg i.c{display:inline-block}
 .fd-likes.lk-open{cursor:pointer}.fd-likes.lk-open:hover{text-decoration:underline}
 .ins-n{color:var(--muted);font-size:13px}
+
+/* challenges */
+.chl ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.chl-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chl-h small{font-size:11.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted)}
+.chl-sec{margin-top:10px}
+.chl-sh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+.chl-sh b{font-size:13.5px}.chl-sh span{font-size:12px;color:var(--muted)}
+.chl-i{display:grid;grid-template-columns:20px minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:6px 0}
+.chl-ck{width:18px;height:18px;border-radius:50%;border:1.6px solid var(--line);display:flex;align-items:center;justify-content:center}
+.chl-i.done .chl-ck{background:var(--accent);border-color:var(--accent)}
+.chl-ck svg{width:12px;height:12px;fill:none;stroke:var(--on-accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.chl-t{font-size:13.5px;line-height:1.3}.chl-t em{font-style:normal;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:4px}
+.chl-i.done .chl-t{color:var(--muted);text-decoration:line-through}
+.chl-bar{height:5px;border-radius:999px;background:var(--soft);margin-top:5px;overflow:hidden}
+.chl-bar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.chl-v{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chl-rr{border:0;background:none;color:var(--muted);padding:4px;border-radius:8px;cursor:pointer;display:flex}
+.chl-rr:hover{background:var(--soft);color:var(--ink)}
+.chl-rr svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
