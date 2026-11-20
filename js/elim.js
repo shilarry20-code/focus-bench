@@ -450,18 +450,42 @@ function elGameHtml(G, t, opts = {}){
       ${opts.replay ? '' : me.st === 'out' || S.over ? `<div class="el-btns"><button class="small-btn" data-el="browse">Back to lobbies</button>${G.done || me.st === 'out' ? `<button class="small-btn" data-el="share">Share to Feed</button><button class="small-btn" data-rp="el:${L.id}">View replay</button><button class="small-btn" data-el="close">Close</button>` : ''}</div>` : `<div class="el-btns"><button class="small-btn accent" data-el="brk">${me.st === 'break' ? 'Back to studying' : 'Take a break'}</button><button class="small-btn danger" data-el="stop">Stop (you're out)</button></div>`}</div>`;
   }
   const order = S.ps.slice().sort((a, b) => (a.out ? 1 : 0) - (b.out ? 1 : 0) || (b.out || 0) - (a.out || 0) || elR(b.w) - elR(a.w));
-  const stand = `<div class="card"><div class="h first">Standings</div><ul class="el-st">${order.map(p => `<li class="${p.st}">${elAv(p.w)}<span class="who">${elWho(p.w)}<small>${elR(p.w).toLocaleString()}</small></span><span class="el-ps">${p.st === 'out' ? `Out · ${elOrd(p.place)}` : p.st === 'break' ? `Break · ${elClock(Math.max(0, S.a - p.used))} left` : p.st === 'wait' ? 'Ready' : S.over && S.over.winner === p.w ? 'Winner' : 'Studying'}</span></li>`).join('')}</ul></div>`;
+  const stand = `<div class="card"><div class="h first">Standings</div><ul class="el-st">${order.map(p => `<li class="${p.st}${!opts.replay && EL.follow === p.w ? ' fol' : ''}" data-tile="${p.w}">${elAv(p.w)}<span class="who">${elWho(p.w)}<small>${elR(p.w).toLocaleString()}</small></span><span class="el-ps">${p.st === 'out' ? `Out · ${elOrd(p.place)}` : p.st === 'break' ? `Break · ${elClock(Math.max(0, S.a - p.used))} left` : p.st === 'wait' ? 'Ready' : S.over && S.over.winner === p.w ? 'Winner' : 'Studying'}</span></li>`).join('')}</ul></div>`;
   const arena = `<div class="card el-arena${S.sd ? ' sd' : ''}"><div class="el-count"><b>${S.alive}</b><small>of ${L.players.length} remaining</small></div><div class="el-grid">${L.players.map((w, k) => { const p = S.ps[k];
-      return `<div class="el-tile ${p.st}${S.over && S.over.winner === w ? ' champ' : ''}"><span class="num">${String(k + 1).padStart(3, '0')}</span>${elAv(w)}<small>${w === -1 ? 'You' : esc(bot(w).name)}</small>${p.st === 'out' ? '<em>OUT</em>' : p.st === 'break' && S.a > 0 ? `<i class="drain" style="width:${Math.max(0, (S.a - p.used) / S.a * 100)}%"></i>` : ''}</div>`; }).join('')}</div></div>`;
+      return `<div class="el-tile ${p.st}${S.over && S.over.winner === w ? ' champ' : ''}${!opts.replay && EL.follow === w ? ' fol' : ''}" data-tile="${w}" title="${w === -1 ? 'You' : esc(bot(w).name)}${p.st === 'out' ? ` · out, ${elOrd(p.place)}` : p.st === 'break' ? ' · on a break' : ''}"><span class="num">${String(k + 1).padStart(3, '0')}</span>${elAv(w)}<small>${w === -1 ? 'You' : esc(bot(w).name)}</small>${p.st === 'break' && S.a > 0 ? `<i class="drain" style="width:${Math.max(0, (S.a - p.used) / S.a * 100)}%"></i>` : ''}</div>`; }).join('')}</div></div>`;
   const chat = L.rules.chat === 'off' ? '' : `<div class="card el-chat"><div class="h first">Lobby chat <small>${L.rules.chat === 'break' ? '· on breaks only' : ''}</small></div><div class="el-cl" id="elChatList">${(G.chat.length || mine ? G.chat : elSysLines(G, now)).filter(m => m.t <= now).slice(-60).map(m => m.sys ? `<p class="sys">${esc(m.text)}</p>` : `<p><b>${m.w === -1 ? esc(myName()) : esc(bot(m.w).name)}</b> ${esc(m.text)}</p>`).join('') || '<p class="hint">Quiet so far.</p>'}</div>
     ${mine && !opts.replay ? `<form class="el-send" id="elForm"><input id="elIn" maxlength="200" autocomplete="off" placeholder="${L.rules.chat === 'break' && me && me.st === 'study' ? 'Take a break to chat' : 'Say something…'}"><button class="small-btn accent">Send</button></form>` : ''}</div>`;
   const tabs = `<div class="el-tabs">${[['stand', 'Standings'], ['arena', 'Arena']].map(([k, n]) => `<button class="chip${(opts.tab || EL.tab) === k ? ' on' : ''}" data-el="tab" data-t="${k}">${n}</button>`).join('')}${!opts.replay && !mine ? '<button class="small-btn" data-el="browse">Back to lobbies</button>' : ''}</div>`;
-  return top + card + tabs + `<div class="el-main">${(opts.tab || EL.tab) === 'arena' ? arena : stand}${chat}</div>`;
+  const tl = opts.replay ? '' : elTimeline(G, now), fc = opts.replay ? '' : elFollowCard(G, now);
+  if ((opts.tab || EL.tab) === 'arena') return top + card + tabs + fc + arena + `<div class="el-main el-below">${tl}${chat}</div>`;
+  return top + card + tabs + fc + `<div class="el-main">${stand}<div class="el-sidecol">${tl}${chat}</div></div>`;
 }
 // knockout lines for a lobby you're watching
 function elSysLines(G, t){
   const S = elState(G, t), outs = S.ps.filter(p => p.out).sort((a, b) => a.out - b.out);
   return [{t: G.L.t0, sys: 1, text: `The game started: ${G.L.players.length} players.`}, ...outs.map((p, k) => ({t: p.out, sys: 1, text: `${p.w === -1 ? myName() : bot(p.w).name} ${p.why === 'stopped' ? 'ended their session' : p.why === 'left' ? 'left' : 'went over the break allowance'} · ${G.L.players.length - k - 1} left`}))];
+}
+// what has happened so far in a running game, newest first
+function elTimeline(G, now){
+  if (!G.L.t0 || now < G.L.t0 || typeof rpEvents !== 'function') return '';
+  const S = elState(G, now), end = S.over ? S.over.t : now, d = {kind: 'el', G, start: G.L.t0, end, live: !S.over};
+  let E = []; try { E = rpEvents(d, rpTracks(d)).filter(e => e.kind !== 'chat'); } catch(e){ console.error(e); }
+  const z = G.L.t0;
+  return `<div class="card el-tl"><div class="h first">Timeline <small>${E.length} event${E.length === 1 ? '' : 's'}${EL.follow != null && G.L.players.includes(EL.follow) ? ` · ${EL.follow === -1 ? 'your' : esc(bot(EL.follow).name) + '’s'} highlighted` : ''}</small></div><ol>${E.slice(-60).reverse().map(e => `<li class="k-${e.kind}${EL.follow != null && e.w === EL.follow ? ' fw' : ''}"><time>${elClock(e.t - z)}</time><span>${esc(e.text)}</span></li>`).join('')}</ol></div>`;
+}
+// the player you're following: what they're doing right now and what they've done
+function elFollowCard(G, now){
+  const f = EL.follow, L = G.L;
+  if (!L.t0 || now < L.t0) return '';
+  if (f == null || !L.players.includes(f)) return '<p class="hint el-fhint">Tap a player to follow them and see what they’re doing.</p>';
+  const S = elState(G, now), p = S.ps.find(x => x.w === f), n = L.players.indexOf(f) + 1, end = S.over ? S.over.t : now;
+  const d = {kind: 'el', G, start: L.t0, end, live: !S.over}, tr = rpTracks(d).find(x => x.w === f), st = rpStats(tr.ev);
+  const mine = rpEvents(d, rpTracks(d)).filter(e => e.w === f && e.kind !== 'chat').slice(-4).reverse();
+  const left = Math.max(0, S.a - p.used), stud = f === -1 ? elMeStudied(G, now) : rpStud(tr.ev, now);
+  const status = p.st === 'out' ? `Out · ${elOrd(p.place)}` : S.over && S.over.winner === f ? 'Winner' : p.st === 'break' ? 'On a break' : 'Studying';
+  return `<div class="card el-fc ${p.st}"><div class="el-fch">${elAv(f)}<span><small>Following · Player ${String(n).padStart(3, '0')}</small><b>${f === -1 ? 'You' : esc(bot(f).name)}</b><small>${elR(f).toLocaleString()} Elo${f >= 0 && BOTS[f].subject ? ' · ' + esc(BOTS[f].subject) : ''}</small></span>${f >= 0 ? `<button class="small-btn" data-bot="${f}">Profile</button>` : ''}<button class="small-btn" data-el="unfollow" aria-label="Stop following">×</button></div>
+    <div class="el-fcs"><div><small>Status</small><b class="st-${p.st}">${status}</b></div><div><small>Studied</small><b>${elClock(stud)}</b></div><div><small>Break left this round</small><b>${p.st === 'out' ? '–' : S.a > 0 ? elClock(left) : 'none'}</b>${p.st !== 'out' && S.a > 0 ? `<span class="el-alb ${left / S.a < .2 ? 'red' : left / S.a < .5 ? 'amb' : ''}"><i style="width:${left / S.a * 100}%"></i></span>` : ''}</div><div><small>Breaks taken</small><b>${st.n} · ${elClock(st.br)}</b></div></div>
+    ${mine.length ? `<ul class="el-fce">${mine.map(e => `<li><time>${elClock(e.t - L.t0)}</time>${esc(e.text)}</li>`).join('')}</ul>` : ''}</div>`;
 }
 function elMeStudied(G, t){ const ev = G.me.ev, end = G.me.out ? Math.min(t, G.me.out.t) : G.result && G.result.t ? Math.min(t, G.result.t) : t; let n = 0; for (let k = 0; k < ev.length; k++){ if (ev[k][1] !== 'S') continue; const y = Math.min(k + 1 < ev.length ? ev[k + 1][0] : end, end); if (y > ev[k][0]) n += y - ev[k][0]; } return n; }
 let elKeep = null;
@@ -515,10 +539,16 @@ document.addEventListener('click', e => {
   else if (k === 'leave') elLeave();
   else if (k === 'close'){ EL.G = null; EL.view = 'browse'; saveEl(); elRender(); }
   else if (k === 'tab'){ EL.tab = b.dataset.t; saveEl(); elRender(); }
+  else if (k === 'unfollow'){ EL.follow = null; elRender(); }
   else if (k === 'brk'){ if (S.running) pause(); else start(); setTimeout(elTick, 50); }
   else if (k === 'stop'){ if (confirm('Stop studying? You’ll be knocked out of the lobby.')){ const G = EL.G; G.me.out = {t: Date.now(), why: 'stopped'}; elFinishMe(G); try { if (P.mode === 'stopwatch') finishStopwatch(); else reset(); } catch(err){} elTick(); } }
   else if (k === 'share'){ const r = EL.G && EL.G.result; if (!r) return; const cap = r.place === 1 ? `won a ${r.N}-player elimination lobby 🏆` : `${elOrd(r.place)} of ${r.N} in elimination today`;
     try { showPage('feed'); FDV.composer = {...fdNewComposer(), mode: 'text', cap}; FDV.tab = 'for'; renderFeed(); window.scrollTo(0, 0); toast('Your post is ready: edit it and press Post.'); } catch(err){ toast('Couldn’t open the Feed.'); } }
+});
+// tap a player in a running game to follow them
+document.addEventListener('click', e => {
+  const t = e.target.closest('#elBody [data-tile]'); if (!t || e.target.closest('[data-bot], button')) return;
+  const w = +t.dataset.tile; EL.follow = EL.follow === w ? null : w; elRender();
 });
 document.addEventListener('change', e => {
   if (EL.view !== 'create' || !e.target.closest('.el-form')) return;

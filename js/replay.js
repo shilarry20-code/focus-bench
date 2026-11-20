@@ -137,7 +137,7 @@ function rpEvents(d, tr){
     const outs = tr.filter(p => p.out).sort((a, b) => a.out - b.out);
     outs.forEach((p, k) => add(p.out, 'ko', `Player ${String(p.n).padStart(3, '0')} · ${rpNm(p.w)} ${p.why === 'stopped' ? (p.w === -1 ? 'ended your session' : 'ended their session') : p.why === 'left' ? 'left' : 'went over the break allowance'} · ${N - k - 1} left`, p.w));
     const win = tr.find(p => !p.out) || outs[outs.length - 1];
-    if (win) add(d.end, 'win', `${rpNm(win.w)} ${win.w === -1 ? 'win' : 'wins'}!`, win.w);
+    if (win && !d.live) add(d.end, 'win', `${rpNm(win.w)} ${win.w === -1 ? 'win' : 'wins'}!`, win.w);
     (G.chat || []).filter(m => !m.sys).forEach(m => add(m.t, 'chat', `${m.w === -1 ? myName() : bot(m.w).name}: ${m.text}`, m.w));
   }
   return E.filter(e => e.t >= d.start && e.t <= d.end).sort((a, b) => a.t - b.t || (a.kind === 'win') - (b.kind === 'win'));
