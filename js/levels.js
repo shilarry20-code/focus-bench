@@ -71,7 +71,7 @@ function lvCardHtml(){
 function lvRender(){
   if (typeof RK_READY !== 'undefined' && !RK_READY) return;
   const xp = myXp(), B = lvBar(xp);
-  const chip = $('#lvChip'); if (chip){ chip.hidden = false; chip.innerHTML = `${lvBadge(B.L)}<span class="lv-mini"><i style="width:${B.pct}%"></i></span>`; chip.title = `Level ${B.L} · ${B.into.toLocaleString()} / ${B.need.toLocaleString()} XP to level ${B.L + 1}`; }
+  const chip = $('#lvChip'); if (chip){ chip.hidden = false; chip.dataset.tier = lvTier(B.L)[1]; chip.innerHTML = `<svg class="lv-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg><b>Lv ${B.L}</b><span class="lv-mini"><i style="width:${B.pct}%"></i></span>`; chip.title = `Level ${B.L} · ${B.into.toLocaleString()} / ${B.need.toLocaleString()} XP to level ${B.L + 1}`; }
   const slot = $('#lvSlot'); if (slot) slot.innerHTML = `<div class="lv-strip">${lvBadge(B.L)}<div class="lv-bar thin"><i style="width:${B.pct}%"></i></div><small>${B.into.toLocaleString()} / ${B.need.toLocaleString()} XP</small></div>`;
   // level ups (the first time, just remember where you are), and +XP pops
   if (!LVS.seen){ LVS.seen = B.L; LVS.xp = xp; store.set('fb.lv', LVS); return; }
@@ -96,7 +96,7 @@ function lvLevelUp(L, from){
 
 /* ---- badges next to names ---- */
 {
-  const _w = fdWho; fdWho = w => _w(w) + ' ' + lvBadge(lvLevelOf(w), 'sm');
+  const _w = fdWho; fdWho = w => `<span class="lv-nm">${_w(w)}${lvBadge(lvLevelOf(w), 'sm')}</span>`;
   const _r = lbRow2; lbRow2 = function(c, V, k){ const w = V.at(k), html = _r(c, V, k), head = '<span class="who"><b>' + esc(w === ME ? myName() : bot(w).name); return html.replace(head, head + ' ' + lvBadge(lvLevelOf(w), 'sm')); };
 }
 // profiles: a badge by the name, and the level card on your own page
@@ -105,13 +105,13 @@ function lvLevelUp(L, from){
   renderProfilePage = function(){
     const x = _ph.apply(this, arguments);
     try {
-      const nm = document.querySelector('#profBody #bmName'); if (nm && !nm.nextElementSibling?.classList.contains('lvb')) nm.insertAdjacentHTML('afterend', ' ' + lvBadge(lvLevelOf(profWho)));
+      const nm = document.querySelector('#profBody #bmName'); if (nm && !nm.querySelector('.lvb')) nm.insertAdjacentHTML('beforeend', ' ' + lvBadge(lvLevelOf(profWho)));
       if (profWho === ME){ const host = document.querySelector('#profBody'); const first = host && host.querySelector('.card'); if (first && !host.querySelector('.lv-card')) first.insertAdjacentHTML('afterend', lvCardHtml()); }
     } catch(e){ console.error(e); }
     return x;
   };
   const _op = openProfile;
-  openProfile = function(w){ const x = _op.apply(this, arguments); try { const nm = document.querySelector('#bmName'); if (nm && !(nm.nextElementSibling && nm.nextElementSibling.classList.contains('lvb'))) nm.insertAdjacentHTML('afterend', ' ' + lvBadge(lvLevelOf(w))); } catch(e){} return x; };
+  openProfile = function(w){ const x = _op.apply(this, arguments); try { const nm = document.querySelector('#bmName'); if (nm && !nm.querySelector('.lvb')) nm.insertAdjacentHTML('beforeend', ' ' + lvBadge(lvLevelOf(w))); } catch(e){} return x; };
 }
 // chat and DMs: after each name button
 const lvTagNames = root => { if (!root) return; root.querySelectorAll('.ch-name[data-bot]:not([data-lv]), .ch-name[data-me]:not([data-lv])').forEach(b => { b.dataset.lv = 1; b.insertAdjacentHTML('afterend', lvBadge(lvLevelOf(b.dataset.me != null ? ME : +b.dataset.bot), 'sm')); }); };
