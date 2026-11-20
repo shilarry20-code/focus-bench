@@ -1462,7 +1462,7 @@ function editForm(){
 }
 function profileHead(w, big){
   const rk = rkOf(w), r = w === ME ? R.mmr : botRating(w), B = w === ME ? null : BOTS[w];
-  return `<div class="pf-top">${pAvatar(w, big ? 'xl' : 'lg')}<div><b id="bmName">${esc(pName(w))}</b>
+  return `<div class="pf-top">${pAvatar(w, big ? 'xl' : 'lg')}<div><b id="bmName">${esc(pName(w))}</b>${B ? pfPresence(w) : ''}
     <span>${emblem(rk, 'xs')} ${esc(rk.full)} · ${r.toLocaleString()} Elo</span>
     <small>${B ? `${B.style} · studies in the ${B.peak.toLowerCase()} · ${esc(B.subject)}` : 'Your profile'}</small>
     ${B ? `<small class="pf-cls">This semester: ${botClasses(w).map(esc).join(', ')}</small>` : ''}
@@ -1470,6 +1470,11 @@ function profileHead(w, big){
     ${w === ME && !profEditing ? '<button class="small-btn pf-editbtn" data-pf="edit">Edit</button>' : ''}</div>
     ${w === ME && profEditing ? editForm() : ''}
     ${B ? `<p class="bm-bio">“${esc(B.bio)}”</p>` : ''}${paraLine(w)}`;
+}
+// online / studying / offline, next to their name
+function pfPresence(w){
+  let st = 'off'; try { st = botLiveNow(w) || (typeof dmStudying === 'function' && dmStudying(w)) ? 'busy' : typeof dmOnline === 'function' && dmOnline(w) ? 'on' : 'off'; } catch(e){}
+  return ` <span class="pf-pres ${st}"><i></i>${st === 'busy' ? 'Studying' : st === 'on' ? 'Online' : 'Offline'}</span>`;
 }
 // the popup
 function openProfile(w){

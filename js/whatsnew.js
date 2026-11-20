@@ -3,6 +3,11 @@
    something big starts the next one. A dot on the panel button (and on More on phones) shows until you've opened
    the page, and after a change ships you get a one-time note. Whether you've seen it is kept per device. */
 const UPDATES = [
+  {n: 13, name: 'Insights', when: 'Nov 20', secs: [
+    ['Post insights', ['Tap the chart button on any of your posts (or View insights under it) to see how it did: people reached, new followers, a reach ring for followers and everyone else, likes over time (total or per hour), an engagement breakdown, top comments, and a bar chart next to your recent posts', 'On other people’s posts the same button shows the public numbers: likes, comments, replies and when it was posted']],
+    ['Feed', ['Tap a post’s like count to see who liked it, and follow them from the list', 'Tap a name or picture in your notifications to open their profile, and clear your notifications with the Clear button']],
+    ['Profiles', ['Profile pop-ups show whether someone is online, studying or offline']]],
+    fixes: ['Opening a post’s comments jumped to the bottom instead of starting at the top']},
   {n: 12, name: 'New Faces', when: 'Nov 19', secs: [
     ['Profile pictures', ['About 120 new picture designs: food (donuts, ramen, bubble tea, sushi and more), new animals (foxes, axolotls, otters, sloths, bees…), everyday things, places and skies, little blob characters, sports balls and patterns', 'Each design picks its own colours, details and moods per player, so far fewer people share a lookalike picture']]],
     fixes: ['Posters kept commenting on their own posts: now they only answer comments (about one answer for every 8 comments), and the extra ones were cleared from existing posts', 'Players coming back online almost always opened DM replies with “sorry, just saw this”: now most just answer what you said', 'Players could send two or three texts at the exact same moment (after a focus block, when you reopened the app, or when they messaged first): now each text arrives a few seconds after the last', 'In the last two hours before the daily reset, the comment builder left a couple hundred Gemini requests unused: now it uses all but 30']},
