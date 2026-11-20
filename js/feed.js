@@ -638,7 +638,7 @@ function fdSideDraw(){
   el.innerHTML = `<div class="card fd-side-card"><div class="h first lf-h"><span><i class="lf-dot" aria-hidden="true"></i>Studying now</span></div>
       <div class="lf-count"><b>${LF.live.toLocaleString()}</b><span>studying</span></div>
       <div class="lf-bars sm" aria-label="Players studying in each hour today">${bars}</div>
-      ${LF.trend.length ? `<div class="fd-chips">${LF.trend.slice(0, 4).map(([s]) => `<span>${esc(s)}</span>`).join('')}</div>` : ''}</div>
+      ${LF.trend.length ? `<div class="fd-chips">${LF.trend.slice(0, 4).map(([s]) => lfSubj(s)).join('')}</div>` : ''}</div>
     <div class="card fd-side-card"><div class="fd-side-hd"><span class="h first">Happening now</span><span class="fd-mini-tabs">${LF_TABS.map(([k, n]) => `<button data-lft="${k}" aria-pressed="${tab === k}">${k === 'you' ? 'For you' : k === 'top' ? 'Top' : 'All'}</button>`).join('')}</span></div>
       ${live.length ? `<ul class="fd-livem">${live.map(p => `<li><span class="lf-dot" aria-hidden="true"></span><span><b>${esc(bot(p.a).name)}</b> vs <b>${esc(bot(p.c).name)}</b></span><button class="small-btn" data-watch="${p.a}-${p.c}">Watch</button></li>`).join('')}</ul>` : ''}
       ${evs.length ? `<ul class="lf-feed sm">${evs.map(ev => ev.kind === 'match' && tab === 'top' ? lfRow(ev) : lfRow(ev)).join('')}</ul>` : '<p class="hint">It’s quiet right now.</p>'}
