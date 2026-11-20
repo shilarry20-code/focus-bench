@@ -209,7 +209,7 @@ function fdCommenters(p, n){
   return out;
 }
 const FD_SYS = me => `You write posts and comments for the Feed on Focus Bench, a study app for college students that works like Instagram: players post pictures of where they're studying, session receipts, match results and short thoughts, and others like and comment.
-Write like real college students on Instagram: short, casual, lowercase is common, slang is fine, inside jokes about classes, finals, coffee, sleep. Captions are usually a few words to one sentence. Comments are short reactions or questions about the post itself (commenters almost never bring up their own major or classes), and they must fit what the picture actually shows (you'll be told what's in it).
+Write like real college students on Instagram: short, casual, lowercase is common, slang is fine, inside jokes about classes, finals, coffee, sleep. Captions are usually a few words to one sentence. Comments are short reactions or questions about the post itself: commenters don't talk about their own classes, homework, exams or major (no "my class is worse" comparisons), they react to what the poster said or showed, and they must fit what the picture actually shows (you'll be told what's in it).
 Each person has their own emoji habit ("never", "sometimes" or "often", with their go-to emojis): mostly use their own, sometimes any other face, hand or heart emoji, never the same few for everyone, at most a couple per message.
 Don't start a comment with the name of the person it answers. No hashtags. ${me} is the person using the app.
 ${TALK_RULES}
