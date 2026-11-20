@@ -32,10 +32,10 @@ const fdPop = w => w === -1 ? fdMyPop() : 18 + 2600 / Math.sqrt(posOf(w) + 1);
 function fdMyPop(){ return 10 + FD.followers.length * .9 + Math.max(0, (R.mmr - 900) / 25); }
 const fdWorldMin = t => { const d = new Date(worldT(t)); return {dk: dayKey(d.getTime()), m: d.getHours() * 60 + d.getMinutes(), h: d.getHours(), mo: d.getMonth()}; };
 // the post itself: a real session or match when there is one around that time, otherwise a picture or a thought
-function fdMake(w, t){
+function fdMake(w, t, light){
   const B = bot(w), {dk, m, h, mo} = fdWorldMin(t), r = mulberry32(fdHash(w + ':' + t)), id = fdId();
   const base = {id, w, t, cm: [], L: 0};
-  const u = r();
+  const u = light ? 1 : r();
   if (u < .12){       // a match they just played
     const code = dayIdx(dk) * 1440 + m;
     for (let s = w * M5, e = s + M5; s < e; s++){ const opp = M5_OPP[s]; if (opp < 0) continue; const c = M5_T[s]; if (c <= code && c > code - 90){
@@ -47,12 +47,13 @@ function fdMake(w, t){
     if (s) return {...base, type: 'session', d: {min: s.min, subj: s.subj, mode: s.mode, a: s.a, tot: day.sessions.filter(x => x.b <= s.b).reduce((n, x) => n + x.min, 0)}};
   }
   const mood = h >= 22 || h < 5 ? 'tired' : '';
-  return {...base, type: r() < .78 ? 'text' : 'scene', sc: {seed: fdHash(id), hue: B.hue, maj: B.major, hour: h, month: mo, mood, outgoing: emojiHabit(w) === 'often' || r() < .35}};
+  return {...base, type: r() < .5 ? 'text' : 'scene', sc: {seed: fdHash(id), hue: B.hue, maj: B.major, hour: h, month: mo, mood, outgoing: emojiHabit(w) === 'often' || r() < .35}};
 }
 // posts appear at a real-world pace: more in the evening, few at 4 AM
 const FD_RATE = [3, 2, 1.4, 1, .8, .8, 1.2, 2.2, 3, 3.4, 3.6, 4, 4.4, 4.4, 4.6, 5, 5.2, 5.6, 6, 6.4, 6.6, 6.4, 5.6, 4.2];
+// while the world is still catching up, fill with posts that don't need today's matches and sessions (no waiting)
 function fdFill(){
-  if (!RK_READY || simBusy) return false;
+  if (!RK_READY) return false; const light = !!simBusy;
   const now = Date.now(), from = Math.max(FD.filled || now - 8 * 3600e3, now - 12 * 3600e3);
   if (now - from < 4 * 60000) return false;
   const pool = fdPool(); let made = 0;
@@ -60,7 +61,7 @@ function fdFill(){
     const h = new Date(worldT(t)).getHours(), gap = 3600e3 / FD_RATE[h] * (.4 + Math.random() * 1.2);
     t += gap; if (t >= now) break;
     const w = pool[Math.floor(Math.random() * pool.length)];
-    try { const p = fdMake(w, Math.round(t)); p.L = Math.round(fdPop(w) * ({scene: 1, text: .55, session: .8, match: 1.1, rank: 1.7}[p.type] || 1) * (p.sc && p.sc.outgoing ? 1.2 : 1) * (.45 + Math.random())); FD.posts.push(p); made++; } catch(e){ console.error(e); }
+    try { const p = fdMake(w, Math.round(t), light); p.L = Math.round(fdPop(w) * ({scene: 1, text: .55, session: .8, match: 1.1, rank: 1.7}[p.type] || 1) * (p.sc && p.sc.outgoing ? 1.2 : 1) * (.45 + Math.random())); FD.posts.push(p); made++; } catch(e){ console.error(e); }
   }
   FD.filled = now; saveFeed();
   return made > 0;
@@ -223,7 +224,7 @@ function fdNotifHtml(){
 function renderFeed(){
   fdViewRefresh();
   const el = $('#fdBody'); if (!el || $('#page-feed').hidden) return;
-  if (!RK_READY || (simBusy && !FD.posts.length)){ el.innerHTML = '<p class="hint">Loading the feed…</p>'; return; }
+  if (!RK_READY){ el.innerHTML = '<p class="hint">Loading the feed…</p>'; return; }
   const n = FD.notif.filter(x => x.t > FD.nseen).length;
   $('#fdTabs').innerHTML = [['for', 'For you'], ['following', 'Following'], ['you', `You${n ? ` <b>${n}</b>` : ''}`]].map(([k, t]) => `<button class="ct-btn${FDV.tab === k ? ' on' : ''}" data-fdt="${k}">${t}</button>`).join('') + `<button class="small-btn accent fd-new" data-fda="compose">New post</button>`;
   const list = fdList(), page = list.slice(0, FDV.shown);
@@ -480,6 +481,6 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-goto
 
 const _fdShown = onPageShown;
 // the world may still be catching up when you open the Feed: fill it as soon as it's ready
-function fdOpen(){ if ($('#page-feed').hidden) return; if (!RK_READY || simBusy){ renderFeed(); return setTimeout(fdOpen, 1500); } fdFill(); FDV.drawn = Date.now(); renderFeed(); }
+function fdOpen(){ if ($('#page-feed').hidden) return; if (!RK_READY){ renderFeed(); return setTimeout(fdOpen, 1500); } fdFill(); FDV.drawn = Date.now(); renderFeed(); }
 onPageShown = function(name){ _fdShown(name); if (name === 'feed') fdOpen(); };
 setTimeout(fdBadge, 3000);
