@@ -160,3 +160,6 @@ async function cbInboxMerge(){
   setInterval(async () => { await cbInboxMerge(); cbTodoUpload(); }, 20 * 60000);
   document.addEventListener('visibilitychange', () => { if (document.hidden) cbTodoUpload(); else setTimeout(cbInboxMerge, 3000); });
 })();
+// Settings → Chat was drawn before this file loaded: draw it again now, and whenever Settings opens (counts stay fresh)
+renderChatSettings();
+{ const _sh = onPageShown; onPageShown = function(name){ _sh.apply(this, arguments); if (name === 'settings') renderChatSettings(); }; }
