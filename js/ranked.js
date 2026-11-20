@@ -345,7 +345,7 @@ function loadRanked(){
   if (!R.para) R.para = {h: null, since: 0, reign: {}, long: {}};
   RK_READY = false;
   return loadBots().catch(e => { console.error(e); }).then(() => {
-    rTables(); RK_READY = true; botsChanged();
+    rTables(); RK_READY = true; try { rkRepairWL(); } catch(e){ console.error(e); } botsChanged();
     updateParagon(true);
     saveRanked(true);
     const show = () => { renderRankChip(); renderMatch(); if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders(); };
@@ -1056,6 +1056,16 @@ function renderQueue(){
   slot.querySelector('.mq-range').textContent = `±${queueRange(t)}`;
   slot.querySelector('.mq-q').textContent = `${q.toLocaleString()} player${q === 1 ? '' : 's'} in queue`;
 }
+// repair: from Nov 20 (04:02 ET) a bug skipped counting your rated wins, losses and draws (and counted friendly ones):
+// put them right once from your match history
+function rkRepairWL(){
+  if (R.fixWL || !R.hist) return; const T = Date.UTC(2026, 10, 20, 9, 2);
+  R.hist.filter(h => h.t >= T).forEach(h => {
+    const k = h.r === 'W' ? 'w' : h.r === 'L' ? 'l' : 'd', rec = R.rec[h.b] || (R.rec[h.b] = [0, 0, 0]), j = h.r === 'W' ? 0 : h.r === 'L' ? 1 : 2;
+    if (h.f) R[k] = Math.max(0, R[k] - 1); else { R[k]++; rec[j]++; }
+  });
+  R.fixWL = 1; saveRanked();
+}
 function finalize(res, why){
   const c = R.cur; if (!c || c.state !== 'live') return;
   const youMin = Math.round(c.you / 60000), themMin = Math.round(c.target / 60000), B = BOTS[c.b];   // the bot always finishes its sitting
@@ -1069,8 +1079,8 @@ function finalize(res, why){
   if (!c.friendly){ R.mmr = clampN(R.mmr + delta, 100, 5000); R.best = Math.max(R.best, R.mmr); R.played++; }
   const rec = R.rec[c.b] || (R.rec[c.b] = [0, 0, 0]);
   const nem = nemesis();
-  if (c.friendly){ if (res === 'W') rec[0]++; else if (res === 'L') rec[1]++; else rec[2]++; }
   if (!c.friendly && RK_LW && c.b >= 0 && c.b < ROSTER_N){ if (res === 'W') RK_LL[c.b]++; else if (res === 'L') RK_LW[c.b]++; markBots(); }
+  if (c.friendly){ if (res === 'W') rec[0]++; else if (res === 'L') rec[1]++; else rec[2]++; }
   else if (res === 'W'){ R.w++; R.ws++; R.bestWs = Math.max(R.bestWs, R.ws); rec[0]++; R.bestUpset = Math.max(R.bestUpset, c.br - c.mmr0); if (nem === c.b) R.revenge = 1; if (c.mmr0 >= 2400) R.profWins++; }
   else if (res === 'L'){ R.l++; R.ws = 0; rec[1]++; }
   else { R.d++; rec[2]++; }
