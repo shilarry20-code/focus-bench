@@ -68,6 +68,23 @@ function fdFill(){
 }
 const fdLikes = p => (p.L ? Math.floor(p.L * (1 - Math.exp(-(Date.now() - p.t) / 2700e3))) : 0) + (FD.liked[p.id] ? 1 : 0);
 const fdShownComments = p => p.cm.filter(c => c.t <= Date.now() && !c.del);
+// which comment an answer belongs under: the latest one by the named person (also catches text that starts with @name)
+function fdAnswerTo(p, at, text, me){
+  let name = (at || '').trim(); const m = !name && text.match(/^@([\w.]+)\s*/); if (m){ name = m[1]; }
+  if (m || name) text = text.replace(new RegExp('^@' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i'), '').trim() || text;
+  if (!name) return {re: null, text};
+  const nm = name.toLowerCase(), par = p.cm.slice().reverse().find(c => !c.del && (c.w === -1 ? me : bot(c.w).name).toLowerCase() === nm);
+  return {re: par ? par.id : null, text};
+}
+// comments in thread order: each top-level comment, then the answers under it (one level, like Instagram)
+function fdThread(cms){
+  const by = new Map(cms.map(c => [c.id, c])), root = c => { let x = c, n = 0; while (x.re && by.has(x.re) && n++ < 20) x = by.get(x.re); return x; };
+  const out = [], kids = new Map();
+  cms.forEach(c => { const r = root(c); if (r === c) return; if (!kids.has(r.id)) kids.set(r.id, []); kids.get(r.id).push(c); });
+  cms.forEach(c => { if (root(c) !== c) return; out.push({c, sub: 0}); (kids.get(c.id) || []).sort((a, b) => a.t - b.t).forEach(k => out.push({c: k, sub: 1, to: by.get(k.re)})); });
+  return out;
+}
+const fdNameOf = w => w === -1 ? myName() : bot(w).name;
 
 /* ---- what each post is about, in words, for the people writing captions and comments ---- */
 function fdAbout(p){
@@ -118,7 +135,7 @@ const FD_SYS = me => `You write posts and comments for the Feed on Focus Bench, 
 Write like real college students on Instagram: short, casual, lowercase is common, slang is fine, inside jokes about classes, finals, coffee, sleep. Captions are usually a few words to one sentence. Comments are short reactions or questions about the post, and they must fit what the picture actually shows (you'll be told what's in it).
 Each person has their own emoji habit ("never", "sometimes" or "often", with their go-to emojis): mostly use their own, sometimes any other face, hand or heart emoji, never the same few for everyone, at most a couple per message.
 Don't start a comment with the name of the person it answers. No hashtags. ${me} is the person using the app.
-Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…","replyTo":"…"}]}; replyTo says what each message is: "cap <post id>" for a post's caption (from the poster), "<post id>" for a comment on it.`;
+Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…","replyTo":"…"}]}; replyTo says what each message is: "cap <post id>" for a post's caption (from the poster), "<post id>" for a new comment on it, and "<post id> @<name>" for an answer to that person's comment (answers go under the comment they answer, so never write an answer as a new comment, and don't start the text with @name).`;
 async function fdWrite(posts){
   if (!posts.length || !GEM.key || GEM.wait > Date.now()) return false;
   const me = myName(), blocks = [], names = new Map();
@@ -139,11 +156,12 @@ ${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w
       const w = names.get(String(x && x.from || '').toLowerCase().trim()), to = String(x && x.replyTo || '').trim(); if (w == null) return;
       let text = String(x.text || '').replace(/https?:\/\/\S+/g, '').replace(/#\w+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
       text = emotionOnly(stripSegue(text)); if (!text) return;
-      const cap = /^cap\s+/i.test(to), k = to.replace(/^cap\s+/i, ''), p = posts.find(q => q.k === k); if (!p) return;
+      const cap = /^cap\s+/i.test(to), [k, at] = to.replace(/^cap\s+/i, '').split(/\s*@\s*/), p = posts.find(q => q.k === k.trim()); if (!p) return;
       if (cap && w === p.w){ if (!p.cap) p.cap = text; return; }
-      if (p.cm.length >= 8) return;
+      if (p.cm.length >= 10) return;
+      const {re, text: t2} = fdAnswerTo(p, at, text, me);
       const prev = p.cm.length ? p.cm[p.cm.length - 1].t : p.t;
-      p.cm.push({id: p.id + 'c' + p.cm.length, w, t: Math.round(Math.max(prev, p.t) + (2 + Math.random() * 40) * 60000), text: text.replace(/^\[play\]\s*/i, ''), play: /^\[play\]/i.test(text)});
+      p.cm.push({id: p.id + 'c' + p.cm.length, w, t: Math.round(Math.max(prev, p.t) + (2 + Math.random() * 40) * 60000), text: t2.replace(/^\[play\]\s*/i, ''), play: /^\[play\]/i.test(t2), re});
     });
     posts.forEach(p => { p.gen = 1; if (!p.cap) p.cap = fdFallbackCap(p); delete p.k; delete p._cs; });
     return true;
@@ -197,7 +215,7 @@ const fdAgo = t => { const s = (Date.now() - t) / 1000; return s < 60 ? 'now' : 
 const fdWho = w => w === -1 ? `<b>${esc(myName())}</b>` : `<button class="lnk" data-bot="${w}">${esc(bot(w).name)}</button>`;
 function fdPostHtml(p){
   const me = p.w === -1, B = me ? null : bot(p.w), cms = fdShownComments(p), open = FDV.open[p.id], likes = fdLikes(p), fol = !me && FD.follows.includes(p.w);
-  const show = open ? cms : cms.slice(-2), re = FDV.re[p.id];
+  const roots = cms.filter(c => !c.re || !cms.some(x => x.id === c.re)), show = open ? cms : roots.slice(-2), re = FDV.re[p.id];
   return `<article class="card fd-post" data-pid="${p.id}">
     <header class="fd-h">${me ? myAvatar('sm') : avatar(B, 'sm')}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)} · ${fdAgo(p.t)}</small></span>${me ? `<button class="fd-x" data-fda="del" title="Delete post" aria-label="Delete post">×</button>` : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
     <div class="fd-media" data-fda="dbl">${fdMedia(p)}</div>
@@ -289,12 +307,13 @@ async function fdEngage(job){
   for (let k = 0; k < 12 && cs.length < n; k++){ const w = pool[Math.floor(Math.random() * pool.length)]; if (w >= 0 && !cs.includes(w)) cs.push(w); }
   if (!cs.length) return true;
   const ask = /\b(play|match|1v1|challenge|duel|ranked|anyone up)\b/i.test(p.cap || '') && R.on;
-  const user = `Post ${p.id} by ${me} (the user). What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${p.cm.filter(x => x.t <= Date.now()).slice(-8).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(none)'}\n\nWrite one comment each from: ${cs.map(w => { const f = chatFacts(w); return `${f.name} (${f.rank}, ${f.subj}, emojis: ${emojiStyle(w)})`; }).join('; ')}. replyTo "${p.id}".${ask ? ` ${me} is asking for a match: anyone who'd play starts their comment with [play].` : ''}`;
+  const user = `Post ${p.id} by ${me} (the user). What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${p.cm.filter(x => x.t <= Date.now()).slice(-8).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(none)'}\n\nWrite one comment each from: ${cs.map(w => { const f = chatFacts(w); return `${f.name} (${f.rank}, ${f.subj}, emojis: ${emojiStyle(w)})`; }).join('; ')}. replyTo "${p.id}" for a new comment, or "${p.id} @<name>" to answer someone's comment.${ask ? ` ${me} is asking for a match: anyone who'd play starts their comment with [play].` : ''}`;
   try {
     const got = await aiCall(FD_SYS(me), user), names = new Map(cs.map(w => [bot(w).name.toLowerCase(), w])), players = [];
     (Array.isArray(got) ? got : []).forEach((x, k) => { const w = names.get(String(x && x.from || '').toLowerCase().trim()); if (w == null) return;
       let text = emotionOnly(stripSegue(String(x.text || '').replace(/#\w+/g, '').trim().slice(0, 240))); const play = /^\[play\]/i.test(text); text = text.replace(/^\[play\]\s*/i, ''); if (!text) return;
-      p.cm.push({id: p.id + 'e' + Date.now().toString(36) + k, w, t: Date.now() + k * 20000, text}); if (play) players.push(w);
+      const at = String(x && x.replyTo || '').split(/\s*@\s*/)[1], a = fdAnswerTo(p, at, text, me); text = a.text;
+      p.cm.push({id: p.id + 'e' + Date.now().toString(36) + k, w, t: Date.now() + k * 20000, text, re: a.re}); if (play) players.push(w);
       setTimeout(() => { fdNote('comment', w, `<b>${esc(bot(w).name)}</b> commented: ${esc(text.slice(0, 80))}`, p.id); renderFeed(); }, k * 20000); });
     if (players.length) fdChallenge(players);
     saveFeed(); return true;
@@ -398,7 +417,7 @@ function fdViewHtml(p){
       <header class="fd-h">${av(p.w)}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)}</small></span>${me ? '' : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
       <div class="fv-cms">
         ${p.type !== 'text' && p.cap ? `<div class="fv-c">${av(p.w)}<div>${fdWho(p.w)} <span>${esc(p.cap)}</span><small>${fdAgo(p.t)}</small></div></div>` : ''}
-        ${cms.length ? cms.map(c => `<div class="fv-c${c.w === -1 ? ' me' : ''}" data-cid="${c.id}">${av(c.w)}<div>${fdWho(c.w)} <span>${esc(c.text)}</span><small>${fdAgo(c.t)}${c.w !== -1 ? ' · <button data-fda="reply">Reply</button>' : ''}</small></div></div>`).join('')
+        ${cms.length ? fdThread(cms).map(({c, sub, to}) => `<div class="fv-c${c.w === -1 ? ' me' : ''}${sub ? ' sub' : ''}" data-cid="${c.id}">${av(c.w)}<div>${fdWho(c.w)} <span>${to && to.w !== c.w ? `<b class="fv-at">@${esc(fdNameOf(to.w))}</b> ` : ''}${esc(c.text)}</span><small>${fdAgo(c.t)}${c.w !== -1 ? ' · <button data-fda="reply">Reply</button>' : ''}</small></div></div>`).join('')
           : `<p class="hint fv-none">No comments yet.${me ? '' : ' Start the conversation.'}</p>`}
       </div>
       <div class="fv-foot">
@@ -482,5 +501,6 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-goto
 const _fdShown = onPageShown;
 // the world may still be catching up when you open the Feed: fill it as soon as it's ready
 function fdOpen(){ if ($('#page-feed').hidden) return; if (!RK_READY){ renderFeed(); return setTimeout(fdOpen, 1500); } fdFill(); FDV.drawn = Date.now(); renderFeed(); }
-onPageShown = function(name){ _fdShown(name); if (name === 'feed') fdOpen(); };
+onPageShown = function(name){ if (fdViewOpen()){ $('#fdView').hidden = true; FDV.view = null; } _fdShown(name); if (name === 'feed') fdOpen(); };
+if (typeof openProfile === 'function'){ const _fdOP = openProfile; openProfile = function(){ if (fdViewOpen()){ $('#fdView').hidden = true; FDV.view = null; } return _fdOP.apply(this, arguments); }; }
 setTimeout(fdBadge, 3000);

@@ -1637,3 +1637,6 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
   .fv-side{border-left:0;flex:1}
   .fv-side>.fd-h{order:-1}
 }
+.fv-c.sub{margin-left:42px}
+.fv-c.sub .av.sm{width:24px;height:24px;font-size:10px}
+.fv-at{font-weight:600;color:var(--accent)}
