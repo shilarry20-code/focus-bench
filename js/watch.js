@@ -106,7 +106,8 @@ async function wSay(kind, delay, extra){
     const room = wRoom(); if (room.length) for (let k = 0; k < n && lines.length; k++) out.push({w: room[Math.floor(rr() * room.length)], text: lines.splice(Math.floor(rr() * lines.length), 1)[0]});
   }
   if (focusing() && !st.over) return;                 // you started focusing meanwhile: the room waits for your break
-  let t = Date.now() + delay;
+  // after anything already waiting, so a new batch doesn't land on top of the last one
+  let t = Math.max(Date.now() + delay, ...W.q.map(x => x.t + 2000));
   out.slice(0, 5).forEach(o => { t += (2 + o.text.length * .06 + Math.random() * 4) * 1000; W.q.push({t: Math.round(t), w: o.w, text: o.text}); });
   W.last = Date.now(); wSave(); renderWatch();
 }
@@ -168,7 +169,9 @@ function wTick(){
     if (!st.over){ if (foc) W.later = 'stop:' + i; else wSay('stop', 1500, bot(i).name); } } });
   if (st.over && !W.seen.end){ W.seen.end = 1; changed = true; W.chat.push({t: now, sys: 1, text: W.ma === W.mc ? 'Draw.' : `${bot(W.ma > W.mc ? W.a : W.c).name} wins.`}); W.q = []; wSay('end', 1500); }
   if (foc && W.q.length){ W.q = []; changed = true; }                    // the room waits while you focus
-  while (W.q.length && W.q[0].t <= now && !foc){ const x = W.q.shift(); W.chat.push({t: now, w: x.w, text: x.text}); changed = true; }
+  // one message at a time, a couple of seconds apart (after a break or a pause, the backlog comes in one by one)
+  if (W.q.length && W.q[0].t <= now && !foc && now - (W.lastMsg || 0) >= 2200){ const x = W.q.shift(); W.chat.push({t: now, w: x.w, text: x.text}); W.lastMsg = now; changed = true;
+    if (W.q.length && W.q[0].t < now + 2200) W.q[0].t = now + 2200 + Math.random() * 2500; }
   if (!foc){
     if (wPrevFoc){ if (W.later){ const who = +W.later.split(':')[1]; W.later = null; wSay('stop', 2000, bot(who).name); } else if (now - W.last > 90000) wSay('open', 3000); }
     else if (!W.q.length && now - W.last > 150000 + (W.a % 60) * 1000 && !st.over) wSay('ambient', 2000);
