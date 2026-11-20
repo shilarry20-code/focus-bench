@@ -33,12 +33,12 @@ async function fdPersist(){
   if (list.length) try { await IDB.setMany(list); } catch(e){ console.error(e); FD_PS.clear(); FD_CS.clear(); }
 }
 // a post's comments, loading them if they aren't in memory
-// a poster only answers people on their own post, and only a few times: no new comments of their own, at most 3 answers
-const FD_SELF_MAX = 3;
-function fdSelfOk(p, w, re){ return w < 0 || w !== p.w || (re && (p.cm || []).filter(c => c.w === w && !c.del).length < FD_SELF_MAX); }
+// a poster only answers people on their own post (no new comments of their own): about one answer for every 8 comments, at least 3
+const fdSelfMax = p => Math.max(3, Math.round((p.cm || []).filter(c => !c.del && c.w !== p.w).length / 8));
+function fdSelfOk(p, w, re){ return w < 0 || w !== p.w || (re && (p.cm || []).filter(c => c.w === w && !c.del).length < fdSelfMax(p)); }
 function fdTidySelf(p){
   if (!p.cm || p.w < 0) return;
-  const mine = p.cm.filter(c => c.w === p.w), keep = new Set(mine.filter(c => c.re).sort((a, b) => (b.lk || 0) - (a.lk || 0)).slice(0, FD_SELF_MAX).map(c => c.id));
+  const mine = p.cm.filter(c => c.w === p.w), keep = new Set(mine.filter(c => c.re).sort((a, b) => (b.lk || 0) - (a.lk || 0)).slice(0, fdSelfMax(p)).map(c => c.id));
   const gone = new Set(mine.filter(c => !keep.has(c.id)).map(c => c.id)); if (!gone.size) return;
   let grew = true; while (grew){ grew = false; p.cm.forEach(c => { if (c.re && gone.has(c.re) && !gone.has(c.id)){ gone.add(c.id); grew = true; } }); }
   p.cm = p.cm.filter(c => !gone.has(c.id)); if (p.pv) p.pv = p.pv.filter(c => !gone.has(c.id));
