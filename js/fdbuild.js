@@ -48,7 +48,7 @@ function cbPick(){
 }
 
 const CB_SYS = me => `You write comments for the Feed on Focus Bench, a study app for college students that works like Instagram. You're adding more comments to a post that's getting attention.
-Write like real people in an Instagram comment section: mostly short (a few words to one sentence), lowercase is common, slang is fine. Mix it up: reactions, jokes, questions, people tagging along, someone disagreeing, someone being a little unhinged, longer takes now and then. React to what the post actually shows (you'll be told what's in it) and to other comments. Never repeat a comment that's already there, and don't all say the same thing in different words.
+Write like real people in an Instagram comment section: mostly short (a few words to one sentence), lowercase is common, slang is fine. Mix it up: reactions, jokes, questions, people tagging along, someone disagreeing, someone being a little unhinged, longer takes now and then. React to what the post actually shows (you'll be told what's in it) and to other comments. Stay on the post: people almost never bring up their own major or classes (at most about one comment in ten, and only when it really fits), so don't turn comments into "my class is worse" comparisons. Never repeat a comment that's already there, and don't all say the same thing in different words.
 Replies: answers go under the comment they answer. Some threads become back-and-forths (two people arguing, others piling on, the poster jumping in); most comments get no reply.
 Each person has their own emoji habit ("never", "sometimes" or "often", with their go-to emojis): mostly use their own, sometimes another face, hand or heart emoji, at most a couple per message. No hashtags. Don't start a comment with someone's name or @name. ${me} is the person using the app.
 Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…","replyTo":"…"}]}; replyTo is "new" for a new comment or "@<name>" to answer that person's comment (an existing one or one from earlier in your answer).`;
@@ -62,7 +62,7 @@ async function cbJob(p){
   have.slice(-6).forEach(c => { const l = `${fdNameOf(c.w)}: ${c.text}`; if (!lines.some(x => x.endsWith(l))) lines.push(l); });
   const cs = fdCommenters(p, 22).filter(w => w !== p.w), poster = p.w >= 0 ? p.w : null, names = {};
   cs.forEach(w => { names[bot(w).name.toLowerCase()] = w; }); if (poster != null) names[bot(poster).name.toLowerCase()] = poster;
-  const who = cs.map(w => { const f = chatFacts(w); return `${f.name} (${f.subj}, emojis: ${emojiStyle(w)})`; }).join('; ');
+  const who = cs.map(w => { const f = chatFacts(w); return `${f.name} (${Math.random() < .15 ? f.subj + ', ' : ''}emojis: ${emojiStyle(w)})`; }).join('; ');
   const user = `Post by ${fdNameOf(p.w)}${p.w === -1 ? ' (the user)' : ''}, ${fdAgo(p.t)} ago, ${fdLikes(p).toLocaleString()} likes. What it is: ${fdAbout(p)}${p.cap && p.type !== 'text' ? `\nCaption: ${p.cap}` : ''}
 Comments so far (${have.length}; the most liked first):\n${lines.join('\n') || '(none yet)'}{MORE}
 

@@ -209,7 +209,7 @@ function fdCommenters(p, n){
   return out;
 }
 const FD_SYS = me => `You write posts and comments for the Feed on Focus Bench, a study app for college students that works like Instagram: players post pictures of where they're studying, session receipts, match results and short thoughts, and others like and comment.
-Write like real college students on Instagram: short, casual, lowercase is common, slang is fine, inside jokes about classes, finals, coffee, sleep. Captions are usually a few words to one sentence. Comments are short reactions or questions about the post, and they must fit what the picture actually shows (you'll be told what's in it).
+Write like real college students on Instagram: short, casual, lowercase is common, slang is fine, inside jokes about classes, finals, coffee, sleep. Captions are usually a few words to one sentence. Comments are short reactions or questions about the post itself (commenters almost never bring up their own major or classes), and they must fit what the picture actually shows (you'll be told what's in it).
 Each person has their own emoji habit ("never", "sometimes" or "often", with their go-to emojis): mostly use their own, sometimes any other face, hand or heart emoji, never the same few for everyone, at most a couple per message.
 Don't start a comment with the name of the person it answers. No hashtags. ${me} is the person using the app.
 ${TALK_RULES}
@@ -225,7 +225,7 @@ async function fdWrite(posts){
     blocks.push(`Post ${p.k} by ${f.name} (${f.rank}, ${f.subj}, emojis: ${emojiStyle(p.w)}), posted at ${new Date(p.t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
 What it is: ${fdAbout(p)}
 ${p.type === 'text' ? `Write the post itself as its caption (one or two short sentences). Starting point: ${pickTopic(p.w)}. Take it wherever feels natural for them.` : Math.random() < .3 ? `Write its caption. It can be about the picture or about ${pickTopic(p.w)}.` : 'Write its caption.'}
-${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w); return `${g.name} (${g.subj}, emojis: ${emojiStyle(w)})`; }).join('; ')}. One of them can answer another's comment, and ${f.name} can answer one comment.` : 'Nobody comments on this one.'}`);
+${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w); return `${g.name} (${Math.random() < .15 ? g.subj + ', ' : ''}emojis: ${emojiStyle(w)})`; }).join('; ')}. One of them can answer another's comment, and ${f.name} can answer one comment.` : 'Nobody comments on this one.'}`);
   });
   const user = `Today is ${new Date().toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}.\n\n${blocks.join('\n\n')}${openerAvoid()}`;
   try {
@@ -389,7 +389,7 @@ async function fdReply(job){
   const p = p0, mine = p && p.cm.find(x => x.id === job.cid); if (!p || !mine || !GEM.key) return true;
   const me = myName(), B = bot(job.w), f = chatFacts(job.w);
   const thread = p.cm.filter(x => x.t <= Date.now()).slice(-10).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n');
-  const user = `Post ${p.id} by ${p.w === -1 ? me : bot(p.w).name}. What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${thread}\n\n${me} just commented "${mine.text}". Write ${B.name}'s answer (${f.rank}, ${f.subj}, emojis: ${emojiStyle(job.w)}) as one short comment, replyTo "${p.id}". It should answer what ${me} said.${/\b(play|match|1v1|challenge|duel|ranked|game)\b/i.test(mine.text) && R.on ? ` If ${me} is asking to play and ${B.name} would, start the comment with [play].` : ''}`;
+  const user = `Post ${p.id} by ${p.w === -1 ? me : bot(p.w).name}. What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${thread}\n\n${me} just commented "${mine.text}". Write ${B.name}'s answer (${f.rank}${Math.random() < .15 ? ', ' + f.subj : ''}, emojis: ${emojiStyle(job.w)}) as one short comment, replyTo "${p.id}". It should answer what ${me} said.${/\b(play|match|1v1|challenge|duel|ranked|game)\b/i.test(mine.text) && R.on ? ` If ${me} is asking to play and ${B.name} would, start the comment with [play].` : ''}`;
   try {
     const got = await aiCall(FD_SYS(me), user), x = (Array.isArray(got) ? got : []).find(m => m && m.text);
     if (!x) return true;
@@ -416,7 +416,7 @@ async function fdEngage(job){
   for (let k = 0; k < 12 && cs.length < n; k++){ const w = pool[Math.floor(Math.random() * pool.length)]; if (w >= 0 && !cs.includes(w)) cs.push(w); }
   if (!cs.length) return true;
   const ask = /\b(play|match|1v1|challenge|duel|ranked|anyone up)\b/i.test(p.cap || '') && R.on;
-  const user = `Post ${p.id} by ${me} (the user). What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${p.cm.filter(x => x.t <= Date.now()).slice(-8).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(none)'}\n\nWrite one comment each from: ${cs.map(w => { const f = chatFacts(w); return `${f.name} (${f.rank}, ${f.subj}, emojis: ${emojiStyle(w)})`; }).join('; ')}. replyTo "${p.id}" for a new comment, or "${p.id} @<name>" to answer someone's comment.${ask ? ` ${me} is asking for a match: anyone who'd play starts their comment with [play].` : ''}`;
+  const user = `Post ${p.id} by ${me} (the user). What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${p.cm.filter(x => x.t <= Date.now()).slice(-8).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(none)'}\n\nWrite one comment each from: ${cs.map(w => { const f = chatFacts(w); return `${f.name} (${f.rank}${Math.random() < .15 ? ', ' + f.subj : ''}, emojis: ${emojiStyle(w)})`; }).join('; ')}. replyTo "${p.id}" for a new comment, or "${p.id} @<name>" to answer someone's comment.${ask ? ` ${me} is asking for a match: anyone who'd play starts their comment with [play].` : ''}`;
   try {
     const got = await aiCall(FD_SYS(me), user), names = new Map(cs.map(w => [bot(w).name.toLowerCase(), w])), players = [];
     (Array.isArray(got) ? got : []).forEach((x, k) => { const w = names.get(String(x && x.from || '').toLowerCase().trim()); if (w == null) return;
