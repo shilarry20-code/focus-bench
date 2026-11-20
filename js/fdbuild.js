@@ -67,7 +67,7 @@ async function cbJob(p){
 Comments so far (${have.length}; the most liked first):\n${lines.join('\n') || '(none yet)'}{MORE}
 
 Write {N} more. About ${Math.round(replyShare * 100)}% of them answer a comment (replyTo "@<name>"), the rest are new comments (replyTo "new").
-They come from: ${who}. Most of them comment once; a few come back to answer people.${poster != null ? ` ${fdNameOf(poster)} (who posted it) never writes a new comment, only answers (replyTo "@<name>"), at most one or two.` : ''}`;
+They come from: ${who}. Most of them comment once; a few come back to answer people.${poster != null ? ` ${fdNameOf(poster)} (who posted it) never writes a new comment, only answers (replyTo "@<name>"), and answers a few of the comments in this batch.` : ''}`;
   return {pid: p.id, sys: CB_SYS(myName()), user, names, need: target - have.length};
 }
 // turn Gemini's messages into comments on the post (also used for comments written overnight); returns how many were added
