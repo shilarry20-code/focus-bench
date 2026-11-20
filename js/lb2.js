@@ -4,7 +4,7 @@
    sorted) and kept until the world changes. Movement arrows compare with the top 100 saved yesterday; your rank history
    is saved daily for the chart on your card. */
 const LB_GROUPS = [
-  ['Rating', '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/>', [['elo', 'Elo']]],
+  ['Rating', '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/>', [['elo', 'Elo'], ['rkw', 'Ranked wins'], ['rkp', 'Win %']]],
   ['Time', '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', [['hours', 'All time'], ['week', 'This week'], ['month', 'This month']]],
   ['Streaks', '<path d="M12 21c-4 0-6.5-2.7-6.5-6.2 0-3.6 2.7-5.5 3.6-9.3 1.9 1.2 3 3 3 5 1-.6 1.6-1.8 1.7-3.2 2.4 1.8 4.7 4.5 4.7 7.6C18.5 18.4 16 21 12 21z"/>', [['cur', 'Current'], ['best', 'Best']]],
   ['Records', '<circle cx="12" cy="14" r="5.5"/><path d="M9 3h6l-1.5 5.5h-3zM12 11.5v2.5l1.5 1"/>', [['sess', 'Longest session'], ['day', 'Biggest day'], ['days', 'Most days'], ['count', 'Sessions']]],
@@ -99,7 +99,7 @@ function lbSub(w){
   const rk = w === ME ? myRk() : rkOf(w);
   return `${emblem(rk, 'xs')} ${esc(rk.full)}${w === ME ? '' : ` · ${esc(bot(w).style)}`}`;
 }
-const lbGapTxt = (u, d) => u === 'elo' ? `+${d.toLocaleString()} Elo` : u === 'min' ? `${lbFmt('min', d)} more` : u === 'd' ? `${d} more day${d === 1 ? '' : 's'}` : u === 'pts' ? `+${d.toLocaleString()} pts` : `${d.toLocaleString()} more`;
+const lbGapTxt = (u, d) => u === 'elo' ? `+${d.toLocaleString()} Elo` : u === 'min' ? `${lbFmt('min', d)} more` : u === 'd' ? `${d} more day${d === 1 ? '' : 's'}` : u === 'pts' ? `+${d.toLocaleString()} pts` : u === 'pct' ? `+${(d / 10).toFixed(1)} points of win rate` : `${d.toLocaleString()} more`;
 
 /* ---- drawing ---- */
 const LBV = {from: 3, to: 53, cat: null, filt: null};
@@ -130,6 +130,8 @@ function lbYouCard(c, V, t){
   if (all){ const mark = [50, 25, 10, 5, 1].map(p => [p, Math.floor(V.n * p / 100)]).find(([, at]) => at >= 1 && place > at);
     if (mark){ const w = V.at(mark[1] - 1), gap = V.val(w) - me + 1; next += `<div class="hint">${lbGapTxt(c.u, Math.max(1, gap))} to reach the top ${mark[0]}%</div>`; } }
   let extra = '';
+  if (c.id === 'rkp' && myGames() < 20){ next = `<div>Play ${20 - myGames()} more rated game${20 - myGames() === 1 ? '' : 's'} to get a win rate on this board.</div>`; }
+  if (c.id === 'rkp' && myGames()) extra = `<div class="hint">${R.w}–${R.l}${R.d ? '–' + R.d : ''} in rated games · ${winPct(R.w, myGames())}</div>`;
   if (c.id === 'cur'){ const today = LOG.filter(x => dayKey(x.t) === dayKey(Date.now())).reduce((n, x) => n + x.min, 0); if (today < 10) extra = `<div class="hint">${t.cur ? 'Study 10+ minutes today to keep your streak.' : 'Study 10+ minutes today to start a streak.'}</div>`; }
   if (c.id === 'pts') extra = `<div class="hint">${ACHS.filter(a => ACH.u[a.id]).length} of ${ACHS.length} achievements unlocked.</div>`;
   return `<div class="lb2-you"><small class="hint">Your standing · ${esc(c.name)}${all ? '' : ` · ${LB_FILTERS.find(f => f[0] === P.lbFilt)[1]}`}</small><div class="lb2-big">#${place.toLocaleString()}</div>
@@ -160,7 +162,7 @@ function renderLeaders(){
   $('#lbCats').innerHTML = LB_GROUPS.map(([g, ic, cats]) => `<div class="lb2-grp${cats.some(([id]) => id === c.id) ? ' on' : ''}">${lbIcon(ic)}<span class="lb2-gl">${g}</span>${cats.map(([id, l]) => `<button data-v="${id}" aria-pressed="${id === c.id}">${l}</button>`).join('')}</div>`).join('');
   $('#lbFilt').innerHTML = `<div class="seg">${LB_FILTERS.map(([k, l]) => `<button data-lbf="${k}" aria-pressed="${filt === k}">${l}</button>`).join('')}</div>${filt === 'major' ? `<select id="lbMajor" aria-label="Your major"><option value="">Pick your major</option>${MAJORS.slice().sort((a, b) => a.n.localeCompare(b.n)).map(m => `<option value="${m.k}"${P.myMajor === m.k ? ' selected' : ''}>${esc(m.n)}</option>`).join('')}</select>` : ''}`;
   $('#lbTitle').textContent = c.name; $('#lbDesc').textContent = c.desc;
-  if (c.f == null && !lbPts){ $('#lbList').innerHTML = '<li class="lb-wait">Adding up everyone\'s achievement points…</li>'; $('#lbPod').innerHTML = ''; $('#lbPin').innerHTML = ''; $('#lbYouCard').innerHTML = '<p class="hint">Adding up points…</p>'; $('#lbDist').hidden = true; $('#lbPer').hidden = true; ensureBotPoints(() => { if (!$('#page-leaders').hidden) renderLeaders(); }); return lbMineSide(c, t); }
+  if (!lbReady(c)){ $('#lbList').innerHTML = '<li class="lb-wait">Adding up everyone\'s achievement points…</li>'; $('#lbPod').innerHTML = ''; $('#lbPin').innerHTML = ''; $('#lbYouCard').innerHTML = '<p class="hint">Adding up points…</p>'; $('#lbDist').hidden = true; $('#lbPer').hidden = true; ensureBotPoints(() => { if (!$('#page-leaders').hidden) renderLeaders(); }); return lbMineSide(c, t); }
   if (filt === 'major' && !P.myMajor){ $('#lbList').innerHTML = '<li class="lb-wait">Pick your major above to see players in it.</li>'; $('#lbPod').innerHTML = ''; $('#lbYouCard').innerHTML = ''; $('#lbDist').innerHTML = ''; return lbMineSide(c, t); }
   const V = lbView(c, t); lbNote(c, V);
   if (LBV.cat !== c.id || LBV.filt !== filt){ LBV.cat = c.id; LBV.filt = filt; LBV.from = Math.min(3, V.n); LBV.to = Math.min(V.n, 53); }
@@ -184,7 +186,7 @@ function renderLeaders(){
   if (s){ lbIO = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)){ LBV.to = Math.min(V.n, LBV.to + 50); lbIO.disconnect(); renderLeaders(); } }, {rootMargin: '400px'}); lbIO.observe(s); }
 }
 function lbMineSide(c, t){
-  $('#lbMine').innerHTML = LB.map(x => { const ready = x.f != null || lbPts, place = ready ? myPlace(x, t) : null;
+  $('#lbMine').innerHTML = LB.map(x => { const ready = lbReady(x), place = ready ? myPlace(x, t) : null;
     return `<li><button class="${x.id === c.id ? 'on' : ''}" data-v="${x.id}"><span class="nm">${x.name}</span><span class="mv2">${lbFmt(x.u, x.me(t))}</span><span class="pl2">${place ? `#${place.toLocaleString()} · ${topPct(place)}` : '…'}</span></button></li>`; }).join('');
 }
 function lbGoMe(V, draw = true){ LBV.from = Math.max(3, V.mine - 20); LBV.to = Math.min(V.n, V.mine + 30); if (draw){ renderLeaders(); setTimeout(() => { const r = document.querySelector('#lbList [data-me]'); if (r) r.scrollIntoView({block: 'center', behavior: 'smooth'}); }, 30); } }

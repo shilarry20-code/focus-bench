@@ -1241,7 +1241,7 @@ let rkHistShown = 30;
 function renderRanked(){
   if (!RK_READY){ $('#rkHero').innerHTML = `<p class="hint">Loading ${(ROSTER_N + 1).toLocaleString()} players…</p>`; return; }
   const rk = myRk(), next = rk.hi ? rankOf(rk.hi) : null, prog = rk.hi ? (R.mmr - rk.lo) / (rk.hi - rk.lo) : 1;
-  const games = R.w + R.l + R.d, wr = games ? Math.round(R.w / games * 100) : 0;
+  const games = R.w + R.l + R.d, wr = games ? (Math.round(R.w / games * 1000) / 10).toFixed(1) : '0.0';
   $('#rkHero').innerHTML = `${emblem(rk, 'xl')}<div class="rk-hero-tx"><small>${R.played < 5 ? `Placement ${R.played}/5 · your rank firms up after 5 matches` : 'Your rank'}</small><b style="color:${rk.c}">${rk.full}</b>
     <span>${R.mmr.toLocaleString()} Elo · best ${R.best.toLocaleString()}</span>
     <span class="bar2 big"><i style="width:${prog * 100}%;background:${rk.c}"></i></span>
@@ -1576,8 +1576,8 @@ function renderProfilePage(){
   const fy = w !== ME && typeof FD !== 'undefined' && FD.followers.includes(w);
   const fb = soc ? socFollowedBy(w) : [], fbTxt = fb.length ? `Followed by ${fb.slice(0, 2).map(a => `<button class="lnk" data-bot="${a}">${esc(bot(a).name)}</button>`).join(', ')}${fb.length > 2 ? ` and ${fb.length - 2} other${fb.length - 2 === 1 ? '' : 's'} you follow` : ''}` : '';
   let wr = '–';
-  if (w === ME){ const g = R.w + R.l + R.d; if (g) wr = Math.round(R.w / g * 100) + '%'; }
-  else { try { m5Backfill(w); const ms = m5List(w); if (ms.length >= 3) wr = Math.round(ms.filter(m => m.a > m.b).length / ms.length * 100) + '%'; } catch(e){} }
+  if (w === ME){ const g = R.w + R.l + R.d; if (g) wr = winPct(R.w, g); }
+  else { try { const A = rkArrs(); if (A.p[w]) wr = (A.p[w] / 10).toFixed(1) + '%'; } catch(e){} }
   const chips = [[st.total >= 60 ? Math.floor(st.total / 60).toLocaleString() + 'h' : st.total + 'm', 'studied'], [`${st.cur}d`, 'streak'], [wr, 'win rate'], ['#' + place.toLocaleString(), 'overall']];
   const bio = w === ME ? (P.myBio || '') : B.bio;
   const cnt = (n, l, kind) => kind ? `<button class="pf-cnt" data-soc="${kind}" data-soc-w="${w === ME ? 'me' : w}"><b>${fmtCount(n)}</b><small>${l}</small></button>` : `<span class="pf-cnt"><b>${n.toLocaleString()}</b><small>${l}</small></span>`;
