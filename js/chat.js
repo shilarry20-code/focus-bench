@@ -371,6 +371,7 @@ async function chatGenerate(forUser, away){
 
 /* ---- the clock: release messages when they're due, start new conversation, catch up after being away ---- */
 function chatTick(){
+  return;                 // global chat was replaced by the Feed
   if (!RK_READY) return;
   const now = Date.now();
   if (!chatStarted){
