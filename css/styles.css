@@ -1973,7 +1973,8 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 .el-tile.break{border-color:#e8a33d;animation:elpulse 1.6s ease-in-out infinite}
 .el-tile .drain{position:absolute;left:0;bottom:0;height:3px;background:#e8a33d}
 .el-tile.out{filter:grayscale(1);opacity:.45}
-.el-tile.out em{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%) rotate(-14deg);font-style:normal;font-weight:900;font-size:16px;letter-spacing:.1em;color:#d64545;border:2px solid #d64545;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,var(--surface) 70%,transparent)}
+.el-tile.out{filter:none;opacity:1}.el-tile.out>:not(.el-x){filter:grayscale(1);opacity:.4}
+.el-x{position:absolute;inset:6px}.el-x svg{width:100%;height:100%;display:block}.el-x path{stroke:#d64545;stroke-width:9;stroke-linecap:round;fill:none;vector-effect:non-scaling-stroke;stroke-width:5px}
 .el-tile.champ{border-color:#e0a630;box-shadow:0 0 0 2px #e0a630,0 0 24px color-mix(in srgb,#e0a630 60%,transparent)}
 @keyframes elpulse{50%{box-shadow:0 0 0 3px color-mix(in srgb,#e8a33d 35%,transparent)}}
 .el-ban{position:fixed;left:50%;top:30%;transform:translate(-50%,-10px) scale(.9);opacity:0;z-index:210;background:#120c0c;color:#fff;border:2px solid #d64545;border-radius:16px;padding:16px 40px;text-align:center;transition:opacity .3s,transform .3s;pointer-events:none;box-shadow:0 20px 60px rgba(0,0,0,.4)}
