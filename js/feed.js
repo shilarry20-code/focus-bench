@@ -384,7 +384,12 @@ function renderFeed(){
 function fdBadge(){ const n = FD.notif.filter(x => x.t > FD.nseen).length; document.querySelectorAll('.feed-badge').forEach(b => { b.textContent = n > 99 ? '99+' : n || ''; b.hidden = !n; }); }
 
 /* ---- notifications ---- */
-function fdNote(kind, w, html, pid){ FD.notif.push({t: Date.now(), kind, w, html, pid}); saveFeed(); fdBadge(); }
+// t: when it happened (things that happened while the app was closed keep their own time, and the list stays in time order)
+function fdNote(kind, w, html, pid, t){
+  const n = {t: Math.min(Date.now(), Math.round(t || Date.now())), kind, w, html, pid};
+  let i = FD.notif.length; while (i > 0 && FD.notif[i - 1].t > n.t) i--;
+  FD.notif.splice(i, 0, n); saveFeed(); fdBadge();
+}
 
 /* ---- following ---- */
 function fdFollow(w, on){
@@ -417,9 +422,11 @@ async function fdReply(job){
     if (!x) return true;
     let text = emotionOnly(stripSegue(stripLeadName(String(x.text).replace(/#\w+/g, '').trim().slice(0, 240), [me]))); const play = /^\[play\]/i.test(text); text = text.replace(/^\[play\]\s*/i, '');
     if (!text) return true;
-    p.cm.push({id: p.id + 'r' + Date.now().toString(36), w: job.w, t: Date.now(), text, re: mine.id, lk: fdCmLikes(p, true)});
+    // they answered when they got to it: if the app was closed then, that was a while before you reopened it
+    const at = Math.max(mine.t + 60000, Math.min(Date.now(), (job.due || Date.now()) + Math.random() * Math.min(Math.max(0, Date.now() - (job.due || 0)), 90 * 60000)));
+    p.cm.push({id: p.id + 'r' + Date.now().toString(36), w: job.w, t: Math.round(at), text, re: mine.id, lk: fdCmLikes(p, true)});
     const rt = fdTree(p.cm).find(x => x.kids.some(k => k.c.id === mine.id) || x.c.id === mine.id); if (rt) FDV.vexp[rt.c.id] = rt.kids.length;
-    fdNote('reply', job.w, `<b>${esc(B.name)}</b> replied: ${esc(text.slice(0, 80))}`, p.id);
+    fdNote('reply', job.w, `<b>${esc(B.name)}</b> replied: ${esc(text.slice(0, 80))}`, p.id, at);
     if (play) fdChallenge([job.w]);
     return true;
   } catch(e){ if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); return e.kind !== 'offline' && e.kind !== 'busy' ? true : false; }
@@ -445,7 +452,8 @@ async function fdEngage(job){
       let text = emotionOnly(stripSegue(String(x.text || '').replace(/#\w+/g, '').trim().slice(0, 240))); const play = /^\[play\]/i.test(text); text = text.replace(/^\[play\]\s*/i, ''); if (!text) return;
       const at = String(x && x.replyTo || '').split(/\s*@\s*/)[1], a = fdAnswerTo(p, at, text, me); text = a.text;
       // people find the post at different moments: each comment a minute or several after the last
-      when = when ? when + (45 + Math.random() * 270) * 1000 : Date.now();
+      // (if the app was closed when they got to it, they commented back then, not the moment you reopened it)
+      when = when ? when + (45 + Math.random() * 270) * 1000 : Math.min(Date.now(), Math.max(job.due || 0, p.t + 60000));
       p.cm.push({id: p.id + 'e' + Date.now().toString(36) + k, w, t: Math.round(when), text, re: a.re, lk: fdCmLikes(p, !!a.re)}); if (play) players.push(w);
       FD.pend.push({kind: 'note', due: Math.round(when), w, pid: p.id, html: `<b>${esc(bot(w).name)}</b> commented: ${esc(text.slice(0, 80))}`}); });
     if (players.length) fdChallenge(players);
@@ -464,9 +472,9 @@ async function fdTick(){
     // jobs that are due (people offline answer once they're back)
     for (const job of FD.pend.slice()){
       if (job.due > now) continue;
-      if (job.kind === 'note'){ fdNote('comment', job.w, job.html, job.pid); FD.pend.splice(FD.pend.indexOf(job), 1); renderFeed(); continue; }
+      if (job.kind === 'note'){ fdNote('comment', job.w, job.html, job.pid, job.due); FD.pend.splice(FD.pend.indexOf(job), 1); renderFeed(); continue; }
       if (job.kind !== 'eng' && job.kind !== 'fb' && !(dmOnline(job.w) || dmStudying(job.w)) && now - job.due < 12 * 3600e3) continue;
-      if (job.kind === 'fb'){ if (!FD.followers.includes(job.w)){ FD.followers.push(job.w); fdNote('follow', job.w, `<b>${esc(bot(job.w).name)}</b> followed you back`); } FD.pend.splice(FD.pend.indexOf(job), 1); continue; }
+      if (job.kind === 'fb'){ if (!FD.followers.includes(job.w)){ FD.followers.push(job.w); fdNote('follow', job.w, `<b>${esc(bot(job.w).name)}</b> followed you back`, null, job.due); } FD.pend.splice(FD.pend.indexOf(job), 1); continue; }
       const done = job.kind === 'reply' ? await fdReply(job) : await fdEngage(job);
       if (done){ const i = FD.pend.indexOf(job); if (i >= 0) FD.pend.splice(i, 1); } else job.due = now + 120000;
       break;                                                   // one request at a time
@@ -476,7 +484,10 @@ async function fdTick(){
     if (Math.random() < rate / 60){ const pool = fdPool().filter(w => !FD.followers.includes(w)); if (pool.length){ const w = pool[Math.floor(Math.random() * pool.length)]; FD.followers.push(w); if (typeof insFollowed === 'function') insFollowed(); fdNote('follow', w, `<b>${esc(bot(w).name)}</b> started following you`); } }
     // likes on your posts: a note at 1, 5, 10, 25, 50, 100…
     FD.posts.filter(p => p.w === -1 && !p.del).forEach(p => { const n = fdLikes(p) - (FD.liked[p.id] ? 1 : 0), marks = [1, 5, 10, 25, 50, 100, 250, 500, 1000], hit = marks.filter(x => x <= n).pop();
-      if (hit && hit > (p.ln || 0)){ p.ln = hit; const w = fdCommenters(p, 1)[0]; fdNote('like', w, hit === 1 ? `<b>${esc(bot(w).name)}</b> liked your post` : `<b>${esc(bot(w).name)}</b> and ${hit - 1} others liked your post`, p.id); } });
+      if (hit && hit > (p.ln || 0)){ p.ln = hit; const w = fdCommenters(p, 1)[0];
+        // when the likes actually reached that number (likes come in along a curve from when it was posted)
+        const L = p.L || n, tau = 2700e3 * (1 + Math.log10(Math.max(1, L / 200))), at = p.t + (hit < L ? -tau * Math.log(1 - hit / L) : 0);
+        fdNote('like', w, hit === 1 ? `<b>${esc(bot(w).name)}</b> liked your post` : `<b>${esc(bot(w).name)}</b> and ${hit - 1} others liked your post`, p.id, at); } });
     saveFeed();
     if (!$('#page-feed').hidden && Date.now() - (FDV.drawn || 0) > 60000 && !document.activeElement.closest('.fd-form')){ if (fdFill()) {} FDV.drawn = Date.now(); renderFeed(); }
   } catch(e){ console.error(e); } finally { fdTickBusy = false; }
