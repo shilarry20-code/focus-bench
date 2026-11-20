@@ -102,6 +102,12 @@ const CH_POOL = [
 ];
 const chDef = id => CH_POOL.find(c => c.id === id);
 if (CHL.xp == null || CHL.xpV !== 2){ CHL.xp = Object.keys(CHL.done || {}).reduce((n, k) => { const [sk, id] = k.split('|'); return n + (id === 'all' ? CHX_ALL[sk[0]] : chXp(sk[0], id)); }, 0); CHL.xpV = 2; }
+// XP is kept as a ledger (one line per finished challenge, never pruned) so two devices can merge without counting twice
+const chXpOf = k => { const [sk, id] = k.split('|'); return id === 'all' ? CHX_ALL[sk[0]] : chXp(sk[0], id); };
+if (!CHL.led){ CHL.led = {}; Object.keys(CHL.done || {}).forEach(k => { CHL.led[k] = chXpOf(k); }); CHL.base = Math.max(0, (CHL.xp || 0) - Object.values(CHL.led).reduce((a, b) => a + b, 0)); }
+const chXpSum = () => { CHL.xp = (CHL.base || 0) + Object.values(CHL.led || {}).reduce((a, b) => a + b, 0); return CHL.xp; };
+chXpSum();
+['d', 'w', 'm'].forEach(p => { const S = CHL.sets && CHL.sets[p]; if (S && S.at == null){ S.at = 0; S.rv = CHL.rr && CHL.rr.day === dayKey(Date.now()) && CHL.rr.used && p === 'd' ? 1 : 0; } });
 // ranked challenges only if ranked is on, and fewer of them if you haven't played lately
 function chRankedMax(per){
   if (!R.on) return 0;
@@ -133,7 +139,7 @@ function chPick(per, keep = []){
 }
 function chSets(){
   let changed = false;
-  ['d', 'w', 'm'].forEach(per => { const k = chKey(per); if (!CHL.sets[per] || CHL.sets[per].k !== k){ CHL.sets[per] = {k, list: chPick(per)}; changed = true; } });
+  ['d', 'w', 'm'].forEach(per => { const k = chKey(per); if (!CHL.sets[per] || CHL.sets[per].k !== k){ CHL.sets[per] = {k, list: chPick(per), at: Date.now(), rv: 0}; changed = true; } });
   if (changed){ const keep = new Set(['d', 'w', 'm'].map(p => CHL.sets[p].k)); Object.keys(CHL.done).forEach(x => { if (!keep.has(x.split('|')[0])) delete CHL.done[x]; }); saveChl(); }
   return CHL.sets;
 }
@@ -149,8 +155,8 @@ function chCheck(){
   const sets = chSets(); let any = false;
   ['d', 'w', 'm'].forEach(per => {
     const S = sets[per]; let fresh = 0;
-    S.list.forEach(c => { const k = S.k + '|' + c.id; if (CHL.done[k]) return; const p = chProg(per, c); if (p.v >= c.n){ CHL.done[k] = Date.now(); CHL.total = (CHL.total || 0) + 1; CHL.xp = (CHL.xp || 0) + chXp(per, c.id); fresh++; any = true; toast(`Challenge complete: ${p.def.t(c.n)}`); } });
-    if (fresh && S.list.every(c => CHL.done[S.k + '|' + c.id]) && !CHL.done[S.k + '|all']){ CHL.done[S.k + '|all'] = Date.now(); CHL.xp = (CHL.xp || 0) + CHX_ALL[per]; setTimeout(() => toast(`All ${CH_NAME[per].toLowerCase()} challenges done! +${CHX_ALL[per]} XP bonus`), 1800); }
+    S.list.forEach(c => { const k = S.k + '|' + c.id; if (CHL.done[k]) return; const p = chProg(per, c); if (p.v >= c.n){ CHL.done[k] = Date.now(); CHL.led[k] = chXp(per, c.id); CHL.total = (CHL.total || 0) + 1; CHL.xp = (CHL.xp || 0) + chXp(per, c.id); fresh++; any = true; toast(`Challenge complete: ${p.def.t(c.n)}`); } });
+    if (fresh && S.list.every(c => CHL.done[S.k + '|' + c.id]) && !CHL.done[S.k + '|all']){ CHL.done[S.k + '|all'] = Date.now(); CHL.led[S.k + '|all'] = CHX_ALL[per]; CHL.xp = (CHL.xp || 0) + CHX_ALL[per]; setTimeout(() => toast(`All ${CH_NAME[per].toLowerCase()} challenges done! +${CHX_ALL[per]} XP bonus`), 1800); }
   });
   if (any){ saveChl(); try { fx.burst(); } catch(e){} }
   chRender();
@@ -164,7 +170,7 @@ function chReroll(per, id){
     && !(c.kind === 'ranked' && was !== 'ranked' && others.filter(x => chDef(x.id).kind === 'ranked').length >= chRankedMax(per))
     && !(c.kind === 'feed' && others.some(x => chDef(x.id).kind === 'feed')));
   if (!pool.length) return toast('No other challenge to swap in.');
-  S.list[i] = chMake(pool[Math.floor(Math.random() * pool.length)], per);
+  S.list[i] = chMake(pool[Math.floor(Math.random() * pool.length)], per); S.rv = (S.rv || 0) + 1;
   CHL.rr = {day: today, used: 1}; saveChl(); chCheck();
 }
 
