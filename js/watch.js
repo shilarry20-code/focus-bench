@@ -63,7 +63,8 @@ The spectators are in a watch room together; some are studying along on their ow
 Write like quick live-stream chat: short, casual, lowercase is fine, slang is fine. Never formal. No "speaking of…" style bridges.
 Each spectator has their own emoji habit (given next to their name): "often", "sometimes" or "never", with their go-to emojis; mostly use those, sometimes any other face, hand or heart emoji, never the same few for everyone, at most a couple per message.
 ${me} is the user, also watching. When ${me} talks, answer what they actually said. Don't start a message with the name of the person it answers.
-Answer with JSON: {"messages":[{"from":"<spectator name exactly as listed>","text":"…"}]}.`;
+Answer with JSON: {"messages":[{"from":"<spectator name exactly as listed>","text":"…"}]}.
+${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
   const user = `The match: ${A.name} (${rankOf(W.ra).full}, ${W.ra} Elo, #${posOf(W.a) + 1} on the ladder) vs ${C.name} (${rankOf(W.rc).full}, ${W.rc} Elo, #${posOf(W.c) + 1}).
 Right now: ${A.name} ${st.aOn ? 'is still studying' : 'has stopped'} at ${Math.floor(st.ta)} min, ${C.name} ${st.cOn ? 'is still studying' : 'has stopped'} at ${Math.floor(st.tc)} min; ${lead}. ${res}
 About ${wViewers().toLocaleString()} people are watching. ${focusing() ? '' : `${me} is on a break.`}
@@ -82,7 +83,7 @@ async function wSay(kind, delay, extra){
   if (kind !== 'reply' && W.q.length) return;
   const st = wState(), A = bot(W.a), C = bot(W.c), me = myName();
   const task = {open: `Write 3 to 5 short messages from 2 to 4 different spectators about where the match stands right now.`,
-    ambient: `Write 2 or 3 short messages from 1 to 3 spectators: react to the match or chat a bit.`,
+    ambient: `Write 2 or 3 short messages from 1 to 3 spectators: ${Math.random() < .5 ? `someone brings up ${pickTopic(null, {school: .3})} and others chime in` : 'react to the match or chat a bit'}.${openerAvoid()}`,
     stop: `${extra} just stopped studying, so the other player only needs to keep going. Write 2 to 4 short reactions from different spectators.`,
     end: `The match just ended. Write 2 to 4 short reactions from different spectators to the result.`,
     reply: `${me} just said something (maybe a few messages in a row). Write 1 to 3 short messages from 1 or 2 spectators answering ${me}.`}[kind];

@@ -45,7 +45,8 @@ function mcPrompt(c, task){
     : !c.you ? `${me} hasn't started studying yet.` : focusing() ? `${me} is focusing right now.` : S.running ? `${me} is on a break.` : `${me} has paused their timer.`;
   const sys = `You write in-match chat messages from ${B.name} to ${me}. They're playing a live match on Focus Bench, a study-timer app for college students: both study at the same time and whoever studies longer wins.
 Write like quick game chat: short, casual, lowercase is fine, friendly trash talk is fine. Keep ${B.name}'s personality. Don't lecture about studying.
-Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. Use them like real people do, to show emotion or react, mostly their own go-tos (listed next to their name) and sometimes any other face, hand or heart emoji: don't fall back on the same few (😭 💀 😂) for everyone. Never use them to illustrate the words (no 🍪 for cookies, 🚗 for cars, ⭐ for stars, 📚 for studying). Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Every message is from ${B.name}.`;
+Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. Use them like real people do, to show emotion or react, mostly their own go-tos (listed next to their name) and sometimes any other face, hand or heart emoji: don't fall back on the same few (😭 💀 😂) for everyone. Never use them to illustrate the words (no 🍪 for cookies, 🚗 for cars, ⭐ for stars, 📚 for studying). Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Every message is from ${B.name}.
+${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
   const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.subj}, ${f.style.toLowerCase()} studier, emojis: ${emojiStyle(c.b)}. ${me}: ${rankOf(c.mmr0).full} (${c.mmr0} Elo).
 Match: ${c.friendly ? 'friendly (no Elo at stake)' : `ranked (${me} gains ${s.win} Elo for a win, loses ${s.loss} for a loss)`}. Their record before this: ${r ? `${r[0]}–${r[1]}${r[2] ? '–' + r[2] : ''} (${me}'s wins–losses)` : 'first time playing'}.
 So far ${me} has studied ${youMin} min and ${B.name} ${themMin} min${c.tapped && c.state === 'live' ? `, and ${B.name} has stopped for good` : ''}. ${state}
@@ -62,7 +63,7 @@ async function mcSay(kind, delay){
   if (kind === 'reply' && mcBusy){ clearTimeout(mcReplyT); mcReplyT = setTimeout(() => mcSay('reply', delay), 2000); return; }
   const B = BOTS[c.b], me = myName();
   const task = {start: `The match just started. Write 1 short opening message from ${B.name} (like gl hf, a bit of banter).`,
-    brk: `${me} just took a break. Write 1 short message ${B.name} sends (teasing, chatting, or about how the match is going).`,
+    brk: `${me} just took a break. Write 1 short message ${B.name} sends (${Math.random() < .5 ? `chatting about ${pickTopic(c.b)}` : 'teasing, chatting, or about how the match is going'}).${openerAvoid()}`,
     tap: `${B.name} is done studying for this match and stopped. Write 1 short message about it.`,
     end: `Write 1 short post-game message from ${B.name} about the result.`,
     reply: `${me} just sent you something (maybe a few messages in a row). Write ${B.name}'s reply to all of it together: 1 or 2 short messages.`}[kind];
