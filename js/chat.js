@@ -555,10 +555,10 @@ setInterval(() => { if (chatPageOpen()) chatLive(); }, 500);
 /* ---- Settings > Chat ---- */
 // requests this device has sent today, per model (Google's limit counts every device using your key)
 function aiUsageHtml(){
-  const n = GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n : {}, reset = new Date(ptResetAt() - 60000).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+  const n = typeof aiTotals === 'function' ? aiTotals() : GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n : {}, reset = new Date(ptResetAt() - 60000).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
   return `<div class="ai-usage"><div class="h">Gemini requests today</div>${GEMINI_MODELS.map(m => { const c = n[m] || 0, out = modelOut(m);
     return `<div class="ai-u-row"><span>${MODEL_NAMES[m]}${m === GEMINI_MODELS[0] ? ' <small class="hint">(used first)</small>' : ''}</span><span class="bar2"><i style="width:${Math.min(100, c / ((GEM.lim && GEM.lim[m]) || 500) * 100)}%"></i></span><b>${out ? 'used up' : `${c} / ${GEM.lim && GEM.lim[m] ? GEM.lim[m] : '~500'}`}</b></div>`; }).join('')}
-    <p class="hint">Counts every request this device sent (retries and errors included); your phone and other devices share the same daily allowance. Resets at ${reset}.</p></div>`;
+    <p class="hint">${typeof cbSyncOn === 'function' && cbSyncOn() ? 'All your devices together (through gist sync) plus overnight runs, retries and errors included.' : 'This device only (turn on gist sync to add your other devices), retries and errors included.'} Resets at ${reset}.</p></div>`;
 }
 function renderChatSettings(){
   const el = $('#chatSetBody'); if (!el) return;
