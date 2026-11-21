@@ -185,7 +185,8 @@ function fdLikesLine(p, cm){
 function fdHeartPop(el){
   const m = el.querySelector('.fd-media, .fv-media'); if (!m || (typeof motion === 'function' && motion() === 'off')) return;
   const h = document.createElement('span'); h.className = 'fd-hpop'; h.setAttribute('aria-hidden', 'true');
-  h.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9.1C1.2 8.6 3.1 5 6.6 5c2 0 3.4 1.2 4.4 2.6C12 6.2 13.4 5 15.4 5c3.5 0 5.4 3.6 3.9 6.9C19 16.4 12 21 12 21z"/></svg>';
+  const gid = 'fdHG' + (++fdHeartPop.n);       // a warm gradient: pink at the top, red, orange at the bottom
+  h.innerHTML = `<svg viewBox="0 0 24 24"><defs><linearGradient id="${gid}" x1=".2" y1="0" x2=".8" y2="1"><stop offset="0" stop-color="#ff5fb0"/><stop offset=".5" stop-color="#ff3358"/><stop offset="1" stop-color="#ff9a2e"/></linearGradient></defs><path fill="url(#${gid})" d="M12 21s-7-4.6-9.3-9.1C1.2 8.6 3.1 5 6.6 5c2 0 3.4 1.2 4.4 2.6C12 6.2 13.4 5 15.4 5c3.5 0 5.4 3.6 3.9 6.9C19 16.4 12 21 12 21z"/></svg>`;
   m.querySelectorAll('.fd-hpop').forEach(x => x.remove()); m.appendChild(h); setTimeout(() => h.remove(), 1000);
 }
 const fdLk = (c, p) => Math.floor((c.lk != null ? c.lk : Math.max(1, fdLikes(p)) * .006 * Math.pow((fdHash(c.id) % 1000) / 1000, 3) * (c.re ? .3 : 1)) * fdLkGrow(c));
@@ -751,3 +752,5 @@ function fdSideDraw(){
 }
 setInterval(() => { if (!$('#page-feed').hidden && !document.hidden){ fdStrip(); fdSideDraw(); if (FDV.tab === 'live') renderLive(); } }, 30000);
 document.addEventListener('click', e => { if (e.target.closest('#fdSide [data-lft]')) setTimeout(fdSideDraw, 0); });
+
+fdHeartPop.n = 0;
