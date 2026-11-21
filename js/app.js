@@ -164,9 +164,11 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderTime
   const check = () => {
     const open = [...document.querySelectorAll('.modal')].some(m => !m.hidden && getComputedStyle(m).display !== 'none');
     if (open === locked) return; locked = open;
-    const b = document.body;
-    if (open){ lockY = window.scrollY; b.style.position = 'fixed'; b.style.top = `-${lockY}px`; b.style.left = '0'; b.style.right = '0'; b.style.overflow = 'hidden'; }
-    else { b.style.position = ''; b.style.top = ''; b.style.left = ''; b.style.right = ''; b.style.overflow = ''; window.scrollTo(0, lockY); }
+    // the page stays exactly where it is (pinning the body in place shifted the side panels, which stick to the window);
+    // the scrollbar's width is kept as padding so nothing jumps sideways
+    const h = document.documentElement, b = document.body;
+    if (open){ lockY = window.scrollY; const sb = window.innerWidth - h.clientWidth; h.style.overflow = 'hidden'; b.style.overscrollBehavior = 'none'; if (sb > 0) b.style.paddingRight = sb + 'px'; }
+    else { h.style.overflow = ''; b.style.overscrollBehavior = ''; b.style.paddingRight = ''; if (Math.abs(window.scrollY - lockY) > 2) window.scrollTo(0, lockY); }
   };
   new MutationObserver(check).observe(document.body, {subtree: true, attributes: true, attributeFilter: ['hidden'], childList: true});
 }
