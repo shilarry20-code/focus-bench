@@ -826,6 +826,8 @@ function sceneSpec(ctx){
   }
   if (SC_NOPROPS.includes(set)) props = [];
   if (SC_MAXPROPS[set]) props = props.slice(0, SC_MAXPROPS[set]);
+  // over the shoulder, your head hides the left half of the desk, so your things all go on the right: only as many as fit there
+  if (angle === 'shoulder'){ let w = 0; props = props.filter(k => { const P = SC.PROP[k]; if (!P) return false; const need = P.w * 1.55 + 14; if (w + need > 130) return false; w += need; return true; }); }
   const season = w.season !== undefined ? w.season : (() => { const ss = Object.keys(SC.SEASON).filter(k => SC.SEASON[k].mo.includes(ctx.month)); return ss.length && r() < .35 ? scPick(r, ss) : null; })();
   const cls = w.cls !== undefined ? w.cls : (r() < .7 ? scClass(r, maj) : '');
   // who, for selfies

@@ -9,6 +9,8 @@
    load only when needed); follows, notifications and the rest stay in fb.feed. Posts are kept 30 days, plus the all-time
    top 1,000, your own and ones you liked. */
 const FD_V = 1;
+// the feed's generation: bot posts from before the last reset (they don't carry this number) are cleared out everywhere
+const FD_EP = 2, fdCurrent = p => p.w === -1 || (p.ep || 0) >= FD_EP;
 let FD = store.get('fb.feed', null);
 if (!FD || FD.v !== FD_V) FD = {v: FD_V, posts: [], follows: [], followers: [], notif: [], filled: 0, nseen: 0, pend: [], liked: {}};
 const saveFeed = () => { if (FD.notif.length > 150) FD.notif = FD.notif.slice(-150); const {posts, ...rest} = FD; store.set('fb.feed', {...rest, posts: FD_READY ? [] : posts}); fdPersistSoon(); };
@@ -67,6 +69,9 @@ async function fdCm(p){ if (p.cm) return p.cm; let cm = []; try { cm = (await ID
 // keep 30 days, plus the all-time top 1,000, your own posts and ones you liked; big old comment lists leave memory
 function fdPrune(){
   if (!FD_READY) return; const now = Date.now(), gone = [];
+  // a reset: every bot post from before it goes, and the feed fills up again from scratch (your own posts stay)
+  if (FD.ep !== FD_EP){ FD.ep = FD_EP; FD.filled = 0; FD.notif = FD.notif.filter(n => !n.pid || FD.posts.some(p => p.id === n.pid && p.w === -1)); FD.pend = FD.pend.filter(j => !j.pid || FD.posts.some(p => p.id === j.pid && p.w === -1)); }
+  FD.posts = FD.posts.filter(p => { if (fdCurrent(p)) return true; gone.push(p.id); return false; });
   const top = new Set(FD.posts.filter(p => !p.del).sort((a, b) => fdLikes(b) - fdLikes(a)).slice(0, 1000).map(p => p.id));
   FD.posts = FD.posts.filter(p => { const keep = p.del ? now - p.t < 864e5 * 2 : (now - p.t < 90 * 864e5 || p.w === -1 || FD.liked[p.id] || top.has(p.id)); if (!keep) gone.push(p.id); return keep; });
   if (gone.length){ gone.forEach(id => { FD_PS.delete(id); FD_CS.delete(id); }); IDB.setMany(gone.flatMap(id => [['fp:' + id, undefined], ['fc:' + id, undefined]])).catch(console.error); }
@@ -114,7 +119,7 @@ const fdWorldMin = t => { const d = new Date(worldT(t)); return {dk: dayKey(d.ge
 // the post itself: a real session or match when there is one around that time, otherwise a picture or a thought
 function fdMake(w, t, light){
   const B = bot(w), {dk, m, h, mo} = fdWorldMin(t), r = mulberry32(fdHash(w + ':' + t)), id = fdId();
-  const base = {id, w, t, cm: [], L: 0};
+  const base = {id, w, t, cm: [], L: 0, ep: FD_EP};
   const u = light ? 1 : r();
   if (u < .12){       // a match they just played
     const code = dayIdx(dk) * 1440 + m;
@@ -127,7 +132,7 @@ function fdMake(w, t, light){
     if (s) return {...base, type: 'session', d: {min: s.min, subj: s.subj, mode: s.mode, a: s.a, tot: day.sessions.filter(x => x.b <= s.b).reduce((n, x) => n + x.min, 0)}};
   }
   const mood = h >= 22 || h < 5 ? 'tired' : '';
-  return {...base, type: r() < .4 ? 'text' : 'scene', sc: {seed: fdHash(id), hue: B.hue, maj: B.major, hour: h, month: mo, mood, outgoing: emojiHabit(w) === 'often' || r() < .35}};
+  return {...base, type: r() < .35 ? 'text' : 'scene', sc: {seed: fdHash(id), hue: B.hue, maj: B.major, hour: h, month: mo, mood, outgoing: emojiHabit(w) === 'often' || r() < .35}};
 }
 // posts appear at a real-world pace: more in the evening, few at 4 AM
 const FD_RATE = [3, 2, 1.4, 1, .8, .8, 1.2, 2.2, 3, 3.4, 3.6, 4, 4.4, 4.4, 4.6, 5, 5.2, 5.6, 6, 6.4, 6.6, 6.4, 5.6, 4.2].map(x => x * 1.3);
