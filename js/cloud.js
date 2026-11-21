@@ -117,7 +117,7 @@ async function clAdopt(){
   const cloud = []; snap.forEach(d => { try { const v = d.data(); if (!v.x) cloud.push(JSON.parse(v.d)); } catch(e){} });
   const ids = new Set(cloud.map(p => p.id)), mine = FD.posts.filter(p => p.w === -1 && !ids.has(p.id));   // your own posts only here get added
   const gone = FD.posts.filter(p => !ids.has(p.id) && p.w !== -1).map(p => p.id);
-  FD.posts = cloud.concat(mine);
+  FD.posts = cloud.filter(fdCurrent).concat(mine);
   FD_PS.clear(); FD_CS.clear();
   if (gone.length) IDB.setMany(gone.flatMap(id => [['fp:' + id, undefined], ['fc:' + id, undefined]])).catch(console.error);
   cloud.forEach(p => CLX.sig.set(p.id, clSig(p)));
@@ -145,6 +145,7 @@ function clApplyPosts(list){
   let changed = false;
   list.forEach(([id, v]) => {
     let r; try { r = JSON.parse(v.d); } catch(e){ return; }
+    if (!v.x && !fdCurrent(r)) return;                                  // a bot post from before the feed was reset
     const i = FD.posts.findIndex(p => p.id === id), local = i >= 0 ? FD.posts[i] : null;
     if (v.x){ if (local){ FD.posts.splice(i, 1); IDB.setMany([['fp:' + id, undefined], ['fc:' + id, undefined]]).catch(() => {}); changed = true; } return; }
     // comments from both sides (what this device wrote and hasn't sent yet stays)

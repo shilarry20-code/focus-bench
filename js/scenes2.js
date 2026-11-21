@@ -301,7 +301,7 @@ scFront = function(S, c, L, r, id, withProps = true){
   if (SC2_LAYER === 'front') g = '';
   g += F.g;
   if (withProps){
-    g += scPropsFront(S.props, c, r, F.top, 1.55, 14, 290).replace(/translate\(([\d.]+) ([\d.]+)\)/g, (m, x) => `translate(${x} ${F.top})`);
+    g += scPropsFront(S.props, c, r, F.top, 1.55, S.angle === 'shoulder' ? 152 : 14, 290).replace(/translate\(([\d.]+) ([\d.]+)\)/g, (m, x) => `translate(${x} ${F.top})`);
     if (S.cls && !back && !['whiteboard', 'chalkboard'].some(d => set.dec.includes(d))) g += scSticky(S.cls, 214 + scR(r, -6, 22), FY - 74, scR(r, -6, 6), 46);   // a sticky note on the wall
   }
   return g;
@@ -1325,12 +1325,12 @@ const SC2_OUTNIGHT = ['rooftop', 'balcony', 'porch', 'quad', 'bench', 'lake', 'b
     if (SC2_LAYER === 'back') return g;
     if (SC2_LAYER === 'front') g = '';
     g += F.g;
-    if (withProps && F.areas){ let left = S.props.slice(); F.areas.forEach(([x0, x1, top, sc, one]) => {
+    if (withProps && F.areas){ let left = S.props.slice(); F.areas.filter(([x0]) => S.angle !== 'shoulder' || x0 >= 140).forEach(([x0, x1, top, sc, one]) => {
       // a cupholder or a slot: holds just one thing, shrunk to fit
       if (one){ const k = left.findIndex(q => SC.PROP[q]); if (k < 0) return; const P = SC.PROP[left.splice(k, 1)[0]], s1 = Math.min(sc, (x1 - x0) / P.w); g += `<g class="ol" transform="translate(${(x0 + (x1 - x0 - P.w * s1) / 2).toFixed(1)} ${top}) scale(${s1.toFixed(3)})">${P.d(c)}</g>`; return; }
       const fit = []; let w = 0; while (left.length){ const P = SC.PROP[left[0]]; if (!P){ left.shift(); continue; } if (w + P.w * sc > x1 - x0) break; w += P.w * sc + 6; fit.push(left.shift()); }
       g += scPropsFront(fit, c, mulberry32(S.seed + x0), top, sc, x0, x1).replace(/translate\(([\d.]+) ([\d.]+)\)/g, (m, x) => `translate(${x} ${top})`); }); }
-    else if (withProps) g += scPropsFront(S.props, c, r, F.top, 1.55, 14, 290).replace(/translate\(([\d.]+) ([\d.]+)\)/g, (m, x) => `translate(${x} ${F.top})`);
+    else if (withProps) g += scPropsFront(S.props, c, r, F.top, 1.55, S.angle === 'shoulder' ? 152 : 14, 290).replace(/translate\(([\d.]+) ([\d.]+)\)/g, (m, x) => `translate(${x} ${F.top})`);
     return g;
   };
 }
