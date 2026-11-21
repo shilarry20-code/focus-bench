@@ -160,7 +160,9 @@ const fdWritten = p => p.cm ? p.cm.filter(c => !c.del && c.t <= Date.now()).leng
 const fdCount = p => Math.max(fdTarget(p), fdWritten(p));
 // likes on a comment: set when it's written (older comments get a stable stand-in)
 const fdCmLikes = (p, reply) => Math.round(Math.max(0, fdLikes(p) * .004 * Math.exp((Math.random() + Math.random() + Math.random() - 1.5) * 1.6) * (reply ? .25 : 1)));
-const fdLk = (c, p) => c.lk != null ? c.lk : Math.floor(Math.max(1, fdLikes(p)) * .006 * Math.pow((fdHash(c.id) % 1000) / 1000, 3) * (c.re ? .3 : 1));
+// a comment's likes build up after it's written (about two thirds within 1½ hours), so a brand-new comment starts at 0
+const fdLkGrow = c => { const a = Date.now() - c.t; return a < 60000 ? 0 : 1 - Math.exp(-a / 5.4e6); };
+const fdLk = (c, p) => Math.floor((c.lk != null ? c.lk : Math.max(1, fdLikes(p)) * .006 * Math.pow((fdHash(c.id) % 1000) / 1000, 3) * (c.re ? .3 : 1)) * fdLkGrow(c));
 // a comment's heart: tap to like it; the count sits under the heart, like Instagram
 const fdCmLiked = c => !!(FD.cliked && FD.cliked[c.id]);
 const fdCmCount = (c, p) => fdLk(c, p) + (fdCmLiked(c) ? 1 : 0);
