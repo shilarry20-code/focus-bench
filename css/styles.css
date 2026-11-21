@@ -2127,3 +2127,11 @@ button.rp-v:hover{border-color:var(--muted)}
 .el-tl li.fw{background:color-mix(in srgb,var(--accent) 16%,transparent)}
 #rpLog .k-chat{border-left-color:#8e98a3}#rpLog .k-chat span{font-style:normal;color:var(--ink)}
 #rpLog .k-chat span::before{content:'💬 ';font-size:11px}
+
+/* Feed: back to top */
+.fd-top-btn{position:fixed;right:max(24px,env(safe-area-inset-right,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:15;width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;visibility:hidden;transform:translateY(10px) scale(.9);transition:opacity .2s,transform .2s,visibility 0s .2s,color .15s,border-color .15s}
+.fd-top-btn svg{width:22px;height:22px}
+.fd-top-btn.on{opacity:1;visibility:visible;transform:none;transition:opacity .2s,transform .2s,visibility 0s,color .15s,border-color .15s}
+.fd-top-btn:hover,.fd-top-btn:focus-visible{color:var(--accent);border-color:var(--accent)}
+body.m-off .fd-top-btn{transition:none}
+@media (max-width:760px){.fd-top-btn{right:max(16px,env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
