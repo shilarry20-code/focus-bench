@@ -200,9 +200,23 @@ const PEAK_NAMES = Object.keys(PEAKS), STYLE_NAMES = ['Steady','Sprinter','Grind
 // compact per-bot data used in the hot loops (built once, cached in IndexedDB)
 let T_STY = null, T_PK = null, T_FAV = null, T_SIT = null, T_PACT = null, T_SUF = null, T_BASE = null, RK_READY = false;
 const botCache = new Map();
+// names → player numbers, for every account that's been looked at (anyone shown on screen), so "@name" can link to them
+const BOT_BY_NAME = new Map();
+// make "@name" in already-escaped text a link to that person's profile (only names of real accounts)
+function atLinks(html){
+  if (!html || html.indexOf('@') < 0) return html;
+  return html.replace(/(^|[^\w@&])@([A-Za-z0-9_.]{2,40})/g, (m, pre, nm) => {
+    let n = nm, tail = '';
+    while (n && !BOT_BY_NAME.has(n.toLowerCase()) && /[._]$/.test(n)){ tail = n.slice(-1) + tail; n = n.slice(0, -1); }
+    const w = BOT_BY_NAME.get(n.toLowerCase());
+    return w == null ? m : `${pre}<button class="at-lnk" data-bot="${w}">@${n}</button>${tail}`;
+  });
+}
+document.addEventListener('click', e => { const b = e.target.closest('.at-lnk[data-bot]'); if (b){ e.stopPropagation(); e.preventDefault(); openProfile(+b.dataset.bot); } }, true);
 function bot(i){
   let b = botCache.get(i); if (b) return b;
   b = genBot(i); b.i = i; const suf = T_SUF ? T_SUF[i] : 0; if (suf) b.name += (/\d$/.test(b.name) ? '_' : '') + suf;
+  BOT_BY_NAME.set(b.name.toLowerCase(), i);
   if (botCache.size > 4000) botCache.clear();
   botCache.set(i, b); return b;
 }

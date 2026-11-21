@@ -105,6 +105,7 @@ function insLikers(p, n){
   // a fixed shuffle of the followers, and a fixed walk through everyone else
   for (let i = fol.length - 1; i > 0; i--){ const j = Math.floor(r() * (i + 1)); [fol[i], fol[j]] = [fol[j], fol[i]]; }
   const step = 7919 * 7 + 2, start = Math.floor(r() * N); let fi = 0, wi = 0;
+  const fl = fdFolLiker(p); if (fl != null && likes > 0){ out.push(fl); seen.add(fl); }      // the person you follow who liked it shows first
   while (out.length < Math.min(n, likes)){
     let w;
     if (fi < fol.length && r() < share) w = fol[fi++];

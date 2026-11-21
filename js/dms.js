@@ -412,7 +412,7 @@ function renderDmThread(el, w){
   const B = bot(w), rk = rankOf(botRating(w)), list = $('#dmList'), nearBottom = !list || list.scrollHeight - list.scrollTop - list.clientHeight < 80;
   if (dmUnread(w)){ DMS.read[w] = Date.now(); saveDms(); }
   const t = thread(w), lock = focusing();
-  const rows = t.map(m => `<div class="dm-msg${m.me ? ' me' : ''}">${m.ch ? chCard(m) : ''}${m.text ? `<p>${esc(m.text)}</p>` : ''}<span class="dm-foot">${m.me && m.text && !m.ch ? `<button class="dm-del" data-del="${m.id}" aria-label="Delete message" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>` : ''}<time>${chatTime(m.t)}</time></span></div>`).join('');
+  const rows = t.map(m => `<div class="dm-msg${m.me ? ' me' : ''}">${m.ch ? chCard(m) : ''}${m.text ? `<p>${atLinks(esc(m.text))}</p>` : ''}<span class="dm-foot">${m.me && m.text && !m.ch ? `<button class="dm-del" data-del="${m.id}" aria-label="Delete message" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>` : ''}<time>${chatTime(m.t)}</time></span></div>`).join('');
   const s = stakes(botRating(w)), pend = pendingCh(w);
   if (!list || list.dataset.w !== String(w)){
     el.innerHTML = `<div class="card ch-card dm-card"><div class="dm-top"><button class="small-btn dm-back" data-back="1" aria-label="Back to messages">←</button>

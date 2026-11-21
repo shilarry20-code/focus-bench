@@ -148,7 +148,7 @@ function renderWatch(fresh){
   const L = $('#wList'), msgs = W.chat, k = msgs.length + '|' + (msgs.length ? msgs[msgs.length - 1].t : 0);
   if (slot.dataset.k !== k){
     const grew = msgs.length > (+slot.dataset.n || 0); slot.dataset.k = k; slot.dataset.n = msgs.length;
-    L.innerHTML = msgs.length ? msgs.map(x => x.sys ? `<div class="mc-msg w-sys">${esc(x.text)}</div>` : `<div class="mc-msg${x.w === -1 ? ' me' : ''}"><b>${x.w === -1 ? 'You' : `<button class="lnk" data-bot="${x.w}">${esc(bot(x.w).name)}</button>`}</b> <span>${esc(x.text)}</span></div>`).join('')
+    L.innerHTML = msgs.length ? msgs.map(x => x.sys ? `<div class="mc-msg w-sys">${esc(x.text)}</div>` : `<div class="mc-msg${x.w === -1 ? ' me' : ''}"><b>${x.w === -1 ? 'You' : `<button class="lnk" data-bot="${x.w}">${esc(bot(x.w).name)}</button>`}</b> <span>${atLinks(esc(x.text))}</span></div>`).join('')
       : `<p class="hint mc-empty">${focusing() ? 'The room is quiet while you focus. Chat opens on your break.' : 'Nobody’s said anything yet.'}</p>`;
     L.scrollTop = wStick || (grew && msgs[msgs.length - 1].w === -1) ? L.scrollHeight : wScroll;
   }
