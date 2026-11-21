@@ -61,7 +61,7 @@ function showPage(name, sec){
 function openTab(name){ const a = PAGE_ALIAS[name] || name; Array.isArray(a) ? showPage(a[0], a[1]) : showPage(a); }
 $('#nav').addEventListener('click', e => {
   const b = e.target.closest('.nav-btn[data-page]');
-  if (b){ showPage(b.dataset.page); return; }
+  if (b){ if (b.dataset.page === 'feed' && !$('#page-feed').hidden && window.scrollY > 0){ feedToTop(); return; } showPage(b.dataset.page); return; }
   if (e.target.closest('#moreBtn')) $('#nav').classList.toggle('more-open');
 });
 document.addEventListener('click', e => {
