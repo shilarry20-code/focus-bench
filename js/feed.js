@@ -38,7 +38,7 @@ function fdSyncPut(o, replace){
 /* ---- storage: IndexedDB, only what changed ---- */
 let FD_READY = false, fdSaveT = null;
 const FD_PS = new Map(), FD_CS = new Map();                 // what was last written for each post and its comments
-const fdPSig = p => `${p.cap || ''}|${p.del ? 1 : 0}|${p.gen ? 1 : 0}|${p.L}|${p.ln || 0}|${p.cm ? p.cm.length : p.cn || 0}|${p.bg ? 1 : 0}|${p.fg || 0}`;
+const fdPSig = p => `${p.cap || ''}|${p.del ? 1 : 0}|${p.gen ? 1 : 0}|${p.L}|${p.ln || 0}|${p.cm ? p.cm.length : p.cn || 0}|${p.bg ? 1 : 0}|${p.fg || 0}|${p.xr || 0}`;
 const fdCSig = p => p.cm ? p.cm.length + ':' + (p.cm.length ? p.cm[p.cm.length - 1].id : '') + ':' + p.cm.filter(c => c.del).length : null;
 function fdMeta(p){
   const o = {}; for (const k in p) if (k !== 'cm' && k !== 'k' && k[0] !== '_') o[k] = p[k];
@@ -56,8 +56,7 @@ async function fdPersist(){
 }
 // a post's comments, loading them if they aren't in memory
 // a poster only answers people on their own post (no new comments of their own): about one answer for every 8 comments, at least 3
-const fdSelfMax = p => Math.max(3, Math.round((p.cm || []).filter(c => !c.del && c.w !== p.w).length / 8));
-function fdSelfOk(p, w, re){ return w < 0 || w !== p.w || (re && (p.cm || []).filter(c => c.w === w && !c.del).length < fdSelfMax(p)); }
+const fdSelfMax = cbSelfMax, fdSelfOk = cbSelfOk;     // in js/cbcore.js
 function fdTidySelf(p){
   if (!p.cm || p.w < 0) return;
   const mine = p.cm.filter(c => c.w === p.w), keep = new Set(mine.filter(c => c.re).sort((a, b) => (b.lk || 0) - (a.lk || 0)).slice(0, fdSelfMax(p)).map(c => c.id));
@@ -194,7 +193,7 @@ function fdTree(cms){
 /* ---- what each post is about, in words, for the people writing captions and comments ---- */
 function fdAbout(p){
   const who = p.w === -1 ? myName() : bot(p.w).name;
-  if (p.type === 'scene') return sceneDesc(fdSpec(p));
+  if (p.type === 'scene') return sceneDesc(fdSpec(p), {t: p.t});
   if (p.type === 'session') return `A session receipt card: ${who} just finished ${p.d.min} min of ${p.d.subj} (${MODE_NAMES[p.d.mode] || 'a session'}), ${Math.floor(p.d.tot / 60)}h ${p.d.tot % 60}m today so far.`;
   if (p.type === 'match' || p.type === 'rank'){ const won = p.d.ys > p.d.ts; return `A ranked match result card: ${who} ${won ? 'beat' : 'lost to'} ${p.d.opp === -1 ? myName() : bot(p.d.opp).name}, ${p.d.ys}–${p.d.ts} min, ${p.d.dl > 0 ? '+' : ''}${p.d.dl} Elo${p.type === 'rank' ? `, and it ranked them up to ${p.d.rk}` : ''}.`; }
   if (p.type === 'text') return p.cap ? `A text post (just big words on a colored card, no photo): "${p.cap}"` : 'A text post (just big words on a colored card, no photo).';
@@ -237,11 +236,20 @@ function fdCommenters(p, n){
   return out;
 }
 const FD_SYS = me => `You write posts and comments for the Feed on Focus Bench, a study app for college students that works like Instagram: players post pictures of where they're studying, session receipts, match results and short thoughts, and others like and comment.
-Write like real college students on Instagram: short, casual, lowercase is common, slang is fine, inside jokes about classes, finals, coffee, sleep. Captions are usually a few words to one sentence. Comments are short reactions or questions about the post itself: commenters don't talk about their own classes, homework, exams or major (no "my class is worse" comparisons), they react to what the poster said or showed, and they must fit what the picture actually shows (you'll be told what's in it).
-Each person has their own emoji habit ("never", "sometimes" or "often", with their go-to emojis): mostly use their own, sometimes any other face, hand or heart emoji, never the same few for everyone, at most a couple per message.
+Write like real college students on Instagram: short, casual, lowercase is common, slang is fine, inside jokes about classes, finals, coffee, sleep. Captions are usually a few words to one sentence. Comments are short reactions or questions about the post itself: commenters don't talk about their own classes, homework, exams or major (no "my class is worse" comparisons), they react to what the poster said or showed.
+You're told what each picture shows so you know what it looks like. That's background, not a checklist: most captions and comments don't mention anything in it. When one does bring up something you could see, it has to be in that description (never invent objects, decorations, pets or people), and it's one thing said in passing, never a list of what's there.
+${EMO_RULE}
 Don't start a comment with the name of the person it answers. No hashtags. ${me} is the person using the app.
 ${TALK_RULES}
 Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…","replyTo":"…"}]}; replyTo says what each message is: "cap <post id>" for a post's caption (from the poster), "<post id>" for a new comment on it, and "<post id> @<name>" for an answer to that person's comment (answers go under the comment they answer, so never write an answer as a new comment, and don't start the text with @name).`;
+// what a caption is about: most aren't about what's in the picture
+function fdCapFocus(p){
+  const u = Math.random();
+  if (p.type !== 'scene') return u < .4 ? `Write its caption. It can be about ${pickTopic(p.w)}.` : 'Write its caption.';
+  if (u < .25) return 'Write its caption. This one mentions one thing you can see in the picture, in passing (not a list).';
+  if (u < .65) return `Write its caption about ${pickTopic(p.w)}, not about what's in the picture.`;
+  return `Write its caption about ${['how the session is going', 'their mood right now', 'what they’re trying to get done today', 'something funny or annoying that just happened', 'the time of day or the weather', 'a little goal or a promise to themselves'][Math.floor(Math.random() * 6)]}. Don't describe what's in the picture.`;
+}
 async function fdWrite(posts){
   if (!posts.length || !GEM.key || GEM.wait > Date.now()) return false;
   const me = myName(), blocks = [], names = new Map();
@@ -251,10 +259,10 @@ async function fdWrite(posts){
     p._cs = cs; [p.w, ...cs].forEach(w => { if (w >= 0) names.set(bot(w).name.toLowerCase(), w); });
     const f = chatFacts(p.w);
     blocks.push(`Post ${p.k} by ${f.name} (${f.rank}, ${f.subj}, emojis: ${emojiStyle(p.w)}), posted at ${new Date(p.t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
-What it is: ${fdAbout(p)}
+${p.type === 'scene' ? 'What the picture shows (background only, don’t list it)' : 'What it is'}: ${fdAbout(p)}
 ${p.type === 'scene' && SC2_BOARDS[fdSpec(p).set] && fdSpec(p).angle !== 'selfie' ? `The picture has a ${SC2_BOARDS[fdSpec(p).set]} in it: also write what's on it, as a message from ${f.name} with replyTo "board ${p.k}": one to three short lines separated by " / ", each under 22 characters (a topic, a formula, a reminder, a doodle label — whatever fits a ${f.subj} class, never the same as other posts).
-` : ''}${p.type === 'text' ? `Write the post itself as its caption (one or two short sentences). Starting point: ${pickTopic(p.w)}. Take it wherever feels natural for them.` : Math.random() < .3 ? `Write its caption. It can be about the picture or about ${pickTopic(p.w)}.` : 'Write its caption.'}
-${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w); return `${g.name} (${Math.random() < .15 ? g.subj + ', ' : ''}emojis: ${emojiStyle(w)})`; }).join('; ')}. One of them can answer another's comment, and ${f.name} can answer one comment.` : 'Nobody comments on this one.'}`);
+` : ''}${p.type === 'text' ? `Write the post itself as its caption (one or two short sentences). Starting point: ${pickTopic(p.w)}. Take it wherever feels natural for them.` : fdCapFocus(p)}
+${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w); return `${g.name} (${Math.random() < .15 ? g.subj + ', ' : ''}emojis: ${emojiStyle(w)})`; }).join('; ')}. One of them can answer another's comment, and ${f.name} can answer one comment.${p.type === 'scene' ? ' At most one of these comments reacts to something in the picture.' : ''}` : 'Nobody comments on this one.'}`);
   });
   const user = `Today is ${new Date().toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}.\n\n${blocks.join('\n\n')}${openerAvoid()}`;
   try {
@@ -424,7 +432,7 @@ async function fdReply(job){
   const p = p0, mine = p && p.cm.find(x => x.id === job.cid); if (!p || !mine || !GEM.key) return true;
   const me = myName(), B = bot(job.w), f = chatFacts(job.w);
   const thread = p.cm.filter(x => x.t <= Date.now()).slice(-10).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n');
-  const user = `Post ${p.id} by ${p.w === -1 ? me : bot(p.w).name}. What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${thread}\n\n${me} just commented "${mine.text}". Write ${B.name}'s answer (${f.rank}${Math.random() < .15 ? ', ' + f.subj : ''}, emojis: ${emojiStyle(job.w)}) as one short comment, replyTo "${p.id}". It should answer what ${me} said.${/\b(play|match|1v1|challenge|duel|ranked|game)\b/i.test(mine.text) && R.on ? ` If ${me} is asking to play and ${B.name} would, start the comment with [play].` : ''}`;
+  const user = `Post ${p.id} by ${p.w === -1 ? me : bot(p.w).name}. ${p.type === 'scene' ? 'What the picture shows (background only, don’t list it)' : 'What it is'}: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${thread}\n\n${me} just commented "${mine.text}". Write ${B.name}'s answer (${f.rank}${Math.random() < .15 ? ', ' + f.subj : ''}, emojis: ${emojiStyle(job.w)}) as one short comment, replyTo "${p.id}". It should answer what ${me} said.${/\b(play|match|1v1|challenge|duel|ranked|game)\b/i.test(mine.text) && R.on ? ` If ${me} is asking to play and ${B.name} would, start the comment with [play].` : ''}`;
   try {
     const got = await aiCall(FD_SYS(me), user), x = (Array.isArray(got) ? got : []).find(m => m && m.text);
     if (!x) return true;
@@ -453,7 +461,7 @@ async function fdEngage(job){
   for (let k = 0; k < 12 && cs.length < n; k++){ const w = pool[Math.floor(Math.random() * pool.length)]; if (w >= 0 && !cs.includes(w)) cs.push(w); }
   if (!cs.length) return true;
   const ask = /\b(play|match|1v1|challenge|duel|ranked|anyone up)\b/i.test(p.cap || '') && R.on;
-  const user = `Post ${p.id} by ${me} (the user). What it is: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${p.cm.filter(x => x.t <= Date.now()).slice(-8).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(none)'}\n\nWrite one comment each from: ${cs.map(w => { const f = chatFacts(w); return `${f.name} (${f.rank}${Math.random() < .15 ? ', ' + f.subj : ''}, emojis: ${emojiStyle(w)})`; }).join('; ')}. replyTo "${p.id}" for a new comment, or "${p.id} @<name>" to answer someone's comment.${ask ? ` ${me} is asking for a match: anyone who'd play starts their comment with [play].` : ''}`;
+  const user = `Post ${p.id} by ${me} (the user). ${p.type === 'scene' ? 'What the picture shows (background only, don’t list it)' : 'What it is'}: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${p.cm.filter(x => x.t <= Date.now()).slice(-8).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(none)'}\n\nWrite one comment each from: ${cs.map(w => { const f = chatFacts(w); return `${f.name} (${f.rank}${Math.random() < .15 ? ', ' + f.subj : ''}, emojis: ${emojiStyle(w)})`; }).join('; ')}. replyTo "${p.id}" for a new comment, or "${p.id} @<name>" to answer someone's comment.${ask ? ` ${me} is asking for a match: anyone who'd play starts their comment with [play].` : ''}`;
   try {
     const got = await aiCall(FD_SYS(me), user), names = new Map(cs.map(w => [bot(w).name.toLowerCase(), w])), players = []; let when = 0;
     (Array.isArray(got) ? got : []).forEach((x, k) => { const w = names.get(String(x && x.from || '').toLowerCase().trim()); if (w == null) return;

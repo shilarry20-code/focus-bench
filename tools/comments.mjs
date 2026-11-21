@@ -3,8 +3,14 @@
 // fb-inbox.json, and records its own usage in fb-usage.json. The app merges the inbox the next time it opens.
 // Same quota rules as in the app: a daily cap, never past half of the day's limit, except in the last two hours before
 // the reset (midnight Pacific), when it can use what would otherwise be lost, keeping 30. Stops at the first daily limit.
-// Secrets: GEMINI_KEY (a key from a project with no billing), GIST_TOKEN (the same gist token the app uses).
-const KEY = process.env.GEMINI_KEY, TOKEN = process.env.GIST_TOKEN, MAX_MIN = +(process.env.MAX_MIN || 25);
+// With the shared feed on (the to-do list says so and names your account), each batch goes straight into the post in your
+// Firestore database instead, using the same code the app uses to place comments (js/cbcore.js), so every device sees them
+// right away. If that can't be done (no FIREBASE_SA secret, or Firestore refuses), it falls back to the inbox.
+// Secrets: GEMINI_KEY (a key from a project with no billing), GIST_TOKEN (the same gist token the app uses),
+// FIREBASE_SA (optional: the Firebase service-account JSON, for writing to Firestore).
+import vm from 'vm';
+import {readFileSync} from 'fs';
+const KEY = process.env.GEMINI_KEY, TOKEN = process.env.GIST_TOKEN, SA = process.env.FIREBASE_SA, MAX_MIN = +(process.env.MAX_MIN || 25);
 const TODO = 'fb-todo.json', INBOX = 'fb-inbox.json', USAGE = 'fb-usage.json', SYNC_FILE = 'focus-bench-sync.json';
 const t0 = Date.now(), sleep = ms => new Promise(r => setTimeout(r, ms));
 if (!KEY || !TOKEN){ console.log('GEMINI_KEY or GIST_TOKEN secret is missing; nothing to do.'); process.exit(0); }
@@ -37,7 +43,7 @@ console.log(`To-do list from ${new Date(todo.at).toISOString()}: ${(todo.jobs ||
 if (!Array.isArray(todo.jobs) || !todo.jobs.length){ console.log('Nothing to write yet: no post is far enough behind its comment count.'); process.exit(0); }
 if (todo.off){ console.log('The comment builder is turned off in the app.'); process.exit(0); }
 const day = ptDay();
-let use = await file(g, USAGE); if (!use || use.day !== day) use = {day, n: {}, req: 0, c: 0};
+let use = await file(g, USAGE); if (!use || use.day !== day) use = {day, n: {}, req: 0, c: 0, fs: use && use.fs};   // what went to Firestore carries over the reset
 let inbox = (await file(g, INBOX)) || [];
 const models = (todo.models && todo.models.length ? todo.models : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']);
 const out = new Set(models.filter(m => todo.out && todo.out[m] > Date.now()));
@@ -46,6 +52,36 @@ if (au && au.day === day) Object.values(au.devs || {}).forEach(v => Object.entri
 else if (todo.day === day) Object.assign(appUse, todo.use || {});
 const appBld = todo.day === day ? todo.bld || 0 : 0;
 if (au && au.day === day && Object.values(au.devs || {}).some(v => v.bld && Date.now() - v.bld < 6 * 60000)){ console.log('A device is building comments right now; skipping this run.'); process.exit(0); }
+// the app's own comment-placing code
+const core = {console, Intl, Date, Math, Set, Map, String, RegExp, Array, JSON}; vm.createContext(core);
+vm.runInContext(readFileSync(new URL('../js/cbcore.js', import.meta.url), 'utf8'), core);
+// Firestore: only when the shared feed is on and the secret works
+let db = null;
+if (todo.cloud && todo.uid){
+  if (!SA) console.log('Shared feed is on, but there is no FIREBASE_SA secret: writing to the gist inbox instead.');
+  else try {
+    const {initializeApp, cert} = await import('firebase-admin/app'), {getFirestore} = await import('firebase-admin/firestore');
+    const sa = JSON.parse(SA); initializeApp({credential: cert(sa)}); db = getFirestore();
+    await db.doc(`users/${todo.uid}/state/lead`).get();
+    console.log(`Writing straight to Firestore (project ${sa.project_id}).`);
+  } catch(e){ db = null; console.log(`Couldn't use Firestore (${e.message.split('\n')[0]}): writing to the gist inbox instead.`); }
+} else console.log('Shared feed is off (or the app hasn\'t said which account): writing to the gist inbox.');
+// put one batch into the post in Firestore; false if it couldn't (then it goes to the inbox)
+let fsReads = 0, fsWrites = 0;
+async function toFirestore(job, got){
+  try {
+    const ref = db.doc(`users/${todo.uid}/posts/${job.pid}`), names = job.names || {}, rev = {};
+    Object.entries(names).forEach(([n, w]) => { rev[w] = n; });
+    return await db.runTransaction(async tx => {
+      const snap = await tx.get(ref); fsReads++;
+      if (!snap.exists) return false; const v = snap.data(); if (v.x) return 0;     // gone: nothing to add to
+      const p = JSON.parse(v.d); if (!Array.isArray(p.cm)) p.cm = [];
+      const now = Date.now(), n = core.cbApplyCore(p, got, names, now, job.tags || {}, {me: todo.me || 'You', nameOf: w => rev[w] || '', likes: core.cbLikes(p, now)});
+      if (n) { tx.set(ref, {d: JSON.stringify(p), u: now, by: 'overnight'}); fsWrites++; }
+      return n;
+    });
+  } catch(e){ console.log(`Firestore: ${e.message.split('\n')[0]}`); return false; }
+}
 const budgetOk = () => {
   let lim = 0, used = 0; models.forEach(m => { const L = (todo.lim && todo.lim[m]) || 500; lim += L; used += out.has(m) ? L : Math.min(L, Math.round(((appUse[m] || 0) + (use.n[m] || 0)) * (late() ? 1 : 1.25))); });
   return late() ? used < lim - 30 : (appBld + use.req < (todo.cap ?? 150) && used < lim * .5);
@@ -69,6 +105,8 @@ async function ask(sys, user){
 // work through the list: biggest gaps first (the app already sorted it), a batch at a time
 const left = new Map(todo.jobs.map(j => [j.pid, j.need]));
 inbox.filter(it => it.at > todo.at).forEach(it => left.set(it.pid, (left.get(it.pid) || 0) - (it.got || []).length));
+if (!use.fs || use.fs.at !== todo.at) use.fs = {at: todo.at, n: {}};                 // what went to Firestore since this to-do list was made
+Object.entries(use.fs.n).forEach(([pid, n]) => left.set(pid, (left.get(pid) || 0) - n));
 const extra = new Map();
 let made = 0, reqs = 0;
 while (Date.now() - t0 < MAX_MIN * 60000 && budgetOk()){
@@ -80,7 +118,12 @@ while (Date.now() - t0 < MAX_MIN * 60000 && budgetOk()){
   if (r.wait){ await sleep(65000); continue; }
   reqs++;
   const got = r.msgs.filter(x => x && x.from && x.text).map(x => ({from: x.from, text: String(x.text).slice(0, 240), replyTo: x.replyTo || 'new'}));
-  if (got.length){ inbox.push({id: `ov${Date.now().toString(36)}${reqs}`, pid: job.pid, at: Date.now(), got, names: job.names}); extra.set(job.pid, more.concat(got)); }
+  if (got.length){
+    const put = db ? await toFirestore(job, got) : false;
+    if (put === false) inbox.push({id: `ov${Date.now().toString(36)}${reqs}`, pid: job.pid, at: Date.now(), got, names: job.names, tags: job.tags || {}});
+    else use.fs.n[job.pid] = (use.fs.n[job.pid] || 0) + got.length;
+    extra.set(job.pid, more.concat(got));
+  }
   left.set(job.pid, (left.get(job.pid) || 0) - Math.max(got.length, 5)); made += got.length; use.c += got.length;
   // save as we go, so a cancelled run keeps what it wrote
   if (reqs % 5 === 0) await gh('/gists/' + gist, {method: 'PATCH', body: JSON.stringify({files: {[INBOX]: {content: JSON.stringify(inbox)}, [USAGE]: {content: JSON.stringify(use)}}})});
@@ -88,3 +131,4 @@ while (Date.now() - t0 < MAX_MIN * 60000 && budgetOk()){
 }
 await gh('/gists/' + gist, {method: 'PATCH', body: JSON.stringify({files: {[INBOX]: {content: JSON.stringify(inbox)}, [USAGE]: {content: JSON.stringify(use)}}})});
 console.log(`${reqs} request${reqs === 1 ? '' : 's'}, ${made} comments written; today ${use.req} requests, ${use.c} comments.`);
+if (db) console.log(`Firestore: ${fsReads} reads, ${fsWrites} writes.`);

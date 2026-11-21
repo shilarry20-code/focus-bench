@@ -40,7 +40,7 @@ function cbPick(){
   const day = rank(864e5), week = rank(7 * 864e5), month = rank(30 * 864e5), all = rank(0);
   let best = null, bs = 0;
   vis.forEach(p => {
-    const gap = fdTarget(p) - (p.cm ? p.cm.filter(c => !c.del).length : p.cn || 0); if (gap < 3) return;
+    const gap = cbWant(p) - cbHave(p); if (gap < 3) return;
     const w = 1 + (day.has(p.id) ? 4 : 0) + (week.has(p.id) ? 2 : 0) + (month.has(p.id) ? 1 : 0) + (all.has(p.id) ? 1 : 0) + (p.seen ? 2 : 0) + (p.w === -1 ? 2 : 0);
     const sc = Math.pow(gap, .6) * w; if (sc > bs){ bs = sc; best = p; }
   });
@@ -48,44 +48,57 @@ function cbPick(){
 }
 
 const CB_SYS = me => `You write comments for the Feed on Focus Bench, a study app for college students that works like Instagram. You're adding more comments to a post that's getting attention.
-Write like real people in an Instagram comment section: mostly short (a few words to one sentence), lowercase is common, slang is fine. Mix it up: reactions, jokes, questions, people tagging along, someone disagreeing, someone being a little unhinged, longer takes now and then. React to what the post actually shows (you'll be told what's in it) and to other comments. Stay on the post: commenters don't talk about their own classes, homework, exams or major at all. They react to what the poster said or showed (tease them, hype them up, ask about it, joke about the picture). Bad: "real analysis homework would make me drop out", "constitutional law has nothing on this", "my compiler is running and i'm staring at this". If older comments on the post do that, don't copy them. Never repeat a comment that's already there, and don't all say the same thing in different words.
-Replies: answers go under the comment they answer. Some threads become back-and-forths (two people arguing, others piling on, the poster jumping in); most comments get no reply.
-Each person has their own emoji habit ("never", "sometimes" or "often", with their go-to emojis): mostly use their own, sometimes another face, hand or heart emoji, at most a couple per message. No hashtags. Don't start a comment with someone's name or @name. ${me} is the person using the app.
-Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…","replyTo":"…"}]}; replyTo is "new" for a new comment or "@<name>" to answer that person's comment (an existing one or one from earlier in your answer).`;
+Write like real people in an Instagram comment section: mostly short (a few words to one sentence), lowercase is common, slang is fine. Mix it up: reactions, jokes, questions, people tagging along, someone disagreeing, someone being a little unhinged, longer takes now and then. React to the caption, the person, the vibe and the other comments. You're told what the picture shows so you know what it looks like, but it's background, not a checklist: only about 1 in 5 comments reacts to something in it, and when one does, it has to be in that description (never invent objects, decorations, pets or people) and it's one thing in passing. Stay on the post: commenters don't talk about their own classes, homework, exams or major at all. They react to what the poster said or showed (tease them, hype them up, ask about it, joke about the picture). Bad: "real analysis homework would make me drop out", "constitutional law has nothing on this", "my compiler is running and i'm staring at this". If older comments on the post do that, don't copy them. Never repeat a comment that's already there, and don't all say the same thing in different words.
+Replies: answers go under the comment they answer, like on Instagram: popular comments collect long threads (two people arguing, others piling on, jokes building on jokes, the poster jumping in) while most comments get no reply at all. You'll be told where this batch's replies go.
+${EMO_RULE} No hashtags. A new comment never starts with a name or @name; inside a thread, a reply can start with @name when it answers someone other than the comment at the top of the thread. ${me} is the person using the app.
+Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…","replyTo":"…"}]}; replyTo is "new" for a new comment, a comment's tag like "c3" to reply in that comment's thread, or "@<name>" to answer a comment written earlier in your answer.`;
 
 // everything a batch for this post needs: the prompt (with {N} for how many and {MORE} for ones already added this run)
+// how many comments a post should have (its share of likes, plus any reply catch-up) and how many it has
+const cbWant = p => fdTarget(p) + (p.xr || 0);
+const cbHave = p => p.cm ? p.cm.filter(c => !c.del).length : p.cn || 0;
+// where this batch's replies go: popular comments draw most of them (and threads that are already going draw more), like a
+// real comment section where the top comment has a long thread and most comments have none. Returns [[root, how many]].
+function cbReplyPlan(roots, p, n){
+  if (!n || !roots.length) return [];
+  // which threads get replies this batch: a few, picked by likes (threads already going are more likely to keep going)
+  const w = roots.map(r => Math.pow(fdLk(r.c, p) + 2, 1.5) * (1 + r.kids.length) * (r.c.w === -1 ? 1.5 : 1));
+  const k = Math.min(roots.length, 1 + Math.floor(Math.log2(1 + n / 4)) + (Math.random() < .3 ? 1 : 0)), pick = [], left = roots.map((r, i) => i);
+  while (pick.length < k && left.length){ const tot = left.reduce((a, i) => a + w[i], 0); let u = Math.random() * tot, j = 0; while (j < left.length - 1 && (u -= w[left[j]]) > 0) j++; pick.push(left.splice(j, 1)[0]); }
+  pick.sort((a, b) => w[b] - w[a]);
+  // and how many each: the biggest thread gets most of them (1, 1/2, 1/3…)
+  const z = pick.map((_, i) => 1 / (i + 1)), zt = z.reduce((a, b) => a + b, 0), out = pick.map((i, j) => [roots[i], Math.max(1, Math.round(n * z[j] / zt))]);
+  return out;
+}
 async function cbJob(p){
-  const cm = await fdCm(p), have = cm.filter(c => !c.del), target = fdTarget(p);
-  const replyShare = Math.min(.6, Math.max(.15, .12 + Math.log10(1 + target) / 6));
-  const tree = fdTree(have).sort((a, b) => fdLk(b.c, p) - fdLk(a.c, p)), lines = [];
-  tree.slice(0, 12).forEach(r => { lines.push(`${fdNameOf(r.c.w)}: ${r.c.text}`); r.kids.slice(-2).forEach(k => lines.push(`   ↳ ${fdNameOf(k.c.w)}: ${k.c.text}`)); });
-  have.slice(-6).forEach(c => { const l = `${fdNameOf(c.w)}: ${c.text}`; if (!lines.some(x => x.endsWith(l))) lines.push(l); });
+  const cm = await fdCm(p), have = cm.filter(c => !c.del), target = cbWant(p), need = target - have.length;
+  const n = Math.min(35, Math.max(0, need));
+  // bigger posts are more about the threads; a reply catch-up is almost all replies
+  const replyShare = p.xr && need > 0 ? .85 : Math.min(.7, Math.max(.2, .15 + Math.log10(1 + target) / 5));
+  const tree = fdTree(have).sort((a, b) => fdLk(b.c, p) - fdLk(a.c, p)), roots = tree.slice(0, 14);
+  const recent = tree.filter(r => !roots.includes(r)).sort((a, b) => b.c.t - a.c.t).slice(0, 4);
+  const shown = roots.concat(recent), tags = {};
+  shown.forEach((r, k) => { tags['c' + (k + 1)] = r.c.id; r.tag = 'c' + (k + 1); });
+  const plan = cbReplyPlan(roots, p, Math.round(n * replyShare)), hot = new Set(plan.slice(0, 4).map(([r]) => r));
+  const lines = [];
+  shown.forEach(r => {
+    lines.push(`[${r.tag} · ${fdLk(r.c, p).toLocaleString()} likes · ${r.kids.length} repl${r.kids.length === 1 ? 'y' : 'ies'}] ${fdNameOf(r.c.w)}: ${r.c.text}`);
+    r.kids.slice(hot.has(r) ? -6 : -2).forEach(k => lines.push(`      ↳ ${fdNameOf(k.c.w)}: ${k.c.text}`));
+  });
   const cs = fdCommenters(p, 22).filter(w => w !== p.w), poster = p.w >= 0 ? p.w : null, names = {};
   cs.forEach(w => { names[bot(w).name.toLowerCase()] = w; }); if (poster != null) names[bot(poster).name.toLowerCase()] = poster;
   const who = cs.map(w => { const f = chatFacts(w); return `${f.name} (${Math.random() < .15 ? f.subj + ', ' : ''}emojis: ${emojiStyle(w)})`; }).join('; ');
-  const user = `Post by ${fdNameOf(p.w)}${p.w === -1 ? ' (the user)' : ''}, ${fdAgo(p.t)} ago, ${fdLikes(p).toLocaleString()} likes. What it is: ${fdAbout(p)}${p.cap && p.type !== 'text' ? `\nCaption: ${p.cap}` : ''}
-Comments so far (${have.length}; the most liked first):\n${lines.join('\n') || '(none yet)'}{MORE}
+  const nNew = n - plan.reduce((a, [, m]) => a + m, 0);
+  const planTxt = plan.length ? `Put the replies here: ${plan.map(([r, m]) => `${r.tag} about ${m}`).join(', ')}${nNew > 0 ? `, and write about ${nNew} new comment${nNew === 1 ? '' : 's'}` : ''}. In the big threads people answer each other (agreeing, arguing, joking, piling on, @-ing someone in the thread), not just the top comment, and a few people come back more than once.` : `They're all new comments (replyTo "new"), and one or two can answer a comment from earlier in your answer.`;
+  const user = `Post by ${fdNameOf(p.w)}${p.w === -1 ? ' (the user)' : ''}, ${fdAgo(p.t)} ago, ${fdLikes(p).toLocaleString()} likes. ${p.type === 'scene' ? 'What the picture shows (background only, don’t list it)' : 'What it is'}: ${fdAbout(p)}${p.cap && p.type !== 'text' ? `\nCaption: ${p.cap}` : ''}
+Comments so far (${have.length}; the most liked first, each with its tag, likes and replies):\n${lines.join('\n') || '(none yet)'}{MORE}
 
-Write {N} more. About ${Math.round(replyShare * 100)}% of them answer a comment (replyTo "@<name>"), the rest are new comments (replyTo "new").
-They come from: ${who}. Most of them comment once; a few come back to answer people.${poster != null ? ` ${fdNameOf(poster)} (who posted it) never writes a new comment, only answers (replyTo "@<name>"), and answers a few of the comments in this batch.` : ''}`;
-  return {pid: p.id, sys: CB_SYS(myName()), user, names, need: target - have.length};
+Write {N} more. ${planTxt}
+They come from: ${who}. Most of them comment once.${poster != null ? ` ${fdNameOf(poster)} (who posted it) never writes a new comment, only answers, mostly in the busiest threads.` : ''}`;
+  return {pid: p.id, sys: CB_SYS(myName()), user, names, tags, need};
 }
-// turn Gemini's messages into comments on the post (also used for comments written overnight); returns how many were added
-function cbApply(p, got, names, now){
-  const me = myName(), span = Math.max(60000, Math.min(now - p.t, 3 * 864e5)); let added = 0, k = 0;
-  (Array.isArray(got) ? got : []).forEach(x => {
-    const w = names[String(x && x.from || '').toLowerCase().trim()]; if (w == null) return;
-    let text = emotionOnly(stripSegue(String(x.text || '').replace(/https?:\/\/\S+/g, '').replace(/#\w+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240))); if (!text) return;
-    const to = String(x.replyTo || '').trim(), at = /^@/.test(to) ? to.slice(1) : '', a = fdAnswerTo(p, at, text, me); text = a.text; if (!text) return;
-    if (!fdSelfOk(p, w, a.re)) return;
-    const par = a.re ? p.cm.find(c => c.id === a.re) : null, u = Math.random();
-    // when it was written: early comments bunch up near the post; answers come after what they answer
-    let t = par ? par.t + (1 + Math.random() * 90) * 60000 : p.t + span * (1 - Math.pow(1 - u, 2.2));
-    t = Math.round(Math.min(Date.now() - 1000, Math.max(p.t + 30000, t)));
-    p.cm.push({id: p.id + 'b' + now.toString(36) + (k++).toString(36) + Math.random().toString(36).slice(2, 4), w, t, text, re: a.re, lk: fdCmLikes(p, !!a.re)}); added++;
-  });
-  return added;
-}
+// turn Gemini's messages into comments on the post (the same code places comments written overnight: js/cbcore.js)
+function cbApply(p, got, names, now, tags = {}){ return cbApplyCore(p, got, names, now, tags, {me: myName(), nameOf: fdNameOf, likes: fdLikes(p)}); }
 let cbBusy = false, cbNext = 0;
 async function cbRun(){
   if (typeof cloudWriter === 'function' && !cloudWriter()) return;
@@ -98,7 +111,7 @@ async function cbRun(){
   try {
     const job = await cbJob(p), n = Math.min(35, job.need);
     const got = await aiCall(job.sys, job.user.replace('{MORE}', '').replace('{N}', n), {bld: true});
-    const added = cbApply(p, got, job.names, now), b = cbDay();
+    const added = cbApply(p, got, job.names, now, job.tags), b = cbDay();
     b.n++; b.c += added; GEM.bldAt = Date.now(); saveAI(); saveFeed();
     if (FDV.view === p.id) fdViewRefresh(); else if (!$('#page-feed').hidden && !document.hidden) renderFeed();
     cbNext = Date.now() + (added ? 6000 : 60000);
@@ -144,11 +157,12 @@ async function cbTodoUpload(){
   const now = Date.now(), vis = FD.posts.filter(p => !p.del && p.gen && p.t <= now), list = [];
   const rank = win => new Set(vis.filter(p => !win || now - p.t < win).sort((a, b) => fdLikes(b) - fdLikes(a)).slice(0, 25).map(p => p.id));
   const sets = [rank(864e5), rank(7 * 864e5), rank(30 * 864e5), rank(0)];
-  vis.forEach(p => { const gap = fdTarget(p) - (p.cm ? p.cm.filter(c => !c.del).length : p.cn || 0); if (gap < 3) return;
+  vis.forEach(p => { const gap = cbWant(p) - cbHave(p); if (gap < 3) return;
     const w = 1 + (sets[0].has(p.id) ? 4 : 0) + (sets[1].has(p.id) ? 2 : 0) + (sets[2].has(p.id) ? 1 : 0) + (sets[3].has(p.id) ? 1 : 0) + (p.seen ? 2 : 0); list.push([Math.pow(gap, .6) * w, p]); });
   list.sort((a, b) => b[0] - a[0]);
   const jobs = []; for (const [, p] of list.slice(0, 60)) jobs.push(await cbJob(p));
-  const todo = {v: 1, at: now, day: ptDay(), models: GEMINI_MODELS, use: GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n : {}, bld: cbDay().n, lim: GEM.lim || {}, cap: cbCap(), off: !!GEM.bOff, out: GEM.out || {}, jobs};
+  const cl = typeof cloudOn === 'function' && cloudOn();
+  const todo = {v: 2, at: now, day: ptDay(), cloud: cl, uid: cl ? CLX.user.uid : null, me: myName(), models: GEMINI_MODELS, use: GEM.cnt && GEM.cnt.day === ptDay() ? GEM.cnt.n : {}, bld: cbDay().n, lim: GEM.lim || {}, cap: cbCap(), off: !!GEM.bOff, out: GEM.out || {}, jobs};
   try { await gh('/gists/' + SYNC.gist, {method: 'PATCH', body: JSON.stringify({files: {[CB_TODO]: {content: JSON.stringify(todo)}}})}); GEM.todoAt = now; GEM.todoN = jobs.length; GEM.todoC = jobs.reduce((n, j) => n + Math.max(0, j.need), 0); saveAI(); } catch(e){ console.error(e); }
 }
 async function cbGistFile(g, name){ const f = g.files && g.files[name]; if (!f) return null; let t = f.content; if (f.truncated) t = await (await fetch(f.raw_url, {cache: 'no-store'})).text(); try { return JSON.parse(t); } catch(e){ return null; } }
@@ -160,7 +174,7 @@ async function cbInboxMerge(){
     if (use && use.day === ptDay()){ GEM.ext = {day: use.day, n: use.n || {}, req: use.req || 0}; saveAI(); }
     if (!Array.isArray(inbox) || !inbox.length) return;
     const done = new Set(GEM.ibDone || []), now = Date.now(); let added = 0;
-    for (const it of inbox){ if (done.has(it.id)) continue; const p = FD.posts.find(x => x.id === it.pid); done.add(it.id); if (!p || p.del) continue; await fdCm(p); added += cbApply(p, it.got, it.names || {}, now); }
+    for (const it of inbox){ if (done.has(it.id)) continue; const p = FD.posts.find(x => x.id === it.pid); done.add(it.id); if (!p || p.del) continue; await fdCm(p); added += cbApply(p, it.got, it.names || {}, now, it.tags || {}); }
     GEM.ibDone = [...done].slice(-400); saveAI();
     if (added){ saveFeed(); renderFeed(); fdViewRefresh(); }
     // clear what was merged (anything written since stays for next time)
@@ -174,6 +188,38 @@ async function cbInboxMerge(){
   setInterval(async () => { await cbInboxMerge(); cbTodoUpload(); }, 20 * 60000);
   document.addEventListener('visibilitychange', () => { if (document.hidden) cbTodoUpload(); else setTimeout(cbInboxMerge, 3000); });
 })();
+/* ---- one-time fix-ups (run once, on the device writing the feed; the flags travel with the feed) ----
+   Reply catch-up: the most popular posts were filled before replies gathered under popular comments, so each gets some
+   extra comments wanted (p.xr), which the builder writes almost all as replies in their top threads.
+   Foam fingers: picture descriptions used to mention a seasonal decoration the new pictures don't draw, so comments
+   brought up a game-day foam finger that isn't there. Those comments (and replies about it) are removed. */
+async function fdFixups(){
+  if (typeof cloudWriter === 'function' && !cloudWriter()) return;
+  if (!FD_READY || !RK_READY) return;
+  let changed = false;
+  if (!FD.xrDone){
+    const now = Date.now(), top = FD.posts.filter(p => !p.del && p.gen && p.t <= now && cbHave(p) >= 6).sort((a, b) => fdLikes(b) - fdLikes(a)).slice(0, 40);
+    top.forEach(p => { p.xr = Math.max(8, Math.min(60, Math.round(cbHave(p) * .6))); });
+    FD.xrDone = 1; changed = true;
+  }
+  if (!FD.foamDone){
+    const rx = /\bfoam\s*(finger|hand)s?\b|\bfoam\b.{0,12}\bfinger/i; let n = 0;
+    for (const p of FD.posts){
+      if (p.del || p.w === -1) continue;
+      if (!p.cm && !(p.cn > 0)) continue;
+      if (p.type === 'scene' && /foam/i.test(fdAbout(p))) continue;          // it really is in the picture
+      const cm = await fdCm(p); if (!cm || !cm.length) continue;
+      const bad = new Set(cm.filter(c => !c.del && c.w !== -1 && rx.test(c.text)).map(c => c.id)); if (!bad.size) continue;
+      cm.forEach(c => { if (bad.has(c.id)) c.del = 1; });
+      cm.forEach(c => { if (!c.del && c.re && bad.has(c.re)) c.re = null; });    // an answer to a removed comment stays, on its own
+      n += bad.size; changed = true;
+    }
+    FD.foamDone = 1; changed = true;
+    if (n) console.log(`Removed ${n} comment${n === 1 ? '' : 's'} about a foam finger that wasn't in the picture.`);
+  }
+  if (changed){ saveFeed(); fdPersistSoon(); if (!$('#page-feed').hidden) renderFeed(); }
+}
+(function fdFixStart(){ if (!RK_READY || !FD_READY) return setTimeout(fdFixStart, 4000); setTimeout(() => fdFixups().catch(console.error), 12000); setInterval(() => { if (!FD.xrDone || !FD.foamDone) fdFixups().catch(console.error); }, 5 * 60000); })();
 // Settings → Chat was drawn before this file loaded: draw it again now, and whenever Settings opens (counts stay fresh)
 renderChatSettings();
 { const _sh = onPageShown; onPageShown = function(name){ _sh.apply(this, arguments); if (name === 'settings') renderChatSettings(); }; }

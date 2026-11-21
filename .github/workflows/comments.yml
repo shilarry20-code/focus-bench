@@ -19,8 +19,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # the Firebase admin library, for writing comments straight into the shared feed
+      - run: npm install --no-save --no-package-lock firebase-admin@13
       - run: node tools/comments.mjs
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
           MAX_MIN: '25'
