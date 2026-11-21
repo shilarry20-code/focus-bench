@@ -8,7 +8,6 @@ function renderLog(){
   const todayMin = todays.reduce((a,s) => a + s.min, 0);
   $('#todayMin').textContent = fmtMin(todayMin);
   $('#stToday').textContent = fmtMin(todayMin);
-  $('#stBlocks').textContent = `${fmtMin(todayMin)} / ${fmtMin(P.goalMin)}`;
   // daily goal: minutes studied today against the goal
   const gp = Math.min(1, todayMin / P.goalMin);
   $('#goalDots').innerHTML = `<span class="gbar${gp >= 1 ? ' full' : ''}"><i style="width:${gp * 100}%"></i></span>${gp >= 1 ? '<em>✓</em>' : ''}`;

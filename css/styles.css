@@ -491,7 +491,7 @@ body:not(.m-off) .streak-chip[data-state="risk"] .fl{animation:flicker 1.6s ease
   .controls .ghost{padding:11px 14px}
 }
 /* Stats page */
-.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .kpis .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:14px 16px}
 .stats-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
 .sess-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -518,7 +518,7 @@ body:not(.m-off) .streak-chip[data-state="risk"] .fl{animation:flicker 1.6s ease
 #page-music .sp-add button{align-self:stretch}
 @media (max-width:1180px){
   .focus-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"timer timer" "left right"}
-  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:900px){
   .stats-grid{grid-template-columns:minmax(0,1fr)}
@@ -541,7 +541,6 @@ body:not(.m-off) .streak-chip[data-state="risk"] .fl{animation:flicker 1.6s ease
   .page-title{font-size:24px}
   .focus-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"timer" "left" "right"}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .kpis .stat:last-child{grid-column:1/-1}
   .card{padding:16px}
   #page-awards .ach-list,#page-music .sp-grid{grid-template-columns:minmax(0,1fr)}
   .ach-pop{bottom:calc(84px + env(safe-area-inset-bottom,0px));top:auto}
@@ -2135,3 +2134,17 @@ button.rp-v:hover{border-color:var(--muted)}
 .fd-top-btn:hover,.fd-top-btn:focus-visible{color:var(--accent);border-color:var(--accent)}
 body.m-off .fd-top-btn{transition:none}
 @media (max-width:760px){.fd-top-btn{right:max(16px,env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
+
+/* @name links in captions, comments and chats */
+.at-lnk{border:0;background:none;padding:0;margin:0;font:inherit;font-weight:600;color:var(--accent);cursor:pointer}
+.at-lnk:hover{text-decoration:underline}
+
+/* "Liked by …" and the heart that pops over the picture */
+.av.xs{width:18px;height:18px;font-size:8px}
+.fd-lkby{font-weight:400}
+.fd-lkby .av{display:inline-flex;vertical-align:-4px;margin-right:6px}
+.fd-lkby .lnk{font-weight:700}
+.fd-media,.fv-media{position:relative}
+.fd-hpop{position:absolute;left:50%;top:50%;width:min(28%,110px);aspect-ratio:1;transform:translate(-50%,-50%) scale(0);pointer-events:none;animation:fdHpop .9s ease-out forwards;filter:drop-shadow(0 4px 14px rgba(0,0,0,.35));z-index:2;line-height:0}
+.fd-hpop svg{width:100%;height:100%;fill:#fff}
+@keyframes fdHpop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}15%{transform:translate(-50%,-50%) scale(1.2);opacity:1}30%{transform:translate(-50%,-50%) scale(.95)}45%{transform:translate(-50%,-50%) scale(1.05)}75%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}

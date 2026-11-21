@@ -427,7 +427,7 @@ function chatMsgHtml(m, byId){
     <button class="ch-av" ${me ? 'data-me="1"' : `data-bot="${m.w}"`} aria-label="${esc(chatName(m.w))}'s profile">${me ? myAvatar() : avatar(B)}</button>
     <div class="ch-body"><div class="ch-head"><button class="ch-name" ${me ? 'data-me="1"' : `data-bot="${m.w}"`}>${esc(chatName(m.w))}</button>${emblem(rk, 'xs')}<span class="ch-rk">${esc(rk.full)}</span>${feat ? badgeHtml(feat) : ''}<time>${chatTime(m.t)}</time></div>
     ${r ? `<button class="ch-re" data-jump="${r.id}" title="Go to this message">${r.del ? '<i>Deleted message</i>' : `<b>${esc(chatName(r.w))}</b> ${esc(r.text.length > 70 ? r.text.slice(0, 70) + '…' : r.text)}`}</button>` : ''}
-    <p>${esc(m.text)}</p></div>
+    <p>${atLinks(esc(m.text))}</p></div>
     <button class="ch-reply" data-reply="${m.id}" aria-label="Reply to ${esc(chatName(m.w))}" title="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/></svg></button>${me ? `<button class="ch-reply ch-del" data-del="${m.id}" aria-label="Delete message" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>` : ''}</div>`;
 }
 function renderChat(){

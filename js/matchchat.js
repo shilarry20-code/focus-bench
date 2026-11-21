@@ -21,7 +21,7 @@ function mcRender(){
   if (L.dataset.k !== k){
     const fresh = !L.dataset.k, grew = !fresh && msgs.length > (+L.dataset.n || 0);
     L.dataset.k = k; L.dataset.n = msgs.length;
-    L.innerHTML = msgs.length ? msgs.map(m => `<div class="mc-msg${m.me ? ' me' : ''}"><b>${m.me ? 'You' : esc(BOTS[c.b].name)}</b> <span>${esc(m.text)}</span></div>`).join('')
+    L.innerHTML = msgs.length ? msgs.map(m => `<div class="mc-msg${m.me ? ' me' : ''}"><b>${m.me ? 'You' : esc(BOTS[c.b].name)}</b> <span>${atLinks(esc(m.text))}</span></div>`).join('')
       : `<p class="hint mc-empty">${c.state === 'live' ? 'Say gl hf. You can chat on breaks, while paused, and before you start.' : 'No messages this match.'}</p>`;
     L.scrollTop = mcStick || (grew && msgs[msgs.length - 1].me) ? L.scrollHeight : mcScroll;     // stay where you were reading
   }
