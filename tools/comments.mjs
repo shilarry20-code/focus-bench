@@ -9,9 +9,13 @@ const TODO = 'fb-todo.json', INBOX = 'fb-inbox.json', USAGE = 'fb-usage.json', S
 const t0 = Date.now(), sleep = ms => new Promise(r => setTimeout(r, ms));
 if (!KEY || !TOKEN){ console.log('GEMINI_KEY or GIST_TOKEN secret is missing; nothing to do.'); process.exit(0); }
 
+// GitHub answers 409 when the gist is being written by someone else at that moment (the app syncing, usually): wait and try again
 const gh = async (path, opts = {}) => {
-  const r = await fetch('https://api.github.com' + path, {...opts, headers: {Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + TOKEN, ...(opts.body ? {'Content-Type': 'application/json'} : {})}});
-  if (!r.ok) throw new Error(`GitHub ${r.status} on ${path}`); return r.status === 204 ? null : r.json();
+  for (let tries = 0; ; tries++){
+    const r = await fetch('https://api.github.com' + path, {...opts, headers: {Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + TOKEN, ...(opts.body ? {'Content-Type': 'application/json'} : {})}});
+    if ((r.status === 409 || r.status >= 500) && tries < 5){ console.log(`GitHub ${r.status} on ${path}; trying again in ${3 * (tries + 1)}s`); await sleep(3000 * (tries + 1)); continue; }
+    if (!r.ok) throw new Error(`GitHub ${r.status} on ${path}`); return r.status === 204 ? null : r.json();
+  }
 };
 const file = async (g, name) => { const f = g.files && g.files[name]; if (!f) return null; let t = f.content; if (f.truncated) t = await (await fetch(f.raw_url)).text(); try { return JSON.parse(t); } catch(e){ return null; } };
 const PT = new Intl.DateTimeFormat('en-US', {timeZone: 'America/Los_Angeles', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
