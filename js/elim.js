@@ -338,7 +338,7 @@ async function elChatAI(task, talk){
     const sys = `You write lobby chat for an Elimination game on Focus Bench, a study-timer app for college students. Everyone in the lobby studies at the same time; each round allows a little break time, and going over it (or stopping) knocks you out. Last one studying wins.
 People only chat while they're on a break. Write like quick game-lobby chat: short, casual, lowercase is fine, slang is fine, some trash talk and hype, nothing formal. Never start a message with the name of the person it answers.
 Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…"}]}.
-${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
+${typeof EMO_RULE === 'string' ? EMO_RULE + '\n' : ''}${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
     const user = `Round ${S.r + 1}, ${S.alive} of ${G.L.players.length} still in, ${S.sd ? 'sudden death (no breaks allowed)' : `${elFmtA(S.a / 60000)} of breaks this round`}.
 People who can talk now: ${talk.map(w => `${bot(w).name} (emojis: ${emojiStyle(w)})`).join('; ')}${!focusing() ? `; ${me} (the user) is on a break too` : ''}.
 Chat so far:

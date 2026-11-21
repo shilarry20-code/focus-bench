@@ -540,8 +540,8 @@ function sc2LabBack(S, K, c, L, r, id, FY, bio){
 }
 function sc2Microscope(){ return pa('M2 0 h22 v-4 h-22z', '#2f3236') + pa('M16 -4 v-10 q0 -8 -8 -14', 'none', ' stroke="#2f3236" stroke-width="4" stroke-linecap="round"') + rc(4, -32, 7, 14, '#c9ccd1', 2) + rc(2, -12, 12, 3, '#2f3236', 1) + rc(5, -36, 5, 5, '#2f3236', 1); }
 // batch 2
-const sc2Lockers = (x0, x1, top, FY, col) => { let g = ''; for (let x = x0; x < x1; x += 30){ g += rc(x, top, 28, FY - top, col, 1) + [0, 1, 2].map(k => ln(x + 6, top + 8 + k * 4, x + 22, top + 8 + k * 4, sc2Shade(col, .35), 1.2)).join('') + rc(x + 20, top + (FY - top) * .45, 3, 10, '#c9ccd1', 1); } return `<g class="ol">${g}</g>`; };
-const sc2Door = (x, FY, w, h, col, win) => `<g class="ol">${rc(x - 4, FY - h - 4, w + 8, h + 4, '#e8e3d8', 1)}${rc(x, FY - h, w, h, col, 1)}${win ? rc(x + w * .2, FY - h + 12, w * .6, h * .3, '#cfe3ef', 1) : ''}${ci(x + w - 9, FY - h * .48, 3, '#c9a26a')}</g>`;
+let sc2Lockers = (x0, x1, top, FY, col) => { let g = ''; for (let x = x0; x < x1; x += 30){ g += rc(x, top, 28, FY - top, col, 1) + [0, 1, 2].map(k => ln(x + 6, top + 8 + k * 4, x + 22, top + 8 + k * 4, sc2Shade(col, .35), 1.2)).join('') + rc(x + 20, top + (FY - top) * .45, 3, 10, '#c9ccd1', 1); } return `<g class="ol">${g}</g>`; };
+let sc2Door = (x, FY, w, h, col, win) => `<g class="ol">${rc(x - 4, FY - h - 4, w + 8, h + 4, '#e8e3d8', 1)}${rc(x, FY - h, w, h, col, 1)}${win ? rc(x + w * .2, FY - h + 12, w * .6, h * .3, '#cfe3ef', 1) : ''}${ci(x + w - 9, FY - h * .48, 3, '#c9a26a')}</g>`;
 const sc2Board = (x, y, w, h, c) => `<g class="ol">${rc(x, y, w, h, '#c9a26a', 2)}${rc(x, y, w, h, 'none', 2, ' stroke="#6b4429" stroke-width="3"')}${[[.08, .12, .3, .35, '#fff'], [.45, .1, .25, .4, '#f9e27a'], [.75, .18, .2, .3, c.a3], [.15, .58, .35, .3, '#f4c6d6'], [.6, .6, .3, .28, '#fff']].map(([a, b, ww, hh, f]) => rc(x + a * w, y + b * h, ww * w, hh * h, f, 1)).join('')}</g>` + [[.08, .12], [.45, .1], [.75, .18], [.15, .58], [.6, .6]].map(([a, b]) => ci(x + a * w + 6, y + b * h + 3, 1.6, '#d32f2f', ' stroke="none"')).join('');
 Object.assign(SC2_SURF, {laundromat: 'table', gym: 'bench', lockerroom: 'bench', hospital: 'table', clinic: 'seatrow', waitingrm: 'seatrow', office: 'desk', officehrs: 'bench', hallway: 'bench'});
 Object.assign(SC2_BACK, {
@@ -727,8 +727,8 @@ function sc2Stands(S, c, top){
   return g;
 }
 Object.assign(SC2_SURF, {greenhouse: 'workbench', bookstore: 'cafetable', bathtub: 'tubtray', hostelbunk: 'bed', frat: 'couch', chapel: 'pew', museum: 'bench', pool: 'bleachers', icearena: 'bleachers', bowling: 'booth', arcade: 'floorbare'});
-const sc2Books = (x, y, w, h, rows, c) => { let g = rc(x, y, w, h, '#6b4429', 2); const rh = h / rows; for (let k = 0; k < rows; k++){ g += rc(x + 3, y + 3 + k * rh, w - 6, rh - 5, '#3b2a1e', 1); let bx = x + 5; while (bx < x + w - 8){ const bw = 4 + ((bx * 7 + k * 13) % 5); g += rc(bx, y + 5 + k * rh + ((bx + k) % 3), bw, rh - 9 - ((bx + k) % 3), ['#c0392b', '#2e7d5b', '#3f6fa0', '#e0a630', '#8e44ad', '#d35400', '#e8dcc8', c.a1][(bx + k * 3) % 8], 1); bx += bw + 1; } } return `<g class="ol">${g}</g>`; };
-const sc2Frame = (x, y, w, h, fill) => `<g class="ol">${rc(x, y, w, h, '#b8923a', 2)}${rc(x + 4, y + 4, w - 8, h - 8, fill, 1)}</g>`;
+let sc2Books = (x, y, w, h, rows, c) => { let g = rc(x, y, w, h, '#6b4429', 2); const rh = h / rows; for (let k = 0; k < rows; k++){ g += rc(x + 3, y + 3 + k * rh, w - 6, rh - 5, '#3b2a1e', 1); let bx = x + 5; while (bx < x + w - 8){ const bw = 4 + ((bx * 7 + k * 13) % 5); g += rc(bx, y + 5 + k * rh + ((bx + k) % 3), bw, rh - 9 - ((bx + k) % 3), ['#c0392b', '#2e7d5b', '#3f6fa0', '#e0a630', '#8e44ad', '#d35400', '#e8dcc8', c.a1][(bx + k * 3) % 8], 1); bx += bw + 1; } } return `<g class="ol">${g}</g>`; };
+let sc2Frame = (x, y, w, h, fill) => `<g class="ol">${rc(x, y, w, h, '#b8923a', 2)}${rc(x + 4, y + 4, w - 8, h - 8, fill, 1)}</g>`;
 Object.assign(SC2_BACK, {
   greenhouse: (S, K, c, L, r, id, FY) => {
     // glass walls on a white frame, benches of potted plants, a hanging basket
@@ -843,10 +843,10 @@ Object.assign(SC2_BACK, {
   }
 });
 // batch 5: rooms at home and around the library
-const sc2Bed = (x, FY, w, c, col) => `<g class="ol">${rc(x, FY - 64, 10, 64, '#7a5638', 2)}${rc(x + w - 10, FY - 40, 10, 40, '#7a5638', 2)}${rc(x + 6, FY - 26, w - 12, 18, '#7a5638', 1)}${rc(x + 8, FY - 40, w - 16, 16, '#f4f1ea', 5)}${pa(`M${x + 34} ${FY - 42} h${w - 44} q4 14 0 20 h${-(w - 44)}z`, col)}${rc(x + 12, FY - 52, 30, 13, '#fbf9f2', 6)}</g>`;
-const sc2Poster = (x, y, w, h, c, k) => `<g class="ol">${rc(x, y, w, h, [c.a3, '#2f3a48', '#f4ede0'][k % 3], 2)}</g>` + [ci(x + w / 2, y + h * .42, w * .26, c.a1, ' stroke="none" opacity=".85"'), pa(`M${x + 4} ${y + h - 6} l${w * .3} ${-h * .4} l${w * .2} ${h * .2} l${w * .3} ${-h * .3} l${w * .1} ${h * .5}z`, c.a2, ' stroke="none"'), tx(x + w / 2, y + h / 2 + 3, '★', w * .5, c.a1)][k % 3];
-const sc2Lights = (y0, w = 300) => pa(`M0 ${y0} q${w / 4} 14 ${w / 2} 2 t${w / 2} 4`, 'none', ' stroke="#2c2c2a" stroke-width="1.1"') + [...Array(11)].map((_, k) => ci(14 + k * 26, y0 + 5 + Math.sin(k * 1.1) * 4, 2.8, ['#ffd166', '#ff8fab', '#90e0ef'][k % 3], ' stroke="none"')).join('');
-const sc2Dresser = (x, FY, w, h, col) => `<g class="ol">${rc(x, FY - h, w, h, col, 2)}${[0, 1, 2].map(k => rc(x + 4, FY - h + 4 + k * (h - 8) / 3, w - 8, (h - 8) / 3 - 3, sc2Tint(col, .08), 1) + rc(x + w / 2 - 6, FY - h + 4 + k * (h - 8) / 3 + (h - 8) / 6 - 3, 12, 3, '#c9a26a', 1)).join('')}</g>`;
+let sc2Bed = (x, FY, w, c, col) => `<g class="ol">${rc(x, FY - 64, 10, 64, '#7a5638', 2)}${rc(x + w - 10, FY - 40, 10, 40, '#7a5638', 2)}${rc(x + 6, FY - 26, w - 12, 18, '#7a5638', 1)}${rc(x + 8, FY - 40, w - 16, 16, '#f4f1ea', 5)}${pa(`M${x + 34} ${FY - 42} h${w - 44} q4 14 0 20 h${-(w - 44)}z`, col)}${rc(x + 12, FY - 52, 30, 13, '#fbf9f2', 6)}</g>`;
+let sc2Poster = (x, y, w, h, c, k) => `<g class="ol">${rc(x, y, w, h, [c.a3, '#2f3a48', '#f4ede0'][k % 3], 2)}</g>` + [ci(x + w / 2, y + h * .42, w * .26, c.a1, ' stroke="none" opacity=".85"'), pa(`M${x + 4} ${y + h - 6} l${w * .3} ${-h * .4} l${w * .2} ${h * .2} l${w * .3} ${-h * .3} l${w * .1} ${h * .5}z`, c.a2, ' stroke="none"'), tx(x + w / 2, y + h / 2 + 3, '★', w * .5, c.a1)][k % 3];
+let sc2Lights = (y0, w = 300) => pa(`M0 ${y0} q${w / 4} 14 ${w / 2} 2 t${w / 2} 4`, 'none', ' stroke="#2c2c2a" stroke-width="1.1"') + [...Array(11)].map((_, k) => ci(14 + k * 26, y0 + 5 + Math.sin(k * 1.1) * 4, 2.8, ['#ffd166', '#ff8fab', '#90e0ef'][k % 3], ' stroke="none"')).join('');
+let sc2Dresser = (x, FY, w, h, col) => `<g class="ol">${rc(x, FY - h, w, h, col, 2)}${[0, 1, 2].map(k => rc(x + 4, FY - h + 4 + k * (h - 8) / 3, w - 8, (h - 8) / 3 - 3, sc2Tint(col, .08), 1) + rc(x + w / 2 - 6, FY - h + 4 + k * (h - 8) / 3 + (h - 8) / 6 - 3, 12, 3, '#c9a26a', 1)).join('')}</g>`;
 // rooms with a board whose words each post can set (bots' come from the AI with the caption)
 const SC2_BOARDS = {classroom: 'chalkboard', studyroom: 'whiteboard', office: 'whiteboard', lecture: 'lecture slide'};
 // what's written on a board: the post's own words (the poster or the AI picks them), else a default for the room
@@ -979,9 +979,9 @@ function sc2Ground(kind, HY, L, col){
   g += rc(-5, HY, 310, 6, '#fff', 0, ' opacity=".08"');
   return g;
 }
-const sc2Tree = (x, gy, s, L, k = 0) => { const n = sc2N(L), cols = n ? ['#16301f', '#1b3626'] : ['#4c9a5c', '#5aa469', '#3f8a4e', '#6aab55'];
+let sc2Tree = (x, gy, s, L, k = 0) => { const n = sc2N(L), cols = n ? ['#16301f', '#1b3626'] : ['#4c9a5c', '#5aa469', '#3f8a4e', '#6aab55'];
   return `<ellipse cx="${x}" cy="${gy}" rx="${16 * s}" ry="${3.5 * s}" fill="#000" opacity=".2"/><g class="ol">${rc(x - 3 * s, gy - 30 * s, 6 * s, 30 * s, '#5a3f2a', 1)}${ci(x - 10 * s, gy - 40 * s, 15 * s, cols[(k + 1) % cols.length])}${ci(x + 10 * s, gy - 42 * s, 15 * s, cols[(k + 2) % cols.length])}${ci(x, gy - 56 * s, 18 * s, cols[k % cols.length])}</g>`; };
-const sc2Pine = (x, gy, s, L) => `<g class="ol">${rc(x - 2 * s, gy - 8 * s, 4 * s, 8 * s, '#5a3f2a', 0)}${pa(`M${x} ${gy - 52 * s} l${14 * s} ${44 * s} h${-28 * s}z`, sc2Nt(L, '#2f6b45', '#132b1d'))}</g>`;
+let sc2Pine = (x, gy, s, L) => `<g class="ol">${rc(x - 2 * s, gy - 8 * s, 4 * s, 8 * s, '#5a3f2a', 0)}${pa(`M${x} ${gy - 52 * s} l${14 * s} ${44 * s} h${-28 * s}z`, sc2Nt(L, '#2f6b45', '#132b1d'))}</g>`;
 // a building with windows (lit at night)
 function sc2Bldg(x, gy, w, h, col, L, o = {}){
   const n = sc2N(L); let g = `<g class="ol">${rc(x, gy - h, w, h, n ? sc2Shade(col, .55) : col, 0)}${o.roof ? pa(`M${x - 4} ${gy - h} l${w / 2 + 4} ${-o.roof} l${w / 2 + 4} ${o.roof}z`, n ? '#2a2422' : '#7c3a24') : ''}</g>`;
@@ -990,7 +990,7 @@ function sc2Bldg(x, gy, w, h, col, L, o = {}){
   if (o.door) g += `<g class="ol">${rc(x + w / 2 - 7, gy - 18, 14, 18, n ? '#2a2422' : '#5d3b25', 1)}</g>`;
   return g;
 }
-const sc2Lamppost = (x, gy, s, L) => `<g class="ol">${rc(x - 1.5 * s, gy - 70 * s, 3 * s, 70 * s, '#2f3236', 0)}${rc(x - 5 * s, gy - 78 * s, 10 * s, 9 * s, sc2N(L) ? '#ffe08a' : '#e8e3d8', 2)}${rc(x - 7 * s, gy - 80 * s, 14 * s, 3 * s, '#2f3236', 1)}</g>` + (sc2N(L) ? ci(x, gy - 74 * s, 26 * s, '#ffd27a', ' opacity=".22"') : '');
+let sc2Lamppost = (x, gy, s, L) => `<g class="ol">${rc(x - 1.5 * s, gy - 70 * s, 3 * s, 70 * s, '#2f3236', 0)}${rc(x - 5 * s, gy - 78 * s, 10 * s, 9 * s, sc2N(L) ? '#ffe08a' : '#e8e3d8', 2)}${rc(x - 7 * s, gy - 80 * s, 14 * s, 3 * s, '#2f3236', 1)}</g>` + (sc2N(L) ? ci(x, gy - 74 * s, 26 * s, '#ffd27a', ' opacity=".22"') : '');
 const sc2Railing = (y, h, col, x0 = -5, x1 = 305, step = 14) => { let g = `<g class="ol">${rc(x0, y, x1 - x0, 5, col, 1)}${rc(x0, y + h, x1 - x0, 3, col, 0)}`; for (let x = x0 + 6; x < x1; x += step) g += rc(x, y + 5, 2.5, h - 5, col, 0); return g + '</g>'; };
 
 // what you sit at, outdoors (props sit at `top`)

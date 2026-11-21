@@ -45,23 +45,9 @@ function chatRegulars(){
 // who's in the room right now: regulars who are studying, plus some whose usual hours these are
 // each player's emoji habit, fixed by their number: about 3 in 10 never use them, half sometimes, 2 in 10 often
 const emojiHabit = i => { const h = (Math.imul(i + 1, 2654435761) >>> 0) % 10; return h < 3 ? 'never' : h < 8 ? 'sometimes' : 'often'; };
-// everyone has their own go-to emojis (a handful from the whole range of faces, hands and hearts), so the room isn't all 😭 and 💀
-const EMO_FAV = [...'😀😃😄😁😆😅🤣😂🙂🙃🫠😉😊😇🥰😍🤩😘😋😛😜🤪😝🤗🤭🫢🫣🤫🤔🫡🤐🤨😐😑😶🫥😏😒🙄😬😌😔😪😴🤢🥵🥶🥴😵🤯🥳😎🤓🧐😕🫤😟🙁😮😯😲😳🥺🥹😦😧😨😰😥😢😭😱😖😣😞😓😩😫🥱😤😡😠💀👀🙏👍👏🙌💪🤝👋✌🤞🫶🤷🤦❤🧡💛💚💙💜🖤🤍💔💕💖💯🔥✨💅🎉'];
-function emojiFavs(i){ const rr = mulberry32(i * 7121 + 99), out = []; const n = 4 + Math.floor(rr() * 3); while (out.length < n){ const e = EMO_FAV[Math.floor(rr() * EMO_FAV.length)]; if (!out.includes(e)) out.push(e); } return out; }
-const emojiStyle = i => { const h = emojiHabit(i); return h === 'never' ? 'never' : `${h} (their go-tos: ${emojiFavs(i).join(' ')})`; };
-// only emotion and reaction emojis survive (faces, hearts, a few gestures); object emojis that just illustrate words are removed
-const EMO_OK = new Set([...'😀😃😄😁😆😅🤣😂🙂🙃🫠😉😊😇🥰😍🤩😘😋😛😜🤪😝🤑🤗🤭🫢🫣🤫🤔🫡🤐🤨😐😑😶🫥😏😒🙄😬🤥😌😔😪🤤😴😷🤒🤕🤢🤮🥵🥶🥴😵🤯🥳🥸😎🤓🧐😕🫤😟🙁😮😯😲😳🥺🥹😦😧😨😰😥😢😭😱😖😣😞😓😩😫🥱😤😡😠🤬😈💀☠💩🤡👻👀🙏👍👎👏🙌💪🤝👋✌🤞🫶🤷🤦❤🧡💛💚💙💜🖤🤍💔💕💖💗💯🔥✨💅🎉']);
-const SEG = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter() : null;
-function emotionOnly(t){
-  if (!SEG || !/\p{Extended_Pictographic}/u.test(t)) return t;
-  let out = '';
-  for (const {segment: g} of SEG.segment(t)){
-    if (!/\p{Extended_Pictographic}/u.test(g)){ out += g; continue; }
-    const base = [...g.replace(/[\u{1F3FB}-\u{1F3FF}\uFE0F\u200D\u2640\u2642]/gu, '')][0];
-    if (base && EMO_OK.has(base)) out += g;
-  }
-  return out.replace(/ {2,}/g, ' ').replace(/ ([,.!?])/g, '$1').trim();
-}
+const emojiStyle = i => emojiHabit(i);
+// how emojis get chosen, for every prompt: by what the message means, from the whole range, never a personal list
+const EMO_RULE = 'Emoji habits ("never", "sometimes" or "often", next to each name) only say how often someone uses emojis, not which ones. Pick the emoji that fits what that exact message means (happy, proud, shocked, sad, sarcastic, tired, cringing, flirty, scared, done with it, impressed, laughing…), from the whole range of faces, hearts, hand gestures and reaction symbols, including less common ones (🫠 🥹 🫡 🫨 😮‍💨 🙂‍↕️ 😶‍🌫️ 🫤 🥲 😤 🤌 🫶 💢 💫). If none fits, use none. At most a couple per message, never the same few for everyone, and don’t default to 😭 💀 😂. Never use emojis to illustrate words (no 🍪 for cookies, 📚 for studying).';
 // your opponent in a live match is studying against you, so they're not in the room
 const inMatchWith = () => R && R.cur && R.cur.state === 'live' && !R.cur.tapped ? R.cur.b : -1;
 // someone you just played sticks around for a while afterwards (20 to 45 min, the same for each match)
@@ -175,7 +161,7 @@ People talk about what's on their mind; each batch you'll get a few things on pe
 A new topic is just a new message that starts on its own: no bridges like "speaking of…", "on that note", "that reminds me", "random but" or "unrelated but".
 Most messages are not replies: only set replyTo when the message directly answers or reacts to that exact message. A reply must respond to what that message actually said; if someone changes the subject, it's a new message, not a reply.
 Write like a real group chat: casual texting style (lowercase is fine, contractions, slang, not formal full sentences), mostly short, with only the odd longer message. A reply is already shown as a reply, so don't start it with the other person's name; use names only now and then, the way people really do. with each player keeping their own personality and interests. Players mostly talk to each other: they answer questions, tease each other, disagree, change the subject, and continue threads already in the chat.
-Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. Use them like real people do, to show emotion or react, mostly their own go-tos (listed next to their name) and sometimes any other face, hand or heart emoji: don't fall back on the same few (😭 💀 😂) for everyone. Never use them to illustrate the words (no 🍪 for cookies, 🚗 for cars, ⭐ for stars, 📚 for studying). Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
+Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. ${EMO_RULE} Keep it friendly and appropriate: no explicit content, no slurs or harassment, nothing hateful. Never mention AI or that anyone is simulated. Only use player names from the list. ${userHere ? `"${myName()}" is also in the room; only talk to or mention them when answering one of their messages.` : 'Only the listed players are in this conversation: never address, @mention or reply to anyone else.'}`;
   const lastK = Math.floor(Math.random() * cast.length * 3);    // mention one player's last match only sometimes, so ranked isn't always the topic
   const who = cast.map((f, k) => `- ${f.name}: ${f.rank}, ${f.subj}, emojis: ${emojiStyle(f.i)}${f.last && k === lastK ? `; just ${f.last.won ? 'beat' : 'lost to'} ${f.last.opp} in ranked (${f.last.mine} vs ${f.last.theirs} min)` : ''}`).join('\n');
   const hist = recent.map((m, k) => `[m${k + 1}] ${chatName(m.w)}: ${m.text}${m.re && tag.has(m.re) ? ` (replying to ${tag.get(m.re)})` : ''}`).join('\n') || '(the chat is quiet)';
@@ -267,11 +253,6 @@ async function aiCall(sys, user){
 // turn Gemini's messages into chat messages, checking every name against the room
 const normName = n => String(n || '').toLowerCase().replace(/^@/, '').replace(/[^a-z0-9]/g, '');
 // "speaking of five am wake up calls, my professor…" → "my professor…": no lead-ins bridging to a new topic
-function stripSegue(t){
-  const m = t.match(/^(speaking of|on (that|the) (note|topic|subject) of|on that note|that reminds me( of)?|random(ly)?( but| question| thought)?|unrelated( but)?|totally unrelated( but)?|changing the subject|side note|off topic( but)?)\b[^,.!?:;—–-]*[,:;—–-]\s*/i);
-  if (!m || m[0].length >= t.length - 8) return t;
-  return t.slice(m[0].length);
-}
 // "NightFox_8, honestly…" → "honestly…": the reply already shows who it's for
 function stripLeadName(text, names){
   for (const n of names){
