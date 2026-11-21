@@ -186,14 +186,14 @@ function fdHeartPop(el){
   const m = el.querySelector('.fd-media, .fv-media'); if (!m || (typeof motion === 'function' && motion() === 'off')) return;
   const h = document.createElement('span'); h.className = 'fd-hpop'; h.setAttribute('aria-hidden', 'true');
   const gid = 'fdHG' + (++fdHeartPop.n);       // a warm gradient: pink at the top, red, orange at the bottom
-  h.innerHTML = `<svg viewBox="0 0 24 24"><defs><linearGradient id="${gid}" x1=".2" y1="0" x2=".8" y2="1"><stop offset="0" stop-color="#ff5fb0"/><stop offset=".5" stop-color="#ff3358"/><stop offset="1" stop-color="#ff9a2e"/></linearGradient></defs><path fill="url(#${gid})" d="M12 21s-7-4.6-9.3-9.1C1.2 8.6 3.1 5 6.6 5c2 0 3.4 1.2 4.4 2.6C12 6.2 13.4 5 15.4 5c3.5 0 5.4 3.6 3.9 6.9C19 16.4 12 21 12 21z"/></svg>`;
+  h.innerHTML = `<svg viewBox="0 0 24 24"><defs><linearGradient id="${gid}" x1=".2" y1="0" x2=".8" y2="1"><stop offset="0" stop-color="#ff5fb0"/><stop offset=".5" stop-color="#ff3358"/><stop offset="1" stop-color="#ff9a2e"/></linearGradient></defs><path fill="url(#${gid})" d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg>`;
   m.querySelectorAll('.fd-hpop').forEach(x => x.remove()); m.appendChild(h); setTimeout(() => h.remove(), 1000);
 }
 const fdLk = (c, p) => Math.floor((c.lk != null ? c.lk : Math.max(1, fdLikes(p)) * .006 * Math.pow((fdHash(c.id) % 1000) / 1000, 3) * (c.re ? .3 : 1)) * fdLkGrow(c));
 // a comment's heart: tap to like it; the count sits under the heart, like Instagram
 const fdCmLiked = c => !!(FD.cliked && FD.cliked[c.id]);
 const fdCmCount = (c, p) => fdLk(c, p) + (fdCmLiked(c) ? 1 : 0);
-const fdHeart = (c, p) => { const n = fdCmCount(c, p), on = fdCmLiked(c); return `<button class="fd-cheart${on ? ' on' : ''}" data-fda="clike" aria-label="${on ? 'Unlike' : 'Like'} comment" aria-pressed="${on}"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9-8.6C1.6 8.4 3.4 5 6.7 5c1.9 0 3.3 1.1 4.3 2.5C12 6.1 13.4 5 15.3 5c3.3 0 5.1 3.4 3.7 6.4C17 15.6 12 20 12 20z"/></svg>${n ? `<small>${fdFmtN(n)}</small>` : ''}</button>`; };
+const fdHeart = (c, p) => { const n = fdCmCount(c, p), on = fdCmLiked(c); return `<button class="fd-cheart${on ? ' on' : ''}" data-fda="clike" aria-label="${on ? 'Unlike' : 'Like'} comment" aria-pressed="${on}"><svg viewBox="0 0 24 24"><path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg>${n ? `<small>${fdFmtN(n)}</small>` : ''}</button>`; };
 const fdFmtN = n => n >= 1e4 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'K' : n.toLocaleString();
 const fdShownComments = p => (p.cm || p.pv || []).filter(c => c.t <= Date.now() && !c.del);
 // which comment an answer belongs under: the latest one by the named person (also catches text that starts with @name)
@@ -365,7 +365,7 @@ function fdPostHtml(p){
   return `<article class="card fd-post" data-pid="${p.id}">
     <header class="fd-h">${me ? myAvatar('sm') : avatar(B, 'sm')}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)} · ${fdAgo(p.t)}</small></span>${me ? `<button class="fd-x" data-fda="del" title="Delete post" aria-label="Delete post">×</button>` : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
     <div class="fd-media" data-fda="dbl">${fdMedia(p)}</div>
-    <div class="fd-b"><div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9.1C1.2 8.6 3.1 5 6.6 5c2 0 3.4 1.2 4.4 2.6C12 6.2 13.4 5 15.4 5c3.5 0 5.4 3.6 3.9 6.9C19 16.4 12 21 12 21z"/></svg></button><button class="fd-cbtn" data-fda="comments" aria-label="Comments"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/></svg></button></div>
+    <div class="fd-b"><div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg></button><button class="fd-cbtn" data-fda="comments" aria-label="Comments"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/></svg></button></div>
     <div class="fd-likes">${fdLikesLine(p)}</div>
     ${p.type !== 'text' && p.cap ? `<p class="fd-cap">${fdWho(p.w)} ${atLinks(esc(p.cap))}</p>` : !p.cap && !p.gen && !me ? '<p class="fd-cap hint">…</p>' : ''}
     ${nc > show.length ? `<button class="fd-more" data-fda="comments">${nc === 1 ? 'View 1 comment' : `View all ${nc.toLocaleString()} comments`}</button>` : ''}
@@ -415,7 +415,7 @@ function renderFeed(){
   if (!RK_READY || !FD_READY){ el.innerHTML = '<p class="hint">Loading the feed…</p>'; return; }
   const n = FD.notif.filter(x => x.t > FD.nseen).length;
   $('#fdTabs').innerHTML = '<div class="fd-tabrow">' + FD_TABS.map(([k, t, ic]) => `<button class="ct-btn${FDV.tab === k ? ' on' : ''}" data-fdt="${k}"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${t}</button>`).join('') + '</div>'
-    + `<div class="fd-acts"><button class="fd-act-btn${FDV.tab === 'act' ? ' on' : ''}" data-fdt="act" aria-label="Activity" title="Activity"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-9-8.6C1.6 8.4 3.4 5 6.7 5c1.9 0 3.3 1.1 4.2 2.4h2.2C14 6.1 15.4 5 17.3 5c3.3 0 5.1 3.4 3.7 6.4C19 15.6 12 20 12 20z"/></svg>${n ? `<b>${n > 99 ? '99+' : n}</b>` : ''}</button><button class="small-btn accent fd-new" data-fda="compose">New post</button></div>`;
+    + `<div class="fd-acts"><button class="fd-act-btn${FDV.tab === 'act' ? ' on' : ''}" data-fdt="act" aria-label="Activity" title="Activity"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg>${n ? `<b>${n > 99 ? '99+' : n}</b>` : ''}</button><button class="small-btn accent fd-new" data-fda="compose">New post</button></div>`;
   const list = fdList(), page = list.slice(0, FDV.shown);
   const top = FDV.tab === 'top' ? `<div class="seg fd-topwin" role="group" aria-label="Top posts from">${Object.entries(FD_TOP).map(([k, [l]]) => `<button data-fdtop="${k}" aria-pressed="${FDV.top === k}">${l}</button>`).join('')}</div>` : FDV.tab === 'act' ? fdNotifHtml() : '';
   fdStrip(); fdSideDraw();
@@ -618,7 +618,7 @@ function fdViewHtml(p){
           : `<p class="hint fv-none">No comments yet.${me ? '' : ' Start the conversation.'}</p>`}
       </div>
       <div class="fv-foot">
-        <div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9.1C1.2 8.6 3.1 5 6.6 5c2 0 3.4 1.2 4.4 2.6C12 6.2 13.4 5 15.4 5c3.5 0 5.4 3.6 3.9 6.9C19 16.4 12 21 12 21z"/></svg></button><button class="fd-cbtn" data-fda="focus" aria-label="Comment"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4A8 8 0 1 1 20 12z"/></svg></button></div>
+        <div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg></button><button class="fd-cbtn" data-fda="focus" aria-label="Comment"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4A8 8 0 1 1 20 12z"/></svg></button></div>
         <div class="fd-likes">${fdLikesLine(p, true)}</div><small class="fv-when">${fdAgo(p.t)}</small>
         <form class="fd-form" data-fda="send">${re ? `<div class="fd-re">Replying to ${esc(re.name)} <button type="button" data-fda="unre" aria-label="Cancel reply">×</button></div>` : ''}<input maxlength="220" placeholder="Add a comment…" aria-label="Add a comment" autocomplete="off"><button class="small-btn accent">Post</button></form>
       </div>
