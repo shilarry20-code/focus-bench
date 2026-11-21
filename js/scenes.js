@@ -13,6 +13,8 @@ const scH = (h, s, l, a) => `hsl(${Math.round(((h % 360) + 360) % 360)} ${s}% ${
 SC.LIGHT = {
   lamp:     {n: 'late night with the desk lamp on', t: 'n', sky: ['#151a3a', '#26215c'], amb: '#1b1640', ao: .35, lamp: 1, fx: 'stars'},
   screen:   {n: 'pitch dark except the screen glow', t: 'n', sky: ['#07080f', '#11131f'], amb: '#05060c', ao: .55, lamp: 0, glow: 1},
+  nightlit: {n: 'late at night with the room lights on', t: 'n', sky: ['#10142c', '#1e2346'], amb: '#2a2f52', ao: .1, lamp: 0, fx: 'stars'},
+  clearnight: {n: 'a clear night, street lights on', t: 'n', sky: ['#0c1230', '#1f2650'], amb: '#141a3a', ao: .28, lamp: 0, fx: 'stars'},
   am3:      {n: '3 AM, everything dark and quiet', t: 'n', sky: ['#0b0d1c', '#1a1d36'], amb: '#0a0b18', ao: .5, lamp: 1, fx: 'stars'},
   bluehour: {n: 'blue hour right after sunset', t: 'e', sky: ['#2b3f7a', '#6d7fc2'], amb: '#24346b', ao: .25, lamp: 1},
   sunrise:  {n: 'sunrise', t: 'm', sky: ['#f6a96b', '#fbe1b0'], amb: '#f2a86a', ao: .12, lamp: 0, fx: 'sun'},
@@ -140,7 +142,7 @@ SC.SETTING = {
 SC.SETTING_KEYS = Object.keys(SC.SETTING);
 
 /* ---- camera angles (7) ---- */
-SC.ANGLE = {front: 'straight on', top: 'from above', close: 'a close-up', shoulder: 'over the shoulder', wide: 'a wide shot of the whole room', door: 'through a doorway', selfie: 'a selfie'};
+SC.ANGLE = {front: 'straight on', top: 'from above', close: 'a close-up', shoulder: 'over the shoulder', wide: 'a wide shot of the whole room', selfie: 'a selfie'};
 SC.ANGLE_KEYS = Object.keys(SC.ANGLE);
 
 /* ---- people: expressions (24), poses (16), hand gestures (18) ---- */
@@ -359,7 +361,7 @@ SC.DEC = {
   frame: (c, x, fy) => rc(x, fy - 170, 44, 34, '#5d3b25', 2) + rc(x + 4, fy - 166, 36, 26, c.a3, 1),
   lampFloor: (c, x, fy, L) => ln(x + 10, fy, x + 10, fy - 130, '#2c2c2a', 3) + pa(`M${x - 8} ${fy - 130} h36 l-8 -24 h-20z`, '#f4e3c3') + (L.lamp ? ci(x + 10, fy - 120, 40, '#ffd27a', ' opacity=".18"') : ''),
   lampGreen: (c, x, fy) => '',
-  cabinets: (c, x, fy) => rc(x - 10, fy - 210, 140, 60, '#e8e3d8', 2) + ln(x + 60, fy - 210, x + 60, fy - 150, '#bbb', 2),
+  cabinets: (c, x, fy) => rc(x - 10, fy - 196, 140, 56, '#e8e3d8', 2) + ln(x + 60, fy - 196, x + 60, fy - 140, '#bbb', 2) + rc(x + 50, fy - 150, 6, 3, '#999', 1) + rc(x + 64, fy - 150, 6, 3, '#999', 1),
   fridge: (c, x, fy) => rc(x + 150, fy - 170, 60, 170, '#e9ecef', 4) + ln(x + 156, fy - 110, x + 156, fy - 90, '#999', 3),
   stacks: (c, x, fy) => [0, 1, 2, 3].map(s => rc(x - 30, fy - 60 - s * 45, 160, 5, '#5d3b25', 0) + [...Array(14)].map((_, k) => rc(x - 28 + k * 11, fy - 98 - s * 45, 9, 38 - (k * 7) % 10, [c.a1, c.a2, c.a3, '#8a5a33', '#c9a26a', '#2b3a8f'][(k + s) % 6], 1)).join('')).join(''),
   stacks2: (c, x, fy) => SC.DEC.stacks(c, x + 150, fy),
@@ -588,7 +590,7 @@ function scDoor(S, c, L, r, id, light){
   const tag = scPick(r, ['#f9e27a', '#9fd3f0', '#f4b6c2', '#c7e9b0']);
   let g = `<defs><clipPath id="${id}dc"><rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}"/></clipPath></defs>`;
   // the room, seen through the doorway
-  g += `<g clip-path="url(#${id}dc)"><g transform="translate(34 ${y1 - 240}) scale(.8)">${scFront(S, c, L, r, id)}${light}</g></g>`;
+  g += `<g clip-path="url(#${id}dc)">${rc(x0, y0, x1 - x0, y1 - y0, night ? '#3a3632' : '#e9e4da', 0)}${rc(x0, y0, x1 - x0, 6, '#000', 0, ' opacity=".08"')}<g transform="translate(${154 - 150 * .72} ${y0}) scale(.72)">${typeof sc2WideBody === 'function' ? sc2WideBody(S, c, L, r, id) : scFront(S, c, L, r, id)}${light}</g></g>`;
   // hallway: wall, baseboard, floor in perspective
   g += pa(`M0 0 H300 V268 H0z M${x0} ${y0} V${y1} H${x1} V${y0}z`, hall, ' fill-rule="evenodd"');
   g += pa('M0 0 L60 26 V258 L0 300z', hall2) + pa('M300 0 L250 22 V262 L300 300z', hall2, ' opacity=".9"');   // the hallway's side walls
@@ -658,77 +660,101 @@ function scTop(S, c, L, r, id){
   if (S.cls) g += scSticky(S.cls, slots[k % slots.length][0], slots[k % slots.length][1], scR(r, -12, 12), 66);
   return g;
 }
+// an open hand seen from the back, fingers pointing `ang` (radians); used where a hand covers the face
+function scFlatHand(x, y, s, col, ang = -Math.PI / 2){
+  const ca = Math.cos(ang), sa = Math.sin(ang), P = (u, v) => [x + u * ca - v * sa, y + u * sa + v * ca].map(n => n.toFixed(1)).join(' ');
+  let g = `<path d="M${P(-s * .1, -s * .38)} L${P(s * .25, -s * .38)} Q${P(s * .35, 0)} ${P(s * .25, s * .38)} L${P(-s * .1, s * .38)} Q${P(-s * .3, 0)} ${P(-s * .1, -s * .38)}z" fill="${col}"/>`;
+  [-.27, -.09, .09, .27].forEach((v, k) => { const len = s * [.45, .55, .55, .48][k]; g += `<line x1="${P(s * .2, v * s * .9).replace(' ', '" y1="')}" x2="${P(s * .2 + len, v * s * .95).replace(' ', '" y2="')}" stroke="${col}" stroke-width="${(s * .17).toFixed(1)}" stroke-linecap="round"/>`; });
+  return g;
+}
 function scPerson(S, c, L, r){
   const look = S.look, pose = S.pose, e = S.expr, hand = scHandOk(S.pose, S.hand) ? S.hand : 'none';
   let cx = 150, cy = 140, s = 62, tilt = 0, bodyW = null, top = null, bot = 300, g = '', front = '';
-  const P = {high: () => { s = 70; cy = 150; bodyW = 190; }, low: () => { s = 54; cy = 122; bodyW = 260; }, mirror: () => { s = 50; cy = 115; },
-    bedtop: () => { s = 64; cy = 135; bodyW = 210; }, half: () => { cx = 40; cy = 165; s = 92; bodyW = 260; }, books: () => { cx = 165; cy = 150; tilt = -14; s = 58; },
-    chin: () => {}, slump: () => { cy = 205; tilt = 18; s = 60; top = 270; }, stretch: () => { cy = 150; s = 56; }, blanket: () => { s = 58; cy = 145; }, cross: () => { s = 34; cy = 112; bodyW = 120; bot = 240; },
+  const P = {high: () => { s = 70; cy = 150; bodyW = 165; }, low: () => { s = 54; cy = 122; bodyW = 200; }, mirror: () => { s = 50; cy = 115; },
+    bedtop: () => { s = 64; cy = 135; bodyW = 180; }, half: () => { cx = 40; cy = 165; s = 92; bodyW = 230; }, books: () => { cx = 165; cy = 150; tilt = -14; s = 58; },
+    chin: () => {}, slump: () => { cy = 205; tilt = 18; s = 60; top = 270; }, stretch: () => { cy = 150; s = 56; }, blanket: () => { s = 58; cy = 145; }, cross: () => { s = 34; cy = 118; bodyW = 94; bot = 228; },
     friend: () => { cx = 125; }, petarms: () => { cy = 125; s = 56; }, petbomb: () => {}, point: () => { cx = 110; s = 56; }, arm: () => {}};
   (P[pose] || P.arm)();
   if (top == null) top = cy + s * 1.32;
-  if (bodyW == null) bodyW = s * 3.7;
+  if (bodyW == null) bodyW = s * 3.05;   // shoulders about three heads wide, not four
   // arms: sleeves from the shoulders (with an outline so they don't blend into the shirt), hands on the end
-  const sw = s * .3, hs = s * .42, used = new Set();
+  const sw = s * .37, hs = s * .42, used = new Set(), ends = [];
+  // hands are drawn in an upper-case copy of the skin color: the same color, but it keeps its outline (the face and neck don't)
+  const HS = look.skin.toUpperCase(), LH = {...look, skin: HS};
   const sleeve = d => `<path d="${d}" fill="none" stroke="rgba(20,16,12,.7)" stroke-width="${(sw + 2.8).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${look.outfit}" stroke-width="${sw.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  const sh = side => [cx + side * bodyW * .27, top + sw * .7];
+  const sh = side => [cx + side * bodyW * .33, top + Math.min((bot - top) * .2, 26) + sw * .6 + 2];   // tucked just inside the shoulder, so the arm never pokes out above it   // the arm starts at the shoulder itself
   const f1 = v => v.toFixed(1);
-  const arm = (side, x, y, ex, ey) => { used.add(side); const [a, b] = sh(side); return sleeve(ex == null ? `M${f1(a)} ${f1(b)} L${f1(x)} ${f1(y)}` : `M${f1(a)} ${f1(b)} L${f1(ex)} ${f1(ey)} L${f1(x)} ${f1(y)}`); };
-  const fist = (x, y, k = 1) => ci(x, y, hs * .48 * k, look.skin);
-  if (pose === 'bedtop') g += `<ellipse cx="${cx}" cy="${cy + 10}" rx="125" ry="72" fill="#f4f1ea"/>` + scHairBack({...look, style: 'long'}, cx, cy, s * 1.1);
+  const arm = (side, x, y, ex, ey) => { used.add(side); const [a, b] = sh(side); ends.push(ex == null ? [a, b, x, y] : [ex, ey, x, y]); return sleeve(ex == null ? `M${f1(a)} ${f1(b)} L${f1(x)} ${f1(y)}` : `M${f1(a)} ${f1(b)} L${f1(ex)} ${f1(ey)} L${f1(x)} ${f1(y)}`) + ci(a, b, sw / 2 + 1.8, look.outfit, ' opacity="1"'); };   // no outline where the arm meets the shoulder, so it joins the body
+  const fist = (x, y, k = 1) => ci(x, y, hs * .48 * k, HS);
+  if (pose === 'bedtop') g += `<ellipse cx="${cx}" cy="${cy + 10}" rx="125" ry="72" fill="#f4f1ea"/>` + scHairBack(look, cx, cy, s * 1.1);
   if (pose === 'friend'){ const f = scLook(S.seed + 7); g += scBody(f, 255, 222, 150) + scHead(f, 262, 150, 50, scPick(r, ['laugh', 'tongue', 'grin', 'wink']), 10, 222); }
-  g += scBody(look, cx, top, bodyW, bot);
-  if (pose === 'cross') g += rc(cx - 72, bot - 22, 144, 34, '#3c4a5c', 16) + ci(cx - 56, bot - 5, 15, '#3c4a5c') + ci(cx + 56, bot - 5, 15, '#3c4a5c');
-  if (pose === 'bedtop') g += pa(`M-10 ${f1(top + 34)} q160 -34 320 0 V310 H-10z`, c.a3) + pa(`M-10 ${f1(top + 34)} q160 -34 320 0`, 'none', ` stroke="#fff" stroke-width="6" opacity=".5"`);
+  if (pose === 'cross'){
+    // sitting cross-legged, seen from the front: two thighs running out from the hips to the knees, the shins folded across in
+    // front (the right one over the left), a shoe at the end of each. All of it starts under the shirt's hem, so it's one body.
+    const pc = look.pants || '#3c4a5c', lw = 34, d0 = 'rgba(20,16,12,.78)';
+    const limb = d => `<path d="${d}" fill="none" stroke="${d0}" stroke-width="${lw + 3}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${pc}" stroke-width="${lw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const kL = [cx - 60, bot], kR = [cx + 60, bot];
+    g += `<ellipse cx="${cx}" cy="${bot - 2}" rx="${bodyW * .43 + 4}" ry="20" fill="${pc}" opacity="1"/>`;                                       // the seat of the pants
+    g += limb(`M${cx - 26} ${bot - 8} Q${cx - 50} ${bot - 10} ${kL[0]} ${kL[1]}`) + limb(`M${cx + 26} ${bot - 8} Q${cx + 50} ${bot - 10} ${kR[0]} ${kR[1]}`);   // thighs out to the knees
+    g += limb(`M${kL[0]} ${kL[1]} Q${cx - 30} ${bot + 24} ${cx + 22} ${bot + 18}`) + `<ellipse cx="${cx + 34}" cy="${bot + 17}" rx="14" ry="8" fill="#2f3236"/>`;   // left shin, tucked under
+    g += limb(`M${kR[0]} ${kR[1]} Q${cx + 30} ${bot + 30} ${cx - 22} ${bot + 24}`) + `<ellipse cx="${cx - 34}" cy="${bot + 23}" rx="14" ry="8" fill="#2f3236"/>${rc(cx - 48, bot + 26, 26, 3, '#d8d2c4', 1.5, ' opacity="1"')}`;   // right shin over it
+  }
+
+
+  g += scBody(look, cx, top, bodyW, pose === 'cross' ? bot - 18 : bot);   // sitting cross-legged, the shirt ends at the lap
+
+  if (pose === 'bedtop') g += arm(-1, cx - s * 2.2, -20, cx - s * 1.5, top - s * .2) + pa(`M-10 ${f1(top + 34)} q160 -34 320 0 V310 H-10z`, c.a3) + pa(`M-10 ${f1(top + 34)} q160 -34 320 0`, 'none', ` stroke="#fff" stroke-width="6" opacity=".5"`);
   if (pose === 'blanket') g += pa(`M${cx - 120} 300 q-10 -160 120 -${300 - cy + s * 1.35} q130 ${10} 120 ${300 - cy + s * 1.35}z`, c.a3);
   g += scHead(look, cx, cy, s, e, tilt, top);
   if (pose === 'blanket') g += pa(`M${cx - s * 1.25} ${cy + s * .9} q-6 ${-s * 1.9} ${s * 1.25} ${-s * 2.1} q${s * 1.35} ${s * .2} ${s * 1.25} ${s * 2.1}`, 'none', ` stroke="${c.a3}" stroke-width="${s * .5}"`);
   // the arm holding the phone for a selfie reaches out of the frame
   if (pose === 'arm' || pose === 'low') front += arm(-1, cx - s * 2.6, 330);
   if (pose === 'high') front += arm(-1, -20, top - s * .9);
-  if (pose === 'bedtop') front += arm(-1, cx - s * 2.2, -20, cx - s * 1.5, top - s * .2);
   // poses that use hands
-  if (pose === 'chin'){ const hy = cy + s * 1.38; front += arm(-1, cx - hs * .2, hy + hs * .3, cx - s * .95, cy + s * 2.45) + arm(1, cx + hs * .2, hy + hs * .3, cx + s * .95, cy + s * 2.45) + scHand('pray', look, cx, hy, hs * 1.1, c); }
+  if (pose === 'chin'){ const hy = cy + s * 1.38; front += arm(-1, cx - hs * .2, hy + hs * .3, cx - s * .95, cy + s * 2.45) + arm(1, cx + hs * .2, hy + hs * .3, cx + s * .95, cy + s * 2.45) + scHand('pray', LH, cx, hy, hs * 1.1, c); }
   if (pose === 'stretch') [-1, 1].forEach(d => { front += arm(d, cx + d * s * 1.45, cy - s * 1.4, cx + d * s * 1.55, cy + s * .2) + fist(cx + d * s * 1.45, cy - s * 1.55); });
   if (pose === 'books') front += `<g transform="translate(20 ${cy + s * .9}) scale(2.2)">${SC.PROP.books.d(c)}</g>`;
   if (pose === 'slump') front += pa('M20 300 L60 255 H250 L280 300z', '#4a4a4a');
-  if (pose === 'petarms' || pose === 'petbomb'){ const px = pose === 'petarms' ? cx - 40 : 205, py = pose === 'petarms' ? 300 : 95, sc = pose === 'petarms' ? 2.4 : 1.8; front += `<g transform="translate(${px} ${py}) scale(${sc})">${SC.PROP[r() < .5 ? 'cat' : 'dog'].d(c)}</g>`; }
+  if (pose === 'petarms' || pose === 'petbomb'){ const px = pose === 'petarms' ? cx - 40 : 196, py = pose === 'petarms' ? 300 : 316, sc = pose === 'petarms' ? 2.4 : 2.3; front += `<g transform="translate(${px} ${py}) scale(${sc})">${SC.PROP[r() < .5 ? 'cat' : 'dog'].d(c)}</g>`; }
   if (pose === 'petarms') front += arm(-1, cx - 40, 272, cx - s * 1.45, top + s * .9) + fist(cx - 40, 272) + arm(1, cx + 44, 266, cx + s * 1.45, top + s * .9) + fist(cx + 44, 266);
-  if (pose === 'mirror'){ const py = cy + s * 1.5; front += arm(1, cx + 20, py + 44, cx + s * 1.25, py + 80) + rc(cx - 22, py, 44, 74, '#1f1f1f', 7) + rc(cx + 10, py + 30, hs * .9, hs * 1.1, look.skin, hs * .3); }
+  if (pose === 'mirror'){ const py = cy + s * 1.5; front += arm(1, cx + 20, py + 44, cx + s * 1.25, py + 80) + rc(cx - 22, py, 44, 74, '#1f1f1f', 7) + rc(cx + 10, py + 30, hs * .9, hs * 1.1, HS, hs * .3); }
   if (pose === 'point') front += arm(1, 255, cy - s * .3, cx + s * 1.5, cy + s * 1.5) + ln(255, cy - s * .3, 285, cy - s * .75, look.skin, s * .16) + fist(255, cy - s * .3, .9);
   // the gesture: one hand on the free side, or both
   const side = used.has(1) ? -1 : 1, hx = side > 0 ? Math.min(268, cx + s * 1.35) : Math.max(32, cx - s * 1.35), hy = cy + s * .95;
-  if (hand === 'facepalm') front += arm(side, cx + side * s * .25, cy - s * .1, cx + side * s * 1.35, cy + s * 2) + rc(cx - s * .55, cy - s * .75, s * 1.1, s * .7, look.skin, s * .3);
-  else if (hand === 'mouth') front += arm(side, cx + side * s * .2, cy + s * .7, cx + side * s * 1.3, cy + s * 2.2) + rc(cx - s * .45, cy + s * .22, s * .9, s * .5, look.skin, s * .25);
-  else if (hand === 'cheeks') [-1, 1].forEach(d => { front += arm(d, cx + d * s * .95, cy + s * .62, cx + d * s * 1.45, cy + s * 2.1) + rc(cx + d * s * .95 - s * .2, cy, s * .4, s * .7, look.skin, s * .18); });
-  else if (hand === 'pray'){ const py = cy + s * 1.75; front += arm(-1, cx - hs * .2, py + hs * .3, cx - s * .95, cy + s * 2.6) + arm(1, cx + hs * .2, py + hs * .3, cx + s * .95, cy + s * 2.6) + scHand('pray', look, cx, py, hs * 1.1, c); }
-  else if (hand === 'shrug') [-1, 1].forEach(d => { const x = cx + d * s * 1.6, y = cy + s * 1.3; front += arm(d, x, y + hs * .25, cx + d * s * 1.4, cy + s * 2.15) + `<g transform="rotate(${d * 20} ${f1(x)} ${f1(y)})">${rc(x - hs * .5, y - hs * .3, hs, hs * .6, look.skin, hs * .25)}${ln(x + d * hs * .45, y - hs * .1, x + d * hs * .7, y - hs * .55, look.skin, hs * .26)}</g>`; });
-  else if (hand === 'help'){ const y = cy + s * 2.3, k = hs * 1.4; front += arm(-1, cx - k * 1.4, y, cx - s * 1.3, y + s * .5) + arm(1, cx + k * 1.4, y, cx + s * 1.3, y + s * .5) + scHand('help', look, cx, y, k, c); }
+  if (hand === 'facepalm') front += arm(side, cx + side * s * .45, cy - s * .2, cx + side * s * 1.35, cy + s * 2) + scHand('_flat', LH, cx + side * s * .4, cy - s * .3, s * .7, c, Math.atan2(-.25, -side));
+  else if (hand === 'mouth') front += arm(side, cx + side * s * .35, cy + s * .62, cx + side * s * 1.3, cy + s * 2.2) + scHand('_flat', LH, cx + side * s * .3, cy + s * .48, s * .55, c, Math.atan2(-.15, -side));
+  else if (hand === 'cheeks') [-1, 1].forEach(d => { front += arm(d, cx + d * s * .92, cy + s * .62, cx + d * s * 1.45, cy + s * 2.1) + scHand('_flat', LH, cx + d * s * .9, cy + s * .45, s * .48, c, -Math.PI / 2 - d * .15); });
+  else if (hand === 'pray'){ const py = cy + s * 1.75; front += arm(-1, cx - hs * .2, py + hs * .3, cx - s * .95, cy + s * 2.6) + arm(1, cx + hs * .2, py + hs * .3, cx + s * .95, cy + s * 2.6) + scHand('pray', LH, cx, py, hs * 1.1, c); }
+  else if (hand === 'shrug') [-1, 1].forEach(d => { const x = cx + d * s * 1.6, y = cy + s * 1.3; front += arm(d, x, y + hs * .25, cx + d * s * 1.4, cy + s * 2.15) + `<g transform="rotate(${d * 20} ${f1(x)} ${f1(y)})">${rc(x - hs * .5, y - hs * .3, hs, hs * .6, HS, hs * .25)}${ln(x + d * hs * .45, y - hs * .1, x + d * hs * .7, y - hs * .55, look.skin, hs * .26)}</g>`; });
+  else if (hand === 'help'){ const y = cy + s * 2.3, k = hs * 1.4; front += arm(-1, cx - k * 1.4, y, cx - s * 1.3, y + s * .5) + arm(1, cx + k * 1.4, y, cx + s * 1.3, y + s * .5) + scHand('help', LH, cx, y, k, c); }
   else if (hand === 'flex'){ const [a0, b0] = sh(side), ex = cx + side * s * 1.75, ey = cy + s * 1.45, fx = cx + side * s * 1.55, fy = cy + s * .5;
-    front += arm(side, fx, fy + hs * .3, ex, ey) + `<ellipse cx="${f1((a0 + ex) / 2)}" cy="${f1((b0 + ey) / 2 - sw * .45)}" rx="${f1(sw * .75)}" ry="${f1(sw * .55)}" fill="${look.outfit}"/>` + fist(fx, fy, 1.05); }
-  else if (hand !== 'none') front += arm(side, hx, hy + hs * .55, cx + side * s * 1.5, cy + s * 2.1) + scHand(hand, look, hx, hy, hs * 1.15, c);
+    front += arm(side, fx, fy + hs * .3, ex, ey)  + fist(fx, fy, 1.05); }
+  else if (hand !== 'none') front += arm(side, hx, hy + hs * .55, cx + side * s * 1.5, cy + s * 2.1) + scHand(hand, LH, hx, hy, hs * 1.15, c);
   // sitting cross-legged: free hands rest on the knees
-  if (pose === 'cross') [-1, 1].forEach(d => { if (!used.has(d)) front += arm(d, cx + d * 52, bot - 16, cx + d * 66, top + 40) + fist(cx + d * 52, bot - 16, .8); });
+  if (pose === 'cross') [-1, 1].forEach(d => { if (!used.has(d)) front += arm(d, cx + d * 58, bot - 8, cx + d * 46, top + 34) + fist(cx + d * 58, bot - 8, .8); });   // hands resting on the knees   // hands resting on the knees
   // skin (face, ears, neck, hands, arms) has no outline, only hair, clothes and things do
   const skins = [look.skin]; if (pose === 'friend') skins.push(scLook(S.seed + 7).skin);
-  let out = g + front; skins.forEach(k => { out = out.split(`fill="${k}"`).join(`fill="${k}" stroke="none"`); });
+  const cuffs = ends.map(([x0, y0, x, y]) => { const dx = x - x0, dy = y - y0, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l, a0 = Math.min(hs * .95, l * .5);
+    return `<path d="M${f1(x - ux * a0)} ${f1(y - uy * a0)} L${f1(x - ux * hs * .22)} ${f1(y - uy * hs * .22)}" fill="none" stroke="${look.outfit}" stroke-width="${f1(sw - 1)}" stroke-linecap="butt"/>`; }).join('');
+  let out = g + front + cuffs; skins.forEach(k => { out = out.split(`fill="${k}"`).join(`fill="${k}" stroke="none"`); });
   return `<g class="ol">${out}</g>`;
 }
 function sceneSvg(S, uid){
+  if (S.angle === 'door') S = {...S, angle: 'front'};   // retired angle
   const id = 'sc' + (uid || S.seed).toString(36), r = mulberry32(S.seed ^ 0x51ab), L = SC.LIGHT[S.light], c = scPalette(S.hue, mulberry32(S.seed + 3));
   let body = '';
   const amb = L.ao ? rc(0, 0, 300, 300, L.amb, 0, ` opacity="${L.ao}"`) : '';
-  const lampGlow = L.lamp && S.angle !== 'top' ? `<radialGradient id="${id}g"><stop offset="0" stop-color="#ffd27a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient><circle cx="${scR(r, 60, 240).toFixed(0)}" cy="220" r="150" fill="url(#${id}g)"/>` : '';
-  const glow = L.glow ? `<radialGradient id="${id}q"><stop offset="0" stop-color="#9ec5ff" stop-opacity=".4"/><stop offset="1" stop-color="#9ec5ff" stop-opacity="0"/></radialGradient><circle cx="150" cy="230" r="170" fill="url(#${id}q)"/>` : '';
-  const candle = L.candle ? `<radialGradient id="${id}c"><stop offset="0" stop-color="#ffb347" stop-opacity=".5"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient><circle cx="80" cy="240" r="130" fill="url(#${id}c)"/>` + `<g class="ol" transform="translate(70 262) scale(1.4)">${SC.PROP.candle.d(c)}</g>` : '';
+  const inside = SC.SETTING[S.set].k === 'in', lampGlow = L.lamp && inside && S.angle !== 'top' ? `<radialGradient id="${id}g"><stop offset="0" stop-color="#ffd27a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient><circle cx="${scR(r, 60, 240).toFixed(0)}" cy="220" r="150" fill="url(#${id}g)"/>` : '';
+  const glow = L.glow && inside ? `<radialGradient id="${id}q"><stop offset="0" stop-color="#9ec5ff" stop-opacity=".4"/><stop offset="1" stop-color="#9ec5ff" stop-opacity="0"/></radialGradient><circle cx="150" cy="230" r="170" fill="url(#${id}q)"/>` : '';
+  const candle = L.candle && inside ? `<radialGradient id="${id}c"><stop offset="0" stop-color="#ffb347" stop-opacity=".5"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient><circle cx="80" cy="240" r="130" fill="url(#${id}c)"/>` + `<g class="ol" transform="translate(70 262) scale(1.4)">${SC.PROP.candle.d(c)}</g>` : '';
   const light = amb + lampGlow + glow + candle;
   switch (S.angle){
     case 'top': body = scTop(S, c, L, r, id) + amb; break;
     case 'close': body = `<g transform="translate(-180 -330) scale(2.1)">${scFront(S, c, L, r, id)}</g>` + light; break;
     case 'wide': body = rc(0, 0, 300, 300, '#b98e5c', 0) + `<g transform="translate(40 18) scale(.73)">${scFront(S, c, L, r, id)}</g>` + rc(0, 236, 300, 64, '#b98e5c', 0) + rc(20, 250, 120, 40, c.a3, 8, ' opacity=".7"') + light; break;
-    case 'door': body = scDoor(S, c, L, r, id, light); break;
-    case 'shoulder': body = scFront(S, c, L, r, id) + light + `<g class="ol">${scHairBack({...S.look, style: S.look.style === 'buzz' ? 'short' : S.look.style}, 70, 250, 70) + ci(70, 250, 66, S.look.hair) + pa('M-40 300 q40 -70 120 -70 q60 0 90 70z', S.look.outfit)}</g>`; break;
-    case 'selfie': body = `<g transform="translate(-30 -60) scale(1.2)">${scFront(S, c, L, r, id, false)}</g>` + rc(0, 0, 300, 300, '#fff', 0, ' opacity=".12"') + light + scPerson(S, c, L, r); break;
+    case 'door': body = scFront(S, c, L, r, id) + light; break;   // the doorway shot was retired; old posts that had it show straight on
+    case 'shoulder': body = scFront(S, c, L, r, id) + light + (typeof sc2BackHead === 'function' ? sc2BackHead(S.look, 80, 188, 50) : `<g class="ol">${scHairBack(S.look, 70, 250, 70) + ci(70, 250, 66, S.look.hair)}</g>`); break;
+    case 'selfie': body = ((typeof sc2SelfieBack === 'function' && sc2SelfieBack(S, c, L, r, id)) || `<g transform="translate(-30 -60) scale(1.2)">${scFront(S, c, L, r, id, false)}</g>`) + rc(0, 0, 300, 300, '#fff', 0, ' opacity=".12"') + light + scPerson(S, c, L, r) + (typeof sc2SelfieFront === 'function' ? sc2SelfieFront(S, c, L) : ''); break;
     default: body = scFront(S, c, L, r, id) + light;
   }
   return `<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" class="scene" role="img" aria-label="${esc(sceneDesc(S))}"><defs>${scSky(L, id).replace(/<\/?defs>/g, '')}</defs>${body}</svg>`;
@@ -738,7 +764,25 @@ function sceneSvg(S, uid){
 const SC_TAG_OK = {lab: ['chem', 'bio', 'che', 'pharm', 'vet', 'nurse'], cs: ['cs', 'it', 'ece', 'math'], art: ['design', 'arts'], music: ['arts'], ath: ['kin'], ag: ['ag', 'vet', 'env'], med: ['nurse', 'pharm', 'bio', 'kin']};
 const SC_GROUP_OK = {lab: ['chem', 'bio', 'che', 'pharm', 'vet'], med: ['nurse', 'pharm', 'bio', 'kin', 'vet'], art: ['design', 'arts'], music: ['arts'], sport: ['kin']};
 const SC_COMMON = ['dorm', 'dorm', 'library', 'library', 'cafe', 'apt', 'bed', 'kitchen', 'studyroom', 'dorm2', 'livingroom', 'library2', 'cafe2', 'floor'];
-const SC_NIGHT_OUT = ['rooftop', 'balcony', 'porch', 'observatory', 'planetarium', 'parkinglot', 'courtyard'];
+const SC_NIGHT_OUT = ['rooftop', 'balcony', 'porch', 'observatory', 'planetarium', 'parkinglot', 'courtyard', 'quad', 'bench', 'lake', 'beach', 'stadium', 'busstop'];
+const SC_NOPROPS = ['bus'];
+const SC_MAXPROPS = {car: 2, gascar: 2, plane: 4, train: 4};   // only so much fits on a tray, a little table or a car seat   // places where nothing is set down (you're holding on in a moving bus)
+// which selfie poses make sense where: lying in bed needs a bed, cross-legged needs a floor or the ground, slumping needs a desk,
+// a mirror needs to be indoors, and nobody brings a pet onto a bus
+const SC_BEDS = ['dorm', 'dorm2', 'apt', 'bed', 'hostelbunk', 'hotel', 'frat', 'tent', 'treehouse'];
+const SC_FLOORS = ['floor', 'quad', 'beach', 'tent'];   // places where you're actually sitting on the floor, a blanket or a towel (not a bench, table or couch)
+function scPoseOk(set, k){
+  const st = SC.SETTING[set], veh = st.k === 'veh', surf = (typeof SC2_SURF !== 'undefined' && SC2_SURF[set]) || st.surf;
+  if (k === 'bedtop') return SC_BEDS.includes(set);
+  if (k === 'cross') return SC_FLOORS.includes(set);
+  if (k === 'slump' || k === 'books') return ['desk', 'table', 'counter', 'lab', 'booth', 'cafetable', 'carrel', 'workbench', 'worktable', 'longtable', 'flipdesk'].includes(surf) && !veh;
+  if (k === 'mirror') return st.k === 'in';
+  if (k === 'petarms' || k === 'petbomb') return !veh && !['lab', 'biolab', 'complab', 'hospital', 'clinic', 'lecture', 'classroom', 'library', 'library2', 'stacks', 'carrel', 'studyroom', 'museum', 'chapel', 'gym', 'pool', 'icearena'].includes(set);
+  if (k === 'blanket' || k === 'stretch') return !['bus', 'car', 'gascar'].includes(set);
+  return true;
+}
+const SC_DARK_LIGHTS = ['lamp', 'screen', 'am3', 'outage'];
+const SC_PRIVATE = ['dorm', 'dorm2', 'apt', 'kitchen', 'parents', 'livingroom', 'bed', 'floor', 'carrel', 'office', 'basement', 'attic', 'barnoffice', 'hotel', 'tent', 'treehouse', 'bathtub', 'closet', 'hostelbunk', 'frat', 'studyroom'];
 function lightFor(r, hour, month){
   const tt = hour >= 22 || hour < 5 ? 'n' : hour < 10 ? 'm' : hour < 17 ? 'd' : 'e';
   const cold = [10, 11, 0, 1, 2].includes(month), hot = [5, 6, 7].includes(month);
@@ -748,7 +792,7 @@ function lightFor(r, hour, month){
 // ctx: {seed, hue, maj, hour, month, look, outgoing, mood ('win' | 'exam' | 'tired' | ''), want: {set, light, angle, props, season, expr, pose, hand}}
 function sceneSpec(ctx){
   const r = mulberry32((ctx.seed >>> 0) ^ 0x9e37), w = ctx.want || {}, maj = ctx.maj || 'math';
-  const light = w.light || lightFor(r, ctx.hour, ctx.month), L = SC.LIGHT[light];
+  let light = w.light || lightFor(r, ctx.hour, ctx.month), L = SC.LIGHT[light];
   // where
   let set = w.set;
   if (!set){
@@ -756,8 +800,18 @@ function sceneSpec(ctx){
       if (s.k === 'out' && (L.w === 'rain' || L.w === 'snow')) return false; if (s.k === 'out' && L.t === 'n' && !SC_NIGHT_OUT.includes(k)) return false; return true; });
     set = r() < .45 ? scPick(r, SC_COMMON.filter(k => pool.includes(k)).concat(pool.slice(0, 1))) : scPick(r, pool);
   }
+  // dark-room lighting (desk lamp only, screen glow, 3 AM, candlelight) only happens somewhere private; public places keep their lights on at night
+  if (!w.light && SC_DARK_LIGHTS.includes(light) && SC.SETTING[set].k === 'in' && !SC_PRIVATE.includes(set)) light = 'nightlit';
+  if (!w.light && (SC_DARK_LIGHTS.includes(light) || light === 'nightlit') && SC.SETTING[set].k === 'out') light = 'clearnight';
+  if (!w.light && light === 'clearnight' && SC.SETTING[set].k !== 'out') light = 'nightlit';
+  if (!w.light && ['lamp', 'am3', 'outage', 'screen'].includes(light) && SC.SETTING[set].k === 'veh') light = 'nightlit';
+  if (!w.light && light === 'screen' && SC.SETTING[set].k === 'out') light = 'clearnight';
   // how
-  const angle = w.angle || (() => { const wts = {front: 30, top: 22, close: 12, shoulder: 8, wide: 8, door: 5, selfie: ctx.outgoing ? 20 : 8}; let x = r() * Object.values(wts).reduce((a, b) => a + b, 0); for (const [k, v] of Object.entries(wts)){ x -= v; if (x < 0) return k; } return 'front'; })();
+  let angle = w.angle || (() => { const wts = {front: 30, top: 22, close: 12, shoulder: 8, wide: 8, selfie: ctx.outgoing ? 20 : 8}; let x = r() * Object.values(wts).reduce((a, b) => a + b, 0); for (const [k, v] of Object.entries(wts)){ x -= v; if (x < 0) return k; } return 'front'; })();
+  // a doorway shot only makes sense indoors; nobody shoots a car or a bus from above
+  if (!w.angle && angle === 'door' && SC.SETTING[set].k !== 'in') angle = 'front';
+  if (!w.angle && (angle === 'top' || angle === 'close' || angle === 'shoulder') && ['car', 'gascar', 'bus'].includes(set)) angle = 'front';
+  if (!w.angle && angle === 'wide' && SC.SETTING[set].k === 'veh') angle = 'front';
   // what's around
   let props = w.props;
   if (!props){
@@ -770,6 +824,8 @@ function sceneSpec(ctx){
     if (r() < .15) take('pet'); if (r() < .12) take('misc');
     props = [...new Set(props)].sort(() => r() - .5).slice(0, 6);
   }
+  if (SC_NOPROPS.includes(set)) props = [];
+  if (SC_MAXPROPS[set]) props = props.slice(0, SC_MAXPROPS[set]);
   const season = w.season !== undefined ? w.season : (() => { const ss = Object.keys(SC.SEASON).filter(k => SC.SEASON[k].mo.includes(ctx.month)); return ss.length && r() < .35 ? scPick(r, ss) : null; })();
   const cls = w.cls !== undefined ? w.cls : (r() < .7 ? scClass(r, maj) : '');
   // who, for selfies
@@ -778,18 +834,22 @@ function sceneSpec(ctx){
   const expr = w.expr || (EXP && r() < .7 ? scPick(r, EXP) : scPick(r, SC.EXPR_KEYS));
   const HND = {win: ['flex', 'guns', 'peace', 'thumbup'], exam: ['pray', 'help', 'facepalm', 'cheeks'], tired: ['coffee', 'energy', 'none', 'facepalm']}[mood];
   let hand = w.hand || (HND && r() < .6 ? scPick(r, HND) : (r() < .3 ? 'none' : scPick(r, SC.HAND_KEYS)));
-  const pose = w.pose || scPick(r, SC.POSE_KEYS);
+  const pose = w.pose || scPick(r, SC.POSE_KEYS.filter(k => scPoseOk(set, k)));
   if (!scHandOk(pose, hand)) hand = 'none';
   return {seed: ctx.seed >>> 0, hue: ctx.hue || 0, maj, set, light, angle, props, season, cls, look: ctx.look || scLook(ctx.seed), expr, pose, hand};
 }
 // plain words for the players writing captions and comments
 function sceneDesc(S){
+  if (S.angle === 'door') S = {...S, angle: 'front'};
   const set = SC.SETTING[S.set], L = SC.LIGHT[S.light], list = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
-  const props = S.props.map(k => SC.PROP[k] && SC.PROP[k].n).filter(Boolean);
+  const props = SC_NOPROPS.includes(S.set) ? [] : S.props.map(k => SC.PROP[k] && SC.PROP[k].n).filter(Boolean);
   let d = S.angle === 'selfie' ? `A selfie ${SC.POSE[S.pose]}. They're ${SC.EXPR[S.expr]}${SC.HAND[S.hand] && scHandOk(S.pose, S.hand) ? `, ${SC.HAND[S.hand]}` : ''}.` : `A photo taken ${SC.ANGLE[S.angle] === 'straight on' ? 'straight on' : SC.ANGLE[S.angle].replace(/^a /, 'as a ')}.`;
   d += ` Setting: ${set.n}, ${L.n}.`;
   if (props.length && S.angle !== 'selfie') d += ` In the picture: ${list(props)}.`;
-  if (S.cls && S.angle !== 'selfie') d += ` A note says "${S.cls}".`;
-  if (S.season) d += ` Also ${SC.SEASON[S.season].n}.`;
+  const sc2Drawn = typeof SC2_OUT !== 'undefined' && (SC2_OUT[S.set] || SC2_BACK[S.set]) && ['front', 'close', 'shoulder', 'selfie'].includes(S.angle);   // the new outdoor and vehicle pictures have no sticky note or season decor
+  if (S.cls && S.angle !== 'selfie' && !sc2Drawn) d += ` A note says "${S.cls}".`;
+  const bk = typeof SC2_BOARDS !== 'undefined' && SC2_BOARDS[S.set]; const bw = Array.isArray(S.board) && S.board.length ? S.board : S.cls ? [S.cls] : null; if (bk && bw && S.angle !== 'selfie') d += ` The ${bk} says "${bw.join(' / ')}".`;
+  if (S.season && !sc2Drawn) d += ` Also ${SC.SEASON[S.season].n}.`;
+  if (typeof sc2Extra === 'function') d += sc2Extra(S);
   return d;
 }
