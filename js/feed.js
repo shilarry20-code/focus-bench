@@ -222,7 +222,7 @@ function fdTextBgSvg(b, id){
   }
   return {svg, ink};
 }
-function fdSpec(p){ if (p.spec) return p.spec; return (p._spec = p._spec || sceneSpec({...p.sc, look: scLook(p.w)})); }
+function fdSpec(p){ if (p.spec) return {...p.spec, look: fdMyLook()}; const S = (p._spec = p._spec || sceneSpec({...p.sc, look: scLook(p.w)})); if (p.board) S.board = p.board; return S; }
 // who comments: people who'd plausibly see it (followers of theirs are everyone near them, people online now)
 function fdCommenters(p, n){
   const out = [], seen = new Set([p.w]), add = w => { if (w >= 0 && w < ROSTER_N && !seen.has(w)){ seen.add(w); out.push(w); } };
@@ -247,7 +247,8 @@ async function fdWrite(posts){
     const f = chatFacts(p.w);
     blocks.push(`Post ${p.k} by ${f.name} (${f.rank}, ${f.subj}, emojis: ${emojiStyle(p.w)}), posted at ${new Date(p.t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
 What it is: ${fdAbout(p)}
-${p.type === 'text' ? `Write the post itself as its caption (one or two short sentences). Starting point: ${pickTopic(p.w)}. Take it wherever feels natural for them.` : Math.random() < .3 ? `Write its caption. It can be about the picture or about ${pickTopic(p.w)}.` : 'Write its caption.'}
+${p.type === 'scene' && SC2_BOARDS[fdSpec(p).set] && fdSpec(p).angle !== 'selfie' ? `The picture has a ${SC2_BOARDS[fdSpec(p).set]} in it: also write what's on it, as a message from ${f.name} with replyTo "board ${p.k}": one to three short lines separated by " / ", each under 22 characters (a topic, a formula, a reminder, a doodle label — whatever fits a ${f.subj} class, never the same as other posts).
+` : ''}${p.type === 'text' ? `Write the post itself as its caption (one or two short sentences). Starting point: ${pickTopic(p.w)}. Take it wherever feels natural for them.` : Math.random() < .3 ? `Write its caption. It can be about the picture or about ${pickTopic(p.w)}.` : 'Write its caption.'}
 ${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w); return `${g.name} (${Math.random() < .15 ? g.subj + ', ' : ''}emojis: ${emojiStyle(w)})`; }).join('; ')}. One of them can answer another's comment, and ${f.name} can answer one comment.` : 'Nobody comments on this one.'}`);
   });
   const user = `Today is ${new Date().toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}.\n\n${blocks.join('\n\n')}${openerAvoid()}`;
@@ -255,6 +256,7 @@ ${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w
     const got = await aiCall(FD_SYS(me), user);
     (Array.isArray(got) ? got : []).forEach(x => {
       const w = names.get(String(x && x.from || '').toLowerCase().trim()), to = String(x && x.replyTo || '').trim(); if (w == null) return;
+      if (/^board\s+/i.test(to)){ const p = posts.find(q => q.k === to.replace(/^board\s+/i, '').trim()); if (p && w === p.w && !p.board){ const b = String(x.text || '').replace(/[#@]/g, '').split('/').map(t => t.replace(/\s+/g, ' ').trim().slice(0, 26)).filter(Boolean).slice(0, 3); if (b.length){ p.board = b; delete p._spec; } } return; }
       let text = String(x.text || '').replace(/https?:\/\/\S+/g, '').replace(/#\w+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
       text = emotionOnly(stripSegue(text)); if (!text) return;
       const cap = /^cap\s+/i.test(to), [k, at] = to.replace(/^cap\s+/i, '').split(/\s*@\s*/), p = posts.find(q => q.k === k.trim()); if (!p) return;
@@ -522,8 +524,8 @@ function fdComposerHtml(){
       <div class="fd-row"><button type="button" class="small-btn" data-fda="rand">Shuffle everything</button></div>
       ${sel('set', SC.SETTING, S.set, 'Where')}${sel('light', SC.LIGHT, S.light, 'Lighting')}${sel('angle', SC.ANGLE, S.angle, 'Camera')}
       ${self ? sel('expr', SC.EXPR, S.expr, 'Face') + sel('pose', SC.POSE, S.pose, 'Pose') + `<label>Hands<select data-fdw="hand">${Object.entries(SC.HAND).map(([k, v]) => { const ok = scHandOk(S.pose, k); return `<option value="${k}"${k === S.hand ? ' selected' : ''}${ok ? '' : ' disabled'}>${esc(v || 'no gesture')}${ok ? '' : ' (hands are busy)'}</option>`; }).join('')}</select></label>`
-        + `<details class="fd-look"><summary>How you look</summary>${sel('lk:skin', Object.fromEntries(SKIN.map((c, k) => [c, ['Lightest', 'Light', 'Light-medium', 'Medium', 'Medium-deep', 'Deep', 'Deepest'][k]])), L.skin, 'Skin tone')}${sel('lk:hair', Object.fromEntries(HAIR.map((c, k) => [c, ['Black', 'Dark brown', 'Brown', 'Light brown', 'Dirty blond', 'Blond', 'Red', 'Gray', 'Blue', 'Purple', 'Green', 'White', 'Pink'][k] || c])), L.hair, 'Hair color')}${sel('lk:style', {short: 'Short', long: 'Long', bun: 'Bun', curly: 'Curly', buzz: 'Buzz cut', side: 'Side part', afro: 'Afro', bob: 'Bob', spiky: 'Spiky', pony: 'Ponytail'}, L.style, 'Hair style')}<label class="fd-chk"><input type="checkbox" data-fdw="lk:glasses"${L.glasses ? ' checked' : ''}> Glasses</label></details>`
-        : [0, 1, 2, 3, 4, 5].map(k => sel('prop' + k, props, S.props[k] || '', `Thing ${k + 1}`, 'nothing')).join('') + `<label>Note<input data-fdw="cls" maxlength="24" value="${esc(S.cls || '')}" placeholder="what the sticky note says"></label>`}
+        + `<details class="fd-look"><summary>How you look</summary>${sel('lk:skin', Object.fromEntries(SKIN.map((c, k) => [c, ['Lightest', 'Light', 'Light-medium', 'Medium', 'Medium-deep', 'Deep', 'Deepest'][k]])), L.skin, 'Skin tone')}${sel('lk:hair', Object.fromEntries(HAIR.map((c, k) => [c, ['Black', 'Dark brown', 'Brown', 'Light brown', 'Dirty blond', 'Blond', 'Red', 'Gray', 'Blue', 'Purple', 'Green', 'White', 'Pink'][k] || c])), L.hair, 'Hair color')}${sel('lk:style', SC2_STYLES, L.style, 'Hair style') + sel('lk:eyes', SC2_EYES, sc2LookFill(L).eyes, 'Eye color')}${(F => sel('lk:top', SC2_TOPS, F.top, 'Top') + sel('lk:outfit', {'#3f6fa0': 'Blue', '#c0392b': 'Red', '#2e7d5b': 'Green', '#8e44ad': 'Purple', '#e0a630': 'Mustard', '#34495e': 'Navy', '#7f8c8d': 'Gray', '#f4f1ea': 'White', '#1b1b1b': 'Black', '#e57399': 'Pink', '#b5562c': 'Rust', [F.outfit]: 'Current'}, F.outfit, 'Color') + sel('lk:print', SC2_PRINTS, F.print, 'Design') + (F.print === 'word' ? sel('lk:word', Object.fromEntries(SC2_WORDS.map(w => [w, w])), F.word, 'Words') : '') + (F.print === 'icon' ? sel('lk:icon', Object.fromEntries(SC2_ICONS.map(w => [w, w[0].toUpperCase() + w.slice(1)])), F.icon, 'Picture') : ''))(sc2LookFill(L))}<label class="fd-chk"><input type="checkbox" data-fdw="lk:glasses"${L.glasses ? ' checked' : ''}> Glasses</label></details>`
+        : (SC_NOPROPS.includes(S.set) ? '' : [0, 1, 2, 3, 4, 5].map(k => sel('prop' + k, props, S.props[k] || '', `Thing ${k + 1}`, 'nothing')).join('')) + (SC2_BOARDS[S.set] ? `<label>Board<input data-fdw="board" maxlength="70" value="${esc((S.board || []).join(' / '))}" placeholder="what's on the ${SC2_BOARDS[S.set]} (/ between lines)"></label>` : `<label>Note<input data-fdw="cls" maxlength="24" value="${esc(S.cls || '')}" placeholder="what the sticky note says"></label>`)}
       ${sel('season', SC.SEASON, S.season || '', 'Season', 'none')}
     </div></div>`;
   } else if (C.mode === 'share'){
@@ -652,10 +654,11 @@ document.addEventListener('input', e => {
   if (k.startsWith('lk:')){ FD.look = {...fdMyLook(), [k.slice(3)]: v}; S.look = fdMyLook(); saveFeed(); }
   else if (k.startsWith('prop')){ const n = +k.slice(4), a = S.props.slice(); a[n] = v; S.props = a.filter(Boolean); }
   else if (k === 'season') S.season = v || null;
+  else if (k === 'board') S.board = String(v).split('/').map(t => t.trim().slice(0, 26)).filter(Boolean).slice(0, 3);
   else S[k] = v;
   if (k === 'angle' && v === 'selfie') S.look = fdMyLook();
   if (k === 'pose' && !scHandOk(S.pose, S.hand)) S.hand = 'none';
-  if (k === 'angle' || k === 'pose' || k.startsWith('lk:')) fdComposerRedraw();
+  if (k === 'angle' || k === 'pose' || k === 'set' || k.startsWith('lk:')) fdComposerRedraw();
   else { const pv = document.querySelector('#fdComp .fd-prev'); if (pv) pv.innerHTML = sceneSvg(S, 'prev'); }
 });
 
