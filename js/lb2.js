@@ -1,7 +1,7 @@
 /* ---------- Leaderboards, redesigned: podium, your standing, movement, filters, the whole list ----------
    Uses the data side of leaderboards.js (LB, botVal, myTotals, myPlace, lbFmt, topPct) and replaces how the page is drawn.
    Every board can be scrolled from #1 to the last player: the full order is worked out once per category (Elo is already
-   sorted) and kept until the world changes. Movement arrows compare with the top 100 saved a week ago; your rank history
+   sorted) and kept until the world changes. Movement arrows compare with the top 100 saved on the last day before today; your rank history
    is saved daily for the chart on your card. */
 const LB_GROUPS = [
   ['Rating', '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/>', [['elo', 'Elo'], ['rkw', 'Ranked wins'], ['rkp', 'Win %']]],
@@ -54,11 +54,11 @@ function lbNote(c, V){
   const days = Object.keys(LBH).sort(); while (days.length > 40) delete LBH[days.shift()];
   const s = LBS[c.id] || {};
   const cur = {}; for (let k = 0; k < Math.min(100, V.n); k++){ const w = V.at(k); cur[w === ME ? 'me' : w] = k + 1; }
-  // a week of daily top 100s; the arrows compare with the one from a week ago (or the oldest kept, early on)
+  // daily top 100s (a week kept)
   s.days = s.days || {}; if (s.prev && s.pday && !s.days[s.pday]) s.days[s.pday] = s.prev;
   s.days[dk] = cur; s.day = dk; s.cur = cur;
   const ks = Object.keys(s.days).sort(); while (ks.length > 9) delete s.days[ks.shift()];
-  const wk = dayKey(Date.now() - 7 * 864e5), old = ks.filter(k => k < dk), at = old.filter(k => k <= wk).pop() || old[0];
+  const old = ks.filter(k => k < dk), at = old[old.length - 1];       // the arrows compare with the last saved day before today
   s.prev = at ? s.days[at] : null; s.pday = at || null; LBS[c.id] = s;
   // weekly and monthly boards: remember each period's top 3, for "last week's winners"
   if (c.id === 'week' || c.id === 'month'){
@@ -69,14 +69,14 @@ function lbNote(c, V){
   }
   store.set('fb.lbHist', LBH); store.set('fb.lbSnap', LBS);
 }
-// how a player moved over the last week: +n up, -n down, 'new' for new to the top 100
+// how a player moved since the last saved day: +n up, -n down, 'new' for new to the top 100
 function lbMove(c, w, place){
   const s = LBS[c.id]; if (!s || !s.prev || (P.lbFilt || 'all') !== 'all') return null;
   const was = s.prev[w === ME ? 'me' : w];
   if (was == null) return place <= 50 && w !== ME ? 'new' : null;
   return was - place;
 }
-const lbMoveHtml = m => m == null || m === 0 ? '<span class="lb2-mv"></span>' : m === 'new' ? '<span class="lb2-mv new" title="New to the top 100 this week">New</span>' : `<span class="lb2-mv ${m > 0 ? 'up' : 'dn'}" title="${m > 0 ? 'Up' : 'Down'} ${Math.abs(m)} this week">${m > 0 ? '▲' : '▼'}${Math.abs(m).toLocaleString()}</span>`;
+const lbMoveHtml = m => m == null || m === 0 ? '<span class="lb2-mv"></span>' : m === 'new' ? '<span class="lb2-mv new">New</span>' : `<span class="lb2-mv ${m > 0 ? 'up' : 'dn'}">${m > 0 ? '▲' : '▼'}${Math.abs(m).toLocaleString()}</span>`;
 
 /* ---- details per category ---- */
 function lbRecDate(c, w){
@@ -120,13 +120,22 @@ function lbPodium(c, V){
 }
 function lbYouCard(c, V, t){
   const place = V.mine + 1, me = V.me, all = (P.lbFilt || 'all') === 'all';
-  // your rank over the last 14 days (lower is better, so the line rises as you climb)
-  const hist = Object.keys(LBH).sort().slice(-14).map(k => LBH[k][c.id]).filter(x => x);
+  // your rank over the last 7 days: one slot per day (a dot where that day was saved), higher on the chart = better rank
   let chart = '';
-  if (all && hist.length >= 2){ const lo = Math.min(...hist), hi = Math.max(...hist), sp = Math.max(1, hi - lo);
-    const pts = hist.map((v, i) => `${(i / (hist.length - 1) * 200).toFixed(1)},${(6 + (v - lo) / sp * 38).toFixed(1)}`).join(' ');
-    chart = `<svg class="lb2-spark" viewBox="0 0 200 50" role="img" aria-label="Your rank over the last ${hist.length} days"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/><circle cx="200" cy="${pts.split(' ').pop().split(',')[1]}" r="3" fill="var(--accent)"/></svg><small class="hint">Your rank, last ${hist.length} days</small>`; }
-  else if (all) chart = '<small class="hint">Your rank chart fills in day by day.</small>';
+  if (all){
+    const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return d; });
+    const vals = days.map(d => (LBH[dayKey(d.getTime())] || {})[c.id] || null), got = vals.filter(v => v);
+    if (got.length){
+      const lo = Math.min(...got), hi = Math.max(...got), sp = Math.max(1, hi - lo), X = i => 8 + i * 184 / 6, Y = v => got.length < 2 || hi === lo ? 26 : 6 + (v - lo) / sp * 38;
+      const pts = vals.map((v, i) => v ? [X(i), Y(v)] : null).filter(Boolean);
+      chart = `<svg class="lb2-spark" viewBox="0 0 200 64" role="img" aria-label="Your rank on each of the last 7 days">
+        ${days.map((d, i) => `<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="4" y2="46" class="lb2-grid"/>`).join('')}
+        ${pts.length > 1 ? `<polyline points="${pts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>` : ''}
+        ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${i === pts.length - 1 ? 3.2 : 2.2}" fill="var(--accent)"/>`).join('')}
+        ${days.map((d, i) => `<text x="${X(i).toFixed(1)}" y="60" text-anchor="middle" class="lb2-day">${i === 6 ? 'Today' : d.toLocaleDateString(undefined, {weekday: 'narrow'})}</text>`).join('')}
+      </svg><small class="hint">Your rank, last 7 days${got.length < 7 ? ' · fills in a day at a time' : ''}</small>`;
+    } else chart = '<small class="hint">Your rank chart fills in day by day.</small>';
+  }
   // what's next: the player just above you, and the next top-% mark
   let next = '';
   if (V.mine > 0){ const w = V.at(V.mine - 1), gap = V.val(w) - me + (c.u === 'elo' || c.u === 'n' || c.u === 'pts' || c.u === 'd' ? 1 : 1);
@@ -204,3 +213,15 @@ document.addEventListener('click', e => {
 }, true);
 document.addEventListener('change', e => { if (e.target.id === 'lbMajor'){ P.myMajor = e.target.value || null; saveP(); renderLeaders(); } });
 $('#lbJump').onclick = null;
+
+// once a day (a little after the app opens), save your place on the boards you've looked at, so the 7-day chart has a
+// dot for days you didn't open Leaderboards
+function lbDailyNote(){
+  try {
+    if (typeof RK_READY === 'undefined' || !RK_READY || (P.lbFilt || 'all') !== 'all') return;
+    const dk = dayKey(Date.now()), seen = Object.keys(LBS), today = LBH[dk] || {};
+    const cats = LB_GROUPS.flatMap(g => g[2]).map(([id]) => id).filter(id => seen.includes(id) && today[id] == null).slice(0, 4);
+    cats.forEach((id, i) => setTimeout(() => { try { const c = LB.find(x => x.id === id); if (c) lbNote(c, lbView(c, myTotals())); } catch(e){} }, i * 1500));
+  } catch(e){}
+}
+setTimeout(function lbDailyStart(){ if (typeof RK_READY === 'undefined' || !RK_READY) return setTimeout(lbDailyStart, 5000); lbDailyNote(); setInterval(lbDailyNote, 3 * 3600e3); }, 20000);
