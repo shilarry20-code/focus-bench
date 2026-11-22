@@ -13,7 +13,9 @@ var SEG = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter() : null;
 const GN_RE = /^\W*(?:gn|g\.n\.?|gnight|good ?night|night night|nighty ?night|nite|sleep well|sweet dreams)\b(?![^.?!]*\b(?:nap|napping|sleep in|all nighter|all-nighter|pulled)\b)/i, GM_RE = /^\W*(?:gm|good ?morning|morning (?:everyone|all|guys|y'?all|dude))\b/i;
 // the cliché Gemini falls back on when it has nothing to say: a laptop fan like a jet engine
 const FAN_RE = /\b(?:laptop|macbook|computer|pc|fan|fans)\b[^.?!]{0,60}\b(?:jet|plane|airplane|aeroplane|engine|helicopter|take ?off|taking off|rocket|hair ?dryer|vacuum|turbine|runway)\b|\b(?:jet engine|taking off|take off)\b[^.?!]{0,60}\b(?:laptop|fan|computer)\b/i;
-function wrongTimeGreeting(t){ const h = new Date().getHours(); return (h >= 7 && h < 20 && GN_RE.test(t)) || ((h >= 14 || h < 4) && GM_RE.test(t)); }
+let GN_CTX = '';        // the chat the last Gemini request was shown (a goodnight to someone who's napping makes sense)
+const GN_NAP = /\b(?:nap|naps|napping|going to bed|go to bed|going to sleep|go to sleep|sleepy|crashing|passing out|sleeping in)\b/;
+function wrongTimeGreeting(t){ const h = new Date().getHours(); return (h >= 7 && h < 20 && GN_RE.test(t) && !GN_NAP.test(GN_CTX)) || ((h >= 14 || h < 4) && GM_RE.test(t)); }
 function emotionOnly(t){
   if (wrongTimeGreeting(t) || FAN_RE.test(t)) return '';
   if (!SEG || !/\p{Extended_Pictographic}/u.test(t)) return t;
