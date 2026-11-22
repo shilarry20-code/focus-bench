@@ -66,14 +66,14 @@ const LN_EMO = ['📚', '☕', '🔥', '💀', '🌙', '✨', '🧠', '😭', '�
 let lnRecent = [];
 function lnHash(x){ let h = 2166136261; for (const c of String(x)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
 // a name for a lobby hosted by bot w (subject optional); `rnd` is a 0..1 random function
-function lobbyName(w, subject, rnd = Math.random){
+function lobbyName(w, subject, rnd = Math.random, at){      // with a seeded rnd (and the time it's for) the name is the same on every device
   const host = w >= 0 ? bot(w).name : '', gamer = /TTV|xX|Xx|gg|GG|_\d{2,}$|^(the)?[A-Z][a-z]+[A-Z]/.test(host), hs = lnHash(host);
   const subj = subject && LN_SUBJ.find(([re]) => re.test(subject)), pickA = a => a[Math.floor(rnd() * a.length)];
   for (let tries = 0; tries < 12; tries++){
     const r = rnd(); let n;
     if (r < .08 && host) n = `${host}'s lobby`;
     else if (r < .28 && subj){ n = pickA(LN_SUBJ_FMT).replace('{s}', pickA(subj[1])); }
-    else if (r < .38){ n = `${pickA(LN_TIME(new Date().getHours()))} ${pickA(LN_CROWD)}`; }
+    else if (r < .38){ n = `${pickA(LN_TIME(new Date(at || Date.now()).getHours()))} ${pickA(LN_CROWD)}`; }
     else if (r < .46 && gamer) n = pickA(LN_GAMER);
     else n = pickA(LN_FULL);
     // the host's way of typing
@@ -85,6 +85,7 @@ function lobbyName(w, subject, rnd = Math.random){
     }
     if (rnd() < (s === 7 || s === 8 ? .6 : .12)) n += ' ' + LN_EMO[(hs >>> 4) % LN_EMO.length];
     const key = n.toLowerCase();
+    if (rnd !== Math.random){ return n; }
     if (lnRecent.includes(key) || (typeof EL !== 'undefined' && [...EL.list, ...EL.live].some(l => (l.name || '').toLowerCase() === key))) continue;
     lnRecent.push(key); if (lnRecent.length > 250) lnRecent.shift();
     return n;
