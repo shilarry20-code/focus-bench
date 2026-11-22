@@ -2595,3 +2595,5 @@ html.st-open{overflow:hidden}
 .dm-pc{display:block;padding:7px 9px;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dm-pc b{color:var(--text,inherit)}
 .dm-post.gone{padding:14px;color:var(--muted);font-size:12.5px;cursor:default;width:auto}
 .fd-act .fd-n{padding:6px 10px 6px 0;margin-left:-9px}
+.fd-act>*{display:flex;align-items:center}
+.fd-act .fd-n{align-self:stretch;line-height:1;padding-top:3px;padding-bottom:0}
