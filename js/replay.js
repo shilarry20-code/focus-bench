@@ -49,16 +49,16 @@ async function rpGetRk(key){
   const [, kind, a, b] = key.split(':');
   if (kind === 'me'){                                                  // one of yours (rk:me:<hist t>)
     const h = R.hist.find(x => x.t === +a); if (!h) return null;
-    if (h.rp){ const s = await rpLoad('rk:' + h.rp); if (s) return {A: -1, C: s.b, t0: s.t0, end: s.end, evA: s.yev, evC: rpEv(s.plan), res: s.res, d: s.d, totA: s.you, totC: s.them, friendly: s.friendly, exact: true, chat: s.chat || []}; }
+    if (h.rp){ const s = await rpLoad('rk:' + h.rp); if (s) return {A: -1, C: s.b, t0: s.t0, end: s.end, evA: s.yev, evC: rpEv(s.plan), res: s.res, d: s.d, rA: s.mmr0, rC: s.br, totA: s.you, totC: s.them, friendly: s.friendly, exact: true, chat: s.chat || []}; }
     const you = (h.ys || h.you * 60) * 1000, them = (h.ts || h.them * 60) * 1000, t0 = h.t - Math.max(you, them) * 1.25;
     const bA = rpBlocks(-1, t0, you, 'me' + h.t, h.t, you >= them), bC = rpBlocks(h.b, t0, them, 'op' + h.t, h.t, them > you);
-    return {A: -1, C: h.b, t0, end: h.t, evA: rpEv(bA), evC: rpEv(bC), res: h.r, d: h.d, totA: you, totC: them, friendly: h.f};
+    return {A: -1, C: h.b, t0, end: h.t, evA: rpEv(bA), evC: rpEv(bC), res: h.r, d: h.d, rA: h.m != null ? h.m - (h.d || 0) : null, rC: h.br, totA: you, totC: them, friendly: h.f};
   }
   // a bot's match from their history (rk:m5:<player>:<code>)
   const w = +a; m5Backfill(w); const m = m5List(w).find(x => String(x.code) === b); if (!m) return null;
   const t0 = m.t0, W = Math.max(m.t - m.t0, Math.max(m.a, m.b) * 60000 * 1.12), bA = rpBlocks(w, t0, m.a * 60000, `${w}:${m.code}:a`, t0 + W, m.a >= m.b), bC = rpBlocks(m.opp, t0, m.b * 60000, `${w}:${m.code}:b`, t0 + W, m.b > m.a);
   // both stop when the longer one finishes; stretch to the recorded end
-  return {A: w, C: m.opp, t0, end: Math.max(bA.length ? bA[bA.length - 1][1] : t0, bC.length ? bC[bC.length - 1][1] : t0), evA: rpEv(bA), evC: rpEv(bC), res: m.a > m.b ? 'W' : m.a < m.b ? 'L' : 'D', d: m.d, totA: m.a * 60000, totC: m.b * 60000};
+  return {A: w, C: m.opp, t0, end: Math.max(bA.length ? bA[bA.length - 1][1] : t0, bC.length ? bC[bC.length - 1][1] : t0), evA: rpEv(bA), evC: rpEv(bC), res: m.a > m.b ? 'W' : m.a < m.b ? 'L' : 'D', d: m.d, rA: m.after != null ? m.after - (m.d || 0) : botRating(w), rC: m.oppR, totA: m.a * 60000, totC: m.b * 60000};
 }
 
 /* ---- the player: a full-screen replay with a video-style control bar at the bottom ---- */
@@ -238,7 +238,7 @@ function rpDraw(force){
     body = elGameHtml(d.G, t, {replay: true, tab: RP.tab, follow: RP.follow});
   } else {
     const [a, c] = RP.tr, sA = rpSt(a.ev, t), sC = rpSt(c.ev, t), yA = rpStud(a.ev, t), yC = rpStud(c.ev, t), gap = yA - yC;
-    const side = (p, s, y, k) => `<div class="rp-side ${s === 'X' ? 'out' : s === 'S' ? 'study' : 'break'} s${k}${RP.follow === p.w ? ' fol' : ''}" data-rpw="${p.w}" role="button" tabindex="0">${p.w === -1 ? myAvatar('lg') : avatar(bot(p.w), 'lg')}<b>${p.w === -1 ? 'You' : `<button class="lnk" data-bot="${p.w}">${esc(rpNm(p.w))}</button>`}</b><span class="rp-clk">${elClock(y)}</span><small>${s === 'X' ? 'Stopped' : s === 'S' ? 'Studying' : 'On a break'}</small></div>`;
+    const side = (p, s, y, k) => `<div class="rp-side ${s === 'X' ? 'out' : s === 'S' ? 'study' : 'break'} s${k}${RP.follow === p.w ? ' fol' : ''}" data-rpw="${p.w}" role="button" tabindex="0">${p.w === -1 ? myAvatar('lg') : avatar(bot(p.w), 'lg')}<b>${p.w === -1 ? 'You' : `<button class="lnk" data-bot="${p.w}">${esc(rpNm(p.w))}</button>`}</b><span class="rp-elo">${Math.round(k ? (d.rC != null ? d.rC : (p.w === -1 ? R.mmr : botRating(p.w))) : (d.rA != null ? d.rA : (p.w === -1 ? R.mmr : botRating(p.w)))).toLocaleString()} Elo</span><span class="rp-clk">${elClock(y)}</span><small>${s === 'X' ? 'Stopped' : s === 'S' ? 'Studying' : 'On a break'}</small></div>`;
     body = `<div class="card rp-vs">${side(a, sA, yA, 0)}<div class="rp-mid"><span class="rp-vsx">vs</span><small>${gap === 0 ? 'Even' : `${(gap > 0 ? a.w : c.w) === -1 ? 'You’re' : esc(rpNm(gap > 0 ? a.w : c.w))} ahead by ${elClock(Math.abs(gap))}`}</small></div>${side(c, sC, yC, 1)}</div>` + rpChat1v1(t);
   }
   const cl0 = $('#rpChat1'), stick = typeof elStick === 'function' ? elStick(cl0) : true;
