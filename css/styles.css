@@ -2559,3 +2559,16 @@ html.st-open{overflow:hidden}
 .st-car{gap:40px}
 .st-peek::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,.5);pointer-events:none}
 .st-pk{z-index:1}
+
+/* status rings once you've seen someone's story */
+.fd-ring.rs-study{border:2.5px solid #f0b232;background:none}.fd-ring.rs-on{border:2.5px solid #23a55a;background:none}.fd-ring.rs-off{border:2.5px solid #80848e;background:none}
+/* reacting to a story */
+.st-fly{position:absolute;bottom:90px;font-style:normal;z-index:6;pointer-events:none;animation:stFly 1.6s ease-out forwards}
+@keyframes stFly{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1;transform:translateY(-40px) scale(1.1)}100%{transform:translateY(-420px) scale(1);opacity:0}}
+.st-sent{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);z-index:6;background:rgba(0,0,0,.7);color:#fff;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;opacity:0;pointer-events:none;white-space:nowrap}
+.st-sent.on{animation:stSentA 2.2s ease forwards}
+@keyframes stSentA{0%{opacity:0;transform:translate(-50%,8px)}12%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0}}
+/* a story in a DM */
+.dm-story{display:block;width:110px;aspect-ratio:9/16;border-radius:10px;overflow:hidden;border:1px solid var(--line);padding:0;margin:4px 0;background:#000;cursor:pointer;position:relative}
+.dm-story .st-svg{width:100%;height:100%;display:block}
+.dm-story.gone{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;background:var(--soft);cursor:default;text-align:center;padding:8px}
