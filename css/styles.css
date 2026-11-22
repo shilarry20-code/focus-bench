@@ -2530,3 +2530,8 @@ html.st-open{overflow:hidden}
 .dc-sr{font-size:12px;color:var(--muted);margin:2px 0 2px;padding-left:8px;border-left:2px solid var(--line)}
 .st-nudge{position:fixed;right:20px;bottom:20px;z-index:150;display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-radius:14px;background:var(--card,#16171b);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:14px}
 .st-nudge .st-ib{font-size:14px}
+/* the Feed's sideways rows */
+.fd-scroll{position:relative}
+.fd-sa{position:absolute;top:50%;transform:translateY(-35%);width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--card,#16171b);color:var(--text,#eee);font-size:20px;line-height:26px;cursor:pointer;z-index:2;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.fd-sa.l{left:6px}.fd-sa.r{right:6px}.fd-sa[hidden]{display:none}
+.fd-strip-row.dragging{cursor:grabbing;user-select:none}.fd-strip-row.dragging *{pointer-events:none}
