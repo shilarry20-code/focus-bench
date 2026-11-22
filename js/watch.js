@@ -13,7 +13,7 @@ function wLiveTop(){
   const {m} = wNowMin(), out = [];
   for (const p of LF.pairs || []){
     const sa = p.ea - p.ma, sc = p.ec - p.mc;
-    if (Math.max(sa, sc) <= m && Math.max(p.ea, p.ec) > m && Math.max(p.ra, p.rc) >= (LF.top || 2400)) out.push(p);
+    if (Math.max(sa, sc) <= m && Math.max(p.ea, p.ec) > m && Math.min(p.ra, p.rc) >= (LF.top || 2400)) out.push(p);      // both players in the top 1,000
   }
   return out.sort((x, y) => Math.max(y.ra, y.rc) - Math.max(x.ra, x.rc)).slice(0, 6);
 }
