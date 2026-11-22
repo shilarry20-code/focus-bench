@@ -22,11 +22,11 @@ async function rpDownload(key){
   const show = v => { const f = $('#rpDlFill'); if (!f) return; f.style.width = (v * 100).toFixed(1) + '%'; $('#rpDlPct').textContent = Math.floor(v * 100) + '%'; $('#rpDlMb').textContent = `${(mb * v).toFixed(1)} / ${mb.toFixed(1)} MB`; };
   // the bar creeps toward 90% while the work goes on, then finishes
   const tick = () => { if (run !== rpDlRun) return; const s = (performance.now() - t0) / 1000; p = done ? Math.min(1, p + .045) : Math.min(.9, .9 * (1 - Math.exp(-s / 2.2)) + Math.random() * .004); show(p); if (p >= 1) return finish(); requestAnimationFrame(tick); };
-  const finish = () => { if (run !== rpDlRun) return; el.hidden = true; RPDL[key] = 1; store.set('fb.rpdl2', RPDL); rpOpen(key, chat); };
+  const finish = () => { if (run !== rpDlRun) return; el.hidden = true; if (chat !== null) RPDL[key] = 1; store.set('fb.rpdl2', RPDL); rpOpen(key, chat); };
   requestAnimationFrame(tick);
   try {
     const need = key.startsWith('rk:m5:') || key.startsWith('elx:');
-    if (need){ const d = await rpBuild(key); if (d){ chat = await rpWriteChat(key, d); if (chat) rpChatSave(key, {chat, at: Date.now()}); } }
+    if (need){ const d = await rpBuild(key); if (d){ chat = await rpWriteChat(key, d); if (chat && chat.length) rpChatSave(key, {chat, at: Date.now()}); else if (chat === null) console.warn('replay chat not written', GEM.detail || ''); } }
   } catch(e){ console.error(e); }
   const wait = Math.max(0, 1400 - (performance.now() - t0));          // even an instant one takes a moment
   setTimeout(() => { done = true; }, wait);
@@ -64,7 +64,7 @@ async function rpWriteChat(key, d){
   // how much they talk: who's playing, how close it was, and a bit of luck (some matches are silent, some are busy)
   const z = d.start, el = d.kind === 'el', talk = ws.reduce((s, w) => s + rpTalky(w), 0) / ws.length;
   const close = !el && Math.abs(d.totA - d.totC) / Math.max(d.totA, d.totC, 1) < .1, rival = !el && fdHash(key + ':riv') % 100 < 15;
-  const r = fdHash(key + ':amt') % 100, mood = r < 25 ? .12 : r < 75 ? .55 : 1.3;
+  const r = fdHash(key + ':amt') % 100, mood = r < 20 ? .3 : r < 70 ? 1.2 : 2.4;
   const n = Math.min(el ? 40 : 20, Math.round(nb * mood * talk * (close ? 1.25 : 1) * (rival ? 1.3 : 1) * (el ? .7 : 1)));
   if (n < 1) return [];
   // something they might bring up: 60% nothing, 30% one thing, 10% two (only in long matches)
@@ -92,7 +92,7 @@ ${roster}
 When people were on breaks (time from the start · who · how it stood):
 ${wins}
 ${evs ? `\nOther things that happened:\n${evs}\n` : ''}
-Write up to ${n} messages (fewer is fine), in time order. Each: "from" (a player's name exactly as listed), "at" (time from the start, like 27:40 or 1:05:12, inside a break of that player), "text".${tops.length ? `\nIf it fits (it doesn't have to):\n${tops.join('\n')}` : ''}`;
+Write about ${n} messages, in time order. Each: "from" (a player's name exactly as listed), "at" (time from the start, like 27:40 or 1:05:12, inside a break of that player), "text".${tops.length ? `\nIf it fits (it doesn't have to):\n${tops.join('\n')}` : ''}`;
   let got;
   try { got = await aiCall(sys, user, {at: {type: 'STRING'}}); }
   catch(e){ if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); if (e.msg) GEM.detail = e.msg; saveAI(); return null; }
@@ -102,18 +102,17 @@ Write up to ${n} messages (fewer is fine), in time order. Each: "from" (a player
     const w = names[String(x && x.from || '').toLowerCase().trim()]; if (w == null || !br[w].length) return;
     const text = emotionOnly(stripSegue(String(x.text || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 200))); if (!text) return;
     if (/^\W*(ok(ay)?|alr(ight)?|aight|anyway|welp|ight)?[\s,.]*(back to (it|the grind|grinding|work|studying|the books)|time to lock (back )?in|gl|good luck|ok)\W*$/i.test(text)) return;     // filler
-    let t = rpParse(x.at, z); if (t == null) return;
+    let t = rpParse(x.at, z); if (t == null){ const q = br[w][Math.floor(Math.random() * br[w].length)]; t = q[0] + 20000; }
     // into one of their breaks: the one it's in, or the nearest
     let best = null, bd = Infinity;
     br[w].forEach(([a, b]) => { const dd = t < a ? a - t : t > b ? t - b : 0; if (dd < bd){ bd = dd; best = [a, b]; } });
-    if (bd > 10 * 60000) return;
     const a = best[0] + 6000, b = Math.max(a, best[1] - 4000); t = Math.min(b, Math.max(a, t));
     out.push({t: Math.round(t), w, text, b: best[1]});
   });
   out.sort((p, q) => p.t - q.t);
   // typing takes time: space messages out, and drop one that no longer fits in its break
   const res = [];
-  out.forEach(m => { const prev = res[res.length - 1]; if (prev){ const gap = (prev.w === m.w ? 5000 : 12000) + Math.min(20000, m.text.length * 250); if (m.t < prev.t + gap) m.t = prev.t + gap; } if (m.t <= m.b) res.push({t: m.t, w: m.w, text: m.text}); });
+  out.forEach(m => { const prev = res[res.length - 1]; if (prev){ const gap = (prev.w === m.w ? 5000 : 12000) + Math.min(20000, m.text.length * 250); if (m.t < prev.t + gap) m.t = prev.t + gap; } if (m.t > m.b - 1000) m.t = Math.max(prev ? prev.t + 1500 : 0, m.b - 1000); res.push({t: m.t, w: m.w, text: m.text}); });
   return res;
 }
 
