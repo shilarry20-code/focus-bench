@@ -136,3 +136,11 @@ document.addEventListener('submit', e => {
   const G = EL.watch, E = ewInit(G); E.v.push({t: ewNow(), w: -1, text: text.slice(0, 200)}); elRenderGame(G);
   setTimeout(() => ewViewSay(G, 'reply'), 1800);
 });
+
+// names and Profile buttons in group match views (watching, your game, replays) open that player's profile
+document.addEventListener('click', e => {
+  const b = e.target.closest('#elBody [data-bot], #rpModal [data-bot]'); if (!b || e.defaultPrevented) return;
+  e.preventDefault(); const w = +b.dataset.bot; if (!(w >= 0)) return;
+  if (b.closest('#rpModal') && typeof rpClose === 'function') rpClose();
+  openProfile(w);
+});
