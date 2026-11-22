@@ -1,7 +1,7 @@
 /* ---------- replays ----------
    Play back a finished game: your Elimination lobbies, your ranked matches, and other players' ranked matches.
    Yours are saved as they happen (who studied and who was on a break, second by second, plus the chat). Other players'
-   ranked matches are rebuilt from their match history when you press View: the start, the end and both totals are
+   ranked matches are rebuilt from their match history when you press Replay: the start, the end and both totals are
    real; the breaks in between are filled in from their usual timer (the same every time). */
 const rpSave = (key, data) => IDB.set('rp:' + key, data).catch(console.error);
 const rpLoad = key => IDB.get('rp:' + key).catch(() => null);
@@ -124,7 +124,7 @@ function rpEvents(d, tr){
       if (la !== 0) last = Math.sign(la);
       if (lb !== 0 && Math.sign(lb) !== last){ const x = a + Math.abs(la) / Math.abs(lb - la) * (b - a); add(Math.round(x), 'lead', `${rpNm(lb > 0 ? tr[0].w : tr[1].w)} ${rpV(lb > 0 ? tr[0].w : tr[1].w, 'takes', 'take')} the lead`, lb > 0 ? tr[0].w : tr[1].w); last = Math.sign(lb); }
     }
-    (d.chat || []).forEach(m => add(m.t, 'chat', `${m.me ? myName() : bot(d.C).name}: ${m.text}`, m.me ? -1 : d.C));
+    (d.chat || []).sort((a, b) => a.t - b.t).forEach(m => { const w = m.w != null ? m.w : m.me ? -1 : d.C; add(m.t, 'chat', `${w === -1 ? myName() : bot(w).name}: ${m.text}`, w); });
     add(d.end, 'win', d.res === 'D' ? 'Draw' : `${rpNm(d.res === 'W' ? d.A : d.C)} ${rpV(d.res === 'W' ? d.A : d.C, 'wins', 'win')} · ${elClock(d.totA)} vs ${elClock(d.totC)}`, d.res === 'W' ? d.A : d.C);
   } else {
     const G = d.G, L = G.L, RL = L.rules.round * 60000, A = elAllow(L.rules), N = L.players.length;
@@ -143,16 +143,23 @@ function rpEvents(d, tr){
   return E.filter(e => e.t >= d.start && e.t <= d.end).sort((a, b) => a.t - b.t || (a.kind === 'win') - (b.kind === 'win'));
 }
 
-async function rpOpen(key){
+async function rpBuild(key){
   let d = null;
   try {
-    if (key.startsWith('el:')){ const s = await rpLoad(key) || (EL.G && 'el:' + EL.G.L.id === key ? {kind: 'el', G: elPack(EL.G)} : null); if (s){ // the game is decided when the second-to-last player goes out
+    if (key.startsWith('el:') || key.startsWith('elx:')){ const s = key.startsWith('elx:') ? await elxLoad(key.slice(4)) : await rpLoad(key) || (EL.G && 'el:' + EL.G.L.id === key ? {kind: 'el', G: elPack(EL.G)} : null); if (s){ // the game is decided when the second-to-last player goes out
         const L = s.G.L, outs = L.players.map(w => w === -1 ? (s.G.me.out ? s.G.me.out.t : Infinity) : (L.bp && L.bp[w] ? L.bp[w].out : elBotPlan(L, w).out)).sort((a, b) => a - b);
         d = {kind: 'el', G: s.G, t0: L.t0, end: outs.length > 1 ? outs[outs.length - 2] : outs[0]}; } }
     else { const r = await rpGetRk(key); if (r) d = {kind: 'rk', ...r}; }
   } catch(e){ console.error(e); }
-  if (!d) return toast('That replay isn’t available.');
+  if (!d) return null;
   d.start = d.kind === 'el' ? d.G.L.t0 : d.t0; d.end = Math.max(d.end, d.start + 60000);
+  return d;
+}
+// extra: chat written for this replay when it was downloaded ({t, w, text}), added to what was recorded
+async function rpOpen(key, extra){
+  const d = await rpBuild(key);
+  if (!d) return toast('That replay isn’t available.');
+  if (extra && extra.length){ if (d.kind === 'rk') d.chat = (d.chat || []).concat(extra); else d.G = {...d.G, chat: (d.G.chat || []).concat(extra)}; }
   const tr = rpTracks(d);
   RP = {d, tr, E: rpEvents(d, tr), t: d.start, play: true, speed: RP && RP.speed || 60, tab: 'arena', last: performance.now(), log: !matchMedia('(max-width: 760px)').matches, follow: null, cur: -1};
   $('#rpModal').hidden = false; rpShell(); rpDraw(true); rpLoop();
@@ -272,7 +279,7 @@ function rpAct(k){
   if (k === 'unfollow'){ RP.follow = null; rpDraw(true); }
 }
 document.addEventListener('click', e => {
-  const v = e.target.closest('[data-rp]'); if (v){ e.preventDefault(); rpOpen(v.dataset.rp); return; }
+  const v = e.target.closest('[data-rp]'); if (v){ e.preventDefault(); rpDownload(v.dataset.rp); return; }
   if (!RP) return;
   if (e.target.closest('#rpModal') && (e.target === $('#rpModal') || e.target.closest('#rpModal .x'))) return rpClose();
   const sp = e.target.closest('[data-rp-speed]'); if (sp){ RP.speed = +sp.dataset.rpSpeed; RP.last = performance.now(); sp.closest('.rp-spl').hidden = true; rpBar(); return; }
@@ -335,7 +342,7 @@ document.addEventListener('keydown', e => {
     else { const sim = m5List(w).map(m => ({t: m.t, k: `rk:m5:${w}:${m.code}`})), oldest = sim.length ? sim[sim.length - 1].t : 0;
       const vs = R.hist.filter(h => h.b === w && (sim.length < 5 || h.t >= oldest)).slice(0, 5).map(h => ({t: h.t, k: 'rk:me:' + h.t}));
       rows = [...sim, ...vs].sort((a, b) => b.t - a.t).map(x => x.k); }
-    lis.forEach((li, k) => { const when = li.querySelector('.when'); if (when && rows[k]) when.insertAdjacentHTML('beforeend', `<button class="rp-v" data-rp="${rows[k]}">View</button>`); });
+    lis.forEach((li, k) => { const when = li.querySelector('.when'); if (when && rows[k]) when.insertAdjacentHTML('beforeend', `<button class="rp-v" data-rp="${rows[k]}">Replay</button>`); });
     return t.innerHTML;
   };
 }
@@ -343,5 +350,5 @@ document.addEventListener('keydown', e => {
 new MutationObserver(() => {
   const ul = $('#rkHist'); if (!ul || ul.dataset.rpv === String(ul.children.length) + ':' + (R.hist[0] && R.hist[0].t)) return;
   ul.dataset.rpv = String(ul.children.length) + ':' + (R.hist[0] && R.hist[0].t);
-  [...ul.children].forEach((li, k) => { const h = R.hist[k], when = li.querySelector('.when'); if (h && when && !when.querySelector('.rp-v')) when.insertAdjacentHTML('beforeend', `<button class="rp-v" data-rp="rk:me:${h.t}">View</button>`); });
+  [...ul.children].forEach((li, k) => { const h = R.hist[k], when = li.querySelector('.when'); if (h && when && !when.querySelector('.rp-v')) when.insertAdjacentHTML('beforeend', `<button class="rp-v" data-rp="rk:me:${h.t}">Replay</button>`); });
 }).observe(document.body, {childList: true, subtree: true});
