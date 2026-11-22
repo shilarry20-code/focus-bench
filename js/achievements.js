@@ -442,9 +442,17 @@ $('#achClear').onclick = () => { AF = Object.assign({}, AF_DEFAULT, {sort: AF.so
 $('#achFToggle').onclick = () => { const o = $('#achFPanel').classList.toggle('open'); $('#achFToggle').setAttribute('aria-expanded', o); };
 
 /* ---------- notes ---------- */
+const NOTE_ARCH_IC = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M10 13h4"/></svg>';
+let noteArchOpen = false;
 function renderNotes(){
-  $('#noteList').innerHTML = NOTES.map(n => `<li class="${n.done?'done':''}"><input type="checkbox" data-id="${n.id}" ${n.done?'checked':''} aria-label="Done"><span>${esc(n.text)}</span><button data-del="${n.id}" aria-label="Delete">×</button></li>`).join('')
+  const live = NOTES.filter(n => !n.arch), arch = NOTES.filter(n => n.arch).sort((a, b) => b.arch - a.arch);
+  $('#noteList').innerHTML = live.map(n => `<li class="${n.done?'done':''}"><input type="checkbox" data-id="${n.id}" ${n.done?'checked':''} aria-label="Done"><span>${esc(n.text)}</span><button data-arch="${n.id}" title="Archive" aria-label="Archive">${NOTE_ARCH_IC}</button><button data-del="${n.id}" aria-label="Delete">×</button></li>`).join('')
     || '<li style="border:0"><span class="lead" style="margin:0">Nothing parked.</span></li>';
+  const box = $('#noteArch');
+  if (box){
+    box.hidden = !arch.length;
+    box.innerHTML = arch.length ? `<details class="g-archived"${noteArchOpen ? ' open' : ''}><summary>Archived notes · ${arch.length}</summary><ul class="notes">${arch.map(n => `<li class="${n.done?'done':''}"><span>${esc(n.text)}</span><button data-unarch="${n.id}" title="Move back to your notes" aria-label="Unarchive" style="width:auto;padding:0 8px;font-size:12px">Restore</button><button data-del="${n.id}" aria-label="Delete">×</button></li>`).join('')}</ul></details>` : '';
+  }
   renderQuickNotes();
 }
 const saveNotes = () => store.set('fb.notes', NOTES);

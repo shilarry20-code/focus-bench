@@ -182,11 +182,16 @@ new MutationObserver(() => { renderAll(); renderLookSound(); }).observe(document
 function addNote(){ const v = $('#noteIn').value.trim(); if (!v) return; achBump('notes'); NOTES.unshift({id:Date.now().toString(36), text:v, done:false}); $('#noteIn').value = ''; saveNotes(); renderNotes(); }
 $('#noteAdd').onclick = addNote;
 $('#noteIn').onkeydown = e => { if (e.key === 'Enter') addNote(); };
-$('#noteList').onclick = e => {
-  if (e.target.dataset.del){ NOTES = NOTES.filter(n => n.id !== e.target.dataset.del); saveNotes(); renderNotes(); }
+const noteClick = e => {
+  const ab = e.target.closest('[data-arch]'), ub = e.target.closest('[data-unarch]');
+  if (ab){ const n = NOTES.find(x => x.id === ab.dataset.arch); if (n){ n.arch = Date.now(); saveNotes(); renderNotes(); undoToast('Note archived', () => { delete n.arch; saveNotes(); renderNotes(); }); } }
+  else if (ub){ const n = NOTES.find(x => x.id === ub.dataset.unarch); if (n){ delete n.arch; saveNotes(); renderNotes(); } }
+  else if (e.target.dataset.del){ NOTES = NOTES.filter(n => n.id !== e.target.dataset.del); saveNotes(); renderNotes(); }
   else if (e.target.dataset.id){ const n = NOTES.find(n => n.id === e.target.dataset.id); if (n){ n.done = e.target.checked; if (n.done) achBump('notesDone'); saveNotes(); renderNotes(); } }
 };
-$('#noteClear').onclick = () => { NOTES = NOTES.filter(n => !n.done); saveNotes(); renderNotes(); };
+$('#noteList').onclick = noteClick; $('#noteArch').onclick = noteClick;
+$('#noteArch').addEventListener('toggle', e => { if (e.target.tagName === 'DETAILS') noteArchOpen = e.target.open; }, true);
+$('#noteClear').onclick = () => { NOTES = NOTES.filter(n => !n.done || n.arch); saveNotes(); renderNotes(); };
 document.addEventListener('keydown', e => {
   const t = e.target;
   if (e.metaKey || e.ctrlKey || e.altKey || t.matches('input, textarea, select')) return;
