@@ -2443,8 +2443,8 @@ body.m-off .streak-pop{animation:none}
 .rp-graph .gm.fol{stroke-width:3.2;opacity:1}
 .rp-graph .rp-gh small{text-transform:none;letter-spacing:0}
 #rpView .el-below{grid-template-columns:1fr}
-#rpView .el-chat .el-cl{flex:none;height:300px;max-height:none;min-height:0}
-#rpView .el-sidecol .el-chat .el-cl{height:420px}
+#rpView .el-chat .el-cl{flex:none;height:170px;max-height:none;min-height:0}
+#rpView .el-sidecol .el-chat .el-cl{height:240px}
 .rp-graph .rp-gm{height:180px}
 .rp-graph .gm.dim{opacity:.3}
 
