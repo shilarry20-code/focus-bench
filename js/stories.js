@@ -327,3 +327,29 @@ if (typeof SECTIONS !== 'undefined'){
   };
   document.addEventListener('click', e => { const b = e.target.closest('[data-stn]'); if (!b) return; $('#stNudge').hidden = true; if (b.dataset.stn === 'go') stCompose('session'); });
 }
+
+/* ---- the Feed's two rows (stories and Live now) scroll sideways: arrows at the ends, the mouse wheel, or drag ---- */
+function stripArrows(){
+  document.querySelectorAll('#fdStrip .fd-strip-card').forEach(card => {
+    const row = card.querySelector('.fd-strip-row'); if (!row) return;
+    let l = card.querySelector('.fd-sa.l'), r = card.querySelector('.fd-sa.r');
+    if (!l){ card.classList.add('fd-scroll'); card.insertAdjacentHTML('beforeend', '<button class="fd-sa l" aria-label="Scroll left">‹</button><button class="fd-sa r" aria-label="Scroll right">›</button>'); l = card.querySelector('.fd-sa.l'); r = card.querySelector('.fd-sa.r'); }
+    const max = row.scrollWidth - row.clientWidth;
+    l.hidden = row.scrollLeft <= 2; r.hidden = row.scrollLeft >= max - 2;
+  });
+}
+document.addEventListener('click', e => { const b = e.target.closest('#fdStrip .fd-sa'); if (!b) return; const row = b.closest('.fd-strip-card').querySelector('.fd-strip-row'); row.scrollBy({left: (b.classList.contains('l') ? -1 : 1) * row.clientWidth * .8, behavior: 'smooth'}); });
+document.addEventListener('scroll', e => { if (e.target.classList && e.target.classList.contains('fd-strip-row')) stripArrows(); }, true);
+document.addEventListener('wheel', e => {
+  const row = e.target.closest && e.target.closest('#fdStrip .fd-strip-row'); if (!row || row.scrollWidth <= row.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  const max = row.scrollWidth - row.clientWidth; if ((e.deltaY < 0 && row.scrollLeft <= 0) || (e.deltaY > 0 && row.scrollLeft >= max)) return;     // at an end: let the page scroll
+  e.preventDefault(); row.scrollLeft += e.deltaY;
+}, {passive: false});
+{ // drag with the mouse (a drag isn't a click)
+  let d = null;
+  document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button) return; const row = e.target.closest && e.target.closest('#fdStrip .fd-strip-row'); if (row) d = {row, x: e.clientX, s: row.scrollLeft, moved: false}; });
+  document.addEventListener('pointermove', e => { if (!d) return; const dx = e.clientX - d.x; if (Math.abs(dx) > 5) d.moved = true; if (d.moved){ d.row.scrollLeft = d.s - dx; d.row.classList.add('dragging'); } });
+  document.addEventListener('pointerup', () => { if (!d) return; const was = d; d = null; was.row.classList.remove('dragging'); if (was.moved){ const stop = ev => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, {capture: true, once: true}); setTimeout(() => document.removeEventListener('click', stop, true), 50); } });
+}
+{ const _fs2 = fdStrip; fdStrip = function(){ _fs2.apply(this, arguments); stripArrows(); }; }
+addEventListener('resize', stripArrows);
