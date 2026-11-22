@@ -10,8 +10,12 @@ function renderLog(){
   $('#stToday').textContent = fmtMin(todayMin);
   // daily goal: minutes studied today against the goal
   const gp = Math.min(1, todayMin / P.goalMin);
-  $('#goalDots').innerHTML = `<span class="gbar${gp >= 1 ? ' full' : ''}"><i style="width:${gp * 100}%"></i></span>${gp >= 1 ? '<em>✓</em>' : ''}`;
-  $('#goalDots').title = `Daily goal: ${fmtMin(todayMin)} of ${fmtMin(P.goalMin)}`;
+  // hovering the bar shows how far along you are
+  const gLeft = Math.max(0, P.goalMin - todayMin), gOver = Math.max(0, todayMin - P.goalMin);
+  $('#goalDots').innerHTML = `<span class="gbar${gp >= 1 ? ' full' : ''}"><i style="width:${gp * 100}%"></i></span>${gp >= 1 ? '<em>✓</em>' : ''}`
+    + `<span class="goal-pop${gp >= 1 ? ' done' : ''}" role="tooltip"><span class="gp-h">Daily goal</span><span class="gp-top"><b>${Math.round(todayMin / P.goalMin * 100)}%</b><span>${fmtMin(todayMin)} of ${fmtMin(P.goalMin)}</span></span>`
+    + `<span class="gbar"><i style="width:${gp * 100}%"></i></span><span class="gp-s">${gp >= 1 ? 'Goal reached' + (gOver ? ` · ${fmtMin(gOver)} over` : '') : `${fmtMin(gLeft)} to go`}</span></span>`;
+  $('#goalDots').removeAttribute('title'); $('#goalDots').setAttribute('aria-label', `Daily goal: ${fmtMin(todayMin)} of ${fmtMin(P.goalMin)}`);
   // streak (10 minutes or more counts as a day)
   $('#stStreak').textContent = streakInfo().cur;
   renderStreak();
