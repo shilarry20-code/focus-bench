@@ -2436,3 +2436,14 @@ body.m-off .streak-pop{animation:none}
 .el-sz{display:flex;align-items:center;gap:12px;margin:2px 0 10px;font-size:13px;color:var(--muted)}
 .el-sz input{flex:1;max-width:320px;accent-color:var(--accent)}
 .el-sz b{min-width:76px;color:var(--text,inherit);font-variant-numeric:tabular-nums}
+
+/* replay of a group match: the graph of who's ahead, and the match chat at a fixed size, full width */
+.rp-graph .gm{fill:none;stroke-width:1.6;vector-effect:non-scaling-stroke;opacity:.8;transition:opacity .15s}
+.rp-graph .gm.dim{opacity:.18}
+.rp-graph .gm.fol{stroke-width:3.2;opacity:1}
+.rp-graph .rp-gh small{text-transform:none;letter-spacing:0}
+#rpView .el-below{grid-template-columns:1fr}
+#rpView .el-chat .el-cl{flex:none;height:300px;max-height:none;min-height:0}
+#rpView .el-sidecol .el-chat .el-cl{height:420px}
+.rp-graph .rp-gm{height:180px}
+.rp-graph .gm.dim{opacity:.3}

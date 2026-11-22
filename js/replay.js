@@ -211,9 +211,16 @@ function rpGraph(){
     el.innerHTML = `<div class="h first rp-gh"><span>Lead over time</span><small><i class="dot s0"></i>${esc(rpNm(d.A))} ahead · <i class="dot s1"></i>${esc(rpNm(d.C))} ahead</small></div>
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><rect x="0" y="0" width="${W}" height="${H / 2}" class="ga"/><rect x="0" y="${H / 2}" width="${W}" height="${H / 2}" class="gc"/><line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" class="g0"/><polyline points="${pts}" class="gl"/><line class="gp" x1="0" x2="0" y1="0" y2="${H}"/></svg>`;
   } else {
-    const N = d.G.L.players.length, outs = RP.tr.filter(p => p.out && p.out <= d.end).map(p => p.out).sort((a, b) => a - b), Y = n => 6 + (1 - n / N) * (H - 12);
-    let p = `M0,${Y(N)}`, n = N; outs.forEach(t => { p += ` H${X(t).toFixed(1)} V${Y(--n).toFixed(1)}`; }); p += ` H${W}`;
-    el.innerHTML = `<div class="h first rp-gh"><span>Players left</span><small>${N} → 1</small></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="${p} V${H} H0Z" class="gf"/><path d="${p}" class="gl"/><line class="gp" x1="0" x2="0" y1="0" y2="${H}"/></svg>`;
+    // how far each player is behind whoever's studied the most at that moment (the top edge is the leader);
+    // a line ends when that player is out. The player you've picked is drawn on top.
+    const K = 160, ts = Array.from({length: K + 1}, (_, k) => d.start + (d.end - d.start) * k / K), tr = RP.tr;
+    const stud = tr.map(p => ts.map(t => rpStud(p.ev, t))), lead = ts.map((t, k) => Math.max(...stud.map(s2 => s2[k])));
+    const endOf = p => p.out && p.out <= d.end ? p.out : d.end;
+    let mx = 60000; tr.forEach((p, i) => ts.forEach((t, k) => { if (t <= endOf(p)) mx = Math.max(mx, lead[k] - stud[i][k]); }));
+    const Y = v => 4 + v / (mx * 1.05) * (H - 8);
+    const lines = tr.map((p, i) => { const pts = []; for (let k = 0; k <= K; k++){ if (ts[k] > endOf(p)) break; pts.push(`${X(ts[k]).toFixed(1)},${Y(lead[k] - stud[i][k]).toFixed(1)}`); }
+      const hue = (fdHash('c' + p.w) % 360); return `<polyline points="${pts.join(' ')}" class="gm" data-w="${p.w}" style="stroke:hsl(${hue} 70% 62%)"/>`; }).join('');
+    el.innerHTML = `<div class="h first rp-gh"><span>Who's ahead</span><small>top line = the leader · lower = further behind (up to ${Math.round(mx / 60000)}m) · tap a player to pick them out</small></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="rp-gm"><line x1="0" x2="${W}" y1="4" y2="4" class="g0"/>${lines}<line class="gp" x1="0" x2="0" y1="0" y2="${H}"/></svg>`;
   }
 }
 // the stage (throttled) and the cheap moving parts (every frame)
@@ -230,6 +237,7 @@ function rpDraw(force){
     body = `<div class="card rp-vs">${side(a, sA, yA, 0)}<div class="rp-mid"><span class="rp-vsx">vs</span><small>${gap === 0 ? 'Even' : `${(gap > 0 ? a.w : c.w) === -1 ? 'You’re' : esc(rpNm(gap > 0 ? a.w : c.w))} ahead by ${elClock(Math.abs(gap))}`}</small></div>${side(c, sC, yC, 1)}</div>`;
   }
   domMorph($('#rpView'), body);
+  if (d.kind === 'el'){ const f = RP.follow; document.querySelectorAll('#rpGraph .gm').forEach(l => { const on = f != null && +l.dataset.w === f; l.classList.toggle('fol', on); l.classList.toggle('dim', f != null && !on); if (on) l.parentNode.appendChild(l); }); }
   rpFollowCard();
   // the summary once it's over
   const done = t >= d.end, sum = $('#rpSum');
