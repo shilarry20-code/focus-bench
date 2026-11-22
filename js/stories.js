@@ -106,11 +106,11 @@ function stCard(s){
 /* ---- the viewer ---- */
 let SV = null;     // {queue: [{w, l}], qi, i, t0, paused, el}
 function stOpen(w){
-  let queue;
-  if (w === 'me'){ const m = stMine(); if (!m.length) return stCompose(); queue = [{w: -1, l: m}]; }
-  else { const tray = stTray(); queue = tray.map(p => ({w: p.w, l: p.l})); const qi = queue.findIndex(p => p.w === w); if (qi < 0){ const l = stOf(w); if (!l.length) return; queue = [{w, l}]; } else queue = queue.slice(qi); }
-  const first = queue[0], start = Math.max(0, first.l.findIndex(s => !STY.seen[s.id]));
-  SV = {queue, qi: 0, i: start === -1 ? 0 : start, t0: performance.now(), el: 0, paused: false};
+  let queue, qi0 = 0;
+  if (w === 'me'){ const m = stMine(); if (!m.length) return stCompose(); queue = [{w: -1, l: m}, ...stTray().map(p => ({w: p.w, l: p.l}))]; }
+  else { const tray = stTray(); queue = tray.map(p => ({w: p.w, l: p.l})); const mine = stMine(); if (mine.length) queue.unshift({w: -1, l: mine}); qi0 = queue.findIndex(p => p.w === w); if (qi0 < 0){ const l = stOf(w); if (!l.length) return; queue = [{w, l}]; qi0 = 0; } }
+  const first = queue[qi0], start = Math.max(0, first.l.findIndex(s => !STY.seen[s.id]));
+  SV = {queue, qi: qi0, i: start, t0: performance.now(), el: 0, paused: false};
   let m = $('#stView'); if (!m){ m = document.createElement('div'); m.id = 'stView'; m.className = 'st-view'; document.body.appendChild(m); }
   m.hidden = false; document.documentElement.classList.add('st-open');
   stShow(); requestAnimationFrame(stLoop);
@@ -122,7 +122,11 @@ function stShow(){
   STY.seen[s.id] = Date.now(); saveSt();
   const who = mine ? `<span class="st-av">${myAvatar('sm')}</span><b>Your story</b>` : `<button class="st-av" data-bot="${g.w}">${avatar(bot(g.w), 'sm')}</button><button class="st-name" data-bot="${g.w}">${esc(bot(g.w).name)}</button>`;
   const views = mine ? stViews(s) : null;
-  m.innerHTML = `<div class="st-stage"><div class="st-frame">${stSvg(s)}
+  // like Instagram on a computer: the people before and after you sit to the sides, smaller and dimmed; tap one to jump to them
+  const peek = (qi, side) => { const q = SV.queue[qi]; if (!q) return ''; const ps = q.l[Math.max(0, q.l.findIndex(x => !STY.seen[x.id]))] || q.l[0];
+    return `<button class="st-peek ${side}" data-stq="${qi}" aria-label="${q.w === -1 ? 'Your story' : esc(bot(q.w).name)}">${stSvg(ps)}<span class="st-pk">${q.w === -1 ? myAvatar('md') : avatar(bot(q.w), 'md')}<b>${q.w === -1 ? 'Your story' : esc(bot(q.w).name)}</b><small>${fdAgo(ps.t)}</small></span></button>`; };
+  const dir = SV.dir || ''; SV.dir = '';
+  m.innerHTML = `<div class="st-car"><div class="st-side l">${[SV.qi - 2, SV.qi - 1].map(k => peek(k, 'l')).join('')}</div><div class="st-stage${dir ? ' in-' + dir : ''}"><div class="st-frame">${stSvg(s)}
       <div class="st-top"><div class="st-bars">${g.l.map((x, k) => `<i><b style="width:${k < SV.i ? 100 : 0}%"></b></i>`).join('')}</div>
         <div class="st-head">${who}<small>${fdAgo(s.t)}</small><span class="st-sp"></span><button class="st-ib" data-sv="pause" aria-label="Pause">${SV.paused ? '▶' : '❚❚'}</button><button class="st-ib" data-sv="close" aria-label="Close">✕</button></div></div>
       <button class="st-tap l" data-sv="prev" aria-label="Previous"></button><button class="st-tap r" data-sv="next" aria-label="Next"></button>
@@ -130,7 +134,7 @@ function stShow(){
         : `<form class="st-reply" id="stForm"><input id="stIn" maxlength="200" autocomplete="off" placeholder="Send message"><button class="st-ib" type="submit" aria-label="Send">➤</button></form><button class="st-ib st-rxb${SV.rx ? ' on' : ''}" data-sv="rx" aria-label="Reactions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.2c.9 1.3 2.1 2 3.5 2s2.6-.7 3.5-2M9.2 9.8h.01M14.8 9.8h.01"/></svg></button><button class="st-ib st-like${STY.liked[s.id] ? ' on' : ''}" data-sv="like" aria-label="Like">${STY.liked[s.id] ? '♥' : '♡'}</button>`}</div>
       ${mine ? '' : `<div class="st-rx"${SV.rx ? '' : ' hidden'}>${['😂', '😮', '😍', '😢', '👏', '🔥'].map(e => `<button data-sx="${e}">${e}</button>`).join('')}</div>`}
       <div class="st-panel" hidden></div></div>
-    <button class="st-arrow l" data-sv="prevp" aria-label="Previous person">‹</button><button class="st-arrow r" data-sv="nextp" aria-label="Next person">›</button></div>`;
+    <button class="st-arrow l" data-sv="prev" aria-label="Previous">‹</button><button class="st-arrow r" data-sv="next" aria-label="Next">›</button></div><div class="st-side r">${[SV.qi + 1, SV.qi + 2].map(k => peek(k, 'r')).join('')}</div></div>`;
   SV.t0 = performance.now(); SV.el = 0;
   try { fdStrip(); } catch(e){}
 }
@@ -142,9 +146,9 @@ function stLoop(now){
   if (SV.el >= ST_DUR) stNext(); else requestAnimationFrame(stLoop);
 }
 function stNext(){ if (!SV) return; const g = SV.queue[SV.qi]; if (SV.i < g.l.length - 1){ SV.i++; stShow(); requestAnimationFrame(stLoop); } else stNextPerson(); }
-function stPrev(){ if (!SV) return; if (SV.i > 0){ SV.i--; stShow(); } else if (SV.qi > 0){ SV.qi--; SV.i = SV.queue[SV.qi].l.length - 1; stShow(); } else { SV.t0 = performance.now(); SV.el = 0; } }
-function stNextPerson(){ if (!SV) return; if (SV.qi < SV.queue.length - 1){ SV.qi++; const l = SV.queue[SV.qi].l; SV.i = Math.max(0, l.findIndex(s => !STY.seen[s.id])); stShow(); requestAnimationFrame(stLoop); } else stClose(); }
-function stPrevPerson(){ if (!SV || SV.qi === 0){ if (SV){ SV.i = 0; stShow(); } return; } SV.qi--; SV.i = 0; stShow(); }
+function stPrev(){ if (!SV) return; if (SV.i > 0){ SV.i--; stShow(); } else if (SV.qi > 0){ SV.qi--; SV.dir = 'l'; SV.i = SV.queue[SV.qi].l.length - 1; stShow(); } else { SV.t0 = performance.now(); SV.el = 0; } }
+function stNextPerson(){ if (!SV) return; if (SV.qi < SV.queue.length - 1){ SV.qi++; SV.dir = 'r'; const l = SV.queue[SV.qi].l; SV.i = Math.max(0, l.findIndex(s => !STY.seen[s.id])); stShow(); requestAnimationFrame(stLoop); } else stClose(); }
+function stPrevPerson(){ if (!SV || SV.qi === 0){ if (SV){ SV.i = 0; stShow(); } return; } SV.qi--; SV.dir = 'l'; SV.i = 0; stShow(); }
 function stClose(){ SV = null; const m = $('#stView'); if (m){ m.hidden = true; m.innerHTML = ''; } document.documentElement.classList.remove('st-open'); try { fdStrip(); } catch(e){} }
 // what a story shows, in a few words (for DMs about it)
 function stAbout(s){
@@ -245,6 +249,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-st]'); if (t && t.closest('#fdStrip')){ e.preventDefault(); e.stopPropagation(); const v = t.dataset.st; if (v === 'me'){ if (stMine().length) stOpen('me'); else stCompose(); } else stOpen(+v); return; }
   if (e.target.closest('#stView')){
     const b = e.target.closest('[data-bot]'); if (b){ e.preventDefault(); e.stopPropagation(); const w = +b.dataset.bot; stClose(); openProfile(w); return; }
+    const pk = e.target.closest('[data-stq]'); if (pk){ const qi = +pk.dataset.stq; SV.dir = qi > SV.qi ? 'r' : 'l'; SV.qi = qi; const l = SV.queue[qi].l; SV.i = Math.max(0, l.findIndex(x => !STY.seen[x.id])); stShow(); return; }
     const x = e.target.closest('[data-sx]'); if (x){ stReply(x.dataset.sx); SV.rx = false; const r = $('#stView .st-rx'); if (r) r.hidden = true; const b = $('#stView .st-rxb'); if (b) b.classList.remove('on'); return; }
     const a = e.target.closest('[data-sv]'); if (!a) return; const k = a.dataset.sv;
     if (k === 'close') stClose(); else if (k === 'next') stNext(); else if (k === 'prev') stPrev(); else if (k === 'nextp') stNextPerson(); else if (k === 'prevp') stPrevPerson();
