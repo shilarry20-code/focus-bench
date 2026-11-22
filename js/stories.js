@@ -127,8 +127,8 @@ function stShow(){
         <div class="st-head">${who}<small>${fdAgo(s.t)}</small><span class="st-sp"></span><button class="st-ib" data-sv="pause" aria-label="Pause">${SV.paused ? '▶' : '❚❚'}</button><button class="st-ib" data-sv="close" aria-label="Close">✕</button></div></div>
       <button class="st-tap l" data-sv="prev" aria-label="Previous"></button><button class="st-tap r" data-sv="next" aria-label="Next"></button>
       <div class="st-foot">${mine ? `<button class="st-views" data-sv="views"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>${views.n.toLocaleString()} viewer${views.n === 1 ? '' : 's'}</button><span class="st-sp"></span><button class="st-ib" data-sv="add" aria-label="Add to your story">+</button><button class="st-ib" data-sv="del" aria-label="Delete this story">🗑</button>`
-        : `<form class="st-reply" id="stForm"><input id="stIn" maxlength="200" autocomplete="off" placeholder="Send message"><button class="st-ib" type="submit" aria-label="Send">➤</button></form><button class="st-ib st-like${STY.liked[s.id] ? ' on' : ''}" data-sv="like" aria-label="Like">${STY.liked[s.id] ? '♥' : '♡'}</button>`}</div>
-      ${mine ? '' : `<div class="st-rx">${['😂', '😮', '😍', '😢', '👏', '🔥'].map(e => `<button data-sx="${e}">${e}</button>`).join('')}</div>`}
+        : `<form class="st-reply" id="stForm"><input id="stIn" maxlength="200" autocomplete="off" placeholder="Send message"><button class="st-ib" type="submit" aria-label="Send">➤</button></form><button class="st-ib st-rxb${SV.rx ? ' on' : ''}" data-sv="rx" aria-label="Reactions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.2c.9 1.3 2.1 2 3.5 2s2.6-.7 3.5-2M9.2 9.8h.01M14.8 9.8h.01"/></svg></button><button class="st-ib st-like${STY.liked[s.id] ? ' on' : ''}" data-sv="like" aria-label="Like">${STY.liked[s.id] ? '♥' : '♡'}</button>`}</div>
+      ${mine ? '' : `<div class="st-rx"${SV.rx ? '' : ' hidden'}>${['😂', '😮', '😍', '😢', '👏', '🔥'].map(e => `<button data-sx="${e}">${e}</button>`).join('')}</div>`}
       <div class="st-panel" hidden></div></div>
     <button class="st-arrow l" data-sv="prevp" aria-label="Previous person">‹</button><button class="st-arrow r" data-sv="nextp" aria-label="Next person">›</button></div>`;
   SV.t0 = performance.now(); SV.el = 0;
@@ -136,7 +136,7 @@ function stShow(){
 }
 function stLoop(now){
   if (!SV) return;
-  const bar = document.querySelector(`#stView .st-bars i:nth-child(${SV.i + 1}) b`), busy = SV.paused || document.activeElement === $('#stIn') || SV.hold || !$('#stView .st-panel').hidden;
+  const bar = document.querySelector(`#stView .st-bars i:nth-child(${SV.i + 1}) b`), busy = SV.paused || SV.rx || document.activeElement === $('#stIn') || SV.hold || !$('#stView .st-panel').hidden;
   if (busy){ SV.t0 = now - SV.el; } else { SV.el = now - SV.t0; }
   if (bar) bar.style.width = Math.min(100, SV.el / ST_DUR * 100) + '%';
   if (SV.el >= ST_DUR) stNext(); else requestAnimationFrame(stLoop);
@@ -245,12 +245,13 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-st]'); if (t && t.closest('#fdStrip')){ e.preventDefault(); e.stopPropagation(); const v = t.dataset.st; if (v === 'me'){ if (stMine().length) stOpen('me'); else stCompose(); } else stOpen(+v); return; }
   if (e.target.closest('#stView')){
     const b = e.target.closest('[data-bot]'); if (b){ e.preventDefault(); e.stopPropagation(); const w = +b.dataset.bot; stClose(); openProfile(w); return; }
-    const x = e.target.closest('[data-sx]'); if (x){ stReply(x.dataset.sx); return; }
+    const x = e.target.closest('[data-sx]'); if (x){ stReply(x.dataset.sx); SV.rx = false; const r = $('#stView .st-rx'); if (r) r.hidden = true; const b = $('#stView .st-rxb'); if (b) b.classList.remove('on'); return; }
     const a = e.target.closest('[data-sv]'); if (!a) return; const k = a.dataset.sv;
     if (k === 'close') stClose(); else if (k === 'next') stNext(); else if (k === 'prev') stPrev(); else if (k === 'nextp') stNextPerson(); else if (k === 'prevp') stPrevPerson();
     else if (k === 'pause'){ SV.paused = !SV.paused; a.textContent = SV.paused ? '▶' : '❚❚'; }
     else if (k === 'like'){ const c = stCur(); if (!c) return; STY.liked[c.s.id] = !STY.liked[c.s.id]; saveSt(); a.classList.toggle('on', STY.liked[c.s.id]); a.textContent = STY.liked[c.s.id] ? '♥' : '♡'; if (STY.liked[c.s.id] && typeof fdHeartPop === 'function') try { fdHeartPop(a); } catch(err){} }
     else if (k === 'views') stViewsPanel();
+    else if (k === 'rx'){ SV.rx = !SV.rx; const r = $('#stView .st-rx'); if (r) r.hidden = !SV.rx; a.classList.toggle('on', SV.rx); }
     else if (k === 'add'){ stClose(); stCompose(); }
     else if (k === 'del'){ const c = stCur(); if (!c) return; if (a.dataset.sure){ STY.mine = STY.mine.filter(s => s.id !== c.s.id); saveSt(); const l = stMine(); if (!l.length) return stClose(); SV.queue[0].l = l; SV.i = Math.min(SV.i, l.length - 1); stShow(); } else { a.dataset.sure = 1; a.textContent = 'Delete?'; SV.paused = true; } }
     return;
