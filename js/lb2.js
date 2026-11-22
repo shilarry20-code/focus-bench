@@ -134,7 +134,7 @@ function lbYouCard(c, V, t){
         ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${p === L ? 5 : 3.6}" fill="var(--accent)"><title>#${p[2].toLocaleString()}</title></circle>`).join('')}
         <text x="${Math.min(298, Math.max(22, L[0])).toFixed(1)}" y="${(L[1] - 11).toFixed(1)}" text-anchor="${L[0] > 250 ? 'end' : 'middle'}" class="lb2-val">#${L[2].toLocaleString()}</text>
         ${days.map((d, i) => `<text x="${X(i).toFixed(1)}" y="123" text-anchor="middle" class="lb2-day${i === 6 ? ' now' : ''}">${i === 6 ? 'Today' : d.toLocaleDateString(undefined, {weekday: 'short'})}</text>`).join('')}
-      </svg><small class="hint">Your rank, last 7 days${got.length < 7 ? ' · fills in a day at a time' : ''}</small>`;
+      </svg>`;
     } else chart = '<small class="hint">Your rank chart fills in day by day.</small>';
   }
   // what's next: the player just above you, and the next top-% mark
