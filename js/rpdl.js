@@ -141,11 +141,32 @@ const elxLoad = id => /^[XG]/.test(id) ? Promise.resolve(elxGen(id)).then(L => L
 const ELX_SESS = 6, ELX_P = 7;           // sessions a day; % of groups that played in a session
 const ELX_GEN = new Map();
 const elxSize = (day, s) => [4, 4, 5, 6, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16][fdHash('elxn:' + day + ':' + s) % 18];
+// Groups are made inside rating bands (about 250 Elo wide): inside a band the players are scrambled with a keyed shuffle
+// (idx -> a*idx + b mod M), so each game mixes everyone from the band instead of a few neighbours, and a different crowd every session
+const ELX_BAND = 250, ELX_BG = 1e5;
+let ELX_BANDS = null;
+function elxBands(){
+  const order = sortedBots();
+  if (ELX_BANDS && ELX_BANDS.order === order) return ELX_BANDS;
+  const starts = [0], of = new Int32Array(order.length);
+  for (let k = 1, cur = Math.floor(botRating(order[0]) / ELX_BAND); k < order.length; k++){ const bk = Math.floor(botRating(order[k]) / ELX_BAND); if (bk !== cur){ starts.push(k); cur = bk; } of[k] = starts.length - 1; }
+  starts.push(order.length);
+  return ELX_BANDS = {order, starts, of};
+}
+const elxGcd = (x, y) => y ? elxGcd(y, x % y) : x;
+function elxInv(a, m){ let [r0, r1, t0, t1] = [m, a % m, 0, 1]; while (r1){ const q = Math.floor(r0 / r1); [r0, r1] = [r1, r0 - q * r1]; [t0, t1] = [t1, t0 - q * t1]; } return ((t0 % m) + m) % m; }
+function elxMix(day, s, bi, M){          // the shuffle for one band in one session
+  const h = fdHash('elxm:' + day + ':' + s + ':' + bi); let a = 1 + (h % Math.max(1, M - 1)); while (M > 1 && elxGcd(a, M) !== 1) a++;
+  return {a: M > 1 ? a % M || 1 : 1, b: fdHash('elxb:' + day + ':' + s + ':' + bi) % Math.max(1, M)};
+}
 function elxGroup(day, s, g){
   const id = 'G' + day + '_' + s + '_' + g;
   if (ELX_GEN.has(id)) return ELX_GEN.get(id);
-  const N = elxSize(day, s), off = fdHash('elxo:' + day + ':' + s) % N, order = sortedBots();
-  const lo = g * N - off, ppl = []; for (let k = Math.max(0, lo); k < Math.min(order.length, lo + N); k++) ppl.push(order[k]);
+  const N = elxSize(day, s), B = elxBands(), bi = Math.floor(g / ELX_BG), gi = g % ELX_BG, ppl = [];
+  if (bi < B.starts.length - 1){
+    const st = B.starts[bi], M = B.starts[bi + 1] - st, {a, b} = elxMix(day, s, bi, M), ia = elxInv(a, M);
+    for (let k = gi * N; k < Math.min(M, gi * N + N); k++){ const idx = (((k - b) % M + M) % M) * ia % M; ppl.push(B.order[st + idx]); }
+  }
   if (ppl.length < 3 || fdHash(id) % 100 >= ELX_P){ ELX_GEN.set(id, null); return null; }
   const rnd = mulberry32(fdHash(id + ':m')); for (let k = ppl.length - 1; k > 0; k--){ const j = Math.floor(rnd() * (k + 1)); [ppl[k], ppl[j]] = [ppl[j], ppl[k]]; }
   const n = ppl.length, ranked = [4, 8, 16].includes(n) && rnd() < .6;
@@ -162,7 +183,7 @@ function elxGen(id){
 function elxOf(w){
   const today = Math.floor(Date.now() / 864e5), now = Date.now(), out = [], pos = posOf(w);
   for (let day = today; day > today - 21; day--) for (let s = ELX_SESS - 1; s >= 0; s--){
-    const N = elxSize(day, s), off = fdHash('elxo:' + day + ':' + s) % N, g = Math.floor((pos + off) / N);
+    const N = elxSize(day, s), B = elxBands(), bi = B.of[pos], st = B.starts[bi], M = B.starts[bi + 1] - st, {a, b} = elxMix(day, s, bi, M), g = bi * ELX_BG + Math.floor(((a * (pos - st) + b) % M) / N);
     const L = elxGroup(day, s, g); if (!L || !L.players.includes(w) || L.t0 > now) continue;
     const outs = L.players.map(p => [p, elBotPlan(L, p).out]); if (Math.max(...outs.map(x => x[1])) > now) continue;
     const order = outs.slice().sort((a, b) => b[1] - a[1]), place = order.findIndex(x => x[0] === w) + 1, mine = outs.find(x => x[0] === w)[1];

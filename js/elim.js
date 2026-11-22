@@ -184,8 +184,8 @@ function elSlotLobby(h){
 function elTopGame(k){
   const id = 'T' + k.toString(36); if (EL_T.has(id)) return EL_T.get(id);
   const rnd = mulberry32(fdHash('eltop:' + k)), best = sortedBots().slice(0, 1000), N = [4, 4, 8, 8, 8, 16, 6, 12][Math.floor(rnd() * 8)], ranked = [4, 8, 16].includes(N) && rnd() < .7;
-  const at = Math.floor(rnd() * Math.max(1, best.length - 60)), ppl = [];
-  for (let g = 0; ppl.length < N && g < 500; g++){ const w = best[Math.min(best.length - 1, at + Math.floor(rnd() * 120))]; if (!ppl.includes(w)) ppl.push(w); }
+  const at = Math.floor(rnd() * Math.max(1, best.length - 300)), ppl = [];
+  for (let g = 0; ppl.length < N && g < 500; g++){ const w = best[Math.min(best.length - 1, at + Math.floor(rnd() * 300))]; if (!ppl.includes(w)) ppl.push(w); }
   const t0 = k * 240000 + Math.floor(rnd() * 240000);
   const rules = {size: N, round: 25, preset: 'standard', custom: [10, 5, 2.5, 1, 0], rated: ranked, ranked, range: 300, privacy: 'public', subject: '', name: '', start: 'full', at: 0, chat: 'break', spect: true};
   const L = {id, rules, created: t0 - 60000, center: botRating(ppl[0]), host: ranked ? null : ppl[0], players: ppl, joinAt: ppl.map(() => t0 - 3000), t0, top: true, name: ranked ? `Ranked · ${N} players` : lobbyName(ppl[0], BOTS[ppl[0]].subject, rnd, t0)};
