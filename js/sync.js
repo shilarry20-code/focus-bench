@@ -16,7 +16,7 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 22 · 152';
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 22 · 153';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -85,6 +85,13 @@ const SECTIONS = {
       o.follows = FD.follows.slice().sort((a, b) => a - b); o.followers = FD.followers.slice().sort((a, b) => a - b); return o; },
     put: o => { if (typeof FD === 'undefined' || (typeof CL !== 'undefined' && CL.on && CL.ready)) return; if (!FD_READY){ FD_SYNC_PEND = o; return; } fdSyncPut(o, true); }
   },
+  coins: {         // coins: the match ledger (each match once), the highest totals reached, and what's been spent
+    items: () => { const o = {}; if (typeof CO === 'undefined') return o;
+      Object.entries(CO.led).forEach(([k, x]) => { o['l:' + k] = x; }); Object.entries(CO.hw).forEach(([k, v]) => { o['h:' + k] = v; }); Object.entries(CO.sp).forEach(([k, v]) => { o['s:' + k] = v; }); return o; },
+    put: o => { if (typeof CO === 'undefined') return; const led = {}, hw = {}, sp = {};
+      Object.entries(o).forEach(([k, v]) => { const n = k.slice(2); if (k[0] === 'l') led[n] = v; else if (k[0] === 'h') hw[n] = Math.max(+v || 0, CO.hw[n] || 0); else if (k[0] === 's') sp[n] = v; });
+      CO.led = led; CO.hw = hw; CO.sp = sp; saveCo(); }
+  },
   chal: {          // challenges: this period's sets (the same on every device), the daily reroll, and finished ones
     items: () => { const o = {}; if (typeof CHL === 'undefined') return o;
       ['d', 'w', 'm'].forEach(p => { if (CHL.sets[p]) o['set:' + p] = CHL.sets[p]; });
@@ -101,7 +108,7 @@ const SECTIONS = {
     put: o => { const order = GUIDES.map(g => g.id); GUIDES.length = 0; Object.values(o).sort((a, b) => (order.indexOf(a.id) + 1 || 1e9) - (order.indexOf(b.id) + 1 || 1e9)).forEach(g => GUIDES.push(g)); saveGuidesRaw(); }
   }
 };
-const STORE_SECTION = {'fb.chal': 'chal', 'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked', 'fb.chat': 'chat', 'fb.dms': 'dms', 'fb.groups': 'groups', 'fb.feed': 'feed'};
+const STORE_SECTION = {'fb.chal': 'chal', 'fb.coins': 'coins', 'fb.log': 'log', 'fb.notes': 'notes', 'fb.settings': 'settings', 'fb.ranked': 'ranked', 'fb.chat': 'chat', 'fb.dms': 'dms', 'fb.groups': 'groups', 'fb.feed': 'feed'};
 let syncFirstDone = false;     // the chat waits for the first sync before filling in a catch-up
 
 // what each section looked like last time, to see which items changed

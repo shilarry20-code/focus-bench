@@ -2618,3 +2618,9 @@ html.st-open{overflow:hidden}
 .fd-act .fd-n{padding:6px 10px 6px 0;margin-left:-9px}
 .fd-act>*{display:flex;align-items:center}
 .fd-act .fd-n{align-self:stretch;line-height:1;padding-top:3px;padding-bottom:0}
+/* coins */
+.coin-chip{position:relative;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:4px 12px 4px 8px;font-size:13px;color:var(--muted);white-space:nowrap;cursor:pointer;font-family:inherit}
+.coin-chip:hover{border-color:var(--muted)}.coin-chip b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.coin-chip .co-ic,.co-big svg{width:16px;height:16px;fill:none;stroke:#e0a630;stroke-width:2;stroke-linejoin:round}
+.co-big{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--soft)}.co-big svg{width:24px;height:24px}
+.co-card .lv-top b{font-variant-numeric:tabular-nums}
