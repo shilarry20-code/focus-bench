@@ -7,9 +7,9 @@
    Also here: finished lobbies that ran without you are kept (the newest 300), so every player's profile can list the
    Elimination games they played, each with a replay. */
 const rpSz = key => { const h = fdHash(key + ':sz'); return 2.6 + (h % 5200) / 1000; };       // a believable size in MB, the same every time
-let RPDL = store.get('fb.rpdl3', {});            // replays already downloaded: key → 1
-const rpChatLoad = key => IDB.get('rpc3:' + key).catch(() => null);
-const rpChatSave = (key, v) => IDB.set('rpc3:' + key, v).catch(console.error);
+let RPDL = store.get('fb.rpdl4', {});            // replays already downloaded: key → 1
+const rpChatLoad = key => IDB.get('rpc4:' + key).catch(() => null);
+const rpChatSave = (key, v) => IDB.set('rpc4:' + key, v).catch(console.error);
 let rpDlRun = 0;
 async function rpDownload(key){
   if (RPDL[key]){ const c = await rpChatLoad(key); return rpOpen(key, c && c.chat); }
@@ -22,7 +22,7 @@ async function rpDownload(key){
   const show = v => { const f = $('#rpDlFill'); if (!f) return; f.style.width = (v * 100).toFixed(1) + '%'; $('#rpDlPct').textContent = Math.floor(v * 100) + '%'; $('#rpDlMb').textContent = `${(mb * v).toFixed(1)} / ${mb.toFixed(1)} MB`; };
   // the bar creeps toward 90% while the work goes on, then finishes
   const tick = () => { if (run !== rpDlRun) return; const s = (performance.now() - t0) / 1000; p = done ? Math.min(1, p + .045) : Math.min(.9, .9 * (1 - Math.exp(-s / 2.2)) + Math.random() * .004); show(p); if (p >= 1) return finish(); requestAnimationFrame(tick); };
-  const finish = () => { if (run !== rpDlRun) return; el.hidden = true; if (chat !== null) RPDL[key] = 1; store.set('fb.rpdl3', RPDL); rpOpen(key, chat); };
+  const finish = () => { if (run !== rpDlRun) return; el.hidden = true; if (chat !== null) RPDL[key] = 1; store.set('fb.rpdl4', RPDL); rpOpen(key, chat); };
   requestAnimationFrame(tick);
   try {
     const need = key.startsWith('rk:m5:') || key.startsWith('elx:');
@@ -103,10 +103,10 @@ async function rpWriteChat(key, d){
   const long = d.end - d.start > 90 * 60000, tq = fdHash(key + ':top') % 100, nTop = tq < 60 ? 0 : tq < 90 || !long ? 1 : 2;
   const tops = [...Array(nTop)].map(() => { const w = pick(Math.random, ws); return `${bot(w).name} might bring up: ${pickTopic(w)}`; });
   const roster = ws.filter(w => slots.some(m => m.w === w)).map(w => { const f = chatFacts(w); return `${f.name} (${f.subj.split(',')[0]}, ${f.r} Elo, emojis: ${emojiStyle(w)})`; }).join('\n');
-  const script = slots.map(m => `#${m.n} ${rpMs(m.t, z)} ${bot(m.w).name} · ${m.x.on.length > 1 ? `on a break with ${m.x.on.filter(q => q !== m.w).map(q => bot(q).name).slice(0, 4).join(', ')}` : m.x.rest.length ? 'alone on a break, the others are studying' : 'alone on a break, nobody else is still playing'} · ${m.x.st} · ${m.role}`).join('\n');
+  const script = slots.map(m => `#${m.n} ${rpMs(m.t, z)} ${bot(m.w).name} · ${m.x.on.length > 1 ? `on a break with ${m.x.on.filter(q => q !== m.w).map(q => bot(q).name).slice(0, 4).join(', ')}` : m.x.rest.length ? (el ? 'alone on a break, the others are studying' : `alone on a break, ${bot(m.x.rest[0].w).name} is studying`) : 'alone on a break, nobody else is still playing'} · ${m.x.st} · ${m.role}`).join('\n');
   const evs = rpEvents(d, tr).filter(e => /^(ko|win|sd|stop)$/.test(e.kind) && e.t < slots[slots.length - 1].t).map(e => `${rpMs(e.t, z)} ${e.text}`).join('\n');
   const sys = `You write the chat log from a finished ${el ? 'Elimination game (a lobby studies together, breaks are limited each round, going over the allowance or stopping knocks you out, last one studying wins)' : 'ranked 1v1 (whoever studies longer wins)'} in Focus Bench, a study-timer app for college students. Everyone studies in their own place (not the same room) and players can only type while they're on a break, never while studying, so a text sent while the other person studies is only read on their next break, maybe half an hour later.
-You get a numbered list of slots. Who sends each one, when, and what it does (starts the chat, answers a certain number, adds to their own text) is already decided: write the words for every slot and follow its role exactly.
+${el ? '' : 'It is just the two of them: every text is to the one other player, so never "anyone", "everyone", "you guys", "y\'all" or "anyone else".\n'}You get a numbered list of slots. Who sends each one, when, and what it does (starts the chat, answers a certain number, adds to their own text) is already decided: write the words for every slot and follow its role exactly.
 It must read as one real conversation from top to bottom: an answer actually answers the message it points to, nobody mentions things nobody said, and it sticks to one or two topics instead of jumping around. It can be about the match (only what's true at that moment, which is listed with each slot) or about anything else: a class, food, a show, their day. Someone who answers half an hour later knows time has passed. Nobody congratulates themselves.
 No filler or sign-offs: never "back to it", "back to the grind", "gotta grind", "gl", "gg", "good luck", and nobody wishes the other luck, says goodbye or says they're heading out, since the match is still going. Short, casual texts, lowercase is fine.
 ${EMO_RULE} Keep it friendly and appropriate. Never mention AI.`;
