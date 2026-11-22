@@ -187,7 +187,7 @@ async function stDmTick(){
   for (const s of stMine()){
     if (STY.dmd[s.id] || Date.now() - s.t < 20 * 60000) continue;
     STY.dmd[s.id] = 1; saveSt();
-    if (fdHash(s.id + ':dm') % 100 >= 45) continue;
+    if (fdHash(s.id + ':dm') % 100 >= 10) continue;
     const v = stViews(s).list; if (!v.length) continue;
     const w = v[fdHash(s.id + 'who') % Math.min(v.length, 12)].w;
     try {
