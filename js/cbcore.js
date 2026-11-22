@@ -9,7 +9,11 @@ var emoOk = ch => { const c = ch.codePointAt(0);
     || (c >= 0x1F446 && c <= 0x1F450) || (c >= 0x270A && c <= 0x270D) || c === 0x261D || c === 0x1F590 || c === 0x1F596 || (c >= 0x1F918 && c <= 0x1F91F) || c === 0x1F90C || c === 0x1F90F
     || (c >= 0x1FAF0 && c <= 0x1FAF8) || c === 0x1F4AA || c === 0x1F937 || c === 0x1F926 || EMO_EXTRA.has(ch); };
 var SEG = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter() : null;
+// a goodnight in the afternoon or a good morning at night doesn't fit the time: it's dropped
+const GN_RE = /^\W*(?:gn|g\.n\.?|good ?night|night night|nighty ?night|nite|sleep well|sweet dreams|going to (?:bed|sleep)|heading (?:to bed|off to sleep)|off to (?:bed|sleep)|time for bed|im (?:going )?(?:to )?(?:bed|sleep)|i'?m (?:going )?(?:to )?(?:bed|sleep))\b/i, GM_RE = /^\W*(?:gm|good ?morning|morning (?:everyone|all|guys|y'?all|dude))\b/i;
+function wrongTimeGreeting(t){ const h = new Date().getHours(); return (h >= 7 && h < 20 && GN_RE.test(t)) || ((h >= 14 || h < 4) && GM_RE.test(t)); }
 function emotionOnly(t){
+  if (wrongTimeGreeting(t)) return '';
   if (!SEG || !/\p{Extended_Pictographic}/u.test(t)) return t;
   let out = '';
   for (const {segment: g} of SEG.segment(t)){
