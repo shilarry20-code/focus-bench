@@ -37,8 +37,23 @@ setInterval(() => { if (dayKey(Date.now()) !== streakDay){ streakDay = dayKey(Da
 
 /* ---------- pages & navigation ---------- */
 const PAGE_ALIAS = {log:'stats', cal:'stats', timer:['settings','set-timer'], sound:['settings','set-sound'], look:['settings','set-look']};
+// where you were on a page when you opened someone's full profile, so Back returns you to the same spot
+// (on the Feed it's pinned to the post you were looking at, in case new posts came in above it meanwhile)
+const PAGE_POS = {};
+function pageMemo(name){
+  const pos = {y: window.scrollY, anchor: null};
+  if (name === 'feed'){ const el = [...document.querySelectorAll('#fdBody .fd-post[data-pid]')].find(x => x.getBoundingClientRect().bottom > 70); if (el) pos.anchor = {pid: el.dataset.pid, top: el.getBoundingClientRect().top}; }
+  PAGE_POS[name] = pos;
+}
+function pageRestore(name){
+  const pos = PAGE_POS[name]; if (!pos) return window.scrollTo(0, 0);
+  const go = () => { window.scrollTo(0, pos.y); if (pos.anchor){ const el = document.querySelector(`#fdBody .fd-post[data-pid="${pos.anchor.pid}"]`); if (el) window.scrollTo(0, window.scrollY + el.getBoundingClientRect().top - pos.anchor.top); } };
+  go(); requestAnimationFrame(() => requestAnimationFrame(go)); setTimeout(go, 120);
+}
 function showPage(name, sec){
   const el = $('#page-' + name); if (!el) return;
+  const from = document.body.dataset.page, back = from === 'profile' && name === profPrev && name !== 'profile';
+  if (from && from !== name && name === 'profile') pageMemo(from);
   document.querySelectorAll('.page').forEach(p => {
     const on = p === el;
     if (on && p.hidden){ p.classList.remove('pane-in'); void p.offsetWidth; p.classList.add('pane-in'); }
@@ -55,6 +70,7 @@ function showPage(name, sec){
   if (name === 'awards'){ achBump('awards'); renderAwards(); }
   if (typeof onPageShown === 'function') onPageShown(name);
   if (sec){ const t = $('#' + sec); if (t){ if (name === 'settings') setTocOn(sec, true); setTimeout(() => t.scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}), 30); } }
+  else if (back) pageRestore(name);
   else window.scrollTo(0, 0);
   if (name === 'settings' && !sec) requestAnimationFrame(updateToc);
 }

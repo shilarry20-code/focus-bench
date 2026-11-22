@@ -363,7 +363,7 @@ function fdPostHtml(p){
   const me = p.w === -1, B = me ? null : bot(p.w), cms = fdShownComments(p), open = FDV.open[p.id], likes = fdLikes(p), fol = !me && FD.follows.includes(p.w);
   const roots = cms.filter(c => !c.re || !cms.some(x => x.id === c.re)), show = roots.slice().sort((a, b) => fdLk(b, p) - fdLk(a, p)).slice(0, 2), re = FDV.re[p.id], nc = fdCount(p);
   return `<article class="card fd-post" data-pid="${p.id}">
-    <header class="fd-h">${me ? myAvatar('sm') : avatar(B, 'sm')}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)} · ${fdAgo(p.t)}</small></span>${me ? `<button class="fd-x" data-fda="del" title="Delete post" aria-label="Delete post">×</button>` : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
+    <header class="fd-h">${me ? myAvatar('sm') : avatar(B, 'sm')}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)} · ${fdAgo(p.t)}</small></span>${me ? '' : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
     <div class="fd-media" data-fda="dbl">${fdMedia(p)}</div>
     <div class="fd-b"><div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg></button><button class="fd-cbtn" data-fda="comments" aria-label="Comments"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/></svg></button></div>
     <div class="fd-likes">${fdLikesLine(p)}</div>
@@ -406,8 +406,41 @@ function fdNotifHtml(){
   // likes, comments and replies show a small picture of the post; tapping the row opens it with its comments
   const row = n => { const p = n.pid ? FD.posts.find(x => x.id === n.pid && !x.del) : null;
     return `<div class="fd-n${n.t > FD.nseen ? ' new' : ''}${p ? ' go' : ''}"${p ? ` data-open-post="${p.id}" role="button" tabindex="0"` : ''}>${n.w != null && n.w >= 0 ? `<button class="fd-nav" data-bot="${n.w}" aria-label="Open ${esc(bot(n.w).name)}'s profile">${avatar(bot(n.w), 'sm')}</button>` : '<span class="fd-ndot"></span>'}<span>${fdNoteHtml(n)} <small>${fdAgo(n.t)}</small></span>${p ? `<span class="fd-nthumb">${fdMedia(p)}</span>` : ''}</div>`; };
-  return `<div class="card fd-notifs"><div class="fd-nhead"><div class="h first">Activity</div>${ns.length ? '<button class="small-btn" data-fdclr>Clear</button>' : ''}</div>${ns.length ? ns.map(row).join('') : '<p class="hint">Likes, comments and new followers show up here.</p>'}</div>`;
+  const sub = FDV.actSub || 'notif';
+  const seg = `<div class="seg fd-actseg" role="group" aria-label="Activity">${[['notif', 'Notifications'], ['likes', 'Your likes'], ['cms', 'Your comments']].map(([k, l]) => `<button data-fdact="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</div>`;
+  if (sub === 'likes') return `<div class="card fd-notifs">${seg}${fdMyLikesHtml()}</div>`;
+  if (sub === 'cms') return `<div class="card fd-notifs">${seg}${fdMyCmsHtml()}</div>`;
+  return `<div class="card fd-notifs">${seg}<div class="fd-nhead"><div class="h first">Notifications</div>${ns.length ? '<button class="small-btn" data-fdclr>Clear</button>' : ''}</div>${ns.length ? ns.map(row).join('') : '<p class="hint">Likes, comments and new followers show up here.</p>'}</div>`;
 }
+/* your activity: posts you liked (newest like first) and every comment you've left */
+function fdMyLikesHtml(){
+  const ps = FD.posts.filter(p => FD.liked[p.id] && !p.del).sort((a, b) => ((+FD.liked[b.id] > 1 ? FD.liked[b.id] : b.t) - (+FD.liked[a.id] > 1 ? FD.liked[a.id] : a.t)));
+  const n = FDV.likeN || 24;
+  if (!ps.length) return '<p class="hint">Posts you like show up here.</p>';
+  return `<div class="fd-nhead"><div class="h first">${ps.length.toLocaleString()} liked post${ps.length === 1 ? '' : 's'}</div></div><div class="fd-likegrid">${ps.slice(0, n).map(p => `<button class="fd-lg" data-open-post="${p.id}" aria-label="Open ${esc(fdNameOf(p.w))}’s post">${fdMedia(p)}</button>`).join('')}</div>
+    ${ps.length > n ? '<button class="small-btn fd-load" data-fdact-more="likes">Show more</button>' : ''}`;
+}
+async function fdMyCmsLoad(){
+  if (FDV.cmsBusy) return; FDV.cmsBusy = true;
+  const out = [];
+  for (const p of FD.posts){ if (p.del) continue; const cm = p.cm || (p.cn ? await fdCm(p) : (p.pv || [])); (cm || []).forEach(c => { if (c.w === -1 && !c.del) out.push([p, c]); }); }
+  out.sort((a, b) => b[1].t - a[1].t);
+  FDV.myCms = out; FDV.cmsAt = Date.now(); FDV.cmsBusy = false;
+  if (FDV.tab === 'act' && FDV.actSub === 'cms' && !$('#page-feed').hidden) renderFeed();
+}
+function fdMyCmsHtml(){
+  if (!FDV.myCms || Date.now() - (FDV.cmsAt || 0) > 60000){ fdMyCmsLoad(); if (!FDV.myCms) return '<p class="hint">Gathering your comments…</p>'; }
+  const list = FDV.myCms, n = FDV.cmN || 30;
+  if (!list.length) return '<p class="hint">Comments and replies you write show up here.</p>';
+  const row = ([p, c]) => { const par = c.re ? (p.cm || []).find(x => x.id === c.re) : null, who = par ? par.w : p.w;
+    const what = par ? (par.w === -1 ? 'You replied on' : `You replied to <b>${esc(fdNameOf(par.w))}</b> on`) : 'You commented on';
+    return `<div class="fd-n go" data-open-post="${p.id}" role="button" tabindex="0">${myAvatar('sm')}<span>${what} ${p.w === -1 ? 'your post' : `<b>${esc(fdNameOf(p.w))}</b>’s post`}: ${atLinks(esc(c.text))} <small>${fdAgo(c.t)}</small></span><span class="fd-nthumb">${fdMedia(p)}</span></div>`; };
+  return `<div class="fd-nhead"><div class="h first">${list.length.toLocaleString()} comment${list.length === 1 ? '' : 's'}</div></div>${list.slice(0, n).map(row).join('')}${list.length > n ? '<button class="small-btn fd-load" data-fdact-more="cms">Show more</button>' : ''}`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-fdact]'); if (b){ FDV.actSub = b.dataset.fdact; renderFeed(); return; }
+  const m = e.target.closest('[data-fdact-more]'); if (m){ if (m.dataset.fdactMore === 'likes') FDV.likeN = (FDV.likeN || 24) + 24; else FDV.cmN = (FDV.cmN || 30) + 30; renderFeed(); }
+});
 document.addEventListener('click', e => { const r = e.target.closest('[data-open-post]'); if (!r || e.target.closest('[data-bot]')) return; const p = FD.posts.find(x => x.id === r.dataset.openPost); if (p) fdView(p); });
 function renderFeed(){
   fdViewRefresh();
@@ -448,7 +481,7 @@ dmButtons = function(w){ const on = FD.follows.includes(w); return `<button clas
 
 /* ---- commenting: people answer you, later if they're offline ---- */
 function fdComment(p, text){
-  const re = FDV.re[p.id], c = {id: p.id + 'm' + Date.now().toString(36), w: -1, t: Date.now(), text, re: re ? re.cid : null, lk: 0};
+  const re = FDV.re[p.id], c = {id: p.id + 'm' + Date.now().toString(36), w: -1, t: Date.now(), text, re: re ? re.cid : null, lk: 0}; FDV.myCms = null;
   p.cm.push(c); delete FDV.re[p.id];
   if (re){ const r = fdTree(p.cm).find(x => x.c.id === re.cid || x.kids.some(k => k.c.id === re.cid)); if (r) FDV.vexp[r.c.id] = r.kids.length; }
   // who answers: the person you replied to, or the poster (if it isn't you); on your own post, someone in the comments
@@ -607,7 +640,7 @@ function fdViewHtml(p){
   return `<div class="fv" data-pid="${p.id}">
     <div class="fv-media fd-media" data-fda="dbl">${fdMedia(p)}</div>
     <div class="fv-side">
-      <header class="fd-h">${av(p.w)}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)}</small></span>${me ? '' : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
+      <header class="fd-h">${av(p.w)}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)}</small></span>${me ? (FDV.delAsk === p.id ? `<span class="fv-delask" role="alert"><b>Delete this post?</b><button class="small-btn" data-fda="delno">Cancel</button><button class="small-btn fv-delyes" data-fda="del">Delete</button></span>` : `<button class="fv-del" data-fda="delask" title="Delete post" aria-label="Delete post"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg></button>`) : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
       <div class="fv-cms">
         ${p.type !== 'text' && p.cap ? `<div class="fv-c">${av(p.w)}<div>${fdWho(p.w)} <span>${atLinks(esc(p.cap))}</span><small>${fdAgo(p.t)}</small></div></div>` : ''}
         ${!p.cm ? '<p class="hint fv-none">Loading comments…</p>' : tree.length ? tree.slice(0, FDV.vn).map(r => {
@@ -640,7 +673,7 @@ function fdViewRefresh(){
   host.innerHTML = fdViewHtml(p);
   const i2 = host.querySelector('.fd-form input'), b2 = host.querySelector('.fv-cms'); if (i2){ i2.value = val; if (foc) i2.focus(); } if (b2) b2.scrollTop = top;
 }
-function fdViewClose(){ $('#fdView').hidden = true; FDV.view = null; renderFeed(); if (!$('#page-profile').hidden && typeof renderProfilePage === 'function') renderProfilePage(); }
+function fdViewClose(){ $("#fdView").hidden = true; FDV.view = null; FDV.delAsk = null; renderFeed(); if (!$('#page-profile').hidden && typeof renderProfilePage === 'function') renderProfilePage(); }
 // Escape closes only the top window: a profile opened over a post closes first
 let fdEscTop = false;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fdEscTop = !$('#botModal').hidden || !$('#socModal').hidden; }, true);
@@ -665,7 +698,7 @@ document.addEventListener('click', e => {
   if (act === 'newbg'){ FDV.composer.bg = fdTextBgNew(); fdComposerRedraw(); return; }
   if (act === 'more'){ FDV.shown += 16; renderFeed(); return; }
   if (!p) return;
-  if (act === 'like' || (act === 'dbl' && e.detail === 2)){ if (act === 'dbl' && FD.liked[p.id]) return; FD.liked[p.id] = !FD.liked[p.id]; saveFeed();
+  if (act === 'like' || (act === 'dbl' && e.detail === 2)){ if (act === 'dbl' && FD.liked[p.id]) return; FD.liked[p.id] = FD.liked[p.id] ? 0 : Date.now(); saveFeed();     // 0 (not removed) so an unlike syncs too
     document.querySelectorAll(`[data-pid="${p.id}"]`).forEach(el => { el.querySelector('.fd-like').classList.toggle('on', !!FD.liked[p.id]); const n = fdLikes(p); const lk = el.querySelector('.fd-likes'); if (lk) lk.innerHTML = fdLikesLine(p, !!el.closest('#fdView')); if (FD.liked[p.id]) fdHeartPop(el); }); return; }
   if (act === 'follow'){ const on = !FD.follows.includes(p.w); fdFollow(p.w, on); renderFeed(); fdViewRefresh(); return; }
   if (act === 'comments'){ fdView(p, true); return; }
@@ -677,9 +710,11 @@ document.addEventListener('click', e => {
     document.querySelectorAll(`[data-cid="${c.id}"] > .fd-cheart`).forEach(b => { b.outerHTML = fdHeart(c, p); }); return; }
   if (act === 'vmore'){ FDV.vn += 30; fdViewRefresh(); return; }
   if (act === 'vrep'){ const id = a.dataset.root, n = +a.dataset.n, k = FDV.vexp[id] || 0; FDV.vexp[id] = k >= n ? 0 : Math.min(n, k + 10); fdViewRefresh(); return; }
-  if (act === 'del'){ if (!confirmDel(p)) return; if (inView) $('#fdView').hidden = true; p.del = 1; FD.pend = FD.pend.filter(j => j.pid !== p.id); saveFeed(); renderFeed(); undoToast && undoToast('Post deleted.', () => { delete p.del; saveFeed(); renderFeed(); }); return; }
+  if (act === 'delask'){ FDV.delAsk = p.id; fdViewRefresh(); return; }
+  if (act === 'delno'){ FDV.delAsk = null; fdViewRefresh(); return; }
+  // deleting only happens from the enlarged post, after "Delete this post?"
+  if (act === 'del'){ if (!inView || FDV.delAsk !== p.id) return; FDV.delAsk = null; if (inView) $('#fdView').hidden = true; p.del = 1; FD.pend = FD.pend.filter(j => j.pid !== p.id); saveFeed(); renderFeed(); undoToast && undoToast('Post deleted.', () => { delete p.del; saveFeed(); renderFeed(); }); return; }
 });
-function confirmDel(){ return true; }
 document.addEventListener('submit', e => {
   const f = e.target.closest('.fd-form'); if (!f) return; e.preventDefault();
   const p = FD.posts.find(x => x.id === f.closest('[data-pid]').dataset.pid), i = f.querySelector('input'), text = i.value.replace(/\s+/g, ' ').trim();
