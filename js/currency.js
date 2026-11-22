@@ -104,8 +104,7 @@ function coCardHtml(cls = 'card lv-card co-card'){
   return `<div class="${cls}"><div class="lv-top"><span class="co-big"><svg viewBox="0 0 24 24" aria-hidden="true">${CO_IC}</svg></span><div><b>${T.balance.toLocaleString()} coins</b><small>${T.earned.toLocaleString()} earned in all${T.spent ? ` · ${T.spent.toLocaleString()} spent` : ''}</small></div></div>
     <div class="lv-sub">Today's coins <b>+${tot.toLocaleString()}</b></div>
     ${today.length ? `<ul class="lv-list">${today.map(row).join('')}</ul>` : '<p class="hint">Study, finish a challenge or play a ranked match to earn coins.</p>'}
-    <details class="lv-more"><summary>Where your coins come from</summary><ul class="lv-list">${src.map(row).join('')}</ul>
-      <p class="hint">Your rank base is <b>${coMyBase().toLocaleString()}</b> (${esc(rk.un ? 'Unranked' : rk.full)}). Ranked 1v1: a win pays 4× your base, a loss 1×. Elimination: everyone adds 1.5× their base to a prize pool, shared by place (4 players: 1st only; 8: top 3; 16: top 5). Studying pays 1 a minute with a streak bonus, plus the daily goal (+50), challenges and achievements. Friendly matches, casual lobbies and quizzes pay nothing.</p></details></div>`;
+    <details class="lv-more"><summary>Where your coins come from</summary><ul class="lv-list">${src.map(row).join('')}</ul></details></div>`;
 }
 function miniCoins(){
   return `${coCardHtml('lv-card mini-lv co-card')}<div class="mini-go"><button class="small-btn" data-mini-go="level">Your profile</button></div>`;
