@@ -2627,3 +2627,6 @@ html.st-open{overflow:hidden}
 /* a play badge on anyone whose story you've already seen: tap it to watch again, tap the picture to open their profile */
 .st-has{position:absolute;right:2px;top:35px;width:26px;height:26px;border-radius:50%;background:conic-gradient(from 210deg,#ffcf4b,#ff6a3d,#ff2e7e,#c13cff,#ffcf4b);border:2.5px solid var(--card,#111);display:grid;place-items:center;box-sizing:border-box;cursor:pointer}
 .st-has svg{width:12px;height:12px;fill:#fff;margin-left:1px}
+/* add a post to your story */
+.fx-story{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0 0 10px;padding:9px 12px}
+.fx-story svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}

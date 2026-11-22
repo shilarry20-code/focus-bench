@@ -65,6 +65,7 @@ function fxDraw(){
   const m = $('#fxSheet'); if (!m || !FX) return;
   const list = fxPeople(), n = FX.pick.size;
   m.innerHTML = `<div class="modal-card fx-card" role="dialog" aria-modal="true" aria-label="Share"><div class="fx-h"><b>Share</b><button class="st-ib dark" data-fxa="close" aria-label="Close">✕</button></div>
+    ${typeof P !== 'undefined' && P.noStories ? '' : '<button class="small-btn fx-story" data-fxa="story"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke-dasharray="3 2.6"/><path d="M12 8v8M8 12h8"/></svg>Add to your story</button>'}
     <label class="el-search fx-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="fxQ" placeholder="Search" autocomplete="off" value="${esc(FX.q)}"></label>
     <div class="fx-grid">${list.map(w => `<button class="fx-p${FX.pick.has(w) ? ' on' : ''}" data-fxw="${w}"><span class="fx-av">${avatar(bot(w), 'md')}${FX.pick.has(w) ? '<i>✓</i>' : ''}</span><small>${esc(bot(w).name)}</small></button>`).join('') || '<p class="hint">No one to send it to yet. Follow people or message someone first.</p>'}</div>
     <div class="fx-foot"${n ? '' : ' hidden'}><input id="fxText" maxlength="200" placeholder="Write a message…" autocomplete="off" value="${esc(FX.text)}"><button class="small-btn accent" data-fxa="send">${n > 1 ? `Send separately (${n})` : 'Send'}</button></div></div>`;
@@ -93,7 +94,7 @@ document.addEventListener('click', e => {
   if (e.target.id === 'fxSheet'){ $('#fxSheet').hidden = true; FX = null; return; }
   const p = e.target.closest('[data-fxw]'); if (p){ const w = +p.dataset.fxw; FX.pick.has(w) ? FX.pick.delete(w) : FX.pick.add(w); const t = $('#fxText'); if (t) FX.text = t.value; fxDraw(); const t2 = $('#fxText'); if (t2 && FX.pick.size) t2.focus(); return; }
   const a = e.target.closest('[data-fxa]'); if (!a) return;
-  if (a.dataset.fxa === 'close'){ $('#fxSheet').hidden = true; FX = null; } else if (a.dataset.fxa === 'send'){ const t = $('#fxText'); if (t) FX.text = t.value; fxSend(); }
+  if (a.dataset.fxa === 'story'){ const p = FD.posts.find(x => x.id === FX.pid); $('#fxSheet').hidden = true; FX = null; if (p) stRepostMine(p); } else if (a.dataset.fxa === 'close'){ $('#fxSheet').hidden = true; FX = null; } else if (a.dataset.fxa === 'send'){ const t = $('#fxText'); if (t) FX.text = t.value; fxSend(); }
 });
 document.addEventListener('input', e => { if (e.target.id === 'fxQ' && FX){ FX.q = e.target.value; const pos = e.target.selectionStart; fxDraw(); const i = $('#fxQ'); i.focus(); i.setSelectionRange(pos, pos); } else if (e.target.id === 'fxText' && FX) FX.text = e.target.value; });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'fxText'){ e.preventDefault(); FX.text = e.target.value; fxSend(); } if (e.key === 'Escape' && FX){ $('#fxSheet').hidden = true; FX = null; } });

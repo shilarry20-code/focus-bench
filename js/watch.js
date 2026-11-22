@@ -82,11 +82,12 @@ async function wSay(kind, delay, extra){
   if (!W || wBusy) return;
   if (kind !== 'reply' && W.q.length) return;
   const st = wState(), A = bot(W.a), C = bot(W.c), me = myName();
-  const task = {open: `Write 3 to 5 short messages from 2 to 4 different spectators about where the match stands right now.`,
+  let task = {open: `Write 3 to 5 short messages from 2 to 4 different spectators about where the match stands right now.`,
     ambient: `Write 2 or 3 short messages from 1 to 3 spectators: ${Math.random() < .5 ? `someone brings up ${pickTopic(null, {school: .3})} and others chime in` : 'react to the match or chat a bit'}.${openerAvoid()}`,
     stop: `${extra} just stopped studying, so the other player only needs to keep going. Write 2 to 4 short reactions from different spectators.`,
     end: `The match just ended. Write 2 to 4 short reactions from different spectators to the result.`,
     reply: `${me} just said something (maybe a few messages in a row). Write 1 to 3 short messages from 1 or 2 spectators answering ${me}.`}[kind];
+  const ac = kind === 'reply' && typeof acPrepMany === 'function' ? acPrepMany(W.cast || [], acTail(W.chat)) : null; if (ac) task += ac.note;      // asked to like, follow, comment or repost
   let out = [];
   if (GEM.key && !(GEM.wait > Date.now()) && W.calls < 30){
     wBusy = true; W.calls++;
@@ -109,6 +110,7 @@ async function wSay(kind, delay, extra){
   // after anything already waiting, so a new batch doesn't land on top of the last one
   let t = Math.max(Date.now() + delay, ...W.q.map(x => x.t + 2000));
   out.slice(0, 5).forEach(o => { t += (2 + o.text.length * .06 + Math.random() * 4) * 1000; W.q.push({t: Math.round(t), w: o.w, text: o.text}); });
+  if (ac && out.length) ac.commit(t + 2000);
   W.last = Date.now(); wSave(); renderWatch();
 }
 

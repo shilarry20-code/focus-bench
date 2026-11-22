@@ -152,7 +152,7 @@ function fdFill(){
   return made > 0;
 }
 // likes build up over the first hours (longer for big posts)
-const fdLikes = p => (p.L ? Math.floor(p.L * (1 - Math.exp(-(Date.now() - p.t) / (2700e3 * (1 + Math.log10(Math.max(1, p.L / 200))))))) : 0) + (FD.liked[p.id] ? 1 : 0);
+const fdLikes = p => (p.xl ? p.xl.length : 0) + (p.L ? Math.floor(p.L * (1 - Math.exp(-(Date.now() - p.t) / (2700e3 * (1 + Math.log10(Math.max(1, p.L / 200))))))) : 0) + (FD.liked[p.id] ? 1 : 0);
 // how many comments a post should end up with (replies included): 2–5% of its likes; the builder writes toward this
 const fdRate = p => .02 + (fdHash(p.id + 'cr') % 1000) / 1000 * .03;
 const fdTarget = p => Math.round(fdLikes(p) * fdRate(p));
@@ -192,7 +192,7 @@ function fdHeartPop(el){
 const fdLk = (c, p) => Math.floor((c.lk != null ? c.lk : Math.max(1, fdLikes(p)) * .006 * Math.pow((fdHash(c.id) % 1000) / 1000, 3) * (c.re ? .3 : 1)) * fdLkGrow(c));
 // a comment's heart: tap to like it; the count sits under the heart, like Instagram
 const fdCmLiked = c => !!(FD.cliked && FD.cliked[c.id]);
-const fdCmCount = (c, p) => fdLk(c, p) + (fdCmLiked(c) ? 1 : 0);
+const fdCmCount = (c, p) => fdLk(c, p) + (fdCmLiked(c) ? 1 : 0) + (c.xl ? c.xl.length : 0);
 const fdHeart = (c, p) => { const n = fdCmCount(c, p), on = fdCmLiked(c); return `<button class="fd-cheart${on ? ' on' : ''}" data-fda="clike" aria-label="${on ? 'Unlike' : 'Like'} comment" aria-pressed="${on}"><svg viewBox="0 0 24 24"><path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg>${n ? `<small>${fdFmtN(n)}</small>` : ''}</button>`; };
 const fdFmtN = n => n >= 1e4 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'K' : n.toLocaleString();
 const fdShownComments = p => (p.cm || p.pv || []).filter(c => c.t <= Date.now() && !c.del);
@@ -496,7 +496,8 @@ async function fdReply(job){
   const thread = p.cm.filter(x => x.t <= Date.now()).slice(-10).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n');
   const user = `Post ${p.id} by ${p.w === -1 ? me : bot(p.w).name}. ${p.type === 'scene' ? 'What the picture shows (background only, don’t list it)' : 'What it is'}: ${fdAbout(p)}${p.cap ? `\nCaption: ${p.cap}` : ''}\nComments so far:\n${thread}\n\n${me} just commented "${mine.text}". Write ${B.name}'s answer (${f.rank}${Math.random() < .15 ? ', ' + f.subj : ''}, emojis: ${emojiStyle(job.w)}) as one short comment, replyTo "${p.id}". It should answer what ${me} said.${/\b(play|match|1v1|challenge|duel|ranked|game)\b/i.test(mine.text) && R.on ? ` If ${me} is asking to play and ${B.name} would, start the comment with [play].` : ''}`;
   try {
-    const got = await aiCall(FD_SYS(me), user), x = (Array.isArray(got) ? got : []).find(m => m && m.text);
+    const ac = typeof acPrep === 'function' ? acPrep(job.w, mine.text) : null;
+    const got = await aiCall(FD_SYS(me), user + (ac ? ac.note : '')), x = (Array.isArray(got) ? got : []).find(m => m && m.text);
     if (!x) return true;
     let text = emotionOnly(stripSegue(stripLeadName(String(x.text).replace(/#\w+/g, '').trim().slice(0, 240), [me]))); const play = /^\[play\]/i.test(text); text = text.replace(/^\[play\]\s*/i, '');
     if (!text) return true;
@@ -506,6 +507,7 @@ async function fdReply(job){
     const rt = fdTree(p.cm).find(x => x.kids.some(k => k.c.id === mine.id) || x.c.id === mine.id); if (rt) FDV.vexp[rt.c.id] = rt.kids.length;
     fdNote('reply', job.w, `<b>${esc(B.name)}</b> replied: ${esc(text.slice(0, 80))}`, p.id, at);
     if (play) fdChallenge([job.w]);
+    if (ac) ac.commit(Date.now() + 4000 + Math.random() * 8000);
     return true;
   } catch(e){ if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); return e.kind !== 'offline' && e.kind !== 'busy' ? true : false; }
 }

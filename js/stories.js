@@ -7,7 +7,7 @@
    viewed it; replies and reactions go to your DMs, and they answer like any DM. */
 const STV = 360, STH = 640, ST_DUR = 5500, ST_LIFE = 864e5;
 let STY = store.get('fb.stories', {seen: {}, mine: [], liked: {}, dmd: {}});
-STY.seen = STY.seen || {}; STY.mine = STY.mine || []; STY.liked = STY.liked || {}; STY.dmd = STY.dmd || {};
+STY.seen = STY.seen || {}; STY.mine = STY.mine || []; STY.liked = STY.liked || {}; STY.dmd = STY.dmd || {}; STY.rp = STY.rp || [];
 const saveSt = () => store.set('fb.stories', STY);
 const ST_CACHE = new Map();
 
@@ -50,7 +50,7 @@ function stDay(w, dk){
 // someone's stories up now (the last 24 hours), oldest first
 function stOf(w){
   const now = Date.now(), today = fdWorldMin(now).dk, y = fdWorldMin(now - 864e5).dk;
-  return [...stDay(w, y), ...stDay(w, today)].filter(s => s.t <= now && now - s.t < ST_LIFE);
+  return [...stDay(w, y), ...stDay(w, today), ...stReposts(w)].filter(s => s.t <= now && now - s.t < ST_LIFE).sort((a, b) => a.t - b.t);
 }
 const stMine = () => STY.mine.filter(s => Date.now() - s.t < ST_LIFE);
 const stAllSeen = list => list.every(s => STY.seen[s.id]);
@@ -90,6 +90,7 @@ function stSvg(s){
   else if (s.kind === 'song') body = blurScene() + scene(110, 300) + stSticker(60, 440, 240, 72, `<rect x="74" y="452" width="48" height="48" rx="8" fill="${scH(hue + 120, 50, 55)}"/><path d="M92 486v-22l14-3v22" stroke="#fff" stroke-width="3" fill="none"/>` + `<text x="132" y="472" font-size="13" font-weight="700" fill="#1d1d1f" font-family="ui-sans-serif,system-ui">${esc(String(d.song).split(' · ')[0].slice(0, 22))}</text><text x="132" y="492" font-size="11" fill="#777" font-family="ui-sans-serif,system-ui">${esc(String(d.song).split(' · ')[1] || 'playing now')}</text>`) + stCaption(s.cap, 92);
   else if (s.kind === 'text') body = stWrap(s.cap, 16).slice(0, 7).map((l, k, a) => stTxt(180, 320 - (a.length - 1) * 21 + k * 42, esc(l), 30, '#fff', ' stroke="rgba(0,0,0,.18)" stroke-width="2" paint-order="stroke"')).join('');
   else if (s.kind === 'card') body = stCard(s);
+  else if (s.kind === 'repost') body = stRepostBody(s, hue);
   return `<svg viewBox="0 0 ${STV} ${STH}" class="st-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">${bg}${body}</svg>`;
 }
 // your own stats cards
@@ -174,6 +175,7 @@ function stViews(s){
   const fol = (FD.followers || []).filter(w => w >= 0), age = (Date.now() - s.t) / 36e5, reach = Math.min(1, .2 + .8 * (1 - Math.exp(-age / 2.5)));
   const order = fol.slice().sort((a, b) => fdHash(s.id + ':' + a) - fdHash(s.id + ':' + b)), cut = Math.round(order.length * (.35 + (fdHash(s.id) % 30) / 100) * reach);
   const list = order.slice(0, cut).map(w => ({w, rx: fdHash(s.id + 'rx' + w) % 9 === 0 ? ['😍', '🔥', '👏', '😂', '😮'][fdHash(s.id + 'e' + w) % 5] : '', like: fdHash(s.id + 'lk' + w) % 5 === 0}));
+  (s.xl || []).forEach(w => { const x = list.find(v => v.w === w); if (x) x.like = true; else list.unshift({w, rx: '', like: true}); });
   return {n: list.length, list};
 }
 function stViewsPanel(){
@@ -321,15 +323,53 @@ fdStrip = function(){
   stripArrows();
 };
 
+
+/* ---- reposts: someone's post on a story ----
+   You can add any post to your story (the share sheet). Players add your posts to theirs when you ask in a chat, and now and
+   then on their own: that part is worked out from the post, so it's the same on every device. */
+function stRepostStory(r, id){ return {id, w: r.w, t: r.t, kind: 'repost', cap: '', d: {pid: r.pid, pw: -1}}; }
+function stDerived(w){
+  if (typeof FD === 'undefined' || !FD.followers.includes(w)) return [];
+  const out = [];
+  (FD.posts || []).forEach(p => {
+    if (p.w !== -1 || p.del || Date.now() - p.t > 36 * 36e5) return;
+    const h = fdHash(p.id + ':rp' + w) % 10000, rate = 2 + Math.min(30, fdLikes(p) / 120);
+    if (h >= rate) return;
+    out.push(stRepostStory({w, t: p.t + (25 + fdHash(p.id + ':rpt' + w) % 360) * 60000, pid: p.id}, 'RD' + w.toString(36) + p.id));
+  });
+  return out;
+}
+function stReposts(w){
+  const own = (STY.rp || []).filter(r => r.w === w).map(r => stRepostStory(r, r.id));
+  return [...own, ...stDerived(w).filter(s => !own.some(o => o.d.pid === s.d.pid))];
+}
+function stRepostBody(s, hue){
+  const d = s.d || {}, p = (FD.posts || []).find(x => x.id === d.pid), who = p ? (p.w === -1 ? myName() : bot(p.w).name) : '', id = 'rp' + fdHash(s.id).toString(36);
+  if (!p) return stSticker(50, 240, 260, 90, stTxt(180, 292, 'Post unavailable', 18, '#555'));
+  let media = ''; try { media = typeof fdMedia === 'function' ? fdMedia(p) : ''; } catch(e){}
+  const inner = /^<svg/.test(media) ? fxUniq(media, 'rs' + id).replace('<svg', '<svg x="40" y="170" width="280" height="280"') : '';
+  const lines = stWrap(p.cap || '', 26).slice(0, 4).map((l, k) => stTxt(180, 478 + k * 22, esc(l), 15, '#1d1d1f')).join('');
+  return stSticker(24, 96, 312, 56, stTxt(180, 122, 'REPOSTED POST', 11, '#888', ' letter-spacing="3"') + stTxt(180, 142, esc(who), 17, '#1d1d1f'))
+    + `<rect x="34" y="164" width="292" height="292" rx="14" fill="#fff" opacity=".96"/>` + (inner || stTxt(180, 310, '', 12, '#555')) + (p.cap ? `<rect x="34" y="456" width="292" height="${24 + Math.min(4, stWrap(p.cap, 26).length) * 22}" rx="14" fill="#fff" opacity=".96"/>` + lines : '');
+}
+// put a post on your own story (from the share sheet)
+function stRepostMine(p){
+  STY.mine.push({id: 'M' + Date.now().toString(36) + 'r', t: Date.now(), kind: 'repost', cap: '', d: {pid: p.id, pw: p.w}});
+  saveSt(); FD.shared[p.id] = (FD.shared[p.id] || 0) + 1; saveFeed();
+  try { fdStrip(); fxRefresh(p); } catch(e){}
+  toast('Added to your story');
+  if (p.w >= 0 && typeof acThanks === 'function') acThanks(p.w, p);
+}
+
 /* ---- sync: what you've seen, and your own stories ---- */
 if (typeof SECTIONS !== 'undefined'){
   SECTIONS.stories = {
     items: () => { const o = {}; const cut = Date.now() - 2 * 864e5;
       Object.entries(STY.seen).forEach(([id, t]) => { if (t > cut) o['s:' + id] = t; });
-      stMine().forEach(s => { o['m:' + s.id] = s; }); Object.entries(STY.liked).forEach(([id, v]) => { if (v) o['l:' + id] = 1; }); return o; },
-    put: o => { const seen = {}, mine = [], liked = {};
-      Object.entries(o).forEach(([k, v]) => { if (k.startsWith('s:')) seen[k.slice(2)] = v; else if (k.startsWith('m:')) mine.push(v); else if (k.startsWith('l:')) liked[k.slice(2)] = 1; });
-      STY.seen = {...STY.seen, ...seen}; STY.mine = mine.sort((a, b) => a.t - b.t); STY.liked = {...STY.liked, ...liked}; store.set('fb.stories', STY); try { fdStrip(); } catch(e){} }
+      stMine().forEach(s => { o['m:' + s.id] = s; }); (STY.rp || []).forEach(r => { if (Date.now() - r.t < 2 * ST_LIFE) o['r:' + r.id] = r; }); Object.entries(STY.liked).forEach(([id, v]) => { if (v) o['l:' + id] = 1; }); return o; },
+    put: o => { const seen = {}, mine = [], liked = {}, rp = [];
+      Object.entries(o).forEach(([k, v]) => { if (k.startsWith('s:')) seen[k.slice(2)] = v; else if (k.startsWith('m:')) mine.push(v); else if (k.startsWith('l:')) liked[k.slice(2)] = 1; else if (k.startsWith('r:')) rp.push(v); });
+      STY.seen = {...STY.seen, ...seen}; STY.mine = mine.sort((a, b) => a.t - b.t); STY.liked = {...STY.liked, ...liked}; STY.rp = rp.sort((a, b) => a.t - b.t); store.set('fb.stories', STY); try { fdStrip(); } catch(e){} }
   };
   if (typeof STORE_SECTION !== 'undefined') STORE_SECTION['fb.stories'] = 'stories';
 }

@@ -385,7 +385,7 @@ function elChatPump(){
   const x = G.q.shift(); G.chat.push({t: now, w: x.w, text: x.text}); G.lastMsg = now;
   if (!$('#page-elim').hidden && EL.view === 'game') elRenderGame();
 }
-async function elChatAI(task, talk, G = EL.G){
+async function elChatAI(task, talk, G = EL.G, ac = null){
   if (!G) return; elChatBusy = true; elAiLast = Date.now();
   try {
     const S = elState(G, Date.now()), me = myName();
@@ -399,8 +399,9 @@ Chat so far:
 ${G.chat.slice(-10).map(x => x.sys ? `[${x.text}]` : `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(nothing yet)'}
 
 ${task} Write 1 to 3 short messages from 1 or 2 of the people who can talk.`;
-    const got = await aiCall(sys, user), names = new Map(talk.map(w => [bot(w).name.toLowerCase(), w]));
-    (Array.isArray(got) ? got : []).slice(0, 3).forEach(x => { const w = names.get(String(x && x.from || '').toLowerCase().trim()); if (w == null) return; const text = emotionOnly(stripSegue(String(x.text || '').trim().slice(0, 180))); if (text) elQ(w, text, 0, G); });
+    const got = await aiCall(sys, user), names = new Map(talk.map(w => [bot(w).name.toLowerCase(), w])); let queued = 0;
+    (Array.isArray(got) ? got : []).slice(0, 3).forEach(x => { const w = names.get(String(x && x.from || '').toLowerCase().trim()); if (w == null) return; const text = emotionOnly(stripSegue(String(x.text || '').trim().slice(0, 180))); if (text){ elQ(w, text, 0, G); queued++; } });
+    if (ac && queued) ac.commit(Date.now() + 8000);
   } catch(e){ if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); }
   finally { elChatBusy = false; }
 }
@@ -410,7 +411,8 @@ function elSend(text){
   if (G.L.rules.chat === 'break' && focusing() && !G.me.out) return toast('You can only chat on a break.');
   G.chat.push({t: Date.now(), w: -1, text: text.trim().slice(0, 200)}); saveEl(); elRenderGame();
   const S = elState(G, Date.now()), talk = (G.L.rules.chat === 'on' ? S.ps.filter(p => p.w !== -1 && !p.out) : S.ps.filter(p => p.w !== -1 && p.st === 'break')).map(p => p.w);
-  if (talk.length && GEM.key && !elChatBusy) setTimeout(() => elChatAI(`${myName()} just said something: answer them.`, talk), 2500);
+  const ac = typeof acPrepMany === 'function' ? acPrepMany(talk, text) : null;
+  if (talk.length && GEM.key && !elChatBusy) setTimeout(() => elChatAI(`${myName()} just said something: answer them.` + (ac ? ac.note : ''), talk, G, ac), 2500);
 }
 
 /* ---- drawing ---- */
