@@ -10,7 +10,12 @@ const elAllow = r => (r.preset === 'custom' ? (r.custom && r.custom.length ? r.c
 const elStd = r => r.preset === 'standard' && +r.round === 25;
 const elRated = r => !!r.ranked && elStd(r);      // only games from the Ranked queue are rated; every other lobby is casual
 let EL = store.get('fb.elim', {G: null, list: [], live: [], hist: [], view: 'browse', tab: 'stand', filt: 'all', form: null});
-EL.list = EL.list || []; EL.live = EL.live || []; EL.hist = EL.hist || [];
+EL.list = store.get('fb.elist', []); EL.live = EL.live || []; EL.hist = EL.hist || [];
+// the open lobbies are kept on their own (on this device only), so a refresh shows the same lobbies, filled in as far as
+// they would have got while you were away, instead of a whole new list
+let elListSavedAt = 0;
+function elSaveList(force){ const now = Date.now(); if (!force && now - elListSavedAt < 8000) return; elListSavedAt = now; store.set('fb.elist', EL.list.filter(l => !l.mine)); saveEl(); }      // and the games running (Top matches)
+addEventListener('pagehide', () => elSaveList(true));
 // a refresh never drops you into a game you were only watching, or back into one that's over
 if (EL.view === 'watch' || (EL.view === 'game' && (!EL.G || EL.G.done))){ EL.view = 'browse'; EL.watch = null; }
 delete EL.watch;
@@ -197,6 +202,7 @@ function elListTick(){
   }
   // running lobbies you can watch (a few at a time; finished ones drop off)
   EL.live = EL.live.filter(L => { const end = Math.max(...L.players.map(w => elBotPlan(L, w).out)); return now < end + 5 * 60000; }).slice(0, 40);
+  if (ch) elSaveList();
   if (ch && !$('#page-elim').hidden && EL.view === 'browse') elRender();
 }
 
@@ -365,15 +371,15 @@ function elChatEvent(kind, w){
   if (GEM.key && !(GEM.wait > Date.now()) && Date.now() - elAiLast > 150000 && !elChatBusy) return elChatAI(kind === 'out' ? `${bot(w).name} just got knocked out.` : 'react to the game', talk);
   if (Math.random() < .6){ const who = talk[Math.floor(Math.random() * talk.length)], lines = EL_LINES[S.sd ? 'sd' : kind === 'out' ? 'out' : 'brk']; elQ(who, lines[Math.floor(Math.random() * lines.length)]); }
 }
-function elQ(w, text, at){ const G = EL.G; if (!G) return; const t = Math.max(at || Date.now() + 2000, ...G.q.map(x => x.t + 2500)); G.q.push({t, w, text}); }
+function elQ(w, text, at, G = EL.G){ if (!G) return; const t = Math.max(at || Date.now() + 2000, ...G.q.map(x => x.t + 2500)); G.q.push({t, w, text}); }
 function elChatPump(){
   const G = EL.G; if (!G || !G.q.length) return;
   const now = Date.now(); if (G.q[0].t > now || now - (G.lastMsg || 0) < 2200) return;
   const x = G.q.shift(); G.chat.push({t: now, w: x.w, text: x.text}); G.lastMsg = now;
   if (!$('#page-elim').hidden && EL.view === 'game') elRenderGame();
 }
-async function elChatAI(task, talk){
-  const G = EL.G; elChatBusy = true; elAiLast = Date.now();
+async function elChatAI(task, talk, G = EL.G){
+  if (!G) return; elChatBusy = true; elAiLast = Date.now();
   try {
     const S = elState(G, Date.now()), me = myName();
     const sys = `You write lobby chat for an Elimination game on Focus Bench, a study-timer app for college students. Everyone in the lobby studies at the same time; each round allows a little break time, and going over it (or stopping) knocks you out. Last one studying wins.
@@ -381,13 +387,13 @@ People only chat while they're on a break. Write like quick game-lobby chat: sho
 Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…"}]}.
 ${typeof EMO_RULE === 'string' ? EMO_RULE + '\n' : ''}${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
     const user = `Round ${S.r + 1}, ${S.alive} of ${G.L.players.length} still in, ${S.sd ? 'sudden death (no breaks allowed)' : `${elFmtA(S.a / 60000)} of breaks this round`}.
-People who can talk now: ${talk.map(w => `${bot(w).name} (emojis: ${emojiStyle(w)})`).join('; ')}${!focusing() ? `; ${me} (the user) is on a break too` : ''}.
+People who can talk now: ${talk.map(w => `${bot(w).name} (emojis: ${emojiStyle(w)})`).join('; ')}${G === EL.G && !focusing() ? `; ${me} (the user) is on a break too` : ''}.
 Chat so far:
 ${G.chat.slice(-10).map(x => x.sys ? `[${x.text}]` : `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(nothing yet)'}
 
 ${task} Write 1 to 3 short messages from 1 or 2 of the people who can talk.`;
     const got = await aiCall(sys, user), names = new Map(talk.map(w => [bot(w).name.toLowerCase(), w]));
-    (Array.isArray(got) ? got : []).slice(0, 3).forEach(x => { const w = names.get(String(x && x.from || '').toLowerCase().trim()); if (w == null) return; const text = emotionOnly(stripSegue(String(x.text || '').trim().slice(0, 180))); if (text) elQ(w, text); });
+    (Array.isArray(got) ? got : []).slice(0, 3).forEach(x => { const w = names.get(String(x && x.from || '').toLowerCase().trim()); if (w == null) return; const text = emotionOnly(stripSegue(String(x.text || '').trim().slice(0, 180))); if (text) elQ(w, text, 0, G); });
   } catch(e){ if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); }
   finally { elChatBusy = false; }
 }
@@ -408,7 +414,9 @@ const elWho = w => w === -1 ? `<b>You</b>` : `<button class="lnk" data-bot="${w}
 const elAv = w => w === -1 ? myAvatar('sm') : avatar(bot(w), 'sm');
 const elR = w => w === -1 ? R.mmr : botRating(w);
 function elRender(){
-  const box = $('#elBody'); if (!box) return; elCardRender();
+  const box = $('#elBody'); if (!box) return;
+  if (!RK_READY){ if (!box.firstChild) box.innerHTML = '<p class="hint">Loading lobbies…</p>'; return; }
+  elCardRender();
   if ($('#page-elim').hidden) return;
   if (EL.view === 'game' && EL.G) return elRenderGame();
   if (EL.view === 'watch' && EL.watch) return elRenderGame(EL.watch);
@@ -496,12 +504,13 @@ function elGameHtml(G, t, opts = {}){
   const stand = `<div class="card"><div class="h first">Standings</div><ul class="el-st">${order.map(p => `<li class="${p.st}${(opts.replay ? opts.follow : EL.follow) === p.w ? ' fol' : ''}" data-tile="${p.w}">${elAv(p.w)}<span class="who">${elWho(p.w)}<small>${elR(p.w).toLocaleString()}</small></span><span class="el-ps">${p.st === 'out' ? `Out · ${elOrd(p.place)}` : p.st === 'break' ? `Break · ${elClock(Math.max(0, S.a - p.used))} left` : p.st === 'wait' ? 'Ready' : S.over && S.over.winner === p.w ? 'Winner' : 'Studying'}</span></li>`).join('')}</ul></div>`;
   const arena = `<div class="card el-arena${S.sd ? ' sd' : ''}"><div class="el-count"><b>${S.alive}</b><small>of ${L.players.length} remaining</small></div><div class="el-grid">${L.players.map((w, k) => { const p = S.ps[k];
       return `<div class="el-tile ${p.st}${S.over && S.over.winner === w ? ' champ' : ''}${(opts.replay ? opts.follow : EL.follow) === w ? ' fol' : ''}" data-tile="${w}" title="${w === -1 ? 'You' : esc(bot(w).name)}${p.st === 'out' ? ` · out, ${elOrd(p.place)}` : p.st === 'break' ? ' · on a break' : ''}"><span class="num">${String(k + 1).padStart(3, '0')}</span>${elAv(w)}<small>${w === -1 ? 'You' : esc(bot(w).name)}</small>${p.st === 'break' && S.a > 0 ? `<i class="drain" style="width:${Math.max(0, (S.a - p.used) / S.a * 100)}%"></i>` : ''}</div>`; }).join('')}</div></div>`;
-  const chat = L.rules.chat === 'off' ? '' : `<div class="card el-chat"><div class="h first">Lobby chat <small>${L.rules.chat === 'break' ? '· on breaks only' : ''}</small></div><div class="el-cl" id="elChatList">${(G.chat.length || mine ? G.chat : elSysLines(G, now)).filter(m => m.t <= now).slice(-60).map(m => m.sys ? `<p class="sys">${esc(m.text)}</p>` : `<p><b>${m.w === -1 ? esc(myName()) : esc(bot(m.w).name)}</b> ${atLinks(esc(m.text))}</p>`).join('') || '<p class="hint">Quiet so far.</p>'}</div>
+  const chat = L.rules.chat === 'off' ? '' : `<div class="card el-chat"><div class="h first">Lobby chat <small>${L.rules.chat === 'break' ? '· on breaks only' : ''}</small></div><div class="el-cl" id="elChatList">${(mine ? G.chat : elSysLines(G, now).concat(G.chat).sort((a, b) => a.t - b.t)).filter(m => m.t <= now).slice(-60).map(m => m.sys ? `<p class="sys">${esc(m.text)}</p>` : `<p><b>${m.w === -1 ? esc(myName()) : esc(bot(m.w).name)}</b> ${atLinks(esc(m.text))}</p>`).join('') || '<p class="hint">Quiet so far.</p>'}</div>
     ${mine && !opts.replay ? `<form class="el-send" id="elForm"><input id="elIn" maxlength="200" autocomplete="off" placeholder="${L.rules.chat === 'break' && me && me.st === 'study' ? 'Take a break to chat' : 'Say something…'}"><button class="small-btn accent">Send</button></form>` : ''}</div>`;
   const tabs = `<div class="el-tabs">${[['stand', 'Standings'], ['arena', 'Arena']].map(([k, n]) => `<button class="chip${(opts.tab || EL.tab) === k ? ' on' : ''}" data-el="tab" data-t="${k}">${n}</button>`).join('')}${!opts.replay && !mine ? '<button class="small-btn" data-el="browse">Back to lobbies</button>' : ''}</div>`;
   const tl = opts.replay ? '' : elTimeline(G, now), fc = opts.replay ? '' : elFollowCard(G, now);
-  if ((opts.tab || EL.tab) === 'arena') return top + card + tabs + fc + arena + `<div class="el-main el-below">${tl}${chat}</div>`;
-  return top + card + tabs + fc + `<div class="el-main">${stand}<div class="el-sidecol">${tl}${chat}</div></div>`;
+  const vw = !mine && !opts.replay && typeof elViewHtml === 'function' ? elViewHtml(G, now) : '';
+  if ((opts.tab || EL.tab) === 'arena') return top + card + tabs + fc + arena + `<div class="el-main el-below">${vw}${chat}${tl}</div>`;
+  return top + card + tabs + fc + `<div class="el-main">${stand}<div class="el-sidecol">${vw}${chat}${tl}</div></div>`;
 }
 // knockout lines for a lobby you're watching
 function elSysLines(G, t){
@@ -536,6 +545,7 @@ function elRenderGame(Gx){
   const box = $('#elBody'); if (!box || $('#page-elim').hidden) return;
   const G = Gx || EL.G; if (!G) return elRender();
   const inp = $('#elIn'), val = inp ? inp.value : '', foc = document.activeElement === inp, cl = $('#elChatList'), atEnd = !cl || cl.scrollTop + cl.clientHeight >= cl.scrollHeight - 20;
+  const vl = $('#elVList'), vEnd = !vl || vl.scrollTop + vl.clientHeight >= vl.scrollHeight - 20;
   const tl = box.querySelector('.el-tl ol'), tlTop = tl ? tl.scrollTop : 0, tlH = tl ? tl.scrollHeight : 0, pg = window.scrollY;
   domMorph(box, elGameHtml(G, Date.now()));
   // keep the timeline where you scrolled it (new events come in at the top, so shift by what was added)
@@ -543,6 +553,7 @@ function elRenderGame(Gx){
   if (Math.abs(window.scrollY - pg) > 1) window.scrollTo(0, pg);
   const i2 = $('#elIn'); if (i2){ i2.value = val; if (foc) i2.focus(); }
   const c2 = $('#elChatList'); if (c2 && atEnd) c2.scrollTop = c2.scrollHeight;
+  const v2 = $('#elVList'); if (v2 && vEnd) v2.scrollTop = v2.scrollHeight;
 }
 // the card on the Ranked page
 function elCardRender(){
