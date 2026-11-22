@@ -2431,3 +2431,8 @@ body.m-off .streak-pop{animation:none}
 .el-chat .el-cl{flex:1 1 auto}
 .el-chat .el-cl>:first-child{margin-top:auto}
 .el-chat .el-send{margin-top:10px}
+
+/* lobby size slider */
+.el-sz{display:flex;align-items:center;gap:12px;margin:2px 0 10px;font-size:13px;color:var(--muted)}
+.el-sz input{flex:1;max-width:320px;accent-color:var(--accent)}
+.el-sz b{min-width:76px;color:var(--text,inherit);font-variant-numeric:tabular-nums}
