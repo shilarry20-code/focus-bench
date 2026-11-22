@@ -133,31 +133,38 @@ Return one item per slot, in order: "n" (the slot number), "from" (the sender's 
 /* ---- finished lobbies without you: kept so their players' profiles can list them, with replays ---- */
 let ELX = store.get('fb.elx', []);                // [{id, t0, end, N, name, ps: [[player, place]]}], newest first
 const elxG = L => ({kind: 'el', G: {L, me: {ev: [], out: null}, chat: [], result: null}});
-const elxLoad = id => id[0] === 'X' ? Promise.resolve(elxGen(id)).then(L => L && elxG(L)) : IDB.get('elx:' + id).then(v => v ? elxG(v.L) : null).catch(() => null);
-/* Every player's own past games: worked out from their id and the day, the same on every device, so profiles have
-   Elimination history going back three weeks without anything being saved. Id: X<player in base 36>_<day number>. */
-const ELX_SIZES = [4, 4, 8, 8, 8, 16, 5, 6, 10, 12];
-const elxPlays = (w, day) => { const rate = [0, 8, 18, 30, 45][fdHash(w + ':elrate') % 5]; return fdHash(w + ':eld:' + day) % 100 < rate; };
+const elxLoad = id => /^[XG]/.test(id) ? Promise.resolve(elxGen(id)).then(L => L && elxG(L)) : IDB.get('elx:' + id).then(v => v ? elxG(v.L) : null).catch(() => null);
+/* Everyone's past group matches, worked out the same on every device and consistent between the players in them:
+   each day has a few sessions; in each, the ladder is cut into groups of neighbours (the group size changes from
+   session to session) and some of those groups played a match. So a match is the same match on every player's
+   profile, with the same result, and its replay matches too. Id: G<day>_<session>_<group>. */
+const ELX_SESS = 6, ELX_P = 7;           // sessions a day; % of groups that played in a session
 const ELX_GEN = new Map();
-function elxGen(id){
+const elxSize = (day, s) => [4, 4, 5, 6, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16][fdHash('elxn:' + day + ':' + s) % 18];
+function elxGroup(day, s, g){
+  const id = 'G' + day + '_' + s + '_' + g;
   if (ELX_GEN.has(id)) return ELX_GEN.get(id);
-  const m = /^X([0-9a-z]+)_(\d+)$/.exec(id); if (!m) return null;
-  const w = parseInt(m[1], 36), day = +m[2]; if (!BOTS[w]) return null;
-  const h = fdHash(id), rnd = mulberry32(h), N = ELX_SIZES[h % ELX_SIZES.length], ranked = [4, 8, 16].includes(N) && rnd() < .6;
-  const t0 = day * 864e5 + (13 + Math.floor(rnd() * 12)) * 36e5 + Math.floor(rnd() * 60) * 60000;      // 8am–8pm Eastern
-  const players = elPickPlayers(id, botRating(w), 300, N, '').filter(x => x !== w).slice(0, N - 1);
-  players.splice(Math.floor(rnd() * N), 0, w);
-  const rules = {size: N, round: 25, preset: 'standard', custom: [10, 5, 2.5, 1, 0], rated: ranked, ranked, range: 300, privacy: 'public', subject: '', name: '', start: 'full', at: 0, chat: 'break', spect: true};
-  const L = {id, rules, created: t0 - 5 * 60000, center: botRating(w), host: players[0], players, joinAt: players.map(() => t0 - 60000), t0, name: ranked ? `Ranked · ${N} players` : lobbyName(players[0], BOTS[players[0]].subject, rnd)};
+  const N = elxSize(day, s), off = fdHash('elxo:' + day + ':' + s) % N, order = sortedBots();
+  const lo = g * N - off, ppl = []; for (let k = Math.max(0, lo); k < Math.min(order.length, lo + N); k++) ppl.push(order[k]);
+  if (ppl.length < 3 || fdHash(id) % 100 >= ELX_P){ ELX_GEN.set(id, null); return null; }
+  const rnd = mulberry32(fdHash(id + ':m')); for (let k = ppl.length - 1; k > 0; k--){ const j = Math.floor(rnd() * (k + 1)); [ppl[k], ppl[j]] = [ppl[j], ppl[k]]; }
+  const n = ppl.length, ranked = [4, 8, 16].includes(n) && rnd() < .6;
+  const t0 = day * 864e5 + (11 + s * 2.5 + rnd() * 2) * 36e5;           // sessions spread from morning to night (Eastern)
+  const rules = {size: n, round: 25, preset: 'standard', custom: [10, 5, 2.5, 1, 0], rated: ranked, ranked, range: 300, privacy: 'public', subject: '', name: '', start: 'full', at: 0, chat: 'break', spect: true};
+  const L = {id, rules, created: t0 - 5 * 60000, center: botRating(ppl[0]), host: ranked ? null : ppl[0], players: ppl, joinAt: ppl.map(() => t0 - 60000), t0: Math.round(t0), name: ranked ? `Ranked · ${n} players` : lobbyName(ppl[0], BOTS[ppl[0]].subject, rnd, t0)};
   ELX_GEN.set(id, L); return L;
 }
-// a player's Elimination games over the last three weeks that have finished, newest first
+function elxGen(id){
+  const m = /^G(\d+)_(\d+)_(\d+)$/.exec(id); if (!m) return null;
+  return elxGroup(+m[1], +m[2], +m[3]);
+}
+// a player's group matches over the last three weeks that have finished, newest first
 function elxOf(w){
-  const today = Math.floor(Date.now() / 864e5), now = Date.now(), out = [];
-  for (let day = today; day > today - 21; day--){
-    if (!elxPlays(w, day)) continue;
-    const L = elxGen('X' + w.toString(36) + '_' + day), outs = L.players.map(p => [p, elBotPlan(L, p).out]);
-    if (L.t0 > now || Math.max(...outs.map(x => x[1])) > now) continue;
+  const today = Math.floor(Date.now() / 864e5), now = Date.now(), out = [], pos = posOf(w);
+  for (let day = today; day > today - 21; day--) for (let s = ELX_SESS - 1; s >= 0; s--){
+    const N = elxSize(day, s), off = fdHash('elxo:' + day + ':' + s) % N, g = Math.floor((pos + off) / N);
+    const L = elxGroup(day, s, g); if (!L || !L.players.includes(w) || L.t0 > now) continue;
+    const outs = L.players.map(p => [p, elBotPlan(L, p).out]); if (Math.max(...outs.map(x => x[1])) > now) continue;
     const order = outs.slice().sort((a, b) => b[1] - a[1]), place = order.findIndex(x => x[0] === w) + 1, mine = outs.find(x => x[0] === w)[1];
     out.push({id: L.id, t0: L.t0, end: mine, N: L.players.length, name: L.name, place, ranked: L.rules.ranked});
   }
