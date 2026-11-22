@@ -651,3 +651,30 @@ document.addEventListener('submit', e => { if (e.target.id !== 'elForm') return;
 { const _s = onPageShown; onPageShown = function(name){ const x = _s.apply(this, arguments); if (name === 'elim'){ elListTick(); elRender(); } if (name === 'ranked') elCardRender(); return x; }; }
 setInterval(() => { try { elListTick(); elTick(); } catch(e){ console.error(e); } }, 1000);
 setTimeout(() => { try { elCardRender(); } catch(e){} }, 3000);
+
+/* ---- one-time: past games get bots with the new stamina ----
+   Every saved game's bots are worked out again the new way, then fitted to what really happened to you: your own times
+   and your place stay exactly as recorded (the bots who outlasted you still do, the ones who went out before you still did). */
+async function elRegenPast(){
+  if (store.get('fb.elRegen', 0)) return;
+  let all = []; try { all = (await IDB.all('rp:el:', 'rp:el:\uffff')) || []; } catch(e){ return; }
+  let n = 0;
+  for (const s of all){
+    try {
+      const G = s && s.G, L = G && G.L; if (!L || !G.result || !G.me) continue;
+      const T = G.me.out ? G.me.out.t : G.result.t, place = G.result.place; if (!T || !place) continue;
+      delete L.bp;
+      const plans = L.players.filter(w => w !== -1).map(w => ({w, p: elBotPlan(L, w)})).sort((a, b) => b.p.out - a.p.out);
+      plans.forEach((x, i) => {
+        let o = x.p.out;
+        if (i < place - 1){ if (o <= T) o = T + 45000 * (place - 1 - i); }                 // these outlasted you
+        else if (o >= T) o = T - 20000 * (i - (place - 1) + 1);                             // these were out before you
+        o = Math.max(o, L.t0 + 60000);
+        x.p.out = Math.round(o); x.p.br = x.p.br.filter(([b]) => b < x.p.out).map(([b, e]) => [b, Math.min(e, x.p.out + (x.p.why === 'break' ? 60000 : 0))]);
+      });
+      await rpSave('el:' + L.id, s); n++;
+    } catch(e){ console.error(e); }
+  }
+  store.set('fb.elRegen', 1);
+}
+{ const w = setInterval(() => { if (typeof RK_READY !== 'undefined' && RK_READY && typeof IDB !== 'undefined'){ clearInterval(w); setTimeout(() => elRegenPast().catch(console.error), 4000); } }, 1000); }
