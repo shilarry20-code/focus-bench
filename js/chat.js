@@ -193,6 +193,7 @@ ${forUser ? chatChallengeNote(cast) : ''}For replyTo use the id of the message b
 // GEM.detail keeps Google's own error message so Settings can show what went wrong.
 // `more`: extra fields each message may carry (e.g. reactions), added to the answer's shape
 async function aiCall(sys, user, more){
+  GN_CTX = String(user || '').toLowerCase().slice(-2500);
   const models = GEMINI_MODELS.filter(m => !modelOut(m));
   if (!models.length){ const until = Math.min(...GEMINI_MODELS.map(m => GEM.out[m])); throw {kind: 'busy', until, msg: 'Both Gemini models have used up today’s free requests.'}; }
   const schema = {type: 'OBJECT', properties: {messages: {type: 'ARRAY', items: {type: 'OBJECT',
