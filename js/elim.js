@@ -341,7 +341,7 @@ function elFinishMe(G, won){
   if (elRated(L.rules)){
     pl = rkUnplaced() ? R.played + 1 : 0; R.played++; placed = rkPlace();
     const gm = R.gm || (R.gm = {}), x = gm[N] || (gm[N] = {w: 0, l: 0}); if (place === 1) x.w++; else x.l++;
-    (R.gh || (R.gh = [])).unshift({id: L.id, t, t0: L.t0, N, p: place, d: delta, m: R.mmr, dur: t - L.t0, ...(pl ? {pl} : {})}); R.gh = R.gh.slice(0, 300);
+    (R.gh || (R.gh = [])).unshift({id: L.id, t, t0: L.t0, N, p: place, d: delta, m: R.mmr, dur: t - L.t0, ...(pl ? {pl} : {}), ...(typeof coLobbyBases === 'function' && L.players ? {bs: coLobbyBases(L, R.mmr - delta, pl)} : {})}); R.gh = R.gh.slice(0, 300);
   }
   const el = R.el || (R.el = {played: 0, wins: 0, top3: 0, best: 99, longest: 0, sd: 0});
   el.played++; if (place === 1) el.wins++; if (place <= 3) el.top3++; el.best = Math.min(el.best, place);

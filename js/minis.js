@@ -32,7 +32,7 @@ function miniAch(){
     ${next.length ? `<div class="mini-h">Almost there</div><ul class="mini-list">${next.map(([a, f]) => row(a, `<span class="ach-prog"><i style="width:${Math.min(100, f * 100)}%;background:${TIERS[a.tier].c}"></i></span><small>${achProgressText(a, achVal(a, st))}</small>`)).join('')}</ul>` : ''}
     <div class="mini-go"><button class="small-btn accent" data-mini-go="awards">See all</button></div>`;
 }
-const TBPOP_VIEWS = {lvChip: miniLevel, rankChip: miniRank, achBtn: miniAch};
+const TBPOP_VIEWS = {lvChip: miniLevel, rankChip: miniRank, achBtn: miniAch, coinChip: miniCoins};
 function tbPopClose(){ const p = $('#miniPop'); if (p) p.remove(); if (TBPOP.open){ const b = $('#' + TBPOP.open); if (b) b.setAttribute('aria-expanded', 'false'); } TBPOP.open = null; }
 function tbPopOpen(id){
   tbPopClose(); const btn = $('#' + id); if (!btn) return;
@@ -47,7 +47,7 @@ function tbPopOpen(id){
   el.style.maxHeight = `${Math.round(innerHeight - r.bottom - 24)}px`;
 }
 document.addEventListener('click', e => {
-  const b = e.target.closest('#lvChip, #rankChip, #achBtn');
+  const b = e.target.closest('#lvChip, #rankChip, #achBtn, #coinChip');
   if (b){ e.stopImmediatePropagation(); e.preventDefault(); if (TBPOP.open === b.id) tbPopClose(); else tbPopOpen(b.id); return; }
   const go = e.target.closest('[data-mini-go]');
   if (go){ const k = go.dataset.miniGo; tbPopClose(); if (k === 'level'){ try { profTab = 'stats'; } catch(err){} openFullProfile(ME); } else showPage(k); return; }
