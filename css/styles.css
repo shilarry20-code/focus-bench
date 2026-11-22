@@ -2225,6 +2225,8 @@ body.m-off .streak-pop{animation:none}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .dc{--dcn:70%}}
 .dc.with-mem{grid-template-columns:300px minmax(0,1fr) 240px}
 .dc svg{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+/* profile pictures are drawings with their own colors: they don't get the outline icons have */
+.dc .av svg{fill:initial;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter}
 .dc-side{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:color-mix(in srgb,var(--soft) 55%,var(--surface))}
 .dc-shead{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 8px}
 .dc-shead b{font-size:16px}
