@@ -126,13 +126,14 @@ function lbYouCard(c, V, t){
     const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return d; });
     const vals = days.map(d => (LBH[dayKey(d.getTime())] || {})[c.id] || null), got = vals.filter(v => v);
     if (got.length){
-      const lo = Math.min(...got), hi = Math.max(...got), sp = Math.max(1, hi - lo), X = i => 22 + i * 276 / 6, Y = v => got.length < 2 || hi === lo ? 62 : 26 + (v - lo) / sp * 72;
+      const lo = Math.min(...got), hi = Math.max(...got), sp = Math.max(1, hi - lo), X = i => 22 + i * 276 / 6, Y = v => got.length < 2 || hi === lo ? 62 : 16 + (v - lo) / sp * 82;
       const pts = vals.map((v, i) => v ? [X(i), Y(v), v] : null).filter(Boolean), L = pts[pts.length - 1];
       chart = `<svg class="lb2-spark" viewBox="0 0 320 128" role="img" aria-label="Your rank on each of the last 7 days">
         ${days.map((d, i) => `<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="14" y2="106" class="lb2-grid"/>`).join('')}
         ${pts.length > 1 ? `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
-        ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${p === L ? 5 : 3.6}" fill="var(--accent)"><title>#${p[2].toLocaleString()}</title></circle>`).join('')}
-        <text x="${Math.min(298, Math.max(22, L[0])).toFixed(1)}" y="${(L[1] - 11).toFixed(1)}" text-anchor="${L[0] > 250 ? 'end' : 'middle'}" class="lb2-val">#${L[2].toLocaleString()}</text>
+        ${pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${p === L ? 5 : 3.6}" fill="var(--accent)" class="lb2-dot"/>`).join('')}
+        <g class="lb2-tip" visibility="hidden"><rect rx="6" height="22" fill="var(--ink)"/><text class="lb2-tipt" y="15" text-anchor="middle"></text></g>
+        ${pts.map(p => { const i = Math.round((p[0] - 22) / 46); return `<rect class="lb2-hit" x="${(p[0] - 23).toFixed(1)}" y="0" width="46" height="128" fill="transparent" data-x="${p[0].toFixed(1)}" data-y="${p[1].toFixed(1)}" data-t="${i === 6 ? 'Today' : days[i].toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'})} · #${p[2].toLocaleString()}"/>`; }).join('')}
         ${days.map((d, i) => `<text x="${X(i).toFixed(1)}" y="123" text-anchor="middle" class="lb2-day${i === 6 ? ' now' : ''}">${i === 6 ? 'Today' : d.toLocaleDateString(undefined, {weekday: 'short'})}</text>`).join('')}
       </svg>`;
     } else chart = '<small class="hint">Your rank chart fills in day by day.</small>';
@@ -226,3 +227,17 @@ function lbDailyNote(){
   } catch(e){}
 }
 setTimeout(function lbDailyStart(){ if (typeof RK_READY === 'undefined' || !RK_READY) return setTimeout(lbDailyStart, 5000); lbDailyNote(); setInterval(lbDailyNote, 3 * 3600e3); }, 20000);
+
+// hover (or tap) a day on the rank chart to see your rank that day
+function lbTipShow(hit){
+  const svg = hit.closest('svg'), tip = svg.querySelector('.lb2-tip'), t = tip.querySelector('text'), r = tip.querySelector('rect');
+  t.textContent = hit.dataset.t; const w = t.getComputedTextLength() + 16, x = +hit.dataset.x, y = +hit.dataset.y;
+  const left = Math.max(2, Math.min(318 - w, x - w / 2)), top = y - 34 < 0 ? y + 10 : y - 34;
+  r.setAttribute('x', left); r.setAttribute('y', top); r.setAttribute('width', w); t.setAttribute('x', left + w / 2); t.setAttribute('y', top + 15);
+  tip.setAttribute('visibility', 'visible');
+  svg.querySelectorAll('.lb2-dot').forEach(d => d.classList.toggle('on', Math.abs(+d.getAttribute('cx') - x) < 1));
+}
+function lbTipHide(svg){ const tip = svg.querySelector('.lb2-tip'); if (tip) tip.setAttribute('visibility', 'hidden'); svg.querySelectorAll('.lb2-dot.on').forEach(d => d.classList.remove('on')); }
+document.addEventListener('pointerover', e => { const h = e.target.closest && e.target.closest('.lb2-hit'); if (h) lbTipShow(h); });
+document.addEventListener('pointerout', e => { const sv = e.target.closest && e.target.closest('.lb2-spark'); if (sv && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.lb2-hit'))) lbTipHide(sv); });
+document.addEventListener('click', e => { const h = e.target.closest && e.target.closest('.lb2-hit'); if (h) lbTipShow(h); else document.querySelectorAll('.lb2-spark').forEach(lbTipHide); });
