@@ -14,10 +14,14 @@ function fxRow(html, p, view){
   const t = document.createElement('template'); t.innerHTML = html;
   const act = t.content.querySelector(view ? '.fv-foot .fd-act' : '.fd-act'); if (!act) return html;
   const like = act.querySelector('.fd-like'), cm = act.querySelector('.fd-cbtn'), nl = fdLikes(p), nc = fdCount(p), ns = fdShares(p);
+  // the heart, the bubble and the plane are drawn at different sizes: frame each so they all come out the same height, centered
+  const fit = (svg, vb, sw) => { if (svg){ svg.setAttribute('viewBox', vb); svg.style.strokeWidth = sw; } };
+  if (like) fit(like.querySelector('svg'), '0.47 0.42 23.07 23.07', 1.92);
+  if (cm) view ? fit(cm.querySelector('svg'), '1.35 1.35 21.3 21.3', 1.78) : fit(cm.querySelector('svg'), '2.75 3.45 19.5 19.5', 1.62);
   if (like) like.insertAdjacentHTML('afterend', `<button class="fd-n fd-lkn" data-ins="likers" aria-label="See who liked this">${fxN(nl)}</button>`);
   if (cm) cm.insertAdjacentHTML('afterend', `<button class="fd-n fd-cmn" data-fdx="${view ? 'cms' : 'open'}" aria-label="See the comments">${fxN(nc)}</button>`);
   const after = act.querySelector('.fd-cmn') || cm;
-  if (after) after.insertAdjacentHTML('afterend', `<button class="fd-cbtn fd-shb" data-fdx="share" aria-label="Share">${FX_ICON.share}</button><span class="fd-n fd-shn">${fxN(ns)}</span>`);
+  if (after) after.insertAdjacentHTML('afterend', `<button class="fd-cbtn fd-shb" data-fdx="share" aria-label="Share">${FX_ICON.share.replace('viewBox="0 0 24 24"', 'viewBox="0.5 0 24 24"')}</button><span class="fd-n fd-shn">${fxN(ns)}</span>`);
   // the "70 likes · 2 comments" line goes: the numbers are on the buttons now (a "Liked by …" line in the feed stays)
   const lk = t.content.querySelector(view ? '.fv-foot .fd-likes' : '.fd-likes');
   if (lk && (view || !lk.querySelector('.fd-lkby'))) lk.remove();
