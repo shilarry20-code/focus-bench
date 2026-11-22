@@ -39,13 +39,15 @@ const elMeIn = G => G && G.L.players.includes(-1);
 
 /* ---- who plays: players near a rating, picked the same way every time for a lobby ---- */
 function elPickPlayers(seed, center, range, n, subject){
-  const order = sortedBots(), rnd = mulberry32(fdHash(seed + ':pick'));
-  // order is highest rating first: find where `center` sits
-  let lo = 0, hi = order.length - 1; while (lo < hi){ const m = (lo + hi) >> 1; if (botRating(order[m]) > center) lo = m + 1; else hi = m; }
-  const out = new Set(), half = range / 2;
-  for (let t = 0; t < 4000 && out.size < n; t++){
-    const k = clampN(lo + Math.round((rnd() - .5) * 2 * Math.min(6000, 400 + t * 4)), 0, order.length - 1), w = order[k];
-    if (Math.abs(botRating(w) - center) > half || out.has(w)) continue;
+  const order = sortedBots(), rnd = mulberry32(fdHash(seed + ':pick')), half = range / 2;
+  // order is highest rating first: find the slice of it that's inside the lobby's range, and pick from all of it
+  const first = v => { let lo = 0, hi = order.length; while (lo < hi){ const m = (lo + hi) >> 1; if (botRating(order[m]) > v) lo = m + 1; else hi = m; } return lo; };
+  const a = first(center + half + 1e-9), b = first(center - half - 1e-9) - 1;      // a..b = everyone within range
+  if (b < a) return [];
+  const out = new Set();
+  for (let t = 0; t < 4000 && out.size < n && out.size < b - a + 1; t++){
+    const w = order[a + Math.floor(rnd() * (b - a + 1))];
+    if (out.has(w)) continue;
     if (subject && t < 2500 && BOTS[w].subject !== subject && rnd() < .7) continue;
     out.add(w);
   }
