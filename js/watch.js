@@ -112,6 +112,30 @@ async function wSay(kind, delay, extra){
   W.last = Date.now(); wSave(); renderWatch();
 }
 
+/* ---- the big view: the same match, enlarged over the page, with a graph of the lead so far ---- */
+let wBigOn = false;
+function wBig(on){
+  wBigOn = !!on && !!W; const c = $('#watchSlot .watch'); if (!c) return;
+  c.classList.toggle('big', wBigOn); document.documentElement.classList.toggle('w-bigopen', wBigOn);
+  const b = c.querySelector('.w-big'); if (b){ b.setAttribute('aria-label', wBigOn ? 'Shrink' : 'Enlarge'); b.dataset.tip = wBigOn ? 'Shrink' : 'Enlarge'; b.innerHTML = wBigOn ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>'; }
+  if (!wBigOn){ const g = c.querySelector('.w-graph'); if (g) g.innerHTML = ''; }
+  renderWatch();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && wBigOn) wBig(false); });
+document.addEventListener('pointerdown', e => { if (wBigOn && !e.target.closest('#watchSlot .watch') && !e.target.closest('.modal, .toast')) wBig(false); });      // a tap outside shrinks it back
+// minutes studied by each player, minute by minute, as a lead line (above the middle: the first player is ahead)
+function wGraph(el, st){
+  if (!el) return;
+  const m0 = W.s0, m1 = Math.max(m0 + 5, st.over ? W.e1 : st.m), Wd = 600, H = 120, K = 120;
+  const pts = [], vals = [];
+  for (let k = 0; k <= K; k++){ const m = m0 + (m1 - m0) * k / K; if (m > st.m) break; vals.push([m, wElapsed(W.sa, W.ea, m) - wElapsed(W.sc, W.ec, m)]); }
+  const mx = Math.max(5, ...vals.map(v => Math.abs(v[1]))) * 1.15, X = m => (m - m0) / (m1 - m0) * Wd, Y = v => H / 2 - v / mx * (H / 2 - 6);
+  vals.forEach(([m, v]) => pts.push(`${X(m).toFixed(1)},${Y(v).toFixed(1)}`));
+  const key = pts.length + ':' + (pts[pts.length - 1] || ''); if (el.dataset.k === key) return; el.dataset.k = key;
+  el.innerHTML = `<div class="w-gh"><span>Lead over time</span><small><i class="dot s0"></i>${esc(bot(W.a).name)} ahead · <i class="dot s1"></i>${esc(bot(W.c).name)} ahead</small></div>
+    <svg viewBox="0 0 ${Wd} ${H}" preserveAspectRatio="none"><rect x="0" y="0" width="${Wd}" height="${H / 2}" class="ga"/><rect x="0" y="${H / 2}" width="${Wd}" height="${H / 2}" class="gc"/><line x1="0" x2="${Wd}" y1="${H / 2}" y2="${H / 2}" class="g0"/><polyline points="${pts.join(' ')}" class="gl"/></svg>`;
+}
+
 /* ---- drawing ---- */
 function renderWatch(fresh){
   const slot = $('#watchSlot'); if (!slot) return;
@@ -119,14 +143,15 @@ function renderWatch(fresh){
   if (!slot.querySelector('.watch') || fresh){
     const A = bot(W.a), C = bot(W.c), side = (i, r) => `<div class="w-p" data-wp="${i}">${avatar(bot(i), 'md')}<div><button class="lnk" data-bot="${i}">${esc(bot(i).name)}</button>
       <small>#${(posOf(i) + 1).toLocaleString()} · ${emblem(rankOf(r), 'xs')} ${r.toLocaleString()}</small><span class="w-st"></span></div><b class="w-time">0:00</b></div>`;
-    slot.innerHTML = `<div class="card watch"><div class="w-head"><span class="h first"><i class="lf-dot" aria-hidden="true"></i>Watching</span><span class="w-view"></span><button class="small-btn" data-wact="leave">Leave</button></div>
+    slot.innerHTML = `<div class="card watch"><div class="w-head"><span class="h first"><i class="lf-dot" aria-hidden="true"></i>Watching</span><span class="w-view"></span><button class="rp-ib w-big" data-wact="big" aria-label="Enlarge" data-tip="Enlarge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button><button class="small-btn" data-wact="leave">Leave</button></div>
       <div class="w-players">${side(W.a, W.ra)}<span class="w-vs">vs</span>${side(W.c, W.rc)}</div>
-      <p class="w-lead"></p>
+      <p class="w-lead"></p><div class="w-graph"></div>
       <div class="w-along"></div>
       <div class="mc w-chat"><div class="mc-h"><span>Room chat</span></div><div class="mc-list" id="wList"></div><div class="ch-typing mc-typing" id="wTyping" aria-live="polite"></div>
       <form class="mc-send" id="wForm"><input id="wIn" maxlength="200" autocomplete="off" aria-label="Room chat message" placeholder="Say something to the room" data-ph="Say something to the room"><button class="small-btn accent">Send</button></form></div></div>`;
     const L = $('#wList'); L.addEventListener('scroll', () => { wStick = L.scrollHeight - L.scrollTop - L.clientHeight < 24; wScroll = L.scrollTop; }, {passive: true});
     slot.dataset.k = '';
+    if (wBigOn){ wBigOn = false; wBig(true); return; }
   }
   const st = wState(), A = bot(W.a), C = bot(W.c);
   slot.querySelectorAll('.w-p').forEach(el => {
@@ -139,6 +164,7 @@ function renderWatch(fresh){
   const gap = Math.abs(st.ta - st.tc);
   slot.querySelector('.w-lead').textContent = st.over ? (W.ma === W.mc ? 'It’s a draw.' : `${W.ma > W.mc ? A.name : C.name} wins by ${Math.round(Math.abs(W.ma - W.mc))} min. The room closes in a few minutes.`)
     : gap < 1 ? 'Dead even.' : `${st.ta > st.tc ? A.name : C.name} is ahead by ${Math.floor(gap)} min${(!st.aOn || !st.cOn) ? ` · ${st.aOn ? C.name : A.name} has stopped, so ${st.aOn ? A.name : C.name} just has to keep going` : ''}.`;
+  if (wBigOn) wGraph(slot.querySelector('.w-graph'), st);
   const al = slot.querySelector('.w-along');
   const alongKey = S.running ? (focusing() ? 'f' : 'b') : 'n';
   if (al.dataset.k !== alongKey){ al.dataset.k = alongKey;
@@ -193,7 +219,7 @@ document.addEventListener('click', e => {
   const wb = e.target.closest('[data-watch]');
   if (wb){ const p = (LF.pairs || []).find(x => x.a + '-' + x.c === wb.dataset.watch); if (p) watchMatch(p); return; }
   const a = e.target.closest('[data-wact]');
-  if (a){ if (a.dataset.wact === 'leave'){ W = null; wSave(); renderWatch(); } else if (a.dataset.wact === 'along' && !S.running) start(); renderWatch(); return; }
+  if (a){ if (a.dataset.wact === 'big'){ wBig(!wBigOn); return; } if (a.dataset.wact === 'leave'){ wBig(false); W = null; wSave(); renderWatch(); } else if (a.dataset.wact === 'along' && !S.running) start(); renderWatch(); return; }
   const b = e.target.closest('#watchSlot [data-bot]'); if (b) openProfile(+b.dataset.bot);
 });
 // the watch room belongs to today's world: an old one from yesterday is dropped
