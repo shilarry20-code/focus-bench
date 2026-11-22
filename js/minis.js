@@ -36,6 +36,7 @@ const TBPOP_VIEWS = {lvChip: miniLevel, rankChip: miniRank, achBtn: miniAch};
 function tbPopClose(){ const p = $('#miniPop'); if (p) p.remove(); if (TBPOP.open){ const b = $('#' + TBPOP.open); if (b) b.setAttribute('aria-expanded', 'false'); } TBPOP.open = null; }
 function tbPopOpen(id){
   tbPopClose(); const btn = $('#' + id); if (!btn) return;
+  const sp = $('#streakPop'); if (sp && !sp.hidden){ sp.hidden = true; $('#streakChip').setAttribute('aria-expanded', 'false'); }    // one menu at a time
   const el = document.createElement('div'); el.id = 'miniPop'; el.className = 'mini-pop'; el.setAttribute('role', 'dialog');
   try { el.innerHTML = TBPOP_VIEWS[id](); } catch(e){ console.error(e); return; }
   document.body.appendChild(el); TBPOP.open = id; btn.setAttribute('aria-expanded', 'true');
