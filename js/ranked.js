@@ -1833,7 +1833,7 @@ function rkFindHtml(){
   if (typeof elBusy === 'function' && elBusy()) return '<button class="small-btn accent" data-el="back">Group game in progress →</button>';
   const m = rkMode();
   return `<div class="rk-modes" role="radiogroup" aria-label="Queue">${RK_MODES.map(n => `<button class="chip${n === m ? ' on' : ''}" role="radio" aria-checked="${n === m}" data-rkmode="${n}">${n === 1 ? '1v1' : n + ' players'}</button>`).join('')}</div>
-    <div class="rk-fb"><button class="small-btn accent" data-rkfind="1">Find match</button><button class="link-btn" data-el="go">Lobbies →</button></div>`;
+    <div class="rk-fb"><button class="small-btn accent" data-rkfind="1">Find match</button></div>`;
 }
 // wins and losses for each mode (in a group, a win is finishing 1st)
 function rkModesRender(){
