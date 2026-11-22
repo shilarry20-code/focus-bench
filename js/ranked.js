@@ -1238,7 +1238,7 @@ function renderMatch(fresh){
     return;
   }
   if (!c){
-    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.played < 5 ? `Placement ${R.played}/5` : `${R.mmr.toLocaleString()} Elo`}</small></span></div><p class="hint">Get matched with a player near your rating. Whoever studies longer wins.</p><div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find match</button><button class="link-btn" data-go="ranked">Ranked page →</button></div></div>`;
+    slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.played < 5 ? `Placement ${R.played}/5` : `${R.mmr.toLocaleString()} Elo`}</small></span></div><p class="hint">${rkMode() === 1 ? 'Get matched with a player near your rating. Whoever studies longer wins.' : `Get matched into ${rkMode() === 8 ? "an" : "a"} ${rkMode()}-player ranked lobby near your rating. Last one studying wins.`}</p><div class="rk-modes" role="radiogroup" aria-label="Match size">${RK_MODES.map(n => `<button class="chip${n === rkMode() ? ' on' : ''}" role="radio" aria-checked="${n === rkMode()}" data-rkmode="${n}">${n === 1 ? '1v1' : n + ' players'}</button>`).join('')}</div><div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find match</button><button class="link-btn" data-go="ranked">Ranked page →</button></div></div>`;
     return;
   }
   const B = BOTS[c.b], brk = rankOf(c.br), s = stakes(c.br), max = Math.max(c.you, c.tapped ? c.target : c.them, 60000) * 1.08;
@@ -1304,7 +1304,8 @@ $('#matchSlot').addEventListener('click', e => {
   const a = e.target.closest('[data-act]'), them = e.target.closest('[data-bot]');
   if (a && a.dataset.act === 'm-end'){ if (a.dataset.sure){ endMatch('button'); } else { a.dataset.sure = 1; a.textContent = 'Tap again to end'; a.classList.add('danger'); setTimeout(() => { $('#matchSlot').dataset.key = ''; renderMatch(); }, 3500); } return; }
   if (a && a.dataset.act === 'm-dismiss'){ R.cur = null; saveRanked(); renderMatch(); return; }
-  if (a && a.dataset.act === 'm-find'){ startSearch(); return; }
+  const md = e.target.closest('[data-rkmode]'); if (md){ R.qm = +md.dataset.rkmode; saveRanked(); renderMatch(); return; }
+  if (a && a.dataset.act === 'm-find'){ if (rkMode() > 1 && typeof elQueue === 'function'){ elQueue(rkMode()); return; } startSearch(); return; }
   if (a && a.dataset.act === 'm-cancel'){ cancelSearch(); return; }
   if (them && !e.target.closest('.bdg')) openBot(+them.dataset.bot);
 });
@@ -1332,11 +1333,12 @@ function renderRanked(){
     <div class="rk-find">${rkFindHtml()}</div>`;
   $('#rkKpis').innerHTML = `<div class="stat"><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><span>wins–losses${R.d ? '–draws' : ''}</span></div><div class="stat"><b>${wr}%</b><span>win rate</span></div><div class="stat"><b>${R.ws}</b><span>win streak · best ${R.bestWs}</span></div><div class="stat"><b>${R.played}</b><span>matches played</span></div>`;
   renderEloChart();
-  const hist = R.hist.slice(0, rkHistShown);
-  $('#rkHist').innerHTML = hist.map(h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${matchTimes(h)}</span>${dlCell(h)}<span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></li>`; }).join('')
-    || '<li class="empty-li">No 1v1 matches yet. Pick 1v1 and press Find match.</li>';
-  rkModesRender(); rkGroupHist();
-  $('#rkMore').hidden = R.hist.length <= rkHistShown;
+  const groupRow = g => `<li class="hr-${g.p === 1 ? 'W' : 'L'}"><span class="res">${g.p}</span><span class="rkg-n">${g.N}p</span><span class="who"><b>${elOrd(g.p)} of ${g.N}</b><small>${g.N}-player match${g.pl ? ` · placement ${g.pl} of ${PLACE_N}` : ''} · lasted ${elClock(g.dur || 0)}</small></span><span class="tm"></span><span class="dl ${g.d >= 0 ? 'pos' : 'neg'}">${g.pl ? '' : `${g.d > 0 ? '+' : ''}${g.d}<small>${g.m.toLocaleString()}</small>`}</span><span class="when">${new Date(g.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}${g.id ? `<button class="rp-v" data-rp="el:${g.id}">Replay</button>` : ''}</span></li>`;
+  const oneRow = h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>1v1 · ${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${matchTimes(h)}</span>${dlCell(h)}<span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}<button class="rp-v" data-rp="rk:me:${h.t}">Replay</button></span></li>`; };
+  const all = [...R.hist.map(h => ({t: h.t, html: () => oneRow(h)})), ...(R.gh || []).map(g => ({t: g.t, html: () => groupRow(g)}))].sort((a, b) => b.t - a.t);
+  $('#rkHist').innerHTML = all.slice(0, rkHistShown).map(x => x.html()).join('') || '<li class="empty-li">No ranked matches yet. Pick 1v1, 4, 8 or 16 players and press Find match.</li>';
+  rkModesRender();
+  $('#rkMore').hidden = all.length <= rkHistShown;
   // ladder: 10 above and 10 below you
   const order = sortedBots(); let pos = order.findIndex(i => botRating(i) < R.mmr); if (pos < 0) pos = order.length;
   const from = Math.max(0, pos - 10), to = Math.min(order.length, pos + 10), nem = nemesis();
@@ -1589,29 +1591,36 @@ function profileMatches(w){
   const res = (r, d) => r === 'W' ? 'Win' : r === 'L' ? 'Loss' : 'Draw';
   const row = m => `<li class="hr-${m.r}"><span class="res" title="${res(m.r)}">${m.r}</span>${m.you ? myAvatar('sm') : avatar(BOTS[m.opp], 'sm')}
     <span class="who">${m.you ? `<b>You</b>` : `<button class="lnk" data-bot="${m.opp}">${esc(BOTS[m.opp].name)}</button>`}${m.vsYou ? ' <i class="pf-vs">vs you</i>' : ''}<small>${m.sub}</small></span>
-    <span class="tm">${m.tm}</span><span class="dl ${m.f ? 'fr' : m.d >= 0 ? 'pos' : 'neg'}">${m.f ? 'Friendly' : `${m.d > 0 ? '+' : ''}${m.d}`}${m.after != null && !m.f ? `<small>${m.after.toLocaleString()}</small>` : ''}</span><span class="when">${m.when}</span></li>`;
+    <span class="tm">${m.tm}</span><span class="dl ${m.f ? 'fr' : m.d >= 0 ? 'pos' : 'neg'}">${m.f ? 'Friendly' : `${m.d > 0 ? '+' : ''}${m.d}`}${m.after != null && !m.f ? `<small>${m.after.toLocaleString()}</small>` : ''}</span><span class="when">${m.when}${m.key ? `<button class="rp-v" data-rp="${m.key}">Replay</button>` : ''}</span></li>`;
+  // a group match (4, 8 or 16 players): place instead of an opponent
+  const grow = g => `<li class="hr-${g.place === 1 ? 'W' : 'L'}"><span class="res">${g.place}</span><span class="rkg-n">${g.N}p</span><span class="who"><b>${elOrd(g.place)} of ${g.N}</b><small>${g.N}-player match · lasted ${elClock(g.dur || 0)}</small></span><span class="tm"></span><span class="dl ${g.d >= 0 ? 'pos' : 'neg'}">${g.d > 0 ? '+' : ''}${g.d}${g.after != null ? `<small>${g.after.toLocaleString()}</small>` : ''}</span><span class="when">${g.when}<button class="rp-v" data-rp="${g.key}">Replay</button></span></li>`;
+  const clk = t => new Date(t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'});
+  const groups = w === ME ? (R.gh || []).filter(g => g.id).map(g => ({g: 1, t: g.t, place: g.p, N: g.N, dur: g.dur, d: g.pl ? 0 : g.d, after: g.pl ? null : g.m, key: 'el:' + g.id, when: `${winLabel(g.t)}, ${clk(g.t)}`}))
+    : typeof elxOf === 'function' ? elxOf(w).filter(x => x.ranked).map(x => ({g: 1, t: x.end, place: x.place, N: x.N, dur: x.end - x.t0, d: Math.round(14 * (x.N + 1 - 2 * x.place) / (x.N - 1)), after: null, key: 'elx:' + x.id, when: `${winLabel(x.t0)}, ${clk(x.t0)}–${clk(x.end)}`})) : [];
+  const html = m => m.g ? grow(m) : row(m);
   const youRow = (h, mine) => {      // one of your real matches, from your side or theirs
     const B = BOTS[h.b], r = mine ? h.r : ({W: 'L', L: 'W', D: 'D'})[h.r], swap = !mine;
     const tm = h.ys == null ? `${fmtMin(swap ? h.them : h.you)} <i>vs</i> ${fmtMin(swap ? h.you : h.them)}` : (x => swap ? x.split(' <i>vs</i> ').reverse().join(' <i>vs</i> ') : x)(matchTimes(h));
-    return {t: h.t, r, f: h.f, d: mine ? h.d : -h.d, after: mine ? h.m : null, opp: h.b, you: !mine, vsYou: false,
+    return {t: h.t, key: 'rk:me:' + h.t, r, f: h.f, d: mine ? h.d : -h.d, after: mine ? h.m : null, opp: h.b, you: !mine, vsYou: false,
       sub: mine ? `${rankOf(h.br).full} · ${h.br.toLocaleString()} then` : `${rankOf(R.mmr).full}`, tm, when: `${winLabel(h.t)}, ${new Date(h.t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'})}`};
   };
   let rows, more = false;
   if (w === ME){
-    rows = R.hist.slice(0, profMatchN).map(h => youRow(h, true)); more = R.hist.length > profMatchN;
+    const allMine = [...R.hist.map(h => youRow(h, true)), ...groups].sort((a, b) => b.t - a.t);
+    rows = allMine.slice(0, profMatchN); more = allMine.length > profMatchN;
     if (!rows.length) return '<p class="hint">No matches yet. Turn on Ranked and start a focus block to get matched.</p>';
   } else {
     m5Backfill(w);
     const clock = t => new Date(t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'});
-    const sim = m5List(w).map(m => ({t: m.t, r: m.a > m.b ? 'W' : m.a < m.b ? 'L' : 'D', d: m.d, after: m.after, opp: m.opp,
+    const sim = m5List(w).map(m => ({t: m.t, key: `rk:m5:${w}:${m.code}`, r: m.a > m.b ? 'W' : m.a < m.b ? 'L' : 'D', d: m.d, after: m.after, opp: m.opp,
       sub: `${rankOf(m.oppR).full} · ${m.oppR.toLocaleString()} then`, tm: `${fmtMin(m.a)} <i>vs</i> ${fmtMin(m.b)}`,
       when: `${winLabel(m.t0)}, ${clock(m.t0)}–${clock(m.t)}`}));
     const oldest = sim.length ? sim[sim.length - 1].t : 0;
     const vsYou = R.hist.filter(h => h.b === w && (sim.length < 5 || h.t >= oldest)).slice(0, 5).map(h => youRow(h, false));
-    rows = [...sim, ...vsYou].sort((a, b) => b.t - a.t);
+    rows = [...sim, ...vsYou, ...groups].sort((a, b) => b.t - a.t);
     if (!rows.length) return '<p class="hint">No ranked matches yet.</p>';
   }
-  return `<ul class="rk-hist pf-matches">${rows.map(row).join('')}</ul>${more ? '<button class="link-btn" data-pf="moreMatches">Show more</button>' : ''}`;
+  return `<ul class="rk-hist pf-matches">${rows.map(html).join('')}</ul>${more ? '<button class="link-btn" data-pf="moreMatches">Show more</button>' : ''}`;
 }
 function renderProfilePage(){
   const w = profWho; if (w == null || !RK_READY) return;
@@ -1674,7 +1683,7 @@ function renderProfilePage(){
         <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
       <div class="card" id="pfCal"></div>
       <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of ${(ROSTER_N + 1).toLocaleString()} players. Click one to open that leaderboard.</p></div>`,
-    ranked: () => `<div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>${typeof profileElim === 'function' ? `<div class="card"><div class="h first">Elimination games</div>${profileElim(w)}</div>` : ''}`,
+    ranked: () => `<div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>${typeof profileElim === 'function' ? `<div class="card"><div class="h first">Casual lobby games</div>${profileElim(w)}</div>` : ''}`,
     awards: () => `<div class="card"><div class="h first">Featured</div><div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('') || '<span class="hint">Nothing featured yet.</span>'}</div></div>
       <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>`
   };
@@ -1830,7 +1839,7 @@ function rkFindHtml(){
   if (typeof elBusy === 'function' && elBusy()) return '<button class="small-btn accent" data-el="back">Group game in progress →</button>';
   const m = rkMode();
   return `<div class="rk-modes" role="radiogroup" aria-label="Queue">${RK_MODES.map(n => `<button class="chip${n === m ? ' on' : ''}" role="radio" aria-checked="${n === m}" data-rkmode="${n}">${n === 1 ? '1v1' : n + ' players'}</button>`).join('')}</div>
-    <div class="rk-fb"><button class="small-btn accent" data-rkfind="1">Find match</button><button class="link-btn" data-el="go">Casual lobbies →</button></div>`;
+    <div class="rk-fb"><button class="small-btn accent" data-rkfind="1">Find match</button><button class="link-btn" data-el="go">Lobbies →</button></div>`;
 }
 // wins and losses for each mode (in a group, a win is finishing 1st)
 function rkModesRender(){
