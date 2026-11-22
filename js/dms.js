@@ -140,10 +140,12 @@ function dmSend(w, text, re){
       const rYes = Math.random() < chAcceptP(w, 'r'), fYes = Math.random() < chAcceptP(w, 'f');
       task += ` If ${me} is asking to play a match right now: ${B.name} ${rYes ? 'would play ranked' : 'won’t play ranked' + (gap > 150 ? ` (much higher rated, too much Elo to lose)` : '')} and ${fYes ? 'would play a friendly' : 'won’t play a friendly right now'}. If they agree to play, add one more item to the list with "from": "ACTION" and "text": "ranked" or "friendly", and ${B.name} sends the challenge for ${me} to accept. Never say a challenge was sent or accepted without that item. If ${me} isn't asking to play, don't add it.`;
     }
+    const ac = typeof acPrep === 'function' ? acPrep(w, acRecentMine(w) || text) : null; if (ac) task += ac.note;      // asked to like, follow, comment or repost
     const {texts, act} = await dmWrite(w, task, true);
     if (off && !seenOk && texts.length) dmNoLateOpener(texts);
     dmGenBusy[w] = 0;
     const t0 = off ? Date.now() + 7 * 864e5 : Math.max(Date.now() + 2500, Date.now() + d - 4000), had = new Set(DMS.q.map(q => q.id));
+    if (ac && texts.length) ac.commit(t0 + 2500 + Math.random() * 5000);
     if (mine && pendingCh(w) === pend){
       DMS.q = DMS.q.filter(q => !(q.upd && q.upd.id === pend.id));          // this reply is their answer
       dmQueue(w, t0, texts, {upd: {id: pend.id, st: pend.ch.yes ? 'a' : 'd'}});

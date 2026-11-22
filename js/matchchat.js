@@ -62,11 +62,12 @@ async function mcSay(kind, delay){
   if ((c.cq || []).length && kind !== 'reply') return;              // one thing at a time
   if (kind === 'reply' && mcBusy){ clearTimeout(mcReplyT); mcReplyT = setTimeout(() => mcSay('reply', delay), 2000); return; }
   const B = BOTS[c.b], me = myName();
-  const task = {start: `The match just started. Write 1 short opening message from ${B.name} (like gl hf, a bit of banter).`,
+  let task = {start: `The match just started. Write 1 short opening message from ${B.name} (like gl hf, a bit of banter).`,
     brk: `${me} just took a break. Write 1 short message ${B.name} sends (${Math.random() < .5 ? `chatting about ${pickTopic(c.b)}` : 'teasing, chatting, or about how the match is going'}).${openerAvoid()}`,
     tap: `${B.name} is done studying for this match and stopped. Write 1 short message about it.`,
     end: `Write 1 short post-game message from ${B.name} about the result.`,
     reply: `${me} just sent you something (maybe a few messages in a row). Write ${B.name}'s reply to all of it together: 1 or 2 short messages.`}[kind];
+  const ac = kind === 'reply' && typeof acPrep === 'function' ? acPrep(c.b, acTail(c.chat)) : null; if (ac) task += ac.note;      // asked to like, follow, comment or repost
   let texts = [];
   if (GEM.key && !(GEM.wait > Date.now())){
     mcBusy = true;
@@ -84,6 +85,7 @@ async function mcSay(kind, delay){
   c.cq = c.cq || [];
   let t = Math.max(Date.now() + delay, ...c.cq.map(x => x.t + 2000));    // after anything already waiting
   texts.forEach(text => { c.cq.push({t: Math.round(t), text, ...(kind === 'reply' ? {re: 1} : {})}); t += (3 + text.length * .07 + Math.random() * 3) * 1000; });
+  if (ac && texts.length) ac.commit(t + 2000);
   saveRanked(); mcRender();
 }
 // the opponent's own moments: the start, your breaks (once each), when they stop, and after the result
