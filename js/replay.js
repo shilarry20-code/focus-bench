@@ -223,14 +223,13 @@ function rpDraw(force){
   const d = RP.d, t = RP.t;
   let body;
   if (d.kind === 'el'){
-    body = elGameHtml(d.G, t, {replay: true, tab: RP.tab});
+    body = elGameHtml(d.G, t, {replay: true, tab: RP.tab, follow: RP.follow});
   } else {
     const [a, c] = RP.tr, sA = rpSt(a.ev, t), sC = rpSt(c.ev, t), yA = rpStud(a.ev, t), yC = rpStud(c.ev, t), gap = yA - yC;
     const side = (p, s, y, k) => `<div class="rp-side ${s === 'X' ? 'out' : s === 'S' ? 'study' : 'break'} s${k}${RP.follow === p.w ? ' fol' : ''}" data-rpw="${p.w}" role="button" tabindex="0">${p.w === -1 ? myAvatar('lg') : avatar(bot(p.w), 'lg')}<b>${p.w === -1 ? 'You' : `<button class="lnk" data-bot="${p.w}">${esc(rpNm(p.w))}</button>`}</b><span class="rp-clk">${elClock(y)}</span><small>${s === 'X' ? 'Stopped' : s === 'S' ? 'Studying' : 'On a break'}</small></div>`;
     body = `<div class="card rp-vs">${side(a, sA, yA, 0)}<div class="rp-mid"><span class="rp-vsx">vs</span><small>${gap === 0 ? 'Even' : `${(gap > 0 ? a.w : c.w) === -1 ? 'You’re' : esc(rpNm(gap > 0 ? a.w : c.w))} ahead by ${elClock(Math.abs(gap))}`}</small></div>${side(c, sC, yC, 1)}</div>`;
   }
-  $('#rpView').innerHTML = body;
-  if (d.kind === 'el'){ const f = RP.follow; $('#rpView').querySelectorAll('.el-tile').forEach((x, k) => { x.dataset.tile = d.G.L.players[k]; x.classList.toggle('fol', +x.dataset.tile === f); }); $('#rpView').querySelectorAll('.el-st li[data-tile]').forEach(x => x.classList.toggle('fol', +x.dataset.tile === f)); }
+  domMorph($('#rpView'), body);
   rpFollowCard();
   // the summary once it's over
   const done = t >= d.end, sum = $('#rpSum');
@@ -259,7 +258,7 @@ function rpBar(){
 function rpFollowCard(){
   const el = $('#rpFollow'); if (!el) return;
   const d = RP.d, f = RP.follow;
-  if (f == null){ el.innerHTML = `<p class="hint rp-tiphint">${d.kind === 'el' ? 'Tap a player in the Arena or Standings' : 'Tap a player'} to see their stats at this point in the match.</p>`; return; }
+  if (f == null){ domMorph(el, `<p class="hint rp-tiphint">${d.kind === 'el' ? 'Tap a player in the Arena or Standings' : 'Tap a player'} to see their stats at this point in the match.</p>`); return; }
   const p = RP.tr.find(x => x.w === f); if (!p){ RP.follow = null; el.innerHTML = ''; return; }
   const t = RP.t, s = rpSt(p.ev, t), x = rpStatsAt(p.ev, t);
   const status = s === 'X' ? (d.kind === 'el' ? (p.out && p.out <= t ? 'Out' : 'Won') : 'Done') : s === 'S' ? 'Studying' : s === 'B' ? 'On a break' : 'Ready';
@@ -268,8 +267,8 @@ function rpFollowCard(){
   else { const o = RP.tr.find(q => q.w !== f), gap = x.st - rpStud(o.ev, t); third = gap === 0 ? ['Lead', 'Even'] : [gap > 0 ? 'Ahead by' : 'Behind by', elClock(Math.abs(gap))]; }
   const cells = [['Status', `<b class="st-${s}">${status}</b>`], ['Studied', `<b>${elClock(x.st)}</b>`], [third[0], `<b>${third[1]}</b>`],
     ['Breaks', `<b>${x.n}${x.n ? ` · ${elClock(x.br)}` : ''}</b>`], ['Longest stretch', `<b>${elClock(x.long)}</b>`], ['This stretch', `<b>${s === 'S' ? elClock(x.cur) : '–'}</b>`]];
-  el.innerHTML = `<div class="card rp-fc"><div class="rp-fh">${f === -1 ? myAvatar('md') : avatar(bot(f), 'md')}<span><small>${d.kind === 'el' ? `Player ${String(p.n).padStart(3, '0')}` : 'Stats so far'}</small><b>${esc(rpNm(f))}</b></span><button class="rp-ib" data-rp-act="unfollow" data-tip="Close" aria-label="Close">×</button></div>
-    <div class="rp-fs">${cells.map(([l, v]) => `<div><small>${l}</small>${v}</div>`).join('')}</div></div>`;
+  domMorph(el, `<div class="card rp-fc"><div class="rp-fh">${f === -1 ? myAvatar('md') : avatar(bot(f), 'md')}<span><small>${d.kind === 'el' ? `Player ${String(p.n).padStart(3, '0')}` : 'Stats so far'}</small><b>${esc(rpNm(f))}</b></span>${f === -1 ? '' : `<button class="small-btn" data-bot="${f}">Profile</button>`}<button class="rp-ib" data-rp-act="unfollow" data-tip="Close" aria-label="Close">×</button></div>
+    <div class="rp-fs">${cells.map(([l, v]) => `<div><small>${l}</small>${v}</div>`).join('')}</div></div>`);
 }
 function rpSummary(){
   const d = RP.d, rows = RP.tr.map(p => ({p, s: rpStats(p.ev)}));
@@ -298,14 +297,14 @@ document.addEventListener('click', e => {
   if (e.target.closest('#rpModal') && (e.target === $('#rpModal') || e.target.closest('#rpModal .x'))) return rpClose();
   const sp = e.target.closest('[data-rp-speed]'); if (sp){ RP.speed = +sp.dataset.rpSpeed; RP.last = performance.now(); sp.closest('.rp-spl').hidden = true; rpBar(); return; }
   if (!e.target.closest('.rp-spd')){ const l = $('#rpBody .rp-spl'); if (l) l.hidden = true; }
-  if (e.target.closest('#rpBody [data-el="tab"], #rpView .el-tile, #rpView .el-st li, #rpView [data-rpw]') && !e.target.closest('[data-bot]')){ e.stopPropagation(); return; }
+  if (e.target.closest('#rpBody [data-el="tab"], #rpView .el-tile, #rpView .el-st li, #rpView [data-rpw]')){ e.stopPropagation(); e.preventDefault(); return; }      // picked on press (below); a name here picks the player too
   const li = e.target.closest('#rpLog li'); if (li){ const ev = RP.E[+li.dataset.rpi]; if (ev) rpSeek(ev.t + 1); return; }
   const a = e.target.closest('[data-rp-act]'); if (a) rpAct(a.dataset.rpAct);
 }, true);
 // picking a tab or a player happens on press: the view redraws several times a second while it plays,
 // so a click (press and release) often ended on a different element and did nothing
 document.addEventListener('pointerdown', e => {
-  if (!RP || e.button > 0 || e.target.closest('[data-bot]')) return;
+  if (!RP || e.button > 0 || e.target.closest('#rpFollow [data-bot]')) return;
   const tb = e.target.closest('#rpBody [data-el="tab"]'); if (tb){ RP.tab = tb.dataset.t; rpDraw(true); return; }
   const ti = e.target.closest('#rpView .el-tile[data-tile], #rpView .el-st li[data-tile], #rpView [data-rpw]'); if (!ti) return;
   const w = +(ti.dataset.tile != null ? ti.dataset.tile : ti.dataset.rpw); RP.follow = RP.follow === w ? null : w; rpDraw(true);
