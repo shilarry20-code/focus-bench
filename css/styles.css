@@ -2388,3 +2388,13 @@ body.m-off .streak-pop{animation:none}
 .at-row > span{display:flex;flex-direction:column;min-width:0}
 .at-row b{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .at-row small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* downloading a replay */
+.rp-dl{width:min(380px,100%);display:flex;flex-direction:column;gap:12px;padding:22px}
+.rp-dlh{display:flex;align-items:center;gap:10px}
+.rp-dlh svg{width:22px;height:22px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rp-dlh b{font-size:16px}
+.rp-dlbar{height:10px;border-radius:6px;background:var(--soft);overflow:hidden}
+.rp-dlbar i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 60%,#fff));transition:width .12s linear}
+.rp-dln{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rp-dl .small-btn{align-self:flex-end}

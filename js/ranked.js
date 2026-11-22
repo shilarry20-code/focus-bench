@@ -1674,7 +1674,7 @@ function renderProfilePage(){
         <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
       <div class="card" id="pfCal"></div>
       <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of ${(ROSTER_N + 1).toLocaleString()} players. Click one to open that leaderboard.</p></div>`,
-    ranked: () => `<div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>`,
+    ranked: () => `<div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>${typeof profileElim === 'function' ? `<div class="card"><div class="h first">Elimination games</div>${profileElim(w)}</div>` : ''}`,
     awards: () => `<div class="card"><div class="h first">Featured</div><div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('') || '<span class="hint">Nothing featured yet.</span>'}</div></div>
       <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>`
   };
@@ -1843,7 +1843,7 @@ function rkGroupHist(){
   const el = $('#rkGHist'); if (!el) return;
   const gh = (R.gh || []).slice(0, 30);
   el.closest('.card').hidden = !gh.length;
-  el.innerHTML = gh.map(g => `<li class="hr-${g.p === 1 ? 'W' : 'L'}"><span class="res">${g.p}</span><span class="rkg-n">${g.N}p</span><span class="who"><b>${elOrd(g.p)} of ${g.N}</b><small>${g.pl ? `Placement ${g.pl} of ${PLACE_N}` : 'Ranked group'} · lasted ${elClock(g.dur || 0)}</small></span><span class="tm"></span><span class="dl ${g.d >= 0 ? 'pos' : 'neg'}">${g.pl ? '' : `${g.d > 0 ? '+' : ''}${g.d}<small>${g.m.toLocaleString()}</small>`}</span><span class="when">${winLabel(g.t)}<button class="rp-v" data-rp="el:${g.id}">View</button></span></li>`).join('');
+  el.innerHTML = gh.map(g => `<li class="hr-${g.p === 1 ? 'W' : 'L'}"><span class="res">${g.p}</span><span class="rkg-n">${g.N}p</span><span class="who"><b>${elOrd(g.p)} of ${g.N}</b><small>${g.pl ? `Placement ${g.pl} of ${PLACE_N}` : 'Ranked group'} · lasted ${elClock(g.dur || 0)}</small></span><span class="tm">${g.id ? `<button class="rp-v" data-rp="el:${g.id}">Replay</button>` : ''}</span><span class="dl ${g.d >= 0 ? 'pos' : 'neg'}">${g.pl ? '' : `${g.d > 0 ? '+' : ''}${g.d}<small>${g.m.toLocaleString()}</small>`}</span><span class="when">${winLabel(g.t)}<button class="rp-v" data-rp="el:${g.id}">View</button></span></li>`).join('');
 }
 $('#page-ranked').addEventListener('click', e => {
   const m = e.target.closest('[data-rkmode]'); if (!m) return;
