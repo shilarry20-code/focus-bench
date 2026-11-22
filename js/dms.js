@@ -61,7 +61,7 @@ Write like real texting between two college students: casual, short, lowercase i
 Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. ${EMO_RULE} Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Don't check in on how ${me} is doing and don't congratulate rank-ups unprompted. Every message is from ${B.name}.
 ${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
   const H = threadAll(w).filter(m => m.text || m.ch).slice(-14); DM_REF[w] = H.map(m => m.id);
-  const hist = H.map((m, k) => `[${k + 1}] ` + (m.ch ? `(${m.me ? me : B.name} sent a ${m.ch.mode === 'f' ? 'friendly' : 'ranked'} challenge, ${({p: 'pending', a: 'accepted', d: 'declined', x: 'expired'})[m.ch.st]})` : `${m.me ? me : B.name}${m.re ? ' (replying to [' + (H.findIndex(x => x.id === m.re) + 1 || '?') + '])' : ''}: ${m.text}`)).join('\n') || '(no messages yet)';
+  const hist = H.map((m, k) => `[${k + 1}] ` + (m.ch ? `(${m.me ? me : B.name} sent a ${m.ch.mode === 'f' ? 'friendly' : 'ranked'} challenge, ${({p: 'pending', a: 'accepted', d: 'declined', x: 'expired'})[m.ch.st]})` : `${m.me ? me : B.name}${m.re ? ' (replying to [' + (H.findIndex(x => x.id === m.re) + 1 || '?') + '])' : ''}${m.sr ? (m.me ? ` (replying to ${B.name}'s story: ${m.sr})` : ` (about ${m.sr})`) : ''}: ${m.text}`)).join('\n') || '(no messages yet)';
   const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}, emojis: ${emojiStyle(w)}${B.bio ? `. Bio: "${B.bio}"` : ''}.
 ${me}: ${rk.full} (${R.mmr} Elo).
 ${R.cur && R.cur.b === w && R.cur.state === 'live' ? `They are in a live ${R.cur.friendly ? 'friendly' : 'ranked'} match with each other right now (any challenge between them was already accepted).` : ''}
@@ -329,7 +329,7 @@ function dmTick(){
     }
     const prevM = DMS.msgs.filter(x => x.w === q.w && !x.del).pop(), tgt = q.re ? DMS.msgs.find(x => x.id === q.re) : null;
     const re = tgt && tgt.me && !(prevM && prevM.id === q.re) && !DMS.msgs.some(x => x.w === q.w && x.re && !x.me && x.got > now - 600000) ? q.re : null;   // only for an older message of yours, and rarely
-    const m = {id: q.id, t: q.at && q.at < now ? q.at : now, w: q.w, text: q.text || '', ai: 1, ...(re ? {re} : {})};      // messages sent while you were away keep their time
+    const m = {id: q.id, t: q.at && q.at < now ? q.at : now, w: q.w, text: q.text || '', ai: 1, ...(re ? {re} : {}), ...(q.sr ? {sr: q.sr} : {})};      // messages sent while you were away keep their time
     if (q.ch) m.ch = {mode: q.ch.mode, exp: now + CH_THEIRS, st: 'p', by: 'them'};
     if (m.text || m.ch){ m.got = now; DMS.msgs.push(m); fresh.push(m); gapOk.set(q.w, now); }
     changed = true;
