@@ -2398,3 +2398,9 @@ body.m-off .streak-pop{animation:none}
 .rp-dlbar i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 60%,#fff));transition:width .12s linear}
 .rp-dln{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .rp-dl .small-btn{align-self:flex-end}
+
+/* picking a player in a 1v1 replay */
+.rp-vs .rp-side{cursor:pointer;border-radius:12px;outline:2px solid transparent;outline-offset:4px;transition:outline-color .15s}
+.rp-vs .rp-side:hover{outline-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.rp-vs .rp-side.fol{outline-color:var(--accent)}
+.el-st li[data-tile],.el-tile[data-tile]{cursor:pointer}

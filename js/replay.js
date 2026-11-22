@@ -107,6 +107,13 @@ function rpStats(ev){
   for (let k = 0; k < ev.length - 1; k++){ const len = ev[k + 1][0] - ev[k][0]; if (ev[k][1] === 'S'){ st += len; long = Math.max(long, len); } else if (ev[k][1] === 'B' && len >= 5000){ br += len; n++; } }
   return {st, br, n, long};
 }
+// a player's numbers up to moment t
+function rpStatsAt(ev, t){
+  let st = 0, br = 0, n = 0, long = 0, cur = 0;
+  for (let k = 0; k < ev.length; k++){ const a = ev[k][0]; if (a > t) break; const b = Math.min(k + 1 < ev.length ? ev[k + 1][0] : t, t), len = Math.max(0, b - a);
+    if (ev[k][1] === 'S'){ st += len; long = Math.max(long, len); cur = b >= t ? len : 0; } else if (ev[k][1] === 'B' && (len >= 5000 || b >= t)){ br += len; n++; } }
+  return {st, br, n, long, cur};
+}
 // everything that happens, in order
 function rpEvents(d, tr){
   const E = [], add = (t, kind, text, w) => E.push({t, kind, text, w});
@@ -219,11 +226,11 @@ function rpDraw(force){
     body = elGameHtml(d.G, t, {replay: true, tab: RP.tab});
   } else {
     const [a, c] = RP.tr, sA = rpSt(a.ev, t), sC = rpSt(c.ev, t), yA = rpStud(a.ev, t), yC = rpStud(c.ev, t), gap = yA - yC;
-    const side = (p, s, y, k) => `<div class="rp-side ${s === 'X' ? 'out' : s === 'S' ? 'study' : 'break'} s${k}">${p.w === -1 ? myAvatar('lg') : avatar(bot(p.w), 'lg')}<b>${p.w === -1 ? 'You' : `<button class="lnk" data-bot="${p.w}">${esc(rpNm(p.w))}</button>`}</b><span class="rp-clk">${elClock(y)}</span><small>${s === 'X' ? 'Stopped' : s === 'S' ? 'Studying' : 'On a break'}</small></div>`;
+    const side = (p, s, y, k) => `<div class="rp-side ${s === 'X' ? 'out' : s === 'S' ? 'study' : 'break'} s${k}${RP.follow === p.w ? ' fol' : ''}" data-rpw="${p.w}" role="button" tabindex="0">${p.w === -1 ? myAvatar('lg') : avatar(bot(p.w), 'lg')}<b>${p.w === -1 ? 'You' : `<button class="lnk" data-bot="${p.w}">${esc(rpNm(p.w))}</button>`}</b><span class="rp-clk">${elClock(y)}</span><small>${s === 'X' ? 'Stopped' : s === 'S' ? 'Studying' : 'On a break'}</small></div>`;
     body = `<div class="card rp-vs">${side(a, sA, yA, 0)}<div class="rp-mid"><span class="rp-vsx">vs</span><small>${gap === 0 ? 'Even' : `${(gap > 0 ? a.w : c.w) === -1 ? 'You’re' : esc(rpNm(gap > 0 ? a.w : c.w))} ahead by ${elClock(Math.abs(gap))}`}</small></div>${side(c, sC, yC, 1)}</div>`;
   }
   $('#rpView').innerHTML = body;
-  if (d.kind === 'el'){ const f = RP.follow; $('#rpView').querySelectorAll('.el-tile').forEach((x, k) => { x.dataset.tile = d.G.L.players[k]; x.classList.toggle('fol', +x.dataset.tile === f); }); }
+  if (d.kind === 'el'){ const f = RP.follow; $('#rpView').querySelectorAll('.el-tile').forEach((x, k) => { x.dataset.tile = d.G.L.players[k]; x.classList.toggle('fol', +x.dataset.tile === f); }); $('#rpView').querySelectorAll('.el-st li[data-tile]').forEach(x => x.classList.toggle('fol', +x.dataset.tile === f)); }
   rpFollowCard();
   // the summary once it's over
   const done = t >= d.end, sum = $('#rpSum');
@@ -252,10 +259,17 @@ function rpBar(){
 function rpFollowCard(){
   const el = $('#rpFollow'); if (!el) return;
   const d = RP.d, f = RP.follow;
-  if (d.kind !== 'el' || f == null){ el.innerHTML = d.kind === 'el' ? '<p class="hint rp-tiphint">Tap a player in the Arena or Standings to follow them.</p>' : ''; return; }
-  const p = RP.tr.find(x => x.w === f), t = RP.t, s = rpSt(p.ev, t), S = elState(d.G, t), me = S.ps.find(x => x.w === f), left = Math.max(0, S.a - (me ? me.used : 0));
-  el.innerHTML = `<div class="card rp-fc"><div class="rp-fh">${f === -1 ? myAvatar('md') : avatar(bot(f), 'md')}<span><small>Player ${String(p.n).padStart(3, '0')}</small><b>${esc(rpNm(f))}</b></span><button class="rp-ib" data-rp-act="unfollow" data-tip="Stop following" aria-label="Stop following">×</button></div>
-    <div class="rp-fs"><div><small>Status</small><b class="st-${s}">${s === 'X' ? (p.out && p.out <= t ? 'Out' : 'Won') : s === 'S' ? 'Studying' : s === 'B' ? 'On a break' : 'Ready'}</b></div><div><small>Studied</small><b>${elClock(rpStud(p.ev, t))}</b></div><div><small>Break left</small><b>${s === 'X' ? '–' : S.a > 0 ? elClock(left) : 'none'}</b></div></div></div>`;
+  if (f == null){ el.innerHTML = `<p class="hint rp-tiphint">${d.kind === 'el' ? 'Tap a player in the Arena or Standings' : 'Tap a player'} to see their stats at this point in the match.</p>`; return; }
+  const p = RP.tr.find(x => x.w === f); if (!p){ RP.follow = null; el.innerHTML = ''; return; }
+  const t = RP.t, s = rpSt(p.ev, t), x = rpStatsAt(p.ev, t);
+  const status = s === 'X' ? (d.kind === 'el' ? (p.out && p.out <= t ? 'Out' : 'Won') : 'Done') : s === 'S' ? 'Studying' : s === 'B' ? 'On a break' : 'Ready';
+  let third;
+  if (d.kind === 'el'){ const S = elState(d.G, t), me = S.ps.find(q => q.w === f), left = Math.max(0, S.a - (me ? me.used : 0)); third = ['Break left', s === 'X' ? '–' : S.a > 0 ? elClock(left) : 'none']; }
+  else { const o = RP.tr.find(q => q.w !== f), gap = x.st - rpStud(o.ev, t); third = gap === 0 ? ['Lead', 'Even'] : [gap > 0 ? 'Ahead by' : 'Behind by', elClock(Math.abs(gap))]; }
+  const cells = [['Status', `<b class="st-${s}">${status}</b>`], ['Studied', `<b>${elClock(x.st)}</b>`], [third[0], `<b>${third[1]}</b>`],
+    ['Breaks', `<b>${x.n}${x.n ? ` · ${elClock(x.br)}` : ''}</b>`], ['Longest stretch', `<b>${elClock(x.long)}</b>`], ['This stretch', `<b>${s === 'S' ? elClock(x.cur) : '–'}</b>`]];
+  el.innerHTML = `<div class="card rp-fc"><div class="rp-fh">${f === -1 ? myAvatar('md') : avatar(bot(f), 'md')}<span><small>${d.kind === 'el' ? `Player ${String(p.n).padStart(3, '0')}` : 'Stats so far'}</small><b>${esc(rpNm(f))}</b></span><button class="rp-ib" data-rp-act="unfollow" data-tip="Close" aria-label="Close">×</button></div>
+    <div class="rp-fs">${cells.map(([l, v]) => `<div><small>${l}</small>${v}</div>`).join('')}</div></div>`;
 }
 function rpSummary(){
   const d = RP.d, rows = RP.tr.map(p => ({p, s: rpStats(p.ev)}));
@@ -284,14 +298,17 @@ document.addEventListener('click', e => {
   if (e.target.closest('#rpModal') && (e.target === $('#rpModal') || e.target.closest('#rpModal .x'))) return rpClose();
   const sp = e.target.closest('[data-rp-speed]'); if (sp){ RP.speed = +sp.dataset.rpSpeed; RP.last = performance.now(); sp.closest('.rp-spl').hidden = true; rpBar(); return; }
   if (!e.target.closest('.rp-spd')){ const l = $('#rpBody .rp-spl'); if (l) l.hidden = true; }
-  const tb = e.target.closest('#rpBody [data-el="tab"]'); if (tb){ e.stopPropagation(); RP.tab = tb.dataset.t; rpDraw(true); return; }
-  const ti = e.target.closest('#rpView .el-tile, #rpView .el-st li'); if (ti && RP.d.kind === 'el' && !e.target.closest('[data-bot]')){
-    const w = ti.dataset.tile != null ? +ti.dataset.tile : RP.d.G.L.players[[...ti.parentNode.children].indexOf(ti)] ;
-    if (ti.matches('.el-st li')){ const idx = [...ti.parentNode.children].indexOf(ti), S = elState(RP.d.G, RP.t), ord = S.ps.slice().sort((a, b) => (a.out ? 1 : 0) - (b.out ? 1 : 0) || (b.out || 0) - (a.out || 0) || elR(b.w) - elR(a.w)); RP.follow = ord[idx] ? ord[idx].w : null; }
-    else RP.follow = RP.follow === w ? null : w;
-    rpDraw(true); return; }
+  if (e.target.closest('#rpBody [data-el="tab"], #rpView .el-tile, #rpView .el-st li, #rpView [data-rpw]') && !e.target.closest('[data-bot]')){ e.stopPropagation(); return; }
   const li = e.target.closest('#rpLog li'); if (li){ const ev = RP.E[+li.dataset.rpi]; if (ev) rpSeek(ev.t + 1); return; }
   const a = e.target.closest('[data-rp-act]'); if (a) rpAct(a.dataset.rpAct);
+}, true);
+// picking a tab or a player happens on press: the view redraws several times a second while it plays,
+// so a click (press and release) often ended on a different element and did nothing
+document.addEventListener('pointerdown', e => {
+  if (!RP || e.button > 0 || e.target.closest('[data-bot]')) return;
+  const tb = e.target.closest('#rpBody [data-el="tab"]'); if (tb){ RP.tab = tb.dataset.t; rpDraw(true); return; }
+  const ti = e.target.closest('#rpView .el-tile[data-tile], #rpView .el-st li[data-tile], #rpView [data-rpw]'); if (!ti) return;
+  const w = +(ti.dataset.tile != null ? ti.dataset.tile : ti.dataset.rpw); RP.follow = RP.follow === w ? null : w; rpDraw(true);
 }, true);
 // drag (or tap) the bar; hovering shows what's at that moment
 {
