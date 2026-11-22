@@ -68,8 +68,9 @@ function coDerived(){
     const sc = Math.round((Math.min(m, CO_FULL_MIN) + Math.max(0, m - CO_FULL_MIN) * .5) * (counts ? coMult(run) : 1)), gc = m >= P.goalMin ? CO_GOAL : 0;
     days[k] = {study: sc, goal: gc}; study += sc; goal += gc;
   });
-  const chal = Object.keys((typeof CHL !== 'undefined' && CHL.led) || {}).reduce((n, k) => n + coChKey(k), 0);
-  const ach = typeof ACHS !== 'undefined' ? ACHS.filter(a => ACH.u[a.id]).reduce((n, a) => n + TIERS[a.t].pts * CO_ACH, 0) : 0;
+  let chal = 0, ach = 0;
+  try { chal = Object.keys((typeof CHL !== 'undefined' && CHL.led) || {}).reduce((n, k) => n + coChKey(k), 0); } catch(e){ console.error('coins', e); }
+  try { ach = typeof ACHS !== 'undefined' ? ACHS.filter(a => ACH.u[a.id]).reduce((n, a) => n + TIERS[a.tier].pts * CO_ACH, 0) : 0; } catch(e){ console.error('coins', e); }
   return {study, goal, chal, ach, days};
 }
 // everything you've earned, by where it came from. Each worked-out total only goes up (the high-water mark).
@@ -88,7 +89,7 @@ function coTotals(){
 function coToday(T){
   const k = dayKey(Date.now()), t0 = new Date(k + 'T00:00').getTime(), d = (T.days || {})[k] || {study: 0, goal: 0};
   const chal = Object.entries((typeof CHL !== 'undefined' && CHL.done) || {}).filter(([, t]) => t >= t0).reduce((n, [key]) => n + coChKey(key), 0);
-  const ach = typeof ACHS !== 'undefined' ? ACHS.filter(a => ACH.u[a.id] && ACH.u[a.id] >= t0).reduce((n, a) => n + TIERS[a.t].pts * CO_ACH, 0) : 0;
+  const ach = typeof ACHS !== 'undefined' ? ACHS.filter(a => ACH.u[a.id] && ACH.u[a.id] >= t0).reduce((n, a) => n + TIERS[a.tier].pts * CO_ACH, 0) : 0;
   let v1 = 0, el = 0; Object.values(CO.led).forEach(([c, t, kind]) => { if (t >= t0){ if (kind === 'e') el += c; else v1 += c; } });
   return [['Studying', d.study, 'clock'], ['Daily goal', d.goal, 'target'], ['Challenges', chal, 'check'], ['Achievements', ach, 'award'], ['Ranked 1v1', v1, 'trophy'], ['Elimination', el, 'trophy']].filter(r => r[1] > 0);
 }
