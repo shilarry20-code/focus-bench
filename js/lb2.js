@@ -69,11 +69,11 @@ function lbNote(c, V){
   }
   store.set('fb.lbHist', LBH); store.set('fb.lbSnap', LBS);
 }
-// how a player moved since the last saved day: +n up, -n down, 'new' for new to the top 100
+// how a player moved since the last saved day: +n up, -n down
 function lbMove(c, w, place){
   const s = LBS[c.id]; if (!s || !s.prev || (P.lbFilt || 'all') !== 'all') return null;
   const was = s.prev[w === ME ? 'me' : w];
-  if (was == null) return place <= 50 && w !== ME ? 'new' : null;
+  if (was == null) return null;                // not in the saved top 100: no arrow (there's no "New" tag)
   return was - place;
 }
 const lbMoveHtml = m => m == null || m === 0 ? '<span class="lb2-mv"></span>' : m === 'new' ? '<span class="lb2-mv new">New</span>' : `<span class="lb2-mv ${m > 0 ? 'up' : 'dn'}">${m > 0 ? '▲' : '▼'}${Math.abs(m).toLocaleString()}</span>`;
