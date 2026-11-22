@@ -14,7 +14,7 @@ EL.list = EL.list || []; EL.live = EL.live || []; EL.hist = EL.hist || [];
 // a refresh never drops you into a game you were only watching, or back into one that's over
 if (EL.view === 'watch' || (EL.view === 'game' && (!EL.G || EL.G.done))){ EL.view = 'browse'; EL.watch = null; }
 delete EL.watch;
-const saveEl = () => { const {_bp, ...rest} = EL; store.set('fb.elim', JSON.parse(JSON.stringify(rest, (k, v) => k === '_bp' || k === 'watch' ? undefined : v))); };
+const saveEl = () => { const {_bp, ...rest} = EL; store.set('fb.elim', JSON.parse(JSON.stringify(rest, (k, v) => k === '_bp' || k === 'watch' || k === 'list' ? undefined : v))); };
 /* Update a box to new HTML by changing only what differs, instead of replacing everything. Views that redraw every
    second keep their hover, scroll, focus and animations, and a click that starts on a button still lands on it. */
 function domMorph(box, html){
@@ -155,27 +155,29 @@ let elNextOld = 0;   // when to add the next game that's already going (not save
 function elListTick(){
   if (!RK_READY) return;
   const now = Date.now(); let ch = false;
-  // keep plenty of open lobbies: ranked ones (4, 8 or 16 players, standard rules) and casual ones of every size and rule set
-  EL.list = EL.list.filter(l => l.players.length < l.rules.size && now - l.created < 30 * 60000);
-  const nRk = () => EL.list.filter(l => l.rules.ranked).length, nCa = () => EL.list.filter(l => !l.rules.ranked).length;
-  while (nRk() < 14 || nCa() < 20){
-    const ranked = nRk() < 14;
-    const r = Math.random(), N = ranked ? [4, 4, 4, 8, 8, 8, 8, 16, 16][Math.floor(r * 9)] : r < .22 ? 4 : r < .4 ? 8 : r < .5 ? 16 : [3, 5, 6, 6, 7, 10, 12, 12, 14][Math.floor(Math.random() * 9)];
+  // keep hundreds of open lobbies: ranked 1v1, 4, 8 and 16-player ones (standard rules), and casual ones of every size and rule set
+  EL.list = EL.list.filter(l => l.players.length < l.rules.size && now - l.created < 40 * 60000);
+  const want = {r2: 45, r4: 60, r8: 45, r16: 25, c: 140}, kind = l => l.rules.ranked ? 'r' + l.rules.size : 'c', have = {};
+  EL.list.forEach(l => { const k = kind(l); have[k] = (have[k] || 0) + 1; });
+  const fresh = !EL.list.length;
+  for (const k of Object.keys(want)) while ((have[k] || 0) < want[k]){
+    have[k] = (have[k] || 0) + 1;
+    const ranked = k !== 'c', r = Math.random(), N = ranked ? +k.slice(1) : r < .22 ? 4 : r < .4 ? 8 : r < .5 ? 16 : [3, 5, 6, 6, 7, 10, 12, 12, 14][Math.floor(Math.random() * 9)];
     const odd = !ranked && Math.random() < .45, pre = odd ? ['relaxed', 'hardcore', 'sudden', 'standard'][Math.floor(Math.random() * 4)] : 'standard';
-    const L = elNewLobby({size: N, preset: pre, round: odd && pre === 'standard' ? [15, 45, 60][Math.floor(Math.random() * 3)] : 25, ranked, rated: ranked});
-    const ppl = elPickPlayers(L.id, L.center, 300, N, ''), host = ppl[0];
-    L.host = ranked ? null : host; L.pool = ppl; L.name = ranked ? `Ranked · ${N} players` : lobbyName(host, BOTS[host].subject);
+    const L = elNewLobby({size: N, preset: pre, round: odd && pre === 'standard' ? [15, 45, 60][Math.floor(Math.random() * 3)] : 25, ranked, rated: ranked, range: N === 2 ? 200 : 300});
+    const ppl = elPickPlayers(L.id, L.center, L.rules.range, N, ''), host = ppl[0]; if (!ppl.length) continue;
+    L.host = ranked && N > 2 ? null : host; L.pool = ppl; L.name = N === 2 ? `1v1 · ${bot(host).name}` : ranked ? `Ranked · ${N} players` : lobbyName(host, BOTS[host].subject);
     L.rules.subject = !ranked && Math.random() < .25 ? BOTS[host].subject : '';
-    L.players = [host]; L.joinAt = [now];
-    // people trickle in over a few minutes
-    let t = now; for (let k = 1; k < N; k++){ t += (8 + Math.random() * 40) * 1000; L.joinAt.push(Math.round(t)); }
-    L.created = now - Math.floor(Math.random() * 60000);
+    // on first load lobbies are at every stage of filling up; later ones start with just the host. People trickle in.
+    const already = fresh && N > 2 ? Math.floor(Math.random() * (N - 1)) : 0, age = fresh ? Math.random() * 15 * 60000 : Math.random() * 60000;
+    L.created = Math.round(now - age); L.players = ppl.slice(0, 1 + already); L.joinAt = L.players.map(() => L.created);
+    let t = now; for (let k2 = L.players.length; k2 < N; k2++){ t += (N === 2 ? 60 + Math.random() * 600 : 15 + Math.random() * (N >= 16 ? 90 : 60)) * 1000; L.joinAt.push(Math.round(t)); }
     EL.list.push(L); ch = true;
   }
   EL.list.forEach(L => {
     if (L.mine) return;
     while (L.players.length < L.rules.size && L.joinAt[L.players.length] <= now){ L.players.push(L.pool[L.players.length]); ch = true; }
-    if (L.players.length >= L.rules.size && !L.t0){ L.t0 = now + 3000; EL.live.unshift({...L}); ch = true; }
+    if (L.players.length >= L.rules.size && !L.t0){ L.t0 = now + 3000; if (L.rules.size > 2) EL.live.unshift({...L}); ch = true; }
   });
   EL.list = EL.list.filter(l => !l.t0);
   // games that have been going a while (you can drop in partway and watch): always keep a few around, adding a new one every few minutes
@@ -197,12 +199,24 @@ function elListTick(){
 }
 
 /* ---- joining, creating, leaving ---- */
+function elJoin1v1(L){
+  if (!R.on){ toast('Turn on Ranked in Settings to play ranked 1v1s.'); return; }
+  if (MQ){ toast('You’re already searching for a match.'); return; }
+  if (!elCanJoin()) return;
+  if (Math.abs(R.mmr - L.center) > L.rules.range / 2 + 25){ toast('Your rating is outside this lobby’s range.'); return; }
+  EL.list = EL.list.filter(l => l !== L);
+  if (R.cur) R.cur = null;
+  const now = Date.now(); MQ = {t0: now, wait: 0, pool: 1, b: L.host, found: now};       // straight to "match found", then it starts
+  clearInterval(mqTimer); mqTimer = setInterval(queueTick, 250); saveRanked();
+  showPage('focus'); renderMatch(true); window.scrollTo(0, 0);
+}
 function elCanJoin(){
   if (R.cur && R.cur.state === 'live'){ toast('Finish your ranked match first.'); return false; }
   if (elBusy()){ toast('You’re already in a lobby.'); return false; }
   return true;
 }
 function elJoin(L){
+  if (L.rules.size === 2) return elJoin1v1(L);
   if (!elCanJoin()) return;
   if (Math.abs(R.mmr - L.center) > L.rules.range / 2 + 25){ toast('Your rating is outside this lobby’s range.'); return; }
   EL.list = EL.list.filter(l => l !== L);
@@ -399,25 +413,24 @@ function elRender(){
   if (EL.view === 'create') return elRenderCreate();
   EL.view = 'browse';
   const lt = EL.ltab === 'casual' ? 'casual' : 'ranked', rk = lt === 'ranked';
-  const FILTS = rk ? [['all', 'All'], ['join', 'Joinable'], ['4', '4 players'], ['8', '8 players'], ['16', '16 players']] : [['all', 'All'], ['join', 'Joinable'], ['s', '3–6'], ['m', '7–11'], ['l', '12–16']];
+  const FILTS = rk ? [['all', 'All'], ['join', 'Joinable'], ['2', '1v1'], ['4', '4 players'], ['8', '8 players'], ['16', '16 players']] : [['all', 'All'], ['join', 'Joinable'], ['s', '3–6'], ['m', '7–11'], ['l', '12–16']];
   const f = FILTS.some(([k]) => k === EL.filt) ? EL.filt : 'all';
   const inSize = l => !!l.rules.ranked === rk && (f === 'all' || f === 'join' || (/^\d+$/.test(f) ? l.rules.size === +f : f === 's' ? l.rules.size <= 6 : f === 'm' ? l.rules.size >= 7 && l.rules.size <= 11 : l.rules.size >= 12));
   const can = l => Math.abs(R.mmr - l.center) <= l.rules.range / 2 + 25;
   const list = EL.list.filter(l => inSize(l) && (f !== 'join' || can(l))).sort((a, b) => can(b) - can(a) || b.players.length / b.rules.size - a.players.length / a.rules.size);
   const row = l => { const lo = l.center - l.rules.range / 2, hi = l.center + l.rules.range / 2, ok = can(l);
-    return `<li class="el-row${ok ? '' : ' off'}"><div class="el-rn"><b>${esc(l.name)}</b><small>${l.host != null && l.host !== -1 ? `host ${esc(bot(l.host).name)} · ` : ''}${elRated(l.rules) ? 'Standard rules · changes your Elo' : `Casual · ${EL_PRESET_NAME[l.rules.preset]}`}${+l.rules.round !== 25 ? ` · ${l.rules.round}-min rounds` : ''}${l.rules.subject ? ` · ${esc(l.rules.subject)}` : ''}</small></div>
+    return `<li class="el-row${ok ? '' : ' off'}"><div class="el-rn"><b>${esc(l.name)}</b><small>${l.rules.size === 2 ? `${botRating(l.host).toLocaleString()} Elo · ${rankOf(botRating(l.host)).full} · whoever studies longer wins` : `${l.host != null && l.host !== -1 ? `host ${esc(bot(l.host).name)} · ` : ''}`}${l.rules.size === 2 ? '' : elRated(l.rules) ? 'Standard rules · changes your Elo' : `Casual · ${EL_PRESET_NAME[l.rules.preset]}`}${+l.rules.round !== 25 ? ` · ${l.rules.round}-min rounds` : ''}${l.rules.subject ? ` · ${esc(l.rules.subject)}` : ''}</small></div>
       <div class="el-rs"><span class="el-fill"><i style="width:${l.players.length / l.rules.size * 100}%"></i></span><small>${l.players.length}/${l.rules.size}</small></div>
       <small class="el-rr">${Math.round(lo).toLocaleString()}–${Math.round(hi).toLocaleString()}</small>
       <button class="small-btn${ok ? ' accent' : ''}" data-el="join" data-id="${l.id}" ${ok ? '' : 'disabled title="Your rating is outside this lobby’s range"'}>Join</button></li>`; };
-  const now = Date.now(), live = EL.live.filter(L => L.rules.spect !== false && !!L.rules.ranked === rk).map(L => { const S = elState({L, me: {ev: []}}, now); return {L, S}; }).filter(x => !x.S.over || now - x.S.over.t < 60000);
-  box.innerHTML = `<div class="el-top card"><div><div class="h first">Lobbies</div><p class="hint">${rk ? 'Ranked lobbies use the group format: everyone studies at once, each round allows a little break time, and going over it or stopping knocks you out. Last one studying wins. They change your Elo, the same as a 1v1.' : 'Casual lobbies don’t change your Elo, and can use any size or rules: shorter or longer rounds, relaxed or hardcore break limits, sudden death.'}</p></div>
-      <div class="el-quick">${rk ? [4, 8, 16].map(n => `<button class="small-btn accent" data-el="quick" data-n="${n}">Quick match · ${n}</button>`).join('') : '<button class="small-btn accent" data-el="create">Create lobby</button>'}</div></div>
+  domMorph(box, `<div class="el-top card"><div><div class="h first">Lobbies</div><p class="hint">Ranked lobbies change your Elo: 1v1s, or 4, 8 and 16-player matches where everyone studies at once, breaks are limited each round, and the last one studying wins. Casual lobbies can use any size and rules and don’t change your Elo.</p></div>
+      <div class="el-quick"><button class="small-btn" data-el="create">Create a casual lobby</button></div></div>
     <div class="el-ltabs" role="tablist">${[['ranked', 'Ranked'], ['casual', 'Casual']].map(([k, n]) => `<button class="chip${lt === k ? ' on' : ''}" role="tab" aria-selected="${lt === k}" data-el="ltab" data-t="${k}">${n} <small>${EL.list.filter(l => !!l.rules.ranked === (k === 'ranked')).length}</small></button>`).join('')}</div>
     ${EL.G ? `<div class="card el-cur"><b>You're in a lobby.</b> <button class="small-btn accent" data-el="back">Back to your game →</button></div>` : ''}
     <div class="el-cols"><div class="card"><div class="h first el-lh"><span>Open ${rk ? 'ranked' : 'casual'} lobbies</span><span class="el-filt">${FILTS.map(([k, t]) => `<button class="chip${f === k ? ' on' : ''}" data-el="filt" data-f="${k}">${t}</button>`).join('')}</span></div>
-      <ul class="el-list">${list.map(row).join('') || `<li class="hint">${rk ? 'No ranked lobbies right now. Quick match starts one.' : 'No lobbies right now. Create one!'}</li>`}</ul><p class="hint">Your rating: ${R.mmr.toLocaleString()} Elo. Lobbies are open to players within their rating range.</p></div>
-      <div><div class="card"><div class="h first">Live now</div><ul class="el-list">${live.map(({L, S}) => `<li class="el-row"><div class="el-rn"><b>${esc(L.name)}</b><small>${S.over ? `Finished · ${esc(bot(S.over.winner).name)} won` : `Round ${S.r + 1} · ${S.alive} of ${L.players.length} left${S.sd ? ' · sudden death' : ''}`}</small></div><button class="small-btn" data-el="watch" data-id="${L.id}">Watch</button></li>`).join('') || '<li class="hint">Nothing running right now.</li>'}</ul></div>
-      <div class="card"><div class="h first">Your games</div><ul class="el-list">${EL.hist.slice(0, 12).map(h => `<li class="el-row"><div class="el-rn"><b>${elOrd(h.place || 0)} of ${h.N}</b><small>${esc(h.name || 'Lobby')} · ${new Date(h.t).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})} · ${elClock(h.dur)}${h.rated ? ` · ${h.delta > 0 ? '+' : ''}${h.delta} Elo` : ''} · +${h.xp} XP</small></div><button class="small-btn" data-rp="el:${h.id}">Replay</button></li>`).join('') || '<li class="hint">Your finished games show up here, with replays.</li>'}</ul></div></div></div>`;
+      <ul class="el-list">${list.slice(0, EL.lshow || 40).map(row).join('') || `<li class="hint">${rk ? 'No ranked lobbies right now. Quick match starts one.' : 'No lobbies right now. Create one!'}</li>`}</ul>${list.length > (EL.lshow || 40) ? `<button class="small-btn el-more" data-el="more">Show more (${(list.length - (EL.lshow || 40)).toLocaleString()} more)</button>` : ''}<p class="hint">${list.length.toLocaleString()} lobb${list.length === 1 ? 'y' : 'ies'} · your rating: ${R.mmr.toLocaleString()} Elo. Lobbies are open to players within their rating range.</p></div>
+      <div><div class="card"><div class="h first">Top matches</div><ul class="el-list el-topm">${elTopHtml(elTop(rk, 6)) || `<li class="hint">No ${rk ? 'ranked' : 'casual'} matches worth watching right now.</li>`}</ul></div>
+      <div class="card"><div class="h first">Your games</div><ul class="el-list">${EL.hist.slice(0, 12).map(h => `<li class="el-row"><div class="el-rn"><b>${elOrd(h.place || 0)} of ${h.N}</b><small>${esc(h.name || 'Lobby')} · ${new Date(h.t).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})} · ${elClock(h.dur)}${h.rated ? ` · ${h.delta > 0 ? '+' : ''}${h.delta} Elo` : ''} · +${h.xp} XP</small></div><button class="small-btn" data-rp="el:${h.id}">Replay</button></li>`).join('') || '<li class="hint">Your finished games show up here, with replays.</li>'}</ul></div></div></div>`);
 }
 function elRenderCreate(){
   const box = $('#elBody'), f = EL.form || (EL.form = {size: 8, round: 25, preset: 'standard', custom: [10, 5, 2.5, 1, 0], rated: true, range: 300, privacy: 'public', subject: '', name: '', start: 'full', at: '', chat: 'break', spect: true, inv: []});
@@ -439,7 +452,6 @@ function elRenderCreate(){
     <label>Start<select id="elfStart">${opt('start', 'full', 'When it’s full') + opt('start', 'time', 'At a set time')}</select></label>
     ${f.start === 'time' ? `<label>Start time<input type="time" id="elfAt" value="${f.at || ''}"></label>` : ''}
     <label>Chat<select id="elfChat">${opt('chat', 'break', 'Only on breaks') + opt('chat', 'on', 'Always on') + opt('chat', 'off', 'Off')}</select></label>
-    <label class="el-chk"><input type="checkbox" id="elfSpect" ${f.spect ? 'checked' : ''}> Let people watch</label>
     <div class="confirm"><button class="small-btn" data-el="browse">Cancel</button><button class="small-btn accent" data-el="make">Create and join</button></div></div>`;
 }
 function elFormRead(){
@@ -448,7 +460,7 @@ function elFormRead(){
   f.name = v('elfName') || ''; f.size = +v('elfSize') || f.size; f.round = +v('elfRound') || f.round; f.preset = v('elfPre') || f.preset;
   if ($('#elfCustom')){ const c = v('elfCustom').split(/[,\s]+/).map(Number).filter(x => isFinite(x) && x >= 0).slice(0, 12); if (c.length) f.custom = c; }
   f.rated = !!($('#elfRated') && $('#elfRated').checked); f.range = +v('elfRange') || 300; f.privacy = v('elfPriv') || 'public'; f.subject = (v('elfSubj') || '').trim();
-  f.start = v('elfStart') || 'full'; if ($('#elfAt')) f.at = v('elfAt'); f.chat = v('elfChat') || 'break'; f.spect = !!($('#elfSpect') && $('#elfSpect').checked);
+  f.start = v('elfStart') || 'full'; if ($('#elfAt')) f.at = v('elfAt'); f.chat = v('elfChat') || 'break'; f.spect = false;
   f.inv = [...document.querySelectorAll('[data-inv]')].filter(x => x.checked).map(x => +x.dataset.inv);
 }
 function elBanner(w){
@@ -540,11 +552,23 @@ function elCardRender(){
     ${R.el ? `<p class="hint">${R.el.wins} win${R.el.wins === 1 ? '' : 's'} · ${R.el.top3} top-3 · ${R.el.played} played</p>` : ''}</div>`;
 }
 
-// running lobbies, for the Live now lists on Ranked and in the Feed
+/* Top matches: you can't watch every game, only the few best ones running (highest-rated players still in, bigger
+   lobbies first). Each shows who's in it: the first few avatars and two names, then the lobby name. */
+function elTop(rk, n){
+  const now = Date.now();
+  return EL.live.filter(L => L.t0 && L.t0 <= now && L.players.length > 2 && (rk == null || !!L.rules.ranked === rk)).map(L => {
+    const S = elState({L, me: {ev: []}}, now); if (S.over) return null;
+    const alive = S.ps.filter(p => !p.out).map(p => p.w), avg = alive.reduce((x, w) => x + elR(w), 0) / Math.max(1, alive.length);
+    return {L, S, score: avg + L.players.length * 15 + S.alive * 10};
+  }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, n);
+}
+function elTopHtml(list){
+  return list.map(({L, S}) => { const ps = L.players.slice().sort((a, b) => elR(b) - elR(a)), more = ps.length - 2;
+    return `<li class="el-row el-tm"><div class="el-rn"><span class="el-tp"><span class="el-stack">${ps.slice(0, 4).map(w => elAv(w)).join('')}</span><small>${ps.slice(0, 2).map(w => esc(w === -1 ? 'You' : bot(w).name)).join(', ')}${more > 0 ? ` and ${more} other${more === 1 ? '' : 's'}` : ''}</small></span><b>${esc(L.name)}</b><small>Round ${S.r + 1} · ${S.alive} of ${L.players.length} left${S.sd ? ' · sudden death' : ''}</small></div><button class="small-btn" data-el="watch" data-id="${L.id}">Watch</button></li>`; }).join('');
+}
 function elLiveHtml(){
-  const now = Date.now(), live = EL.live.filter(L => L.t0 && L.t0 <= now && L.rules.spect !== false).map(L => ({L, S: elState({L, me: {ev: []}}, now)})).filter(x => !x.S.over).slice(0, 3);
-  if (!live.length) return '';
-  return `<div class="lf-sub lf-livehd"><i class="lf-dot" aria-hidden="true"></i>Elimination lobbies</div><ul class="el-list el-lf">${live.map(({L, S}) => `<li class="el-row"><div class="el-rn"><b>${esc(L.name)}</b><small>Round ${S.r + 1} · ${S.alive} of ${L.players.length} left${S.sd ? ' · sudden death' : ''}</small></div><button class="small-btn" data-el="watch" data-id="${L.id}">Watch</button></li>`).join('')}</ul>`;
+  const top = elTop(null, 3); if (!top.length) return '';
+  return `<div class="lf-sub lf-livehd"><i class="lf-dot" aria-hidden="true"></i>Top group matches</div><ul class="el-list el-lf el-topm">${elTopHtml(top)}</ul>`;
 }
 
 // is this player in an Elimination game right now (yours, or one running)? 'study', 'break' or null
@@ -564,8 +588,9 @@ document.addEventListener('click', e => {
   else if (k === 'back'){ EL.view = 'game'; showPage('elim'); elRender(); }
   else if (k === 'browse'){ EL.view = 'browse'; EL.watch = null; saveEl(); elRender(); }
   else if (k === 'create'){ EL.view = 'create'; showPage('elim'); elRender(); }
-  else if (k === 'filt'){ EL.filt = b.dataset.f; elRender(); }
-  else if (k === 'ltab'){ EL.ltab = b.dataset.t; EL.filt = 'all'; saveEl(); elRender(); }
+  else if (k === 'filt'){ EL.filt = b.dataset.f; EL.lshow = 40; elRender(); }
+  else if (k === 'ltab'){ EL.ltab = b.dataset.t; EL.filt = 'all'; EL.lshow = 40; saveEl(); elRender(); }
+  else if (k === 'more'){ EL.lshow = (EL.lshow || 40) + 40; elRender(); }
   else if (k === 'join'){ const L = EL.list.find(l => l.id === b.dataset.id); if (L) elJoin(L); }
   else if (k === 'watch'){ const L = EL.live.find(l => l.id === b.dataset.id); if (L){ EL.watch = {L, me: {ev: []}, chat: [], q: []}; EL.view = 'watch'; showPage('elim'); elRender(); } }
   else if (k === 'make'){ elFormRead(); const f = EL.form; let at = 0; if (f.start === 'time' && f.at){ const [h, m] = f.at.split(':').map(Number), d = new Date(); d.setHours(h, m, 0, 0); if (d < Date.now()) d.setDate(d.getDate() + 1); at = d.getTime(); }
