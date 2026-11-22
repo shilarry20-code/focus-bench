@@ -197,7 +197,6 @@ function stTemplates(){
   if (last) out.session = {label: 'Last session', d: {tpl: 'session', v: last.min >= 60 ? `${Math.floor(last.min / 60)}h ${last.min % 60}m` : `${last.min} min`, sub: String(last.task || last.tag || 'Focus').slice(0, 28)}};
   if (R && R.on) out.rank = {label: 'My rank', d: {tpl: 'rank', v: myRk().full, sub: `${R.mmr.toLocaleString()} Elo`}};
   out.photo = {label: 'Photo', d: {tpl: 'photo'}};
-  out.pic = {label: 'Study spot', d: {tpl: 'pic'}};
   out.text = {label: 'Just text', d: {tpl: 'text'}};
   return out;
 }
@@ -213,7 +212,7 @@ function stComposeDraw(){
     <div class="st-cb"><div class="st-prev">${s ? stSvg(s) : '<div class="st-pick"><p>Pick a photo</p></div>'}</div>
     <div class="st-opts"><div class="st-tpls">${Object.entries(T).map(([k, x]) => `<button class="chip${SC_.tpl === k ? ' on' : ''}" data-sct="${k}">${x.label}</button>`).join('')}</div>
       ${SC_.tpl === 'photo' ? `<label class="small-btn st-file">Choose photo<input type="file" accept="image/*" id="stFile" hidden></label>` : ''}
-      ${SC_.tpl === 'pic' ? '<button class="small-btn" data-sc="shuffle">Shuffle the picture</button>' : SC_.tpl === 'text' ? '<button class="small-btn" data-sc="color">New color</button>' : ''}
+      ${SC_.tpl === 'text' ? '<button class="small-btn" data-sc="color">New color</button>' : ''}
       <label class="st-capl">${SC_.tpl === 'text' ? 'Text' : 'Caption (optional)'}<input id="stCap" maxlength="${SC_.tpl === 'text' ? 140 : 80}" placeholder="${SC_.tpl === 'text' ? 'What’s on your mind?' : 'Leave it empty for no caption'}" value="${esc(SC_.cap)}"></label>
       <p class="hint">Stories last 24 hours. Your followers see it in their tray; you'll see who viewed it.</p>
       <button class="small-btn accent" data-sc="post" ${s ? '' : 'disabled'}>Share to story</button></div></div></div>`;
