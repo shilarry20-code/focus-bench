@@ -2536,3 +2536,26 @@ html.st-open{overflow:hidden}
 .fd-sa{position:absolute;top:50%;transform:translateY(-35%);width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--card,#16171b);color:var(--text,#eee);font-size:20px;line-height:26px;cursor:pointer;z-index:2;box-shadow:0 4px 14px rgba(0,0,0,.35)}
 .fd-sa.l{left:6px}.fd-sa.r{right:6px}.fd-sa[hidden]{display:none}
 .fd-strip-row.dragging{cursor:grabbing;user-select:none}.fd-strip-row.dragging *{pointer-events:none}
+
+/* stories on a computer: the people before and after, smaller and dimmed beside the one you're watching */
+.st-car{display:flex;align-items:center;justify-content:center;width:100%;height:100%;gap:28px}
+.st-side{flex:1;display:flex;align-items:center;gap:22px;min-width:0;height:100%}
+.st-side.l{justify-content:flex-end}.st-side.r{justify-content:flex-start}
+.st-peek{position:relative;flex:none;height:min(42vh,calc(42vw * 16 / 9));aspect-ratio:9/16;border-radius:10px;overflow:hidden;border:0;padding:0;background:#000;cursor:pointer;transition:transform .2s}
+.st-peek:hover{transform:scale(1.03)}
+.st-peek .st-svg{position:absolute;inset:0;width:100%;height:100%;filter:brightness(.42) saturate(.6)}
+.st-pk{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#fff;text-align:center;padding:8px}
+.st-pk .av{width:54px;height:54px;border:2px solid #fff;border-radius:50%}
+.st-pk b{font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.st-pk small{font-size:12px;color:rgba(255,255,255,.75)}
+.st-stage{flex:none}
+.st-stage.in-r{animation:stInR .28s ease-out}.st-stage.in-l{animation:stInL .28s ease-out}
+@keyframes stInR{from{transform:translateX(60px);opacity:.3}}@keyframes stInL{from{transform:translateX(-60px);opacity:.3}}
+.st-arrow.l{left:-46px}.st-arrow.r{right:-46px}
+@media (max-width:1100px){.st-peek:nth-child(1):not(:only-child){display:none}.st-side.r .st-peek:nth-child(2){display:none}}
+@media (max-width:760px){.st-side{display:none}.st-car{gap:0}}
+.st-peek .st-svg{filter:brightness(.3) saturate(.5) blur(.5px)}
+.st-car .st-arrow{z-index:4}
+.st-car .st-arrow.l{left:-18px}.st-car .st-arrow.r{right:-18px}
+.st-car{gap:40px}
+.st-peek::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,.5);pointer-events:none}
+.st-pk{z-index:1}
