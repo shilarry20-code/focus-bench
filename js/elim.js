@@ -57,7 +57,7 @@ function elBotPlan(L, w){
   if (L.bp && L.bp[w]) return L.bp[w];
   const rnd = mulberry32(fdHash(L.id + ':' + w)), RL = L.rules.round * 60000, A = elAllow(L.rules).map(m => m * 60000);
   const B = BOTS[w], typ = typical(botRating(w)) * (B.sitMul || 1), g = gaussOf(rnd);
-  const S = clampN(typ * Math.exp(.45 + .4 * g), 25, 720) * 60000;          // how long they can keep going today
+  const S = clampN(typ * .9 * Math.exp(.28 * g), 25, 720) * 60000;          // how long they can keep going today: the same stamina as in a 1v1 (the last one standing is just the best of the lobby)
   const style = ['early', 'saver', 'edge', 'calm'][Math.floor(rnd() * 4)];
   const br = []; let out = L.t0 + S, why = 'stopped';
   for (let r = 0; r < 400; r++){
