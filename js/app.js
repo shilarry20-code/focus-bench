@@ -158,7 +158,7 @@ setInterval(() => { if (!document.hidden) renderDock(); }, 1000);
 /* parking lot on the Focus page */
 function renderQuickNotes(){
   if (!$('#qNoteList')) return;
-  const open = NOTES.filter(n => !n.done).slice(0, 5);
+  const open = NOTES.filter(n => !n.done && !n.arch).slice(0, 5);
   $('#qNoteList').innerHTML = open.map(n => `<li><input type="checkbox" data-id="${n.id}" aria-label="Done"><span>${esc(n.text)}</span></li>`).join('')
     || '<li style="border:0"><span class="hint" style="margin:0">Nothing parked.</span></li>';
 }
