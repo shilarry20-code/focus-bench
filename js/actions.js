@@ -20,11 +20,15 @@ const AC_SAYS = /(?:^|\W)(?:i|we|they|i'd|id|i'll|ill|i'm|im|we'd|we'll|he|she)\
 const AC_NOTVERB = /\b(?:look|looks|looked|looking|feel|feels|felt|seem|seems|seemed|sound|sounds|sounded|something|anything|nothing|everything|just|more|much|be|is|are|was|were|it's|its|that's|thats|what|how|exactly|almost|sort of|kind of|kinda|same|such|would|ill|i'd|id)\s*$/;
 const AC_DET = /\b(?:my|your|the|a|an|that|this|his|her|their|any|no|some|another|every|each|one|ur|our)\s*$/;
 const AC_MY = '(?:all\\s+|some\\s+|a few\\s+|both\\s+|every\\s+|each\\s+|the\\s+rest\\s+of\\s+)?(?:of\\s+)?(?:my|mine)\\b';
+// said about some other time ("when i see you, follow me", "like my post later"): nothing happens now
+const AC_LATER = /\b(?:when|whenever|if|once|next time|tomorrow|tonight|after|before|until|unless|someday|sometime)\b/;
+const AC_LATER_AFTER = /^[^.?!]{0,40}\b(?:later|tomorrow|tonight|next time|after|until|when i|whenever i|if i)\b/;
 function acHits(t, verb, after){
   const re = new RegExp(verb, 'g'); let m;
   while ((m = re.exec(t))){
     const before = t.slice(Math.max(0, m.index - 60), m.index).trimEnd(), post = t.slice(m.index + m[0].length, m.index + m[0].length + 60);
     if (AC_SAYS.test(before) || AC_NOTVERB.test(before)) continue;
+    if (AC_LATER.test(before.slice(Math.max(before.lastIndexOf('.'), before.lastIndexOf('!'), before.lastIndexOf('?')) + 1)) || AC_LATER_AFTER.test(post)) continue;      // "when i see you, follow me": not now
     if (after.test(post)) return {before, post};
   }
   return null;
