@@ -126,13 +126,14 @@ function lbYouCard(c, V, t){
     const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return d; });
     const vals = days.map(d => (LBH[dayKey(d.getTime())] || {})[c.id] || null), got = vals.filter(v => v);
     if (got.length){
-      const lo = Math.min(...got), hi = Math.max(...got), sp = Math.max(1, hi - lo), X = i => 8 + i * 184 / 6, Y = v => got.length < 2 || hi === lo ? 26 : 6 + (v - lo) / sp * 38;
-      const pts = vals.map((v, i) => v ? [X(i), Y(v)] : null).filter(Boolean);
-      chart = `<svg class="lb2-spark" viewBox="0 0 200 64" role="img" aria-label="Your rank on each of the last 7 days">
-        ${days.map((d, i) => `<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="4" y2="46" class="lb2-grid"/>`).join('')}
-        ${pts.length > 1 ? `<polyline points="${pts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>` : ''}
-        ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${i === pts.length - 1 ? 3.2 : 2.2}" fill="var(--accent)"/>`).join('')}
-        ${days.map((d, i) => `<text x="${X(i).toFixed(1)}" y="60" text-anchor="middle" class="lb2-day">${i === 6 ? 'Today' : d.toLocaleDateString(undefined, {weekday: 'narrow'})}</text>`).join('')}
+      const lo = Math.min(...got), hi = Math.max(...got), sp = Math.max(1, hi - lo), X = i => 22 + i * 276 / 6, Y = v => got.length < 2 || hi === lo ? 62 : 26 + (v - lo) / sp * 72;
+      const pts = vals.map((v, i) => v ? [X(i), Y(v), v] : null).filter(Boolean), L = pts[pts.length - 1];
+      chart = `<svg class="lb2-spark" viewBox="0 0 320 128" role="img" aria-label="Your rank on each of the last 7 days">
+        ${days.map((d, i) => `<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="14" y2="106" class="lb2-grid"/>`).join('')}
+        ${pts.length > 1 ? `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+        ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${p === L ? 5 : 3.6}" fill="var(--accent)"><title>#${p[2].toLocaleString()}</title></circle>`).join('')}
+        <text x="${Math.min(298, Math.max(22, L[0])).toFixed(1)}" y="${(L[1] - 11).toFixed(1)}" text-anchor="${L[0] > 250 ? 'end' : 'middle'}" class="lb2-val">#${L[2].toLocaleString()}</text>
+        ${days.map((d, i) => `<text x="${X(i).toFixed(1)}" y="123" text-anchor="middle" class="lb2-day${i === 6 ? ' now' : ''}">${i === 6 ? 'Today' : d.toLocaleDateString(undefined, {weekday: 'short'})}</text>`).join('')}
       </svg><small class="hint">Your rank, last 7 days${got.length < 7 ? ' · fills in a day at a time' : ''}</small>`;
     } else chart = '<small class="hint">Your rank chart fills in day by day.</small>';
   }
