@@ -155,11 +155,18 @@ function stAbout(s){
   const d = s.d || {};
   return ({scene: 'a picture of where they’re studying', timer: `their study time today (${Math.floor((d.tot || 0) / 60)}h ${(d.tot || 0) % 60}m)`, session: `a finished ${d.min}-minute session of ${d.subj}`, streak: `their ${d.streak}-day streak`, song: `the song they’re listening to (${d.song})`, text: 'a text story', photo: 'a photo', card: `a ${d.tpl === 'today' ? 'study time' : d.tpl} card (${d.v})`})[s.kind] + (s.cap ? `, captioned “${s.cap}”` : '');
 }
-function stReply(text){
+function stReply(text, react){
   const c = stCur(); if (!c || c.g.w === -1 || !text.trim()) return;
   dmSend(c.g.w, text.trim().slice(0, 200));
-  const last = DMS.msgs[DMS.msgs.length - 1]; if (last && last.me && last.w === c.g.w){ last.sr = stAbout(c.s); saveDms(); }
-  toast(`Sent to ${bot(c.g.w).name}`);
+  const last = DMS.msgs[DMS.msgs.length - 1]; if (last && last.me && last.w === c.g.w){ last.sr = stAbout(c.s); last.st = {id: c.s.id, w: c.g.w}; if (react) last.srx = 1; saveDms(); try { renderChat(); } catch(e){} }
+  stSent(react ? text : null, react ? `Reaction sent to ${bot(c.g.w).name}` : `Sent to ${bot(c.g.w).name}`);
+}
+// what you see after reacting or replying: the emoji floats up, and a little note says it went
+function stSent(emoji, note){
+  const f = $('#stView .st-frame'); if (!f) return;
+  if (emoji) for (let k = 0; k < 7; k++){ const e = document.createElement('i'); e.className = 'st-fly'; e.textContent = emoji; e.style.left = (30 + Math.random() * 40) + '%'; e.style.animationDelay = (k * 70) + 'ms'; e.style.fontSize = (34 + Math.random() * 26) + 'px'; f.appendChild(e); setTimeout(() => e.remove(), 1800); }
+  let n = f.querySelector('.st-sent'); if (!n){ n = document.createElement('div'); n.className = 'st-sent'; f.appendChild(n); }
+  n.textContent = note; n.classList.remove('on'); void n.offsetWidth; n.classList.add('on');
 }
 
 /* ---- your story: who viewed it ---- */
@@ -250,7 +257,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('#stView')){
     const b = e.target.closest('[data-bot]'); if (b){ e.preventDefault(); e.stopPropagation(); const w = +b.dataset.bot; stClose(); openProfile(w); return; }
     const pk = e.target.closest('[data-stq]'); if (pk){ const qi = +pk.dataset.stq; SV.dir = qi > SV.qi ? 'r' : 'l'; SV.qi = qi; const l = SV.queue[qi].l; SV.i = Math.max(0, l.findIndex(x => !STY.seen[x.id])); stShow(); return; }
-    const x = e.target.closest('[data-sx]'); if (x){ stReply(x.dataset.sx); SV.rx = false; const r = $('#stView .st-rx'); if (r) r.hidden = true; const b = $('#stView .st-rxb'); if (b) b.classList.remove('on'); return; }
+    const x = e.target.closest('[data-sx]'); if (x){ stReply(x.dataset.sx, true); SV.rx = false; const r = $('#stView .st-rx'); if (r) r.hidden = true; const b = $('#stView .st-rxb'); if (b) b.classList.remove('on'); return; }
     const a = e.target.closest('[data-sv]'); if (!a) return; const k = a.dataset.sv;
     if (k === 'close') stClose(); else if (k === 'next') stNext(); else if (k === 'prev') stPrev(); else if (k === 'nextp') stNextPerson(); else if (k === 'prevp') stPrevPerson();
     else if (k === 'pause'){ SV.paused = !SV.paused; a.textContent = SV.paused ? '▶' : '❚❚'; }
@@ -289,20 +296,30 @@ document.addEventListener('keydown', e => {
   document.addEventListener('click', e => { if (SV && SV.swiped && e.target.closest('#stView .st-tap')){ e.stopImmediatePropagation(); e.preventDefault(); SV.swiped = false; } }, true);
 }
 
-/* ---- the tray goes above Live now on the Feed ---- */
-{
-  const _fs = fdStrip;
-  fdStrip = function(){
-    _fs.apply(this, arguments);
-    const el = $('#fdStrip'); if (!el || typeof FDV === 'undefined' || FDV.tab === 'live' || FDV.tab === 'act') return;
-    const html = stTrayHtml(); let tr = el.querySelector('.st-tray');
-    if (!html){ if (tr) tr.remove(); return; }
-    const tmp = document.createElement('div'); tmp.innerHTML = html; const fresh = tmp.firstChild;
-    const row = tr && tr.querySelector('.fd-strip-row'), sl = row ? row.scrollLeft : 0;
-    if (tr) tr.replaceWith(fresh); else el.prepend(fresh);
-    const r2 = fresh.querySelector('.fd-strip-row'); if (r2) r2.scrollLeft = sl;
-  };
-}
+/* ---- one row on the Feed: Live now first, then stories, then people studying ----
+   A story you haven't seen has the colorful ring; once you've seen it, the ring shows how they are right now:
+   green studying, blue online, gray offline. */
+const stStatus = w => typeof gcState === 'function' ? gcState(w) : 'off';
+fdStrip = function(){
+  const el = $('#fdStrip'); if (!el || !RK_READY) return;
+  if (FDV.tab === 'live' || FDV.tab === 'act'){ el.innerHTML = ''; return; }
+  const short = n => n.length > 9 ? n.slice(0, 8) + '…' : n;
+  const live = typeof wLiveTop === 'function' ? wLiveTop().slice(0, 6) : [];
+  const tray = P.noStories ? [] : stTray(), withStory = new Set(tray.map(p => p.w)), mine = stMine();
+  const seenP = new Set(), ppl = [], add = w => { if (w >= 0 && !seenP.has(w) && !withStory.has(w) && botLiveNow(w)){ seenP.add(w); ppl.push(w); } };
+  FD.follows.forEach(add); Object.keys(R.rec || {}).map(Number).filter(w => isRival(w)).forEach(add); if (ppl.length < 8) FD.followers.forEach(add);
+  const ring = w => { const st = stStatus(w); return st === 'study' ? 'rs-study' : st === 'on' ? 'rs-on' : 'rs-off'; };
+  const items = [];
+  if (!P.noStories) items.push(`<button class="fd-st st-me" data-st="me" title="${mine.length ? 'Your story' : 'Add to your story'}"><span class="fd-ring ${mine.length ? (stAllSeen(mine) ? 'rs-on' : 'st-ring') : 'st-ring none'}">${myAvatar('md')}</span>${mine.length ? '' : '<i class="st-plus">+</i>'}<small>Your story</small></button>`);
+  live.forEach(p => { const top = p.ra >= p.rc ? p.a : p.c, oth = top === p.a ? p.c : p.a;
+    items.push(`<button class="fd-st live" data-watch="${p.a}-${p.c}" title="Watch ${esc(bot(p.a).name)} vs ${esc(bot(p.c).name)}"><span class="fd-ring">${avatar(bot(top), 'md')}</span><b class="fd-livetag">LIVE</b><small>${esc(short(bot(top).name))} vs ${esc(short(bot(oth).name))}</small></button>`); });
+  tray.slice(0, 40).forEach(p => items.push(`<button class="fd-st" data-st="${p.w}" title="${esc(bot(p.w).name)}"><span class="fd-ring ${p.seen ? ring(p.w) : 'st-ring'}">${avatar(bot(p.w), 'md')}</span><small>${esc(short(bot(p.w).name))}</small></button>`));
+  ppl.slice(0, 24).forEach(w => items.push(`<button class="fd-st" data-bot="${w}" title="${esc(bot(w).name)} is studying"><span class="fd-ring rs-study">${avatar(bot(w), 'md')}</span><small>${esc(short(bot(w).name))}</small></button>`));
+  const row = el.querySelector('.fd-strip-row'), sl = row ? row.scrollLeft : 0;
+  el.innerHTML = items.length ? `<div class="card fd-strip-card"><div class="fd-strip-row">${items.join('')}</div></div>` : '';
+  const r2 = el.querySelector('.fd-strip-row'); if (r2) r2.scrollLeft = sl;
+  stripArrows();
+};
 
 /* ---- sync: what you've seen, and your own stories ---- */
 if (typeof SECTIONS !== 'undefined'){
@@ -358,5 +375,19 @@ document.addEventListener('wheel', e => {
   document.addEventListener('pointermove', e => { if (!d) return; const dx = e.clientX - d.x; if (Math.abs(dx) > 5) d.moved = true; if (d.moved){ d.row.scrollLeft = d.s - dx; d.row.classList.add('dragging'); } });
   document.addEventListener('pointerup', () => { if (!d) return; const was = d; d = null; was.row.classList.remove('dragging'); if (was.moved){ const stop = ev => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, {capture: true, once: true}); setTimeout(() => document.removeEventListener('click', stop, true), 50); } });
 }
-{ const _fs2 = fdStrip; fdStrip = function(){ _fs2.apply(this, arguments); stripArrows(); }; }
 addEventListener('resize', stripArrows);
+
+// a story someone replied to, shown in DMs: tap it to watch (while it's still up)
+function stFind(id, w){ return (w === -1 ? stMine() : stOf(w)).find(s => s.id === id) || (w === -1 ? STY.mine.find(s => s.id === id) : null); }
+function stThumb(st){
+  const s = st && stFind(st.id, st.w);
+  if (!s) return `<div class="dm-story gone"><span>Story unavailable</span></div>`;
+  return `<button class="dm-story" data-stopen="${esc(st.id)}" data-stw="${st.w}" aria-label="Open story">${stSvg(s)}</button>`;
+}
+function stOpenOne(id, w){
+  const s = stFind(id, w); if (!s) return toast('That story isn’t up anymore.');
+  const l = w === -1 ? stMine() : stOf(w); SV = {queue: [{w, l}], qi: 0, i: Math.max(0, l.findIndex(x => x.id === id)), t0: performance.now(), el: 0, paused: false};
+  let m = $('#stView'); if (!m){ m = document.createElement('div'); m.id = 'stView'; m.className = 'st-view'; document.body.appendChild(m); }
+  m.hidden = false; document.documentElement.classList.add('st-open'); stShow(); requestAnimationFrame(stLoop);
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-stopen]'); if (!b) return; e.preventDefault(); e.stopPropagation(); stOpenOne(b.dataset.stopen, +b.dataset.stw); }, true);
