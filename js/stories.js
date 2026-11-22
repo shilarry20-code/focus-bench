@@ -63,8 +63,8 @@ function stTray(){
 function stTrayHtml(){
   if (P.noStories || !RK_READY) return '';
   const tray = stTray(), mine = stMine(), short = n => n.length > 9 ? n.slice(0, 8) + '…' : n;
-  const me = `<button class="fd-st st-me" data-st="me" title="${mine.length ? 'Your story' : 'Add to your story'}"><span class="fd-ring st-ring${mine.length ? (stAllSeen(mine) ? ' seen' : '') : ' none'}">${myAvatar('md')}</span>${mine.length ? '' : '<i class="st-plus">+</i>'}<small>Your story</small></button>`;
-  return `<div class="card fd-strip-card st-tray"><div class="fd-strip-row">${me}${tray.slice(0, 40).map(p => `<button class="fd-st" data-st="${p.w}" title="${esc(bot(p.w).name)}"><span class="fd-ring st-ring${p.seen ? ' seen' : ''}">${avatar(bot(p.w), 'md')}</span><small>${esc(short(bot(p.w).name))}</small></button>`).join('')}${tray.length ? '' : '<p class="hint st-none">No stories from people you follow right now.</p>'}</div></div>`;
+  const me = `<button class="fd-st st-me" data-st="me" title="${mine.length ? 'Your story' : 'Add to your story'}"><span class="fd-ring st-ring${mine.length ? (stAllSeen(mine) ? ' seen' : '') : ' none'}">${myAvatar('md')}</span>${mine.length ? '<i class="st-has" title="Has a story"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></i>' : '<i class="st-plus">+</i>'}<small>Your story</small></button>`;
+  return `<div class="card fd-strip-card st-tray"><div class="fd-strip-row">${me}${tray.slice(0, 40).map(p => `<button class="fd-st" data-st="${p.w}" title="${esc(bot(p.w).name)}"><span class="fd-ring st-ring${p.seen ? ' seen' : ''}">${avatar(bot(p.w), 'md')}</span><i class="st-has" title="Has a story"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></i><small>${esc(short(bot(p.w).name))}</small></button>`).join('')}${tray.length ? '' : '<p class="hint st-none">No stories from people you follow right now.</p>'}</div></div>`;
 }
 
 /* ---- drawing a story (9:16) ---- */
@@ -310,10 +310,10 @@ fdStrip = function(){
   FD.follows.forEach(add); Object.keys(R.rec || {}).map(Number).filter(w => isRival(w)).forEach(add); if (ppl.length < 8) FD.followers.forEach(add);
   const ring = w => { const st = stStatus(w); return st === 'study' ? 'rs-study' : st === 'on' ? 'rs-on' : 'rs-off'; };
   const items = [];
-  if (!P.noStories) items.push(`<button class="fd-st st-me" data-st="me" title="${mine.length ? 'Your story' : 'Add to your story'}"><span class="fd-ring ${mine.length ? (stAllSeen(mine) ? 'rs-on' : 'st-ring') : 'st-ring none'}">${myAvatar('md')}</span>${mine.length ? '' : '<i class="st-plus">+</i>'}<small>Your story</small></button>`);
+  if (!P.noStories) items.push(`<button class="fd-st st-me" data-st="me" title="${mine.length ? 'Your story' : 'Add to your story'}"><span class="fd-ring ${mine.length ? (stAllSeen(mine) ? 'rs-on' : 'st-ring') : 'st-ring none'}">${myAvatar('md')}</span>${mine.length ? '<i class="st-has" title="Has a story"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></i>' : '<i class="st-plus">+</i>'}<small>Your story</small></button>`);
   live.forEach(p => { const top = p.ra >= p.rc ? p.a : p.c, oth = top === p.a ? p.c : p.a;
     items.push(`<button class="fd-st live" data-watch="${p.a}-${p.c}" title="Watch ${esc(bot(p.a).name)} vs ${esc(bot(p.c).name)}"><span class="fd-ring">${avatar(bot(top), 'md')}</span><b class="fd-livetag">LIVE</b><small>${esc(short(bot(top).name))} vs ${esc(short(bot(oth).name))}</small></button>`); });
-  tray.slice(0, 40).forEach(p => items.push(`<button class="fd-st" data-st="${p.w}" title="${esc(bot(p.w).name)}"><span class="fd-ring ${p.seen ? ring(p.w) : 'st-ring'}">${avatar(bot(p.w), 'md')}</span><small>${esc(short(bot(p.w).name))}</small></button>`));
+  tray.slice(0, 40).forEach(p => items.push(`<button class="fd-st" data-st="${p.w}" title="${esc(bot(p.w).name)}"><span class="fd-ring ${p.seen ? ring(p.w) : 'st-ring'}">${avatar(bot(p.w), 'md')}</span><i class="st-has" title="Has a story"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></i><small>${esc(short(bot(p.w).name))}</small></button>`));
   ppl.slice(0, 24).forEach(w => items.push(`<button class="fd-st" data-bot="${w}" title="${esc(bot(w).name)} is studying"><span class="fd-ring rs-study">${avatar(bot(w), 'md')}</span><small>${esc(short(bot(w).name))}</small></button>`));
   // updated in place (not rebuilt), so a scroll that's moving keeps moving smoothly
   const html = items.length ? `<div class="card fd-strip-card"><div class="fd-strip-row">${items.join('')}</div><button class="fd-sa l" aria-label="Scroll left">‹</button><button class="fd-sa r" aria-label="Scroll right">›</button></div>` : '';
