@@ -130,6 +130,7 @@ function elNewLobby(opts){
   const center = opts.center != null ? opts.center : R.mmr + gaussOf(rnd) * 220;
   return {id, rules, created: now, center: Math.round(center), host: opts.host != null ? opts.host : null, players: [], joinAt: [], t0: 0, name: rules.name};
 }
+let elNextOld = 0;   // when to add the next game that's already going (not saved, so opening the app fills a few right away)
 function elListTick(){
   if (!RK_READY) return;
   const now = Date.now(); let ch = false;
@@ -154,20 +155,21 @@ function elListTick(){
     if (L.players.length >= L.rules.size && !L.t0){ L.t0 = now + 3000; EL.live.unshift({...L}); ch = true; }
   });
   EL.list = EL.list.filter(l => !l.t0);
-  // games already going when you open the app
-  if (EL.live.length < 3 && !EL.seeded){
-    EL.seeded = 1;
-    for (let k = 0; k < 4; k++){
-      const N = [4, 8, 16, 6, 12][Math.floor(Math.random() * 5)], L = elNewLobby({size: N}), ppl = elPickPlayers(L.id, L.center, 300, N, '');
+  // games that have been going a while (you can drop in partway and watch): always keep a few around, adding a new one every few minutes
+  const older = EL.live.filter(L => L.t0 && now - L.t0 > 8 * 60000).length;
+  if (older < 3 && now >= (elNextOld || 0)){
+    const tries = elNextOld ? 1 : 3;          // right after opening, fill in a few at once
+    elNextOld = now + (2 + Math.random() * 4) * 60000;
+    for (let k = 0; k < tries; k++){
+      const N = [4, 4, 8, 8, 16, 6, 12][Math.floor(Math.random() * 7)], L = elNewLobby({size: N}), ppl = elPickPlayers(L.id, L.center, 300, N, '');
       if (ppl.length < N) continue;
       L.host = ppl[0]; L.players = ppl; L.name = lobbyName(ppl[0], BOTS[ppl[0]].subject);
-      L.t0 = now - (5 + Math.random() * 80) * 60000; L.joinAt = ppl.map(() => L.t0 - 3000);
-      const S = elState({L, me: {ev: []}}, now); if (!S.over) EL.live.push(L);
+      L.t0 = now - (8 + Math.random() * 90) * 60000; L.joinAt = ppl.map(() => L.t0 - 3000);
+      const S = elState({L, me: {ev: []}}, now); if (!S.over && S.alive >= 2){ EL.live.push(L); ch = true; }
     }
-    ch = true;
   }
   // running lobbies you can watch (a few at a time; finished ones drop off)
-  EL.live = EL.live.filter(L => { const end = Math.max(...L.players.map(w => elBotPlan(L, w).out)); return now < end + 5 * 60000; }).slice(0, 8);
+  EL.live = EL.live.filter(L => { const end = Math.max(...L.players.map(w => elBotPlan(L, w).out)); return now < end + 5 * 60000; }).slice(0, 10);
   if (ch && !$('#page-elim').hidden && EL.view === 'browse') elRender();
 }
 
