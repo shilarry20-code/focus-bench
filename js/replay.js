@@ -346,25 +346,4 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'Home') rpSeek(RP.d.start);
 });
 
-/* ---- View buttons on match histories ---- */
-{
-  const _pm = profileMatches;
-  profileMatches = function(w){
-    const html = _pm.apply(this, arguments), t = document.createElement('template'); t.innerHTML = html;
-    const lis = [...t.content.querySelectorAll('.rk-hist > li')];
-    // rows are in the same order the original built them: work out each one's match again
-    let rows;
-    if (w === ME) rows = R.hist.slice(0, lis.length).map(h => 'rk:me:' + h.t);
-    else { const sim = m5List(w).map(m => ({t: m.t, k: `rk:m5:${w}:${m.code}`})), oldest = sim.length ? sim[sim.length - 1].t : 0;
-      const vs = R.hist.filter(h => h.b === w && (sim.length < 5 || h.t >= oldest)).slice(0, 5).map(h => ({t: h.t, k: 'rk:me:' + h.t}));
-      rows = [...sim, ...vs].sort((a, b) => b.t - a.t).map(x => x.k); }
-    lis.forEach((li, k) => { const when = li.querySelector('.when'); if (when && rows[k]) when.insertAdjacentHTML('beforeend', `<button class="rp-v" data-rp="${rows[k]}">Replay</button>`); });
-    return t.innerHTML;
-  };
-}
-// the Ranked page's match history
-new MutationObserver(() => {
-  const ul = $('#rkHist'); if (!ul || ul.dataset.rpv === String(ul.children.length) + ':' + (R.hist[0] && R.hist[0].t)) return;
-  ul.dataset.rpv = String(ul.children.length) + ':' + (R.hist[0] && R.hist[0].t);
-  [...ul.children].forEach((li, k) => { const h = R.hist[k], when = li.querySelector('.when'); if (h && when && !when.querySelector('.rp-v')) when.insertAdjacentHTML('beforeend', `<button class="rp-v" data-rp="rk:me:${h.t}">Replay</button>`); });
-}).observe(document.body, {childList: true, subtree: true});
+/* Replay buttons are part of each match history row (ranked.js, rpdl.js). */
