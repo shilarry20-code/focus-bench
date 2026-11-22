@@ -18,10 +18,15 @@ let CHAT_TAB = 'dm', DM_OPEN = null, dmChalOpen = false;      // global chat was
 const dmLoadT = Date.now(), dmGenBusy = {};
 
 /* ---- facts the players know ---- */
-const thread = w => DMS.msgs.filter(m => m.w === w && !m.del);
+if (!DMS.hide) DMS.hide = {};
+// what you see of a chat: after you delete a chat, only messages that come after it show (they still remember the rest)
+const thread = w => DMS.msgs.filter(m => m.w === w && !m.del && m.t > (DMS.hide[w] || 0));
+const threadAll = w => DMS.msgs.filter(m => m.w === w && !m.del);
 // online: in the chat right now, or they just did something (liked, commented, followed, messaged) and are still around
 // for a while after (each person lingers 8 to 25 minutes)
 let dmActC = {at: 0, m: null};
+const DM_REF = {}, DM_RE = new Map();        // the message ids behind the numbers in the last prompt; which text answers which message
+let DM_RX = [];           // reactions they've decided on, applied as their reply comes in
 function dmLastAct(w){
   const now = Date.now();
   if (!dmActC.m || now - dmActC.at > 5000){
@@ -55,7 +60,8 @@ function dmPrompt(w, task){
 Write like real texting between two college students: casual, short, lowercase is fine, sometimes several short texts in a row. Keep ${B.name}'s own personality. They can talk about anything; most texts shouldn't be about studying or work, and don't tack study talk onto messages. When they bring up shows, movies, music, games or sports, they name the real ones (no vague "that show").
 Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. ${EMO_RULE} Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Don't check in on how ${me} is doing and don't congratulate rank-ups unprompted. Every message is from ${B.name}.
 ${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
-  const hist = thread(w).filter(m => m.text || m.ch).slice(-14).map(m => m.ch ? `(${m.me ? me : B.name} sent a ${m.ch.mode === 'f' ? 'friendly' : 'ranked'} challenge, ${({p: 'pending', a: 'accepted', d: 'declined', x: 'expired'})[m.ch.st]})` : `${m.me ? me : B.name}: ${m.text}`).join('\n') || '(no messages yet)';
+  const H = threadAll(w).filter(m => m.text || m.ch).slice(-14); DM_REF[w] = H.map(m => m.id);
+  const hist = H.map((m, k) => `[${k + 1}] ` + (m.ch ? `(${m.me ? me : B.name} sent a ${m.ch.mode === 'f' ? 'friendly' : 'ranked'} challenge, ${({p: 'pending', a: 'accepted', d: 'declined', x: 'expired'})[m.ch.st]})` : `${m.me ? me : B.name}${m.re ? ' (replying to [' + (H.findIndex(x => x.id === m.re) + 1 || '?') + '])' : ''}: ${m.text}`)).join('\n') || '(no messages yet)';
   const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}, emojis: ${emojiStyle(w)}${B.bio ? `. Bio: "${B.bio}"` : ''}.
 ${me}: ${rk.full} (${R.mmr} Elo).
 ${R.cur && R.cur.b === w && R.cur.state === 'live' ? `They are in a live ${R.cur.friendly ? 'friendly' : 'ranked'} match with each other right now (any challenge between them was already accepted).` : ''}
@@ -63,10 +69,11 @@ Their head-to-head record (${me}'s wins–losses${R.rec[w] && R.rec[w][2] ? '–
 ${h ? `Their last match: ${winLabel(h.t).toLowerCase()}, ${h.f ? 'friendly' : 'ranked'}, ${me} ${({W: 'won', L: 'lost', D: 'drew'})[h.r]}, ${matchTimes(h).replace(/<[^>]+>/g, '')}${h.f ? '' : `, ${h.d > 0 ? '+' : ''}${h.d} Elo for ${me}`}${Date.now() - h.t < 3600e3 ? ` (it ended ${Math.max(1, Math.round((Date.now() - h.t) / 60000))} min ago)` : ''}.` : 'They have no matches together.'}
 It's ${new Date().toLocaleDateString(undefined, {weekday: 'long'})} ${new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
 
-Conversation so far, oldest first:
+Conversation so far, oldest first (numbered):
 ${hist}
 
-${task}`;
+${task}
+Each item can also have "replyTo": the number of a message it answers directly (only when quoting that exact message makes sense, not on every text), and "react": an emoji reacting to ${me}'s latest message (only sometimes, the way people tap a reaction; an item can be just a reaction with empty text).`;
   return {sys, user};
 }
 // returns their texts; with withAct, {texts, act}: act is an extra item Gemini adds (from "ACTION") to say what they do
@@ -74,11 +81,13 @@ async function dmWrite(w, task, withAct){
   let texts = [], act = null;
   if (GEM.key && !(GEM.wait > Date.now()) && w !== liveOpp()){
     try {
-      const {sys, user} = dmPrompt(w, task), got = await aiCall(sys, user);
+      const {sys, user} = dmPrompt(w, task), got = await aiCall(sys, user, {react: {type: 'STRING'}}), ref = DM_REF[w] || [];
       (Array.isArray(got) ? got : []).forEach(m => {
         const t = String((m && (m.text || m.message)) || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
         if (/^action$/i.test(String((m && m.from) || '').trim())){ act = t.toLowerCase(); return; }
-        const t2 = emotionOnly(t); if (t2 && texts.length < 3) texts.push(t2);
+        const rx = dcOneEmoji(m && m.react); if (rx){ const mine = DMS.msgs.filter(x => x.w === w && x.me && !x.del).pop(); if (mine) DM_RX.push({w, id: mine.id, e: rx}); }
+        const n = parseInt(String((m && m.replyTo) || '').replace(/\D/g, ''), 10), re = n && ref[n - 1] ? ref[n - 1] : null;
+        const t2 = emotionOnly(t); if (t2 && texts.length < 3){ texts.push(t2); if (re) DM_RE.set(t2, re); }
       });
     } catch(e){
       if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e);
@@ -92,9 +101,14 @@ function dmQueue(w, t, texts, first = {}, hold = false){
   const items = texts.length ? texts : [''];
   items.forEach((text, k) => {
     if (!text && !first.ch && !first.upd) return;
-    DMS.q.push({id: chatId() + 'd' + k, t: Math.round(t), w, text, ...(k ? {} : first), ...(hold ? {hold: 1} : {})});
+    const re = DM_RE.get(text); if (re) DM_RE.delete(text);
+    DMS.q.push({id: chatId() + 'd' + k, t: Math.round(t), w, text, ...(re ? {re} : {}), ...(k ? {} : first), ...(hold ? {hold: 1} : {})});
     t += (3 + Math.random() * 6 + text.length * .06) * 1000;
   });
+  // their reactions land a moment before their texts (or on their own)
+  const firstT = (DMS.q.filter(q => q.w === w && !q.rx).sort((a, b) => a.t - b.t)[0] || {t: Date.now() + 5000}).t;
+  DM_RX.filter(r => r.w === w).forEach(r => DMS.q.push({id: chatId() + 'x', t: Math.round(Math.max(Date.now() + 1500, firstT - 2500)), w, rx: r}));
+  DM_RX = DM_RX.filter(r => r.w !== w);
   DMS.q.sort((a, b) => a.t - b.t); saveDms(); dmRefresh();
 }
 // how long until they answer: online now is quick, studying is slower, offline may be a long while or never
@@ -106,8 +120,8 @@ function dmDelay(w){
 
 /* ---- you send a message ---- */
 let dmReplyTimer = {};
-function dmSend(w, text){
-  DMS.msgs.push({id: chatId(), t: Date.now(), w, me: 1, text}); DMS.read[w] = Date.now();
+function dmSend(w, text, re){
+  DMS.msgs.push({id: chatId(), t: Date.now(), w, me: 1, text, ...(re ? {re} : {})}); DMS.read[w] = Date.now();
   DMS.q = DMS.q.filter(m => m.w !== w || m.upd || m.ch);   // they rethink what they were about to say
   saveDms(); renderChat();
   clearTimeout(dmReplyTimer[w]);
@@ -261,7 +275,7 @@ addEventListener('pagehide', () => store.set('fb.lastSeen', Date.now()));
 let dmAmbientAt = 0;
 async function dmAmbient(){
   const now = Date.now();
-  if (now - dmAmbientAt < 60000 || now - dmLoadT < 120000 || focusing() || document.hidden || !RK_READY) return;
+  if (now - dmAmbientAt < 60000 || now - dmLoadT < 120000 || document.hidden || !RK_READY) return;
   dmAmbientAt = now;
   if (DMS.q.some(m => m.hold) || DMS.msgs.some(m => m.ch && m.ch.st === 'p' && m.ch.by === 'them')) return;
   const rivals = Object.keys(R.rec).map(Number).filter(w => isRival(w) && dmCanStart(w) && !dmGenBusy[w]);
@@ -298,11 +312,13 @@ function dmTick(){
       const b = back.get(m.w); if (b){ m.t = b.base + (m.t - b.first); delete m.wake; changed = true; } });
     if (changed) DMS.q.sort((a, b) => a.t - b.t);
   }
-  DMS.q.forEach(m => { if (focusing() && m.t <= now) m.t = now + 5000; });     // nothing arrives during a focus block: it waits for your break
+  // they keep texting while you focus; only challenges wait for your break (you can't answer one mid-block)
+  DMS.q.forEach(m => { if (focusing() && m.t <= now && m.ch) m.t = now + 5000; });
   // one text at a time from each person: if they have several due at once, the rest follow a few seconds apart
   const gapOk = new Map(), holdT = new Map(); let held = [];
   while (DMS.q.length && DMS.q[0].t <= now){
     const q = DMS.q.shift();
+    if (q.rx){ const m = DMS.msgs.find(x => x.id === q.rx.id); if (m) dcReact(m, q.w, q.rx.e, true); changed = true; continue; }
     const last = gapOk.has(q.w) ? gapOk.get(q.w) : Math.max(0, ...DMS.msgs.filter(x => x.w === q.w && !x.me).slice(-1).map(x => x.got || 0));
     if (!q.upd && now - last < 2500){ q.t = Math.max(last, holdT.get(q.w) || 0) + 2500 + (1 + Math.random() * 4 + (q.text || '').length * .05) * 1000; holdT.set(q.w, q.t); held.push(q); changed = true; continue; }
     if (q.upd){                                 // their answer to your challenge; too late if it already ran out
@@ -311,7 +327,7 @@ function dmTick(){
       c.ch.st = q.upd.st; c.ch.at = now;
       if (q.upd.st === 'a'){ if (!chPlay(c.w, c.ch.mode, chatPageOpen())) c.ch.late = 1; else toast(`${bot(c.w).name} accepted your challenge`); }
     }
-    const m = {id: q.id, t: q.at && q.at < now ? q.at : now, w: q.w, text: q.text || '', ai: 1};      // messages sent while you were away keep their time
+    const m = {id: q.id, t: q.at && q.at < now ? q.at : now, w: q.w, text: q.text || '', ai: 1, ...(q.re ? {re: q.re} : {})};      // messages sent while you were away keep their time
     if (q.ch) m.ch = {mode: q.ch.mode, exp: now + CH_THEIRS, st: 'p', by: 'them'};
     if (m.text || m.ch){ m.got = now; DMS.msgs.push(m); fresh.push(m); gapOk.set(q.w, now); }
     changed = true;
@@ -327,7 +343,7 @@ function dmTick(){
   }
   // in the conversation list: "typing…" in place of the last message while someone is writing to you
   if (CHAT_TAB === 'dm' && DM_OPEN == null && chatPageOpen()){
-    const ty = new Set(typingNow(DMS.q.filter(m => m.text && !focusing())));
+    const ty = new Set(typingNow(DMS.q.filter(m => m.text)));
     document.querySelectorAll('#chatBody .dm-row').forEach(row => {
       const p = row.querySelector('.dm-p'), on = ty.has(+row.dataset.open); if (!p || p.dataset.ty === String(on)) return;
       if (p.dataset.orig == null) p.dataset.orig = p.innerHTML;
@@ -339,7 +355,7 @@ function dmTick(){
   document.querySelectorAll('#chatBody .cc-left[data-exp]').forEach(el => { const ms = +el.dataset.exp - now; el.textContent = ms > 0 ? `${clock(ms)} left` : 'Expired'; });
   if (CHAT_TAB === 'dm' && DM_OPEN != null && chatPageOpen()){
     const t = $('#dmTyping');
-    if (t){ const ws = typingNow(DMS.q.filter(m => m.w === DM_OPEN && m.text && !focusing())), k = ws.join(',');
+    if (t){ const ws = typingNow(DMS.q.filter(m => m.w === DM_OPEN && m.text)), k = ws.join(',');
       if (t.dataset.k !== k){ t.dataset.k = k; t.innerHTML = typingHtml(ws); t.classList.toggle('on', !!ws.length); } }
     const inp = $('#dmIn'); if (inp && !inp.dataset.ph) inp.dataset.ph = inp.placeholder;
     chatLockInput(inp, $('#dmForm button'));
