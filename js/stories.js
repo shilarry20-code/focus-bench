@@ -315,9 +315,9 @@ fdStrip = function(){
     items.push(`<button class="fd-st live" data-watch="${p.a}-${p.c}" title="Watch ${esc(bot(p.a).name)} vs ${esc(bot(p.c).name)}"><span class="fd-ring">${avatar(bot(top), 'md')}</span><b class="fd-livetag">LIVE</b><small>${esc(short(bot(top).name))} vs ${esc(short(bot(oth).name))}</small></button>`); });
   tray.slice(0, 40).forEach(p => items.push(`<button class="fd-st" data-st="${p.w}" title="${esc(bot(p.w).name)}"><span class="fd-ring ${p.seen ? ring(p.w) : 'st-ring'}">${avatar(bot(p.w), 'md')}</span><small>${esc(short(bot(p.w).name))}</small></button>`));
   ppl.slice(0, 24).forEach(w => items.push(`<button class="fd-st" data-bot="${w}" title="${esc(bot(w).name)} is studying"><span class="fd-ring rs-study">${avatar(bot(w), 'md')}</span><small>${esc(short(bot(w).name))}</small></button>`));
-  const row = el.querySelector('.fd-strip-row'), sl = row ? row.scrollLeft : 0;
-  el.innerHTML = items.length ? `<div class="card fd-strip-card"><div class="fd-strip-row">${items.join('')}</div></div>` : '';
-  const r2 = el.querySelector('.fd-strip-row'); if (r2) r2.scrollLeft = sl;
+  // updated in place (not rebuilt), so a scroll that's moving keeps moving smoothly
+  const html = items.length ? `<div class="card fd-strip-card"><div class="fd-strip-row">${items.join('')}</div><button class="fd-sa l" aria-label="Scroll left">‹</button><button class="fd-sa r" aria-label="Scroll right">›</button></div>` : '';
+  if (typeof domMorph === 'function') domMorph(el, html); else el.innerHTML = html;
   stripArrows();
 };
 
@@ -357,17 +357,25 @@ function stripArrows(){
   document.querySelectorAll('#fdStrip .fd-strip-card').forEach(card => {
     const row = card.querySelector('.fd-strip-row'); if (!row) return;
     let l = card.querySelector('.fd-sa.l'), r = card.querySelector('.fd-sa.r');
-    if (!l){ card.classList.add('fd-scroll'); card.insertAdjacentHTML('beforeend', '<button class="fd-sa l" aria-label="Scroll left">‹</button><button class="fd-sa r" aria-label="Scroll right">›</button>'); l = card.querySelector('.fd-sa.l'); r = card.querySelector('.fd-sa.r'); }
+    card.classList.add('fd-scroll'); if (!l){ card.insertAdjacentHTML('beforeend', '<button class="fd-sa l" aria-label="Scroll left">‹</button><button class="fd-sa r" aria-label="Scroll right">›</button>'); l = card.querySelector('.fd-sa.l'); r = card.querySelector('.fd-sa.r'); }
     const max = row.scrollWidth - row.clientWidth;
     l.hidden = row.scrollLeft <= 2; r.hidden = row.scrollLeft >= max - 2;
   });
 }
-document.addEventListener('click', e => { const b = e.target.closest('#fdStrip .fd-sa'); if (!b) return; const row = b.closest('.fd-strip-card').querySelector('.fd-strip-row'); row.scrollBy({left: (b.classList.contains('l') ? -1 : 1) * row.clientWidth * .8, behavior: 'smooth'}); });
+// glide: every wheel notch or arrow press moves the target, and the row eases toward it
+function stripGlide(row, dx){
+  const max = row.scrollWidth - row.clientWidth;
+  row._tgt = Math.max(0, Math.min(max, (row._gliding ? row._tgt : row.scrollLeft) + dx));
+  if (row._gliding) return; row._gliding = true;
+  const step = () => { const d = row._tgt - row.scrollLeft; if (Math.abs(d) < .6 || !row.isConnected){ row.scrollLeft = row._tgt; row._gliding = false; stripArrows(); return; } row.scrollLeft += d * .16; requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+document.addEventListener('click', e => { const b = e.target.closest('#fdStrip .fd-sa'); if (!b) return; const row = b.closest('.fd-strip-card').querySelector('.fd-strip-row'); stripGlide(row, (b.classList.contains('l') ? -1 : 1) * row.clientWidth * .8); });
 document.addEventListener('scroll', e => { if (e.target.classList && e.target.classList.contains('fd-strip-row')) stripArrows(); }, true);
 document.addEventListener('wheel', e => {
   const row = e.target.closest && e.target.closest('#fdStrip .fd-strip-row'); if (!row || row.scrollWidth <= row.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
   const max = row.scrollWidth - row.clientWidth; if ((e.deltaY < 0 && row.scrollLeft <= 0) || (e.deltaY > 0 && row.scrollLeft >= max)) return;     // at an end: let the page scroll
-  e.preventDefault(); row.scrollLeft += e.deltaY;
+  e.preventDefault(); stripGlide(row, e.deltaY * (e.deltaMode === 1 ? 40 : 1.4));
 }, {passive: false});
 { // drag with the mouse (a drag isn't a click)
   let d = null;
@@ -382,7 +390,7 @@ function stFind(id, w){ return (w === -1 ? stMine() : stOf(w)).find(s => s.id ==
 function stThumb(st){
   const s = st && stFind(st.id, st.w);
   if (!s) return `<div class="dm-story gone"><span>Story unavailable</span></div>`;
-  return `<button class="dm-story" data-stopen="${esc(st.id)}" data-stw="${st.w}" aria-label="Open story">${stSvg(s)}</button>`;
+  return `<button class="dm-story" data-stopen="${esc(st.id)}" data-stw="${st.w}" aria-label="Open story">${typeof fxUniq === 'function' ? fxUniq(stSvg(s), 'dm') : stSvg(s)}</button>`;
 }
 function stOpenOne(id, w){
   const s = stFind(id, w); if (!s) return toast('That story isn’t up anymore.');
