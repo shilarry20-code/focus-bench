@@ -38,7 +38,7 @@ function dmLastAct(w){
   return dmActC.m.get(w) || 0;
 }
 const dmLinger = w => (8 + ((w * 7919) % 18)) * 60000;
-const dmOnline = w => { try { if (chatWhoOnline().includes(w)) return true; } catch(e){} const t = dmLastAct(w); return !!t && Date.now() - t < dmLinger(w); };
+const dmOnline = w => { try { if (chatWhoOnline().includes(w)) return true; } catch(e){} if (typeof gcAround === 'function' && gcAround(w)) return true; const t = dmLastAct(w); return !!t && Date.now() - t < dmLinger(w); };      // the same 'online' everywhere: DMs, groups, member lists
 const dmStudying = w => { try { return botLiveNow(w); } catch(e){ return false; } };
 const isRival = w => { const r = R.rec[w]; return w === nemesis() || !!(r && r[0] + r[1] + r[2] >= 3); };
 const recStr = w => { const r = R.rec[w]; return r ? `${r[0]}–${r[1]}${r[2] ? '–' + r[2] : ''}` : 'never played'; };
