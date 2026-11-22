@@ -73,7 +73,7 @@ Conversation so far, oldest first (numbered):
 ${hist}
 
 ${task}
-Each item can also have "replyTo": the number of a message it answers directly (only when quoting that exact message makes sense, not on every text), and "react": an emoji reacting to ${me}'s latest message (only sometimes, the way people tap a reaction; an item can be just a reaction with empty text).`;
+Each item can also have "replyTo": the number of a message it answers, but leave it out almost always: people only use reply in a DM to point back at an older message when the chat has moved on (never for the message right before, never for their own), and "react": an emoji reacting to ${me}'s latest message (only sometimes, the way people tap a reaction; an item can be just a reaction with empty text).`;
   return {sys, user};
 }
 // returns their texts; with withAct, {texts, act}: act is an extra item Gemini adds (from "ACTION") to say what they do
@@ -327,7 +327,9 @@ function dmTick(){
       c.ch.st = q.upd.st; c.ch.at = now;
       if (q.upd.st === 'a'){ if (!chPlay(c.w, c.ch.mode, chatPageOpen())) c.ch.late = 1; else toast(`${bot(c.w).name} accepted your challenge`); }
     }
-    const m = {id: q.id, t: q.at && q.at < now ? q.at : now, w: q.w, text: q.text || '', ai: 1, ...(q.re ? {re: q.re} : {})};      // messages sent while you were away keep their time
+    const prevM = DMS.msgs.filter(x => x.w === q.w && !x.del).pop(), tgt = q.re ? DMS.msgs.find(x => x.id === q.re) : null;
+    const re = tgt && tgt.me && !(prevM && prevM.id === q.re) && !DMS.msgs.some(x => x.w === q.w && x.re && !x.me && x.got > now - 600000) ? q.re : null;   // only for an older message of yours, and rarely
+    const m = {id: q.id, t: q.at && q.at < now ? q.at : now, w: q.w, text: q.text || '', ai: 1, ...(re ? {re} : {})};      // messages sent while you were away keep their time
     if (q.ch) m.ch = {mode: q.ch.mode, exp: now + CH_THEIRS, st: 'p', by: 'them'};
     if (m.text || m.ch){ m.got = now; DMS.msgs.push(m); fresh.push(m); gapOk.set(q.w, now); }
     changed = true;

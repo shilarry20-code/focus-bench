@@ -65,7 +65,7 @@ Chat so far, oldest first (numbered):
 ${hist}
 
 ${task}
-Each item: "from" (a member's name exactly as listed), "text". Optional: "replyTo" (the number of a message it answers directly; use it now and then, not on every text), "react" (an emoji reaction) with "reactTo" (the number of the message it reacts to); an item can be just a reaction with empty text.`;
+Each item: "from" (a member's name exactly as listed), "text". Optional: "replyTo" (the number of a message it answers; leave it out almost always: real people only use reply to point back at an older message when the chat has moved on and it would be unclear otherwise; never for the message right before, never for their own message), "react" (an emoji reaction) with "reactTo" (the number of the message it reacts to); an item can be just a reaction with empty text.`;
   return {sys, user};
 }
 async function gcWrite(g, task){
@@ -81,13 +81,16 @@ function gcQueue(g, got, t0, span, past){
   const names = {}; g.m.forEach(w => { names[bot(w).name.toLowerCase()] = w; });
   const ref = GC_REF[g.id] || [], items = (Array.isArray(got) ? got : []).filter(x => x && names[String(x.from || '').toLowerCase().trim()] != null);
   let t = t0; const step = span ? span / Math.max(1, items.length) : 0;
+  let reLeft = Math.max(1, Math.round(items.length / 5));          // at most about 1 reply in 5 messages
   items.forEach((x, k) => {
     const w = names[String(x.from).toLowerCase().trim()], text = emotionOnly(stripSegue(String(x.text || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 300)));
     const n = s => { const v = parseInt(String(s || '').replace(/\D/g, ''), 10); return v && ref[v - 1] ? ref[v - 1] : null; };
     t += span ? step * (.4 + Math.random() * 1.2) : (2 + Math.random() * 7 + text.length * .05) * 1000;
     const rx = dcOneEmoji(x.react), rTo = n(x.reactTo);
     if (rx && rTo) GC.q.push({id: chatId() + 'x' + k, g: g.id, w, t: past ? Date.now() + 800 * k : Math.round(t - 1500), ...(past ? {at: Math.round(t - 1500)} : {}), rx: {id: rTo, e: rx}});
-    if (text) GC.q.push({id: chatId() + 'g' + k, g: g.id, w, t: past ? Date.now() + 600 + 700 * k : Math.round(t), ...(past ? {at: Math.round(t)} : {}), text, ...(n(x.replyTo) ? {re: n(x.replyTo)} : {})});
+    let re = n(x.replyTo); const tgt = re && GC.msgs.find(y => y.id === re);
+    if (re && (!tgt || tgt.w === w || reLeft <= 0)) re = null; if (re) reLeft--;
+    if (text) GC.q.push({id: chatId() + 'g' + k, g: g.id, w, t: past ? Date.now() + 600 + 700 * k : Math.round(t), ...(past ? {at: Math.round(t)} : {}), text, ...(re ? {re} : {})});
   });
   GC.q.sort((a, b) => a.t - b.t); saveGc();
   return items.length;
@@ -221,7 +224,8 @@ function gcTick(){
   while (GC.q.length && GC.q[0].t <= now){
     const q = GC.q.shift(), g = GC.g[q.g]; changed = true; if (!g || g.left) continue;
     if (q.rx){ const m = GC.msgs.find(x => x.id === q.rx.id); if (m) dcReact(m, q.w, q.rx.e, true); continue; }
-    const m = {id: q.id, g: q.g, w: q.w, t: q.at && q.at < now ? q.at : now, ...(q.text ? {text: q.text} : {}), ...(q.re ? {re: q.re} : {}), ...(q.ch ? {ch: q.ch} : {})};
+    const prevM = gcMsgs(g).filter(x => !x.sys).pop(), re = q.re && !(prevM && prevM.id === q.re) ? q.re : null;      // answering the message right above needs no reply line
+    const m = {id: q.id, g: q.g, w: q.w, t: q.at && q.at < now ? q.at : now, ...(q.text ? {text: q.text} : {}), ...(re ? {re} : {}), ...(q.ch ? {ch: q.ch} : {})};
     GC.msgs.push(m); fresh.push(m);
   }
   if (now - gcLastTick > 1000){ gcLastTick = now; const before = JSON.stringify(GC.msgs.filter(m => m.ch).map(m => m.ch)); gcChTick(now); if (JSON.stringify(GC.msgs.filter(m => m.ch).map(m => m.ch)) !== before) changed = true; }
