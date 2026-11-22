@@ -16,7 +16,7 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 22 · 156';
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 22 · 157';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -261,6 +261,7 @@ async function gh(path, opts = {}){
   if (r.status === 401) throw new SyncErr('token', 'GitHub rejected the token. It may have expired or been deleted.');
   if (r.status === 404) throw new SyncErr('missing', 'Not found.');
   if (r.status === 403 || r.status === 429) throw new SyncErr('limit', 'GitHub is limiting requests right now. Sync will try again later.');
+  if (r.status === 409) throw new SyncErr('conflict', 'Another device was syncing at the same moment. Trying again in a few seconds.');
   if (!r.ok) throw new SyncErr('other', `GitHub returned an error (${r.status}).`);
   return r.status === 204 ? null : r.json();
 }
@@ -316,10 +317,11 @@ async function syncNow(manual){
     else if (manual) toast(pulled ? 'Synced. Brought in changes from your other devices.' : 'Synced.');
   } catch(e){
     syncDirty = true;
-    SYNC.err = e.kind === 'offline' ? 'offline' : e.message; syncState = '';
+    SYNC.err = e.kind === 'offline' || e.kind === 'conflict' ? (e.kind === 'conflict' ? '' : 'offline') : e.message; syncState = '';
     if (e.kind === 'token' && SYNC.fromLink){ delete SYNC.fromLink; toast("That sync link's token didn't work."); }
-    else if (manual) toast(e.message);
-    if (e.kind === 'offline' || e.kind === 'limit') syncTimer = setTimeout(() => syncNow(), 5 * 60000);
+    else if (manual && e.kind !== 'conflict') toast(e.message);
+    if (e.kind === 'conflict') syncTimer = setTimeout(() => syncNow(), 8000 + Math.random() * 7000);
+    else if (e.kind === 'offline' || e.kind === 'limit') syncTimer = setTimeout(() => syncNow(), 5 * 60000);
   } finally {
     saveSync(); syncBusy = false; syncFirstDone = true; renderSyncPanel();
     if (syncAgain){ syncAgain = false; syncTimer = setTimeout(() => syncNow(), 2000); }

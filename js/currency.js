@@ -27,7 +27,7 @@ if (!CO.led) CO.led = {}; if (!CO.hw) CO.hw = {}; if (!CO.sp) CO.sp = {};
 const saveCo = () => store.set('fb.coins', CO);
 
 /* ---- rank base ---- */
-const coBaseOfRating = r => { const k = rankOf(r); return CO_BASE0 + CO_STEP * Math.min(k.i, LAUREATE) + CO_DIVSTEP * (k.d || 0); };
+const coBaseOfRating = r => { try { const k = rankOf(+r); if (!k || !isFinite(k.i)) return CO_BASE0; return CO_BASE0 + CO_STEP * Math.min(k.i, LAUREATE) + CO_DIVSTEP * (k.d || 0); } catch(e){ return CO_BASE0; } };
 function coMyBase(){ const rk = myRk(); return rk.i === PARAGON_I ? CO_PARAGON : rk.un ? CO_BASE0 : coBaseOfRating(R.mmr); }
 // what everyone in a lobby adds up to in rank bases (kept on the match so its prize pool never changes later)
 function coLobbyBases(L, myBefore, placement){
@@ -74,7 +74,8 @@ function coDerived(){
 }
 // everything you've earned, by where it came from. Each worked-out total only goes up (the high-water mark).
 function coTotals(){
-  const d = coDerived(); let dirty = coSyncMatches();
+  let d; try { d = coDerived(); } catch(e){ console.error('coins', e); d = {study: 0, goal: 0, chal: 0, ach: 0, days: {}}; }
+  let dirty = false; try { dirty = coSyncMatches(); } catch(e){ console.error('coins', e); }
   const parts = {study: d.study, goal: d.goal, chal: d.chal, ach: d.ach};
   Object.keys(parts).forEach(k => { if (parts[k] > (CO.hw[k] || 0)){ CO.hw[k] = parts[k]; dirty = true; } else parts[k] = CO.hw[k] || 0; });
   if (dirty) saveCo();
@@ -115,9 +116,9 @@ function coPop(n){
   chip.appendChild(el); setTimeout(() => el.remove(), 1900);
 }
 function coRender(){
+  const chip = $('#coinChip'); if (chip && chip.hidden){ chip.hidden = false; chip.innerHTML = `<svg class="co-ic" viewBox="0 0 24 24" aria-hidden="true">${CO_IC}</svg><b>0</b>`; }
   if (typeof RK_READY !== 'undefined' && !RK_READY) return;
   let T; try { T = coTotals(); } catch(e){ console.error(e); return; }
-  const chip = $('#coinChip');
   if (chip){
     chip.hidden = false; chip.title = `${T.balance.toLocaleString()} coins`;
     if (!chip.querySelector('.lv-pop')) chip.innerHTML = `<svg class="co-ic" viewBox="0 0 24 24" aria-hidden="true">${CO_IC}</svg><b>${coFmt(T.balance)}</b>`;
