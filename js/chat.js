@@ -191,11 +191,12 @@ ${forUser ? chatChallengeNote(cast) : ''}For replyTo use the id of the message b
 // Tries the models in order. For each, it first asks for JSON in an exact shape; if Gemini refuses that request
 // (some models or keys don't take a schema), it asks again more loosely and pulls the JSON out of the text.
 // GEM.detail keeps Google's own error message so Settings can show what went wrong.
-async function aiCall(sys, user){
+// `more`: extra fields each message may carry (e.g. reactions), added to the answer's shape
+async function aiCall(sys, user, more){
   const models = GEMINI_MODELS.filter(m => !modelOut(m));
   if (!models.length){ const until = Math.min(...GEMINI_MODELS.map(m => GEM.out[m])); throw {kind: 'busy', until, msg: 'Both Gemini models have used up today’s free requests.'}; }
   const schema = {type: 'OBJECT', properties: {messages: {type: 'ARRAY', items: {type: 'OBJECT',
-    properties: {from: {type: 'STRING'}, text: {type: 'STRING'}, replyTo: {type: 'STRING'}}, required: ['from', 'text']}}}, required: ['messages']};
+    properties: {from: {type: 'STRING'}, text: {type: 'STRING'}, replyTo: {type: 'STRING'}, ...(more || {})}, required: ['from', 'text']}}}, required: ['messages']};
   const configs = [{responseMimeType: 'application/json', responseSchema: schema}, {responseMimeType: 'application/json'}, {}];
   let last = null, busy = 0;
   for (const model of models){
