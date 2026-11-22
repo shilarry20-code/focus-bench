@@ -2427,3 +2427,7 @@ body.m-off .streak-pop{animation:none}
 
 /* the viewers' chat starts at a proper size */
 .el-vchat .el-cl{min-height:300px;max-height:420px}
+/* chat boxes fill their card: the send bar sits at the bottom and messages stack up from just above it */
+.el-chat .el-cl{flex:1 1 auto}
+.el-chat .el-cl>:first-child{margin-top:auto}
+.el-chat .el-send{margin-top:10px}
