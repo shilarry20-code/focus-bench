@@ -203,13 +203,15 @@ function chLeft(per){
   const ms = chEnd(per) - Date.now(), h = Math.floor(ms / 3600e3), d = Math.floor(h / 24);
   return d >= 1 ? `${d}d ${h % 24}h left` : h >= 1 ? `${h}h ${Math.floor(ms % 3600e3 / 60000)}m left` : `${Math.max(1, Math.floor(ms / 60000))}m left`;
 }
+const chCoin = n => typeof coChKey === 'function' && n ? `<span class="chl-co"><svg viewBox="0 0 24 24" aria-hidden="true">${CO_IC}</svg>${n.toLocaleString()}</span>` : '';
+const chCoins = (per, id) => { try { return chCoin(coChKey(per + '|' + id)); } catch(e){ return ''; } };
 function chItem(per, c, canRr){
   const p = chProg(per, c); if (!p.def) return '';
   const fmt = v => p.def.unit === 'min' ? chHm(v).replace(' min', 'm') : v.toLocaleString();
   const ic = p.done ? '<path d="M5 12.5l4.5 4.5L19 7.5"/>' : (CH_IC[p.def.key] || CH_IC.min);
   return `<li class="chl-i ${p.def.kind}${p.done ? ' done' : ''}"><span class="chl-ic" aria-hidden="true"><svg viewBox="0 0 24 24">${ic}</svg></span>
-    <div class="chl-b"><div class="chl-t">${esc(p.def.t(c.n))}${p.done ? '' : ` <span class="chl-xp">+${chXp(per, c.id)} XP</span>`}</div><div class="chl-bar"><i style="width:${Math.min(100, p.v / c.n * 100)}%"></i></div></div>
-    <small class="chl-v">${p.done ? `+${chXp(per, c.id)} XP` : `${fmt(p.v)} / ${fmt(c.n)}`}</small>
+    <div class="chl-b"><div class="chl-t">${esc(p.def.t(c.n))}${p.done ? '' : ` <span class="chl-xp">+${chXp(per, c.id)} XP</span>${chCoins(per, c.id)}`}</div><div class="chl-bar"><i style="width:${Math.min(100, p.v / c.n * 100)}%"></i></div></div>
+    <small class="chl-v">${p.done ? `+${chXp(per, c.id)} XP${(() => { try { const n = coChKey(per + '|' + c.id); return n ? ' · +' + n.toLocaleString() + ' coins' : ''; } catch(e){ return ''; } })()}` : `${fmt(p.v)} / ${fmt(c.n)}`}</small>
     ${!p.done && canRr && per === 'd' ? `<button class="chl-rr" data-chrr="${per}|${c.id}" aria-label="Reroll this challenge" title="Swap for another (1 free a day)"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></button>` : ''}</li>`;
 }
 function chRender(){
@@ -219,7 +221,7 @@ function chRender(){
   if (full && !$('#page-focus').hidden){
     full.innerHTML = `<div class="card chl"><div class="h first chl-h"><span>Challenges</span><small>${canRr ? '1 free daily reroll today' : 'Daily reroll used'}</small></div>
       ${['d', 'w', 'm'].map(per => { const S = sets[per], nd = S.list.filter(c => CHL.done[S.k + '|' + c.id]).length;
-        return `<div class="chl-sec"><div class="chl-sh"><b>${CH_NAME[per]}</b><span>${nd}/${S.list.length} · all done +${CHX_ALL[per]} XP · ${chLeft(per)}</span></div><ul>${S.list.map(c => chItem(per, c, canRr)).join('')}</ul></div>`; }).join('')}
+        return `<div class="chl-sec"><div class="chl-sh"><b>${CH_NAME[per]}</b><span>${nd}/${S.list.length} · all done +${CHX_ALL[per]} XP${(() => { try { return ' · +' + coChKey(per + '|all').toLocaleString() + ' coins'; } catch(e){ return ''; } })()} · ${chLeft(per)}</span></div><ul>${S.list.map(c => chItem(per, c, canRr)).join('')}</ul></div>`; }).join('')}
       <p class="hint">${(CHL.total || 0).toLocaleString()} challenge${CHL.total === 1 ? '' : 's'} completed so far.</p></div>`;
   }
   if (rk && !$('#page-ranked').hidden){
