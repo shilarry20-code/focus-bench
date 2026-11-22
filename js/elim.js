@@ -15,6 +15,24 @@ EL.list = EL.list || []; EL.live = EL.live || []; EL.hist = EL.hist || [];
 if (EL.view === 'watch' || (EL.view === 'game' && (!EL.G || EL.G.done))){ EL.view = 'browse'; EL.watch = null; }
 delete EL.watch;
 const saveEl = () => { const {_bp, ...rest} = EL; store.set('fb.elim', JSON.parse(JSON.stringify(rest, (k, v) => k === '_bp' || k === 'watch' ? undefined : v))); };
+/* Update a box to new HTML by changing only what differs, instead of replacing everything. Views that redraw every
+   second keep their hover, scroll, focus and animations, and a click that starts on a button still lands on it. */
+function domMorph(box, html){
+  const t = document.createElement('template'); t.innerHTML = html; morphKids(box, t.content);
+}
+function morphKids(a, b){
+  const ak = [...a.childNodes], bk = [...b.childNodes];
+  bk.forEach((n, k) => { const o = ak[k]; if (!o) a.appendChild(n); else if (o.nodeType !== n.nodeType || o.nodeName !== n.nodeName) a.replaceChild(n, o); else morphNode(o, n); });
+  for (let k = bk.length; k < ak.length; k++) ak[k].remove();
+}
+function morphNode(o, n){
+  if (o.nodeType === 3 || o.nodeType === 8){ if (o.nodeValue !== n.nodeValue) o.nodeValue = n.nodeValue; return; }
+  if (o.nodeType !== 1) return;
+  for (const at of [...o.attributes]) if (!n.hasAttribute(at.name)) o.removeAttribute(at.name);
+  for (const at of [...n.attributes]) if (o.getAttribute(at.name) !== at.value) o.setAttribute(at.name, at.value);
+  if (o.tagName === 'INPUT' || o.tagName === 'TEXTAREA') return;            // keep what's being typed
+  morphKids(o, n);
+}
 const elBusy = () => !!(EL.G && !EL.G.done);
 const elMeIn = G => G && G.L.players.includes(-1);
 
@@ -455,9 +473,9 @@ function elGameHtml(G, t, opts = {}){
       ${opts.replay ? '' : me.st === 'out' || S.over ? `<div class="el-btns"><button class="small-btn" data-el="browse">Back to lobbies</button>${G.done || me.st === 'out' ? `<button class="small-btn" data-el="share">Share to Feed</button><button class="small-btn" data-rp="el:${L.id}">View replay</button><button class="small-btn" data-el="close">Close</button>` : ''}</div>` : `<div class="el-btns"><button class="small-btn accent" data-el="brk">${me.st === 'break' ? 'Back to studying' : 'Take a break'}</button><button class="small-btn danger" data-el="stop">Stop (you're out)</button></div>`}</div>`;
   }
   const order = S.ps.slice().sort((a, b) => (a.out ? 1 : 0) - (b.out ? 1 : 0) || (b.out || 0) - (a.out || 0) || elR(b.w) - elR(a.w));
-  const stand = `<div class="card"><div class="h first">Standings</div><ul class="el-st">${order.map(p => `<li class="${p.st}${!opts.replay && EL.follow === p.w ? ' fol' : ''}" data-tile="${p.w}">${elAv(p.w)}<span class="who">${elWho(p.w)}<small>${elR(p.w).toLocaleString()}</small></span><span class="el-ps">${p.st === 'out' ? `Out · ${elOrd(p.place)}` : p.st === 'break' ? `Break · ${elClock(Math.max(0, S.a - p.used))} left` : p.st === 'wait' ? 'Ready' : S.over && S.over.winner === p.w ? 'Winner' : 'Studying'}</span></li>`).join('')}</ul></div>`;
+  const stand = `<div class="card"><div class="h first">Standings</div><ul class="el-st">${order.map(p => `<li class="${p.st}${(opts.replay ? opts.follow : EL.follow) === p.w ? ' fol' : ''}" data-tile="${p.w}">${elAv(p.w)}<span class="who">${elWho(p.w)}<small>${elR(p.w).toLocaleString()}</small></span><span class="el-ps">${p.st === 'out' ? `Out · ${elOrd(p.place)}` : p.st === 'break' ? `Break · ${elClock(Math.max(0, S.a - p.used))} left` : p.st === 'wait' ? 'Ready' : S.over && S.over.winner === p.w ? 'Winner' : 'Studying'}</span></li>`).join('')}</ul></div>`;
   const arena = `<div class="card el-arena${S.sd ? ' sd' : ''}"><div class="el-count"><b>${S.alive}</b><small>of ${L.players.length} remaining</small></div><div class="el-grid">${L.players.map((w, k) => { const p = S.ps[k];
-      return `<div class="el-tile ${p.st}${S.over && S.over.winner === w ? ' champ' : ''}${!opts.replay && EL.follow === w ? ' fol' : ''}" data-tile="${w}" title="${w === -1 ? 'You' : esc(bot(w).name)}${p.st === 'out' ? ` · out, ${elOrd(p.place)}` : p.st === 'break' ? ' · on a break' : ''}"><span class="num">${String(k + 1).padStart(3, '0')}</span>${elAv(w)}<small>${w === -1 ? 'You' : esc(bot(w).name)}</small>${p.st === 'break' && S.a > 0 ? `<i class="drain" style="width:${Math.max(0, (S.a - p.used) / S.a * 100)}%"></i>` : ''}</div>`; }).join('')}</div></div>`;
+      return `<div class="el-tile ${p.st}${S.over && S.over.winner === w ? ' champ' : ''}${(opts.replay ? opts.follow : EL.follow) === w ? ' fol' : ''}" data-tile="${w}" title="${w === -1 ? 'You' : esc(bot(w).name)}${p.st === 'out' ? ` · out, ${elOrd(p.place)}` : p.st === 'break' ? ' · on a break' : ''}"><span class="num">${String(k + 1).padStart(3, '0')}</span>${elAv(w)}<small>${w === -1 ? 'You' : esc(bot(w).name)}</small>${p.st === 'break' && S.a > 0 ? `<i class="drain" style="width:${Math.max(0, (S.a - p.used) / S.a * 100)}%"></i>` : ''}</div>`; }).join('')}</div></div>`;
   const chat = L.rules.chat === 'off' ? '' : `<div class="card el-chat"><div class="h first">Lobby chat <small>${L.rules.chat === 'break' ? '· on breaks only' : ''}</small></div><div class="el-cl" id="elChatList">${(G.chat.length || mine ? G.chat : elSysLines(G, now)).filter(m => m.t <= now).slice(-60).map(m => m.sys ? `<p class="sys">${esc(m.text)}</p>` : `<p><b>${m.w === -1 ? esc(myName()) : esc(bot(m.w).name)}</b> ${atLinks(esc(m.text))}</p>`).join('') || '<p class="hint">Quiet so far.</p>'}</div>
     ${mine && !opts.replay ? `<form class="el-send" id="elForm"><input id="elIn" maxlength="200" autocomplete="off" placeholder="${L.rules.chat === 'break' && me && me.st === 'study' ? 'Take a break to chat' : 'Say something…'}"><button class="small-btn accent">Send</button></form>` : ''}</div>`;
   const tabs = `<div class="el-tabs">${[['stand', 'Standings'], ['arena', 'Arena']].map(([k, n]) => `<button class="chip${(opts.tab || EL.tab) === k ? ' on' : ''}" data-el="tab" data-t="${k}">${n}</button>`).join('')}${!opts.replay && !mine ? '<button class="small-btn" data-el="browse">Back to lobbies</button>' : ''}</div>`;
@@ -499,7 +517,7 @@ function elRenderGame(Gx){
   const G = Gx || EL.G; if (!G) return elRender();
   const inp = $('#elIn'), val = inp ? inp.value : '', foc = document.activeElement === inp, cl = $('#elChatList'), atEnd = !cl || cl.scrollTop + cl.clientHeight >= cl.scrollHeight - 20;
   const tl = box.querySelector('.el-tl ol'), tlTop = tl ? tl.scrollTop : 0, tlH = tl ? tl.scrollHeight : 0, pg = window.scrollY;
-  box.innerHTML = elGameHtml(G, Date.now());
+  domMorph(box, elGameHtml(G, Date.now()));
   // keep the timeline where you scrolled it (new events come in at the top, so shift by what was added)
   const t2 = box.querySelector('.el-tl ol'); if (t2 && tlTop > 0) t2.scrollTop = tlTop + (t2.scrollHeight - tlH);
   if (Math.abs(window.scrollY - pg) > 1) window.scrollTo(0, pg);
