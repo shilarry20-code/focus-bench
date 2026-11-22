@@ -1,7 +1,7 @@
 /* ---------- Leaderboards, redesigned: podium, your standing, movement, filters, the whole list ----------
    Uses the data side of leaderboards.js (LB, botVal, myTotals, myPlace, lbFmt, topPct) and replaces how the page is drawn.
    Every board can be scrolled from #1 to the last player: the full order is worked out once per category (Elo is already
-   sorted) and kept until the world changes. Movement arrows compare with the top 100 saved yesterday; your rank history
+   sorted) and kept until the world changes. Movement arrows compare with the top 100 saved a week ago; your rank history
    is saved daily for the chart on your card. */
 const LB_GROUPS = [
   ['Rating', '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/>', [['elo', 'Elo'], ['rkw', 'Ranked wins'], ['rkp', 'Win %']]],
@@ -45,7 +45,7 @@ function lbView(c, t){
   return {n: list.length, mine: list.indexOf(ME), at: k => list[k], val, me};
 }
 
-/* ---- saved history: your place each day, and yesterday's top 100 for the arrows ---- */
+/* ---- saved history: your place each day, and a week of daily top 100s for the arrows ---- */
 let LBH = store.get('fb.lbHist', {}), LBS = store.get('fb.lbSnap', {}), LBP = store.get('fb.lbPeriod', {});
 function lbNote(c, V){
   const dk = dayKey(Date.now());
@@ -53,9 +53,13 @@ function lbNote(c, V){
   (LBH[dk] = LBH[dk] || {})[c.id] = V.mine + 1;
   const days = Object.keys(LBH).sort(); while (days.length > 40) delete LBH[days.shift()];
   const s = LBS[c.id] || {};
-  if (s.day !== dk){ if (s.day) { s.prev = s.cur; s.pday = s.day; } s.day = dk; }
   const cur = {}; for (let k = 0; k < Math.min(100, V.n); k++){ const w = V.at(k); cur[w === ME ? 'me' : w] = k + 1; }
-  s.cur = cur; LBS[c.id] = s;
+  // a week of daily top 100s; the arrows compare with the one from a week ago (or the oldest kept, early on)
+  s.days = s.days || {}; if (s.prev && s.pday && !s.days[s.pday]) s.days[s.pday] = s.prev;
+  s.days[dk] = cur; s.day = dk; s.cur = cur;
+  const ks = Object.keys(s.days).sort(); while (ks.length > 9) delete s.days[ks.shift()];
+  const wk = dayKey(Date.now() - 7 * 864e5), old = ks.filter(k => k < dk), at = old.filter(k => k <= wk).pop() || old[0];
+  s.prev = at ? s.days[at] : null; s.pday = at || null; LBS[c.id] = s;
   // weekly and monthly boards: remember each period's top 3, for "last week's winners"
   if (c.id === 'week' || c.id === 'month'){
     const pk = c.id === 'week' ? dayKey(startOfWeek(new Date())) : dk.slice(0, 7);
@@ -65,14 +69,14 @@ function lbNote(c, V){
   }
   store.set('fb.lbHist', LBH); store.set('fb.lbSnap', LBS);
 }
-// how a player moved since the last saved day: +n up, -n down, 'new' for new to the top 100
+// how a player moved over the last week: +n up, -n down, 'new' for new to the top 100
 function lbMove(c, w, place){
   const s = LBS[c.id]; if (!s || !s.prev || (P.lbFilt || 'all') !== 'all') return null;
   const was = s.prev[w === ME ? 'me' : w];
   if (was == null) return place <= 50 && w !== ME ? 'new' : null;
   return was - place;
 }
-const lbMoveHtml = m => m == null || m === 0 ? '<span class="lb2-mv"></span>' : m === 'new' ? '<span class="lb2-mv new">New</span>' : `<span class="lb2-mv ${m > 0 ? 'up' : 'dn'}">${m > 0 ? '▲' : '▼'}${Math.abs(m).toLocaleString()}</span>`;
+const lbMoveHtml = m => m == null || m === 0 ? '<span class="lb2-mv"></span>' : m === 'new' ? '<span class="lb2-mv new" title="New to the top 100 this week">New</span>' : `<span class="lb2-mv ${m > 0 ? 'up' : 'dn'}" title="${m > 0 ? 'Up' : 'Down'} ${Math.abs(m)} this week">${m > 0 ? '▲' : '▼'}${Math.abs(m).toLocaleString()}</span>`;
 
 /* ---- details per category ---- */
 function lbRecDate(c, w){
