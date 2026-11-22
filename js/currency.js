@@ -93,7 +93,7 @@ function coToday(T){
 }
 
 /* ---- drawing ---- */
-const CO_IC = '<polygon points="12,3 19.8,7.5 19.8,16.5 12,21 4.2,16.5 4.2,7.5"/><polygon points="12,7.4 15.8,9.7 15.8,14.3 12,16.6 8.2,14.3 8.2,9.7"/>';
+const CO_IC = '<polygon points="21,12 16.5,19.8 7.5,19.8 3,12 7.5,4.2 16.5,4.2"/><polygon points="16.6,12 14.3,15.9 9.7,15.9 7.4,12 9.7,8.1 14.3,8.1"/>';
 const coFmt = n => n < 1e4 ? n.toLocaleString() : n < 1e6 ? (n / 1e3).toFixed(n < 1e5 ? 1 : 0).replace(/\.0$/, '') + 'K' : (n / 1e6).toFixed(n < 1e7 ? 2 : 1).replace(/\.?0+$/, '') + 'M';
 function coCardHtml(cls = 'card lv-card co-card'){
   const T = coTotals(), today = coToday(T), tot = today.reduce((n, r) => n + r[1], 0), p = T.parts, rk = myRk();
