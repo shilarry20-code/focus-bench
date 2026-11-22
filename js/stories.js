@@ -79,7 +79,7 @@ function stSticker(x, y, w, h, body, bg = '#fff'){ return `<g transform="rotate(
 function stSvg(s){
   const d = s.d || {}, hue = d.hue != null ? d.hue : 220, id = 'st' + fdHash(s.id).toString(36);
   const bg = `<defs><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${scH(hue, 45, 32)}"/><stop offset="1" stop-color="${scH(hue + 50, 50, 16)}"/></linearGradient><filter id="${id}b"><feGaussianBlur stdDeviation="22"/></filter></defs><rect width="${STV}" height="${STH}" fill="url(#${id}g)"/>`;
-  const scene = (y, size = 360) => { const S = sceneSpec({seed: d.seed || fdHash(s.id), hue, maj: d.maj || 'math', hour: d.hour != null ? d.hour : 15, month: new Date(s.t).getMonth(), mood: '', outgoing: false}); const inner = sceneSvg(S, id).replace('<svg ', `<svg x="${(STV - size) / 2}" y="${y}" width="${size}" height="${size}" `); return inner; };
+  const scene = (y, size = 360) => { const S = sceneSpec({seed: d.seed || fdHash(s.id), hue, maj: d.maj || 'math', hour: d.hour != null ? d.hour : 15, month: new Date(s.t).getMonth(), mood: '', outgoing: false, ...(s.w == null && typeof fdMyLook === 'function' && String(s.id).match(/^(M|draft)/) ? {look: fdMyLook()} : {})}); const inner = sceneSvg(S, id).replace('<svg ', `<svg x="${(STV - size) / 2}" y="${y}" width="${size}" height="${size}" `); return inner; };
   const blurScene = () => `<g filter="url(#${id}b)" opacity=".55">${sceneSvg(sceneSpec({seed: d.seed || fdHash(s.id), hue, maj: d.maj || 'math', hour: d.hour != null ? d.hour : 15, month: new Date(s.t).getMonth()}), id + 'x').replace('<svg ', `<svg x="-140" y="0" width="${STH}" height="${STH}" `)}</g>`;
   let body = '';
   if (s.kind === 'photo') body = `<image href="${s.img}" x="0" y="0" width="${STV}" height="${STH}" preserveAspectRatio="xMidYMid slice"/>` + stCaption(s.cap, 500);
@@ -197,6 +197,8 @@ function stTemplates(){
   if (last) out.session = {label: 'Last session', d: {tpl: 'session', v: last.min >= 60 ? `${Math.floor(last.min / 60)}h ${last.min % 60}m` : `${last.min} min`, sub: String(last.task || last.tag || 'Focus').slice(0, 28)}};
   if (R && R.on) out.rank = {label: 'My rank', d: {tpl: 'rank', v: myRk().full, sub: `${R.mmr.toLocaleString()} Elo`}};
   out.photo = {label: 'Photo', d: {tpl: 'photo'}};
+  out.pic = {label: 'Study spot', d: {tpl: 'pic'}};
+  out.text = {label: 'Just text', d: {tpl: 'text'}};
   return out;
 }
 function stCompose(tpl){
@@ -211,13 +213,17 @@ function stComposeDraw(){
     <div class="st-cb"><div class="st-prev">${s ? stSvg(s) : '<div class="st-pick"><p>Pick a photo</p></div>'}</div>
     <div class="st-opts"><div class="st-tpls">${Object.entries(T).map(([k, x]) => `<button class="chip${SC_.tpl === k ? ' on' : ''}" data-sct="${k}">${x.label}</button>`).join('')}</div>
       ${SC_.tpl === 'photo' ? `<label class="small-btn st-file">Choose photo<input type="file" accept="image/*" id="stFile" hidden></label>` : ''}
-      <label class="st-capl">Caption<input id="stCap" maxlength="80" placeholder="Say something (optional)" value="${esc(SC_.cap)}"></label>
+      ${SC_.tpl === 'pic' ? '<button class="small-btn" data-sc="shuffle">Shuffle the picture</button>' : SC_.tpl === 'text' ? '<button class="small-btn" data-sc="color">New color</button>' : ''}
+      <label class="st-capl">${SC_.tpl === 'text' ? 'Text' : 'Caption (optional)'}<input id="stCap" maxlength="${SC_.tpl === 'text' ? 140 : 80}" placeholder="${SC_.tpl === 'text' ? 'What’s on your mind?' : 'Leave it empty for no caption'}" value="${esc(SC_.cap)}"></label>
       <p class="hint">Stories last 24 hours. Your followers see it in their tray; you'll see who viewed it.</p>
       <button class="small-btn accent" data-sc="post" ${s ? '' : 'disabled'}>Share to story</button></div></div></div>`;
 }
 function stDraft(){
   const T = stTemplates(), x = T[SC_.tpl]; if (!x) return null;
   if (SC_.tpl === 'photo') return SC_.img ? {id: 'draft', t: Date.now(), kind: 'photo', img: SC_.img, cap: SC_.cap, d: {}} : null;
+  const hue = P.myHue != null ? P.myHue : 215;
+  if (SC_.tpl === 'text') return SC_.cap.trim() ? {id: 'draft', t: Date.now(), kind: 'text', cap: SC_.cap.trim(), d: {hue: SC_.hue != null ? SC_.hue : hue}} : null;
+  if (SC_.tpl === 'pic') return {id: 'draft' + (SC_.seed || 0), t: Date.now(), kind: 'scene', cap: SC_.cap.trim(), d: {seed: SC_.seed || (SC_.seed = Math.floor(Math.random() * 1e9)), hue, hour: new Date().getHours(), maj: 'math'}};
   return {id: 'draft', t: Date.now(), kind: 'card', cap: SC_.cap, d: {...x.d, hue: P.myHue != null ? P.myHue : 215}};
 }
 function stPost(){
@@ -251,11 +257,11 @@ document.addEventListener('click', e => {
   }
   if (e.target.closest('#stComp')){
     const c = e.target.closest('[data-sct]'); if (c){ SC_.tpl = c.dataset.sct; stComposeDraw(); return; }
-    const a = e.target.closest('[data-sc]'); if (a){ if (a.dataset.sc === 'close'){ $('#stComp').hidden = true; SC_ = null; } else if (a.dataset.sc === 'post') stPost(); return; }
+    const a = e.target.closest('[data-sc]'); if (a){ const k = a.dataset.sc; if (k === 'close'){ $('#stComp').hidden = true; SC_ = null; } else if (k === 'post') stPost(); else if (k === 'shuffle'){ SC_.seed = Math.floor(Math.random() * 1e9); stComposeDraw(); } else if (k === 'color'){ SC_.hue = Math.floor(Math.random() * 360); stComposeDraw(); } return; }
     if (e.target.id === 'stComp'){ $('#stComp').hidden = true; SC_ = null; }
   }
 }, true);
-document.addEventListener('input', e => { if (e.target.id === 'stCap' && SC_){ SC_.cap = e.target.value; const p = $('#stComp .st-prev'), s = stDraft(); if (p && s) p.innerHTML = stSvg(s); } });
+document.addEventListener('input', e => { if (e.target.id === 'stCap' && SC_){ SC_.cap = e.target.value; const p = $('#stComp .st-prev'), s = stDraft(); if (p) p.innerHTML = s ? stSvg(s) : '<div class="st-pick"><p>Type something</p></div>'; const b = $('#stComp [data-sc="post"]'); if (b) b.disabled = !s; } });
 document.addEventListener('change', e => { if (e.target.id === 'stFile' && e.target.files[0]) stLoadPhoto(e.target.files[0]); });
 document.addEventListener('submit', e => { if (e.target.id !== 'stForm') return; e.preventDefault(); const i = $('#stIn'); stReply(i.value); i.value = ''; i.blur(); });
 document.addEventListener('keydown', e => {
