@@ -123,7 +123,7 @@ function gcSend(g, text, re){
   clearTimeout(gcReplyT[g.id]);
   gcReplyT[g.id] = setTimeout(async () => {
     const on = gcOnline(g); if (!on.length || g.busy){ g.next = Math.min(g.next || Infinity, Date.now() + 10 * 60000); saveGc(); return; }
-    g.busy = 1; GC.q = GC.q.filter(q => q.g !== g.id || q.rx || q.t > Date.now() + 120000);    // they react to you instead of carrying on
+    g.busy = 1; GC.q = GC.q.filter(q => q.g !== g.id || !q.text);    // they react to you instead of carrying on: every line they had queued goes (a later line of the same chunk would answer one that never gets sent), reactions and challenges stay
     const k = Math.min(on.length, 1 + Math.floor(Math.random() * Math.min(5, on.length)));
     const got = await gcWrite(g, `${myName()} just posted. Write what happens next: about ${k} of the members who are online answer (or just react), maybe each other too, 2 to ${Math.max(3, k * 2)} items in all. Offline members don't answer.`);
     g.busy = 0; if (got) gcQueue(g, got, Date.now() + (3 + Math.random() * 10) * 1000, 0);
