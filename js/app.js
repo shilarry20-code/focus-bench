@@ -65,6 +65,9 @@ function showPage(name, sec){
   $('#pageTitle').textContent = el.dataset.title;
   document.body.dataset.page = name;
   if (P.page !== name && name !== 'profile'){ P.page = name; saveP(); }
+  // remember whose profile is open, so a refresh comes back to it
+  const pr = name === 'profile' ? {w: profWho, tab: profTab} : null;
+  if (JSON.stringify(P.prof || null) !== JSON.stringify(pr)){ P.prof = pr; saveP(); }
   if (name !== 'profile') profPrev = name;
   if (name === 'stats'){ renderLog(); const w = $('#week'); w.classList.remove('grow'); void w.offsetWidth; w.classList.add('grow'); }
   if (name === 'awards'){ achBump('awards'); renderAwards(); }
@@ -171,7 +174,9 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveTabInk
 prewarm();
 document.querySelectorAll('.fl').forEach(f => f.innerHTML = FLAME);
 renderAchHeader(); checkAch(); renderStreak(); renderMatch(); renderRankChip();
+const PROF0 = P.prof;
 showPage(P.page && $('#page-' + P.page) ? P.page : 'focus');
+if (PROF0 && PROF0.w != null){ profPrev = P.page || 'ranked'; profWho = PROF0.w; profTabWho = PROF0.w; profTab = PROF0.tab || 'posts'; showPage('profile'); }
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderTime);
 
 // while a pop-up window is open, the page behind it doesn't scroll (on phones you'd otherwise scroll the hidden page)

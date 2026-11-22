@@ -373,7 +373,7 @@ function loadRanked(){
   if (!R.para) R.para = {h: null, since: 0, reign: {}, long: {}};
   RK_READY = false;
   return loadBots().catch(e => { console.error(e); }).then(() => {
-    rTables(); RK_READY = true; try { rkRepairWL(); } catch(e){ console.error(e); } botsChanged();
+    rTables(); RK_READY = true; try { rkRepairWL(); } catch(e){ console.error(e); } botsChanged(); if (document.body.dataset.page === 'profile') setTimeout(() => { if (profWho !== ME && !BOTS[profWho]) showPage(profPrev || 'ranked'); else renderProfilePage(); }, 0);
     updateParagon(true);
     saveRanked(true);
     const show = () => { renderRankChip(); renderMatch(); if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders(); };
@@ -1785,7 +1785,7 @@ function saveProfileEdit(){
   toast('Profile saved');
 }
 function profClick(e){
-  const tb = e.target.closest('[data-pft]'); if (tb){ profTab = tb.dataset.pft; renderProfilePage(); return; }
+  const tb = e.target.closest('[data-pft]'); if (tb){ profTab = tb.dataset.pft; if (P.prof){ P.prof.tab = profTab; saveP(); } renderProfilePage(); return; }
   const b = e.target.closest('[data-pf]'), hue = e.target.closest('[data-hue]');
   if (hue){ hue.parentNode.querySelectorAll('[data-hue]').forEach(x => x.setAttribute('aria-checked', x === hue)); return; }
   if (!b) return;
