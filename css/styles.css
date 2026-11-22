@@ -2280,8 +2280,8 @@ body.m-off .streak-pop{animation:none}
 .dc-rep i{position:absolute;left:-38px;top:10px;width:32px;height:10px;border-left:2px solid var(--line);border-top:2px solid var(--line);border-top-left-radius:7px}
 .dc-rep .av{width:16px;height:16px;font-size:7px}
 .dc-rep b{color:var(--ink);font-weight:600;white-space:nowrap}
-.dc-rep span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.dc-rep:hover span{color:var(--ink)}
+.dc-rep .dc-rept{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.dc-rep:hover .dc-rept{color:var(--ink)}
 .dc-rx{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 2px}
 .dc-pill{display:inline-flex;align-items:center;gap:5px;border:1px solid transparent;background:var(--soft);border-radius:8px;padding:2px 7px;font-size:14px;cursor:pointer;line-height:1.4}
 .dc-pill b{font-size:12px;font-weight:600;color:var(--muted)}
