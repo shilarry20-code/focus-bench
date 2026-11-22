@@ -225,6 +225,11 @@ function rpGraph(){
 }
 // the stage (throttled) and the cheap moving parts (every frame)
 let rpLastDraw = 0;
+// the match chat in a 1v1 replay: everything said up to this moment
+function rpChat1v1(t){
+  const d = RP.d, msgs = (d.chat || []).filter(m => m.t <= t).sort((a, b) => a.t - b.t).slice(-80);
+  return `<div class="card el-chat rp-chat1"><div class="h first">Match chat</div><div class="el-cl" id="rpChat1">${msgs.map(m => { const w = m.w != null ? m.w : m.me ? -1 : d.C; return `<p><b>${w === -1 ? esc(myName()) : esc(bot(w).name)}</b> ${typeof atLinks === 'function' ? atLinks(esc(m.text)) : esc(m.text)}</p>`; }).join('') || `<p class="hint">${(d.chat || []).length ? 'Nothing said yet.' : 'No one said anything in this match.'}</p>`}</div></div>`;
+}
 function rpDraw(force){
   if (!RP) return; const now = performance.now(); if (!force && now - rpLastDraw < 120) return; rpLastDraw = now;
   const d = RP.d, t = RP.t;
@@ -234,9 +239,11 @@ function rpDraw(force){
   } else {
     const [a, c] = RP.tr, sA = rpSt(a.ev, t), sC = rpSt(c.ev, t), yA = rpStud(a.ev, t), yC = rpStud(c.ev, t), gap = yA - yC;
     const side = (p, s, y, k) => `<div class="rp-side ${s === 'X' ? 'out' : s === 'S' ? 'study' : 'break'} s${k}${RP.follow === p.w ? ' fol' : ''}" data-rpw="${p.w}" role="button" tabindex="0">${p.w === -1 ? myAvatar('lg') : avatar(bot(p.w), 'lg')}<b>${p.w === -1 ? 'You' : `<button class="lnk" data-bot="${p.w}">${esc(rpNm(p.w))}</button>`}</b><span class="rp-clk">${elClock(y)}</span><small>${s === 'X' ? 'Stopped' : s === 'S' ? 'Studying' : 'On a break'}</small></div>`;
-    body = `<div class="card rp-vs">${side(a, sA, yA, 0)}<div class="rp-mid"><span class="rp-vsx">vs</span><small>${gap === 0 ? 'Even' : `${(gap > 0 ? a.w : c.w) === -1 ? 'You’re' : esc(rpNm(gap > 0 ? a.w : c.w))} ahead by ${elClock(Math.abs(gap))}`}</small></div>${side(c, sC, yC, 1)}</div>`;
+    body = `<div class="card rp-vs">${side(a, sA, yA, 0)}<div class="rp-mid"><span class="rp-vsx">vs</span><small>${gap === 0 ? 'Even' : `${(gap > 0 ? a.w : c.w) === -1 ? 'You’re' : esc(rpNm(gap > 0 ? a.w : c.w))} ahead by ${elClock(Math.abs(gap))}`}</small></div>${side(c, sC, yC, 1)}</div>` + rpChat1v1(t);
   }
+  const cl0 = $('#rpChat1'), stick = typeof elStick === 'function' ? elStick(cl0) : true;
   domMorph($('#rpView'), body);
+  const cl1 = $('#rpChat1'); if (cl1 && stick) cl1.scrollTop = cl1.scrollHeight;
   if (d.kind === 'el'){ const f = RP.follow; document.querySelectorAll('#rpGraph .gm').forEach(l => { const on = f != null && +l.dataset.w === f; l.classList.toggle('fol', on); l.classList.toggle('dim', f != null && !on); if (on) l.parentNode.appendChild(l); }); }
   rpFollowCard();
   // the summary once it's over

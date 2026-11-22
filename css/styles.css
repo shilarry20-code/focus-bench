@@ -2449,3 +2449,6 @@ body.m-off .streak-pop{animation:none}
 .rp-graph .gm.dim{opacity:.3}
 
 .el-cnt{margin-left:8px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);font-size:12.5px}
+
+#rpView .rp-chat1 .el-cl{flex:none;height:170px;max-height:none;min-height:0}
+#rpView .rp-chat1{margin-top:12px}
