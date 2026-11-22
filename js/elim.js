@@ -156,7 +156,7 @@ function elNewLobby(opts){
   const center = opts.center != null ? opts.center : R.mmr + gaussOf(rnd) * 220;
   return {id, rules, created: now, center: Math.round(center), host: opts.host != null ? opts.host : null, players: [], joinAt: [], t0: 0, name: rules.name};
 }
-let elNextOld = 0;   // when to add the next game that's already going (not saved, so opening the app fills a few right away)
+let elNextOld = 0, elNextTop = 0;   // when to add the next game that's already going (not saved, so opening the app fills a few right away)
 function elListTick(){
   if (!RK_READY) return;
   const now = Date.now(); let ch = false;
@@ -200,8 +200,25 @@ function elListTick(){
       const S = elState({L, me: {ev: []}}, now); if (!S.over && S.alive >= 2){ EL.live.push(L); ch = true; got++; }
     }
   }
+  // games between top-1,000 players (the only ones shown in Top matches): keep about eight running, at different rounds
+  const tops = EL.live.filter(L => L.top).length;
+  if (tops < 8 && now >= (elNextTop || 0)){
+    const need = elNextTop ? 1 : 8 - tops, best = sortedBots().slice(0, 1000);
+    elNextTop = now + (2 + Math.random() * 4) * 60000;
+    let got = 0;
+    for (let k = 0; k < need * 8 && got < need; k++){
+      const N = [4, 4, 8, 8, 8, 16, 6, 12][Math.floor(Math.random() * 8)], ranked = [4, 8, 16].includes(N) && Math.random() < .7;
+      const at = Math.floor(Math.random() * Math.max(1, best.length - 60)), ppl = [];
+      while (ppl.length < N){ const w = best[Math.min(best.length - 1, at + Math.floor(Math.random() * 120))]; if (!ppl.includes(w)) ppl.push(w); }
+      const L = elNewLobby({size: N, ranked, rated: ranked, center: botRating(ppl[0])});
+      L.top = true; L.host = ranked ? null : ppl[0]; L.players = ppl; L.name = ranked ? `Ranked · ${N} players` : lobbyName(ppl[0], BOTS[ppl[0]].subject);
+      L.t0 = now - (Math.random() < .3 ? 2 + Math.random() * 20 : 27 + Math.random() * 150) * 60000; L.joinAt = ppl.map(() => L.t0 - 3000);
+      const S = elState({L, me: {ev: []}}, now); if (!S.over && S.alive >= 2){ EL.live.push(L); ch = true; got++; }
+    }
+  }
   // running lobbies you can watch (a few at a time; finished ones drop off)
-  EL.live = EL.live.filter(L => { const end = Math.max(...L.players.map(w => elBotPlan(L, w).out)); return now < end + 5 * 60000; }).slice(0, 40);
+  EL.live = EL.live.filter(L => { const end = Math.max(...L.players.map(w => elBotPlan(L, w).out)); return now < end + 5 * 60000; });
+  { const t = EL.live.filter(L => L.top), o = EL.live.filter(L => !L.top).slice(0, 40); EL.live = o.concat(t); }
   if (ch) elSaveList();
   if (ch && !$('#page-elim').hidden && EL.view === 'browse') elRender();
 }
@@ -541,11 +558,17 @@ function elFollowCard(G, now){
 }
 function elMeStudied(G, t){ const ev = G.me.ev, end = G.me.out ? Math.min(t, G.me.out.t) : G.result && G.result.t ? Math.min(t, G.result.t) : t; let n = 0; for (let k = 0; k < ev.length; k++){ if (ev[k][1] !== 'S') continue; const y = Math.min(k + 1 < ev.length ? ev[k + 1][0] : end, end); if (y > ev[k][0]) n += y - ev[k][0]; } return n; }
 let elKeep = null;
+/* chat lists follow new messages only while you're at the bottom. Whether you are is decided by your own scrolling
+   (wheel, touch, keys, dragging the bar), not measured at redraw time: a scroll that has only just started would
+   otherwise still look like "at the bottom" and get pulled back down. */
+const elStick = el => !el || el._stick !== false;
+['wheel', 'touchmove', 'pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, e => { const l = e.target.closest && e.target.closest('.el-cl'); if (l) l._user = Date.now(); }, {passive: true, capture: true}));
+document.addEventListener('scroll', e => { const l = e.target; if (!l.classList || !l.classList.contains('el-cl') || Date.now() - (l._user || 0) > 1500) return; l._stick = l.scrollTop + l.clientHeight >= l.scrollHeight - 8; }, true);
 function elRenderGame(Gx){
   const box = $('#elBody'); if (!box || $('#page-elim').hidden) return;
   const G = Gx || EL.G; if (!G) return elRender();
-  const inp = $('#elIn'), val = inp ? inp.value : '', foc = document.activeElement === inp, cl = $('#elChatList'), atEnd = !cl || cl.scrollTop + cl.clientHeight >= cl.scrollHeight - 20;
-  const vl = $('#elVList'), vEnd = !vl || vl.scrollTop + vl.clientHeight >= vl.scrollHeight - 20;
+  const inp = $('#elIn'), val = inp ? inp.value : '', foc = document.activeElement === inp, cl = $('#elChatList'), atEnd = elStick(cl);
+  const vl = $('#elVList'), vEnd = elStick(vl);
   const tl = box.querySelector('.el-tl ol'), tlTop = tl ? tl.scrollTop : 0, tlH = tl ? tl.scrollHeight : 0, pg = window.scrollY;
   domMorph(box, elGameHtml(G, Date.now()));
   // keep the timeline where you scrolled it (new events come in at the top, so shift by what was added)
@@ -565,11 +588,12 @@ function elCardRender(){
     ${R.el ? `<p class="hint">${R.el.wins} win${R.el.wins === 1 ? '' : 's'} · ${R.el.top3} top-3 · ${R.el.played} played</p>` : ''}</div>`;
 }
 
-/* Top matches: you can't watch every game, only the few best ones running (highest-rated players still in, bigger
-   lobbies first). Each shows who's in it: the first few avatars and two names, then the lobby name. */
+/* Top matches: you can't watch every game, only the few best ones running, where everyone is in the top 1,000
+   (later rounds, sudden death and bigger lobbies first). Each shows who's in it: the first few avatars and two names, then the lobby name. */
 function elTop(rk, n){
   const now = Date.now();
-  return EL.live.filter(L => L.t0 && L.t0 <= now && L.players.length > 2 && (rk == null || !!L.rules.ranked === rk)).map(L => {
+  const cut = sortedBots()[999], min = cut != null ? botRating(cut) : 0;
+  return EL.live.filter(L => L.t0 && L.t0 <= now && L.players.length > 2 && (rk == null || !!L.rules.ranked === rk) && L.players.every(w => w >= 0 && elR(w) >= min)).map(L => {
     const S = elState({L, me: {ev: []}}, now); if (S.over) return null;
     const alive = S.ps.filter(p => !p.out).map(p => p.w), avg = alive.reduce((x, w) => x + elR(w), 0) / Math.max(1, alive.length);
     return {L, S, score: avg + L.players.length * 12 + Math.min(S.r, 6) * 45 + (S.sd ? 60 : 0)};

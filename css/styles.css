@@ -2424,3 +2424,6 @@ body.m-off .streak-pop{animation:none}
 .el-search{display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:14px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
 .el-search svg{width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;flex-shrink:0}
 .el-search input{flex:1;min-width:0;border:0;background:none;color:inherit;font:inherit;font-size:14px;outline:none;padding:0}
+
+/* the viewers' chat starts at a proper size */
+.el-vchat .el-cl{min-height:300px;max-height:420px}

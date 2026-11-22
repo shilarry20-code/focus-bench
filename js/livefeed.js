@@ -189,7 +189,7 @@ function renderLive(force){
   const tmax = LF.trend.length ? LF.trend[0][1] : 1;
   let list;
   if (LF.tab === 'top'){
-    const top = LF.events.filter(x => x.kind === 'match' && Math.max(x.p.ra, x.p.rc) >= LF.top).slice(0, 60);
+    const top = LF.events.filter(x => x.kind === 'match' && Math.min(x.p.ra, x.p.rc) >= LF.top).slice(0, 60);
     const live = typeof wLiveTop === 'function' ? wLiveTop() : [];
     const liveHtml = live.length ? `<div class="lf-sub lf-livehd"><i class="lf-dot" aria-hidden="true"></i>Live now</div><ul class="lf-live">${live.map(p => { const {m} = lfNow(); return `<li><span class="lf-txt">${lfName(p.a)} <span>vs</span> ${lfName(p.c)}<small>${Math.max(p.ra, p.rc).toLocaleString()} Elo · ${Math.round(m - Math.max(p.ea - p.ma, p.ec - p.mc))} min in</small></span><button class="small-btn" data-watch="${p.a}-${p.c}">Watch</button></li>`; }).join('')}</ul><div class="lf-sub">Finished</div>` : '';
     list = liveHtml + (top.length ? `<ol class="lf-top">${top.map(lfTopRow).join('')}</ol>` : '<p class="hint">None in the last 2 hours. The top players are quiet right now.</p>');
