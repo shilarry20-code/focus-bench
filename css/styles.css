@@ -559,6 +559,8 @@ body:not(.m-off) .streak-chip[data-state="risk"] .fl{animation:flicker 1.6s ease
 #goalDots:hover>.gbar{height:10px;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
 .goal-pop{transform-origin:50% 0}
 @keyframes goalPop{from{opacity:0;transform:translate(-50%,-6px) scale(.94)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+/* never show it on top of another header pop-up (level, rank, awards, streak) */
+body:has(#miniPop) #goalDots .goal-pop,body:has(#streakPop:not([hidden])) #goalDots .goal-pop{display:none!important}
 body.m-off #goalDots:hover .goal-pop{animation:none}
 body.m-off #goalDots>.gbar{transition:none}
 .goal-pop .gp-h{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
