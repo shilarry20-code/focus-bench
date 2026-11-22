@@ -11,7 +11,10 @@ const elStd = r => r.preset === 'standard' && +r.round === 25;
 const elRated = r => !!r.ranked && elStd(r);      // only games from the Ranked queue are rated; every other lobby is casual
 let EL = store.get('fb.elim', {G: null, list: [], live: [], hist: [], view: 'browse', tab: 'stand', filt: 'all', form: null});
 EL.list = EL.list || []; EL.live = EL.live || []; EL.hist = EL.hist || [];
-const saveEl = () => { const {_bp, ...rest} = EL; store.set('fb.elim', JSON.parse(JSON.stringify(rest, (k, v) => k === '_bp' ? undefined : v))); };
+// a refresh never drops you into a game you were only watching, or back into one that's over
+if (EL.view === 'watch' || (EL.view === 'game' && (!EL.G || EL.G.done))){ EL.view = 'browse'; EL.watch = null; }
+delete EL.watch;
+const saveEl = () => { const {_bp, ...rest} = EL; store.set('fb.elim', JSON.parse(JSON.stringify(rest, (k, v) => k === '_bp' || k === 'watch' ? undefined : v))); };
 const elBusy = () => !!(EL.G && !EL.G.done);
 const elMeIn = G => G && G.L.players.includes(-1);
 
@@ -495,7 +498,11 @@ function elRenderGame(Gx){
   const box = $('#elBody'); if (!box || $('#page-elim').hidden) return;
   const G = Gx || EL.G; if (!G) return elRender();
   const inp = $('#elIn'), val = inp ? inp.value : '', foc = document.activeElement === inp, cl = $('#elChatList'), atEnd = !cl || cl.scrollTop + cl.clientHeight >= cl.scrollHeight - 20;
+  const tl = box.querySelector('.el-tl ol'), tlTop = tl ? tl.scrollTop : 0, tlH = tl ? tl.scrollHeight : 0, pg = window.scrollY;
   box.innerHTML = elGameHtml(G, Date.now());
+  // keep the timeline where you scrolled it (new events come in at the top, so shift by what was added)
+  const t2 = box.querySelector('.el-tl ol'); if (t2 && tlTop > 0) t2.scrollTop = tlTop + (t2.scrollHeight - tlH);
+  if (Math.abs(window.scrollY - pg) > 1) window.scrollTo(0, pg);
   const i2 = $('#elIn'); if (i2){ i2.value = val; if (foc) i2.focus(); }
   const c2 = $('#elChatList'); if (c2 && atEnd) c2.scrollTop = c2.scrollHeight;
 }
@@ -531,7 +538,7 @@ document.addEventListener('click', e => {
   if (k === 'quick') elQueue(+b.dataset.n);
   else if (k === 'go'){ EL.view = EL.G ? 'game' : 'browse'; showPage('elim'); elRender(); }
   else if (k === 'back'){ EL.view = 'game'; showPage('elim'); elRender(); }
-  else if (k === 'browse'){ EL.view = 'browse'; EL.watch = null; elRender(); }
+  else if (k === 'browse'){ EL.view = 'browse'; EL.watch = null; saveEl(); elRender(); }
   else if (k === 'create'){ EL.view = 'create'; showPage('elim'); elRender(); }
   else if (k === 'filt'){ EL.filt = b.dataset.f; elRender(); }
   else if (k === 'join'){ const L = EL.list.find(l => l.id === b.dataset.id); if (L) elJoin(L); }
