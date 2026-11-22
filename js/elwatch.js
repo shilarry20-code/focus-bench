@@ -88,7 +88,7 @@ function ewLobby(G, kind, w){
   if (!talk.length) return false;
   if (GEM.key && !(GEM.wait > Date.now()) && !elChatBusy && (G.ew.lcalls || 0) < 25){
     G.ew.lcalls = (G.ew.lcalls || 0) + 1;
-    elChatAI(kind === 'out' ? `${bot(w).name} just got knocked out.` : kind === 'sd' ? 'Sudden death just started: no more breaks.' : G.chat.length ? 'Keep the conversation going (answer what was said, or say something new).' : 'Someone starts chatting on their break.', talk, G);
+    elChatAI(kind === 'out' ? `${bot(w).name} just got knocked out.` : kind === 'sd' ? 'Sudden death just started: no more breaks.' : G.chat.length ? 'Keep the conversation going (answer what was said, or say something new' + (typeof pickTopic === 'function' && Math.random() < .5 ? `; if it's a new topic, ${pickTopic(talk[Math.floor(Math.random() * talk.length)])}` : '') + ').' : 'Someone starts chatting on their break' + (typeof pickTopic === 'function' ? `: ${pickTopic(talk[Math.floor(Math.random() * talk.length)])}` : '') + '.', talk, G);
     return true;
   }
   if (Math.random() < .5){ const who = talk[Math.floor(Math.random() * talk.length)], lines = kind === 'out' ? EL_LINES.out : kind === 'sd' ? EL_LINES.sd : EW_LINES.lobby; elQ(who, lines[Math.floor(Math.random() * lines.length)], 0, G); }
