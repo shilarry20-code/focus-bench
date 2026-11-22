@@ -181,10 +181,10 @@ setInterval(elxKeep, 30000); setTimeout(elxKeep, 8000);
 function profileElim(w){
   const row = (place, N, name, t, dur, key, d, lab) => `<li class="hr-${place === 1 ? 'W' : 'L'}"><span class="res">${place || '–'}</span><span class="rkg-n">${N}p</span><span class="who"><b>${place ? `${elOrd(place)} of ${N}` : `${N} players`}</b><small>${esc(name)} · lasted ${elClock(dur || 0)}</small></span><span class="tm"></span><span class="dl ${d > 0 ? 'pos' : d < 0 ? 'neg' : 'fr'}">${d ? `${d > 0 ? '+' : ''}${d}` : lab || 'Casual'}</span><span class="when">${winLabel(t)}<button class="rp-v" data-rp="${key}">Replay</button></span></li>`;
   let rows;
-  if (w === ME) rows = (EL.hist || []).filter(h => !h.rated).slice(0, 20).map(h => row(h.place, h.N, h.name || 'Lobby', h.t, h.dur, 'el:' + h.id, 0));
+  if (w === ME) rows = (EL.hist || []).slice(0, 20).map(h => row(h.place, h.N, h.name || 'Lobby', h.t, h.dur, 'el:' + h.id, h.rated ? h.delta || 0 : 0, h.rated ? 'Ranked' : 'Casual'));
   else {
-    const kept = ELX.filter(x => !x.rk && x.ps.some(([p]) => p === w)).map(x => ({id: x.id, t0: x.t0, end: x.end, N: x.N, name: x.name, place: x.ps.find(([p]) => p === w)[1], ranked: false}));
-    rows = kept.concat(elxOf(w).filter(x => !x.ranked)).sort((a, b) => b.t0 - a.t0).slice(0, 15).map(x => row(x.place, x.N, x.name, x.t0, x.end - x.t0, 'elx:' + x.id, 0, x.ranked ? 'Ranked' : 'Casual'));
+    const kept = ELX.filter(x => x.ps.some(([p]) => p === w)).map(x => ({id: x.id, t0: x.t0, end: x.end, N: x.N, name: x.name, place: x.ps.find(([p]) => p === w)[1], ranked: !!x.rk}));
+    rows = kept.concat(elxOf(w)).sort((a, b) => b.t0 - a.t0).slice(0, 15).map(x => row(x.place, x.N, x.name, x.t0, x.end - x.t0, 'elx:' + x.id, x.ranked ? Math.round(14 * (x.N + 1 - 2 * x.place) / (x.N - 1)) : 0, x.ranked ? 'Ranked' : 'Casual'));
   }
-  return rows.length ? `<ul class="rk-hist pf-matches pf-elim">${rows.join('')}</ul>` : `<p class="hint">${w === ME ? 'No casual lobby games yet. Join one from Lobbies.' : 'No casual lobby games yet.'}</p>`;
+  return rows.length ? `<ul class="rk-hist pf-matches pf-elim">${rows.join('')}</ul>` : `<p class="hint">${w === ME ? 'No group matches yet. Quick match into 4, 8 or 16 players, or join one from Lobbies.' : 'No group matches yet.'}</p>`;
 }

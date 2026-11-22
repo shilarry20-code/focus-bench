@@ -1592,12 +1592,7 @@ function profileMatches(w){
   const row = m => `<li class="hr-${m.r}"><span class="res" title="${res(m.r)}">${m.r}</span>${m.you ? myAvatar('sm') : avatar(BOTS[m.opp], 'sm')}
     <span class="who">${m.you ? `<b>You</b>` : `<button class="lnk" data-bot="${m.opp}">${esc(BOTS[m.opp].name)}</button>`}${m.vsYou ? ' <i class="pf-vs">vs you</i>' : ''}<small>${m.sub}</small></span>
     <span class="tm">${m.tm}</span><span class="dl ${m.f ? 'fr' : m.d >= 0 ? 'pos' : 'neg'}">${m.f ? 'Friendly' : `${m.d > 0 ? '+' : ''}${m.d}`}${m.after != null && !m.f ? `<small>${m.after.toLocaleString()}</small>` : ''}</span><span class="when">${m.when}${m.key ? `<button class="rp-v" data-rp="${m.key}">Replay</button>` : ''}</span></li>`;
-  // a group match (4, 8 or 16 players): place instead of an opponent
-  const grow = g => `<li class="hr-${g.place === 1 ? 'W' : 'L'}"><span class="res">${g.place}</span><span class="rkg-n">${g.N}p</span><span class="who"><b>${elOrd(g.place)} of ${g.N}</b><small>${g.N}-player match · lasted ${elClock(g.dur || 0)}</small></span><span class="tm"></span><span class="dl ${g.d >= 0 ? 'pos' : 'neg'}">${g.d > 0 ? '+' : ''}${g.d}${g.after != null ? `<small>${g.after.toLocaleString()}</small>` : ''}</span><span class="when">${g.when}<button class="rp-v" data-rp="${g.key}">Replay</button></span></li>`;
-  const clk = t => new Date(t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'});
-  const groups = w === ME ? (R.gh || []).filter(g => g.id).map(g => ({g: 1, t: g.t, place: g.p, N: g.N, dur: g.dur, d: g.pl ? 0 : g.d, after: g.pl ? null : g.m, key: 'el:' + g.id, when: `${winLabel(g.t)}, ${clk(g.t)}`}))
-    : typeof elxOf === 'function' ? elxOf(w).filter(x => x.ranked).map(x => ({g: 1, t: x.end, place: x.place, N: x.N, dur: x.end - x.t0, d: Math.round(14 * (x.N + 1 - 2 * x.place) / (x.N - 1)), after: null, key: 'elx:' + x.id, when: `${winLabel(x.t0)}, ${clk(x.t0)}–${clk(x.end)}`})) : [];
-  const html = m => m.g ? grow(m) : row(m);
+  const html = row;
   const youRow = (h, mine) => {      // one of your real matches, from your side or theirs
     const B = BOTS[h.b], r = mine ? h.r : ({W: 'L', L: 'W', D: 'D'})[h.r], swap = !mine;
     const tm = h.ys == null ? `${fmtMin(swap ? h.them : h.you)} <i>vs</i> ${fmtMin(swap ? h.you : h.them)}` : (x => swap ? x.split(' <i>vs</i> ').reverse().join(' <i>vs</i> ') : x)(matchTimes(h));
@@ -1606,8 +1601,7 @@ function profileMatches(w){
   };
   let rows, more = false;
   if (w === ME){
-    const allMine = [...R.hist.map(h => youRow(h, true)), ...groups].sort((a, b) => b.t - a.t);
-    rows = allMine.slice(0, profMatchN); more = allMine.length > profMatchN;
+    rows = R.hist.slice(0, profMatchN).map(h => youRow(h, true)); more = R.hist.length > profMatchN;
     if (!rows.length) return '<p class="hint">No matches yet. Turn on Ranked and start a focus block to get matched.</p>';
   } else {
     m5Backfill(w);
@@ -1617,7 +1611,7 @@ function profileMatches(w){
       when: `${winLabel(m.t0)}, ${clock(m.t0)}–${clock(m.t)}`}));
     const oldest = sim.length ? sim[sim.length - 1].t : 0;
     const vsYou = R.hist.filter(h => h.b === w && (sim.length < 5 || h.t >= oldest)).slice(0, 5).map(h => youRow(h, false));
-    rows = [...sim, ...vsYou, ...groups].sort((a, b) => b.t - a.t);
+    rows = [...sim, ...vsYou].sort((a, b) => b.t - a.t);
     if (!rows.length) return '<p class="hint">No ranked matches yet.</p>';
   }
   return `<ul class="rk-hist pf-matches">${rows.map(html).join('')}</ul>${more ? '<button class="link-btn" data-pf="moreMatches">Show more</button>' : ''}`;
@@ -1683,7 +1677,7 @@ function renderProfilePage(){
         <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
       <div class="card" id="pfCal"></div>
       <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of ${(ROSTER_N + 1).toLocaleString()} players. Click one to open that leaderboard.</p></div>`,
-    ranked: () => `<div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>${typeof profileElim === 'function' ? `<div class="card"><div class="h first">Casual lobby games</div>${profileElim(w)}</div>` : ''}`,
+    ranked: () => `<div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>${typeof profileElim === 'function' ? `<div class="card"><div class="h first">Group matches</div>${profileElim(w)}</div>` : ''}`,
     awards: () => `<div class="card"><div class="h first">Featured</div><div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('') || '<span class="hint">Nothing featured yet.</span>'}</div></div>
       <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>`
   };
