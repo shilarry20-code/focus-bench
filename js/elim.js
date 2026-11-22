@@ -155,9 +155,9 @@ let elNextOld = 0;   // when to add the next game that's already going (not save
 function elListTick(){
   if (!RK_READY) return;
   const now = Date.now(); let ch = false;
-  // keep hundreds of open lobbies: ranked 1v1, 4, 8 and 16-player ones (standard rules), and casual ones of every size and rule set
-  EL.list = EL.list.filter(l => l.players.length < l.rules.size && now - l.created < 40 * 60000);
-  const want = {r2: 45, r4: 60, r8: 45, r16: 25, c: 140}, kind = l => l.rules.ranked ? 'r' + l.rules.size : 'c', have = {};
+  // keep a lot of open lobbies, all casual (ranked matches come from the queue, no lobby needed): every size and rule set
+  EL.list = EL.list.filter(l => !l.rules.ranked && l.players.length < l.rules.size && now - l.created < 40 * 60000);
+  const want = {c: 160}, kind = l => l.rules.ranked ? 'r' + l.rules.size : 'c', have = {};
   EL.list.forEach(l => { const k = kind(l); have[k] = (have[k] || 0) + 1; });
   const fresh = !EL.list.length;
   for (const k of Object.keys(want)) while ((have[k] || 0) < want[k]){
@@ -412,7 +412,7 @@ function elRender(){
   if (EL.view === 'watch' && EL.watch) return elRenderGame(EL.watch);
   if (EL.view === 'create') return elRenderCreate();
   EL.view = 'browse';
-  const lt = EL.ltab === 'casual' ? 'casual' : 'ranked', rk = lt === 'ranked';
+  const rk = false;
   const FILTS = rk ? [['all', 'All'], ['join', 'Joinable'], ['2', '1v1'], ['4', '4 players'], ['8', '8 players'], ['16', '16 players']] : [['all', 'All'], ['join', 'Joinable'], ['s', '3–6'], ['m', '7–11'], ['l', '12–16']];
   const f = FILTS.some(([k]) => k === EL.filt) ? EL.filt : 'all';
   const inSize = l => !!l.rules.ranked === rk && (f === 'all' || f === 'join' || (/^\d+$/.test(f) ? l.rules.size === +f : f === 's' ? l.rules.size <= 6 : f === 'm' ? l.rules.size >= 7 && l.rules.size <= 11 : l.rules.size >= 12));
@@ -423,13 +423,12 @@ function elRender(){
       <div class="el-rs"><span class="el-fill"><i style="width:${l.players.length / l.rules.size * 100}%"></i></span><small>${l.players.length}/${l.rules.size}</small></div>
       <small class="el-rr">${Math.round(lo).toLocaleString()}–${Math.round(hi).toLocaleString()}</small>
       <button class="small-btn${ok ? ' accent' : ''}" data-el="join" data-id="${l.id}" ${ok ? '' : 'disabled title="Your rating is outside this lobby’s range"'}>Join</button></li>`; };
-  domMorph(box, `<div class="el-top card"><div><div class="h first">Lobbies</div><p class="hint">Ranked lobbies change your Elo: 1v1s, or 4, 8 and 16-player matches where everyone studies at once, breaks are limited each round, and the last one studying wins. Casual lobbies can use any size and rules and don’t change your Elo.</p></div>
-      <div class="el-quick"><button class="small-btn" data-el="create">Create a casual lobby</button></div></div>
-    <div class="el-ltabs" role="tablist">${[['ranked', 'Ranked'], ['casual', 'Casual']].map(([k, n]) => `<button class="chip${lt === k ? ' on' : ''}" role="tab" aria-selected="${lt === k}" data-el="ltab" data-t="${k}">${n} <small>${EL.list.filter(l => !!l.rules.ranked === (k === 'ranked')).length}</small></button>`).join('')}</div>
+  domMorph(box, `<div class="el-top card"><div><div class="h first">Lobbies</div><p class="hint">Casual group games with any size and rules: shorter or longer rounds, relaxed or hardcore break limits, sudden death. They don’t change your Elo. For ranked matches (1v1, 4, 8 or 16 players), use Find match on the Ranked page or the Focus tab.</p></div>
+      <div class="el-quick"><button class="small-btn accent" data-el="create">Create lobby</button><button class="small-btn" data-go="ranked">Ranked matches →</button></div></div>
     ${EL.G ? `<div class="card el-cur"><b>You're in a lobby.</b> <button class="small-btn accent" data-el="back">Back to your game →</button></div>` : ''}
-    <div class="el-cols"><div class="card"><div class="h first el-lh"><span>Open ${rk ? 'ranked' : 'casual'} lobbies</span><span class="el-filt">${FILTS.map(([k, t]) => `<button class="chip${f === k ? ' on' : ''}" data-el="filt" data-f="${k}">${t}</button>`).join('')}</span></div>
+    <div class="el-cols"><div class="card"><div class="h first el-lh"><span>Open lobbies</span><span class="el-filt">${FILTS.map(([k, t]) => `<button class="chip${f === k ? ' on' : ''}" data-el="filt" data-f="${k}">${t}</button>`).join('')}</span></div>
       <ul class="el-list">${list.slice(0, EL.lshow || 40).map(row).join('') || `<li class="hint">${rk ? 'No ranked lobbies right now. Quick match starts one.' : 'No lobbies right now. Create one!'}</li>`}</ul>${list.length > (EL.lshow || 40) ? `<button class="small-btn el-more" data-el="more">Show more (${(list.length - (EL.lshow || 40)).toLocaleString()} more)</button>` : ''}<p class="hint">${list.length.toLocaleString()} lobb${list.length === 1 ? 'y' : 'ies'} · your rating: ${R.mmr.toLocaleString()} Elo. Lobbies are open to players within their rating range.</p></div>
-      <div><div class="card"><div class="h first">Top matches</div><ul class="el-list el-topm">${elTopHtml(elTop(rk, 6)) || `<li class="hint">No ${rk ? 'ranked' : 'casual'} matches worth watching right now.</li>`}</ul></div>
+      <div><div class="card"><div class="h first">Top matches</div><ul class="el-list el-topm">${elTopHtml(elTop(null, 6)) || '<li class="hint">No matches worth watching right now.</li>'}</ul></div>
       <div class="card"><div class="h first">Your games</div><ul class="el-list">${EL.hist.slice(0, 12).map(h => `<li class="el-row"><div class="el-rn"><b>${elOrd(h.place || 0)} of ${h.N}</b><small>${esc(h.name || 'Lobby')} · ${new Date(h.t).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})} · ${elClock(h.dur)}${h.rated ? ` · ${h.delta > 0 ? '+' : ''}${h.delta} Elo` : ''} · +${h.xp} XP</small></div><button class="small-btn" data-rp="el:${h.id}">Replay</button></li>`).join('') || '<li class="hint">Your finished games show up here, with replays.</li>'}</ul></div></div></div>`);
 }
 function elRenderCreate(){
@@ -589,7 +588,6 @@ document.addEventListener('click', e => {
   else if (k === 'browse'){ EL.view = 'browse'; EL.watch = null; saveEl(); elRender(); }
   else if (k === 'create'){ EL.view = 'create'; showPage('elim'); elRender(); }
   else if (k === 'filt'){ EL.filt = b.dataset.f; EL.lshow = 40; elRender(); }
-  else if (k === 'ltab'){ EL.ltab = b.dataset.t; EL.filt = 'all'; EL.lshow = 40; saveEl(); elRender(); }
   else if (k === 'more'){ EL.lshow = (EL.lshow || 40) + 40; elRender(); }
   else if (k === 'join'){ const L = EL.list.find(l => l.id === b.dataset.id); if (L) elJoin(L); }
   else if (k === 'watch'){ const L = EL.live.find(l => l.id === b.dataset.id); if (L){ EL.watch = {L, me: {ev: []}, chat: [], q: []}; EL.view = 'watch'; showPage('elim'); elRender(); } }
