@@ -7,9 +7,9 @@
    Also here: finished lobbies that ran without you are kept (the newest 300), so every player's profile can list the
    Elimination games they played, each with a replay. */
 const rpSz = key => { const h = fdHash(key + ':sz'); return 2.6 + (h % 5200) / 1000; };       // a believable size in MB, the same every time
-let RPDL = store.get('fb.rpdl2', {});            // replays already downloaded: key → 1
-const rpChatLoad = key => IDB.get('rpc2:' + key).catch(() => null);
-const rpChatSave = (key, v) => IDB.set('rpc2:' + key, v).catch(console.error);
+let RPDL = store.get('fb.rpdl3', {});            // replays already downloaded: key → 1
+const rpChatLoad = key => IDB.get('rpc3:' + key).catch(() => null);
+const rpChatSave = (key, v) => IDB.set('rpc3:' + key, v).catch(console.error);
 let rpDlRun = 0;
 async function rpDownload(key){
   if (RPDL[key]){ const c = await rpChatLoad(key); return rpOpen(key, c && c.chat); }
@@ -22,7 +22,7 @@ async function rpDownload(key){
   const show = v => { const f = $('#rpDlFill'); if (!f) return; f.style.width = (v * 100).toFixed(1) + '%'; $('#rpDlPct').textContent = Math.floor(v * 100) + '%'; $('#rpDlMb').textContent = `${(mb * v).toFixed(1)} / ${mb.toFixed(1)} MB`; };
   // the bar creeps toward 90% while the work goes on, then finishes
   const tick = () => { if (run !== rpDlRun) return; const s = (performance.now() - t0) / 1000; p = done ? Math.min(1, p + .045) : Math.min(.9, .9 * (1 - Math.exp(-s / 2.2)) + Math.random() * .004); show(p); if (p >= 1) return finish(); requestAnimationFrame(tick); };
-  const finish = () => { if (run !== rpDlRun) return; el.hidden = true; if (chat !== null) RPDL[key] = 1; store.set('fb.rpdl2', RPDL); rpOpen(key, chat); };
+  const finish = () => { if (run !== rpDlRun) return; el.hidden = true; if (chat !== null) RPDL[key] = 1; store.set('fb.rpdl3', RPDL); rpOpen(key, chat); };
   requestAnimationFrame(tick);
   try {
     const need = key.startsWith('rk:m5:') || key.startsWith('elx:');
@@ -57,6 +57,37 @@ function rpWindows(d, tr, br, z){
   }
   return out;
 }
+/* The shape of the chat is planned here, not by Gemini: who talks in which break, and whether each text starts the
+   chat, answers something they hadn't seen yet, or adds to what they just said. Gemini only writes the words for each
+   numbered slot, so a first message can't sound like a reply and nobody answers a message they couldn't have read. */
+function rpPlan(key, W, n){
+  const rnd = mulberry32(fdHash(key + ':plan')), wins = [];
+  W.forEach((x, i) => { const tog = x.on.length > 1; wins.push({i, k: tog ? 2 + Math.floor(rnd() * 4) : rnd() < .65 ? 1 : 2}); });
+  let tot = wins.reduce((s, x) => s + x.k, 0);
+  while (tot > n && wins.length){ const j = Math.floor(rnd() * wins.length); tot -= wins[j].k; wins.splice(j, 1); }
+  const slots = [], last = {};          // last: when each player last texted
+  wins.forEach(({i, k}) => {
+    const x = W[i]; let t = x.a + 12000 + Math.floor(rnd() * 25000);
+    // who talks: alone, it's them; together, two (or three in a big lobby), starting with whoever has something to answer
+    let who = x.on.slice(); if (who.length > 1){ who.sort(() => rnd() - .5); who = who.slice(0, x.on.length > 3 && rnd() < .4 ? 3 : 2); who.sort((p, q) => slots.filter(m => m.w !== p && m.t > (last[p] || 0)).length > slots.filter(m => m.w !== q && m.t > (last[q] || 0)).length ? -1 : 1); }
+    for (let c = 0; c < k; c++){
+      if (t > x.b - 5000) break;
+      const w = who.length > 1 ? who[c % who.length] : who[0];
+      const unread = slots.filter(m => m.w !== w && m.t > (last[w] || 0) && m.t < t), prev = slots[slots.length - 1];
+      // nobody keeps texting into silence: two unanswered texts in a row (in earlier breaks) is enough
+      const tail = []; for (let j = slots.length - 1; j >= 0 && slots[j].w === w; j--) tail.push(slots[j]);
+      if (!unread.length && tail.length >= 2 && tail[0].x !== x) break;
+      let role;
+      if (!slots.length) role = 'starts the chat (nothing has been said before this)';
+      else if (unread.length) role = `answers #${unread[unread.length - 1].n}${unread.length > 1 ? ` (has just read #${unread[0].n}–#${unread[unread.length - 1].n})` : ''}`;
+      else if (prev && prev.w === w) role = prev.x === x ? `adds a second text right after their own #${prev.n}` : `texts again on a later break, #${prev.n} still hasn't been answered (follow up on it or ask something else, without complaining)`;
+      else role = 'says something new (keep the same thread going)';
+      const m = {n: slots.length + 1, t, w, role, x}; slots.push(m); last[w] = t;
+      t += 14000 + Math.floor(rnd() * 22000);
+    }
+  });
+  return slots;
+}
 async function rpWriteChat(key, d){
   if (!GEM.key || GEM.wait > Date.now()) return null;
   const tr = rpTracks(d), br = rpBreaks(tr), ws = tr.map(p => p.w).filter(w => w >= 0), nb = ws.reduce((n, w) => n + br[w].length, 0);
@@ -67,53 +98,36 @@ async function rpWriteChat(key, d){
   const r = fdHash(key + ':amt') % 100, mood = r < 20 ? .3 : r < 70 ? 1.2 : 2.4;
   const n = Math.min(el ? 40 : 20, Math.round(nb * mood * talk * (close ? 1.25 : 1) * (rival ? 1.3 : 1) * (el ? .7 : 1)));
   if (n < 1) return [];
+  const slots = rpPlan(key, rpWindows(d, tr, br, z), n); if (!slots.length) return [];
   // something they might bring up: 60% nothing, 30% one thing, 10% two (only in long matches)
   const long = d.end - d.start > 90 * 60000, tq = fdHash(key + ':top') % 100, nTop = tq < 60 ? 0 : tq < 90 || !long ? 1 : 2;
   const tops = [...Array(nTop)].map(() => { const w = pick(Math.random, ws); return `${bot(w).name} might bring up: ${pickTopic(w)}`; });
-  const roster = ws.map(w => { const f = chatFacts(w), tk = rpTalky(w); return `${f.name} (${f.subj.split(',')[0]}, ${f.r} Elo, emojis: ${emojiStyle(w)}, ${tk < .5 ? 'quiet, says little' : tk > 1.5 ? 'chatty' : 'talks a normal amount'}${br[w].length ? '' : ', never took a break so never types'})`; }).join('\n');
-  const W = rpWindows(d, tr, br, z).slice(0, 70);
-  const wins = W.map(x => `${rpMs(x.a, z)}–${rpMs(x.b, z)} · on a break: ${x.on.map(w => bot(w).name).join(', ')}${x.on.length > 1 ? ' (together, so they can talk back and forth)' : x.rest.length ? ' (alone: the others are studying and only see it later)' : ' (alone: nobody else is still playing)'}${x.gone.length && x.gone.length < 6 ? ` · already finished: ${x.gone.map(w => bot(w).name).join(', ')}` : ''} · ${x.st}`).join('\n');
-  const evs = rpEvents(d, tr).filter(e => /^(ko|win|sd|round|stop)$/.test(e.kind)).map(e => `${rpMs(e.t, z)} ${e.text}`).join('\n');
-  const sys = `You write the chat log from a finished ${el ? 'Elimination game (a lobby studies together, breaks are limited each round, going over the allowance or stopping knocks you out, last one studying wins)' : 'ranked 1v1 (whoever studies longer wins)'} in Focus Bench, a study-timer app for college students. Players can only type while they're on a break, never while studying.
-It has to read like a real chat log from start to finish:
-- The first message is an opener that makes sense with nothing before it. It never sounds like a reply.
-- Every message follows from what was actually said before it in this log. Nobody answers a question nobody asked or reacts to something that wasn't said.
-- Nobody writes to someone who has already finished, and someone who is the only one left playing has nobody to talk to (at most a short note).
-- Someone alone on a break is writing to people who are studying: they say one or two things and that's it. Anyone who answers does it on their own next break, minutes later, and answers what was said.
-- Real back-and-forth only happens when two people are on a break at the same time.
-- Keep to one or two threads for the whole match, followed across breaks. Don't hop between topics. It can be about the match or about anything else (food, a class, a show, their day).
-- Match talk has to fit how things stood at that moment (it's listed with each break). Nobody congratulates themselves. Leads change because the other person is on a break, so nobody brags about taking the lead.
-- No sign-offs or filler like "back to it", "back to the grind", "gl", "ok", "anyway". Silence is fine; quiet people may say nothing at all.
-- Short, casual texts, lowercase is fine.
+  const roster = ws.filter(w => slots.some(m => m.w === w)).map(w => { const f = chatFacts(w); return `${f.name} (${f.subj.split(',')[0]}, ${f.r} Elo, emojis: ${emojiStyle(w)})`; }).join('\n');
+  const script = slots.map(m => `#${m.n} ${rpMs(m.t, z)} ${bot(m.w).name} · ${m.x.on.length > 1 ? `on a break with ${m.x.on.filter(q => q !== m.w).map(q => bot(q).name).slice(0, 4).join(', ')}` : m.x.rest.length ? 'alone on a break, the others are studying' : 'alone on a break, nobody else is still playing'} · ${m.x.st} · ${m.role}`).join('\n');
+  const evs = rpEvents(d, tr).filter(e => /^(ko|win|sd|stop)$/.test(e.kind) && e.t < slots[slots.length - 1].t).map(e => `${rpMs(e.t, z)} ${e.text}`).join('\n');
+  const sys = `You write the chat log from a finished ${el ? 'Elimination game (a lobby studies together, breaks are limited each round, going over the allowance or stopping knocks you out, last one studying wins)' : 'ranked 1v1 (whoever studies longer wins)'} in Focus Bench, a study-timer app for college students. Everyone studies in their own place (not the same room) and players can only type while they're on a break, never while studying, so a text sent while the other person studies is only read on their next break, maybe half an hour later.
+You get a numbered list of slots. Who sends each one, when, and what it does (starts the chat, answers a certain number, adds to their own text) is already decided: write the words for every slot and follow its role exactly.
+It must read as one real conversation from top to bottom: an answer actually answers the message it points to, nobody mentions things nobody said, and it sticks to one or two topics instead of jumping around. It can be about the match (only what's true at that moment, which is listed with each slot) or about anything else: a class, food, a show, their day. Someone who answers half an hour later knows time has passed. Nobody congratulates themselves.
+No filler or sign-offs: never "back to it", "back to the grind", "gotta grind", "gl", "gg", "good luck", and nobody wishes the other luck, says goodbye or says they're heading out, since the match is still going. Short, casual texts, lowercase is fine.
 ${EMO_RULE} Keep it friendly and appropriate. Never mention AI.`;
   const user = `Players:
 ${roster}
+${evs ? `\nWhat happened in the match before the last slot:\n${evs}\n` : ''}
+Slots:
+${script}
 
-When people were on breaks (time from the start · who · how it stood):
-${wins}
-${evs ? `\nOther things that happened:\n${evs}\n` : ''}
-Write about ${n} messages, in time order. Each: "from" (a player's name exactly as listed), "at" (time from the start, like 27:40 or 1:05:12, inside a break of that player), "text".${tops.length ? `\nIf it fits (it doesn't have to):\n${tops.join('\n')}` : ''}`;
+Return one item per slot, in order: "n" (the slot number), "from" (the sender's name exactly as listed), "text".${tops.length ? `\nIf it fits the conversation (it doesn't have to):\n${tops.join('\n')}` : ''}`;
   let got;
-  try { got = await aiCall(sys, user, {at: {type: 'STRING'}}); }
+  try { got = await aiCall(sys, user, {n: {type: 'INTEGER'}}); }
   catch(e){ if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); if (e.msg) GEM.detail = e.msg; saveAI(); return null; }
-  const names = {}; ws.forEach(w => { names[bot(w).name.toLowerCase()] = w; });
-  const out = [];
-  (Array.isArray(got) ? got : []).forEach(x => {
-    const w = names[String(x && x.from || '').toLowerCase().trim()]; if (w == null || !br[w].length) return;
+  const out = [], byN = new Map(); (Array.isArray(got) ? got : []).forEach((x, k) => { const nn = +(x && x.n) || k + 1; if (!byN.has(nn)) byN.set(nn, x); });
+  slots.forEach(m => {
+    const x = byN.get(m.n); if (!x) return;
     const text = emotionOnly(stripSegue(String(x.text || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 200))); if (!text) return;
-    if (/^\W*(ok(ay)?|alr(ight)?|aight|anyway|welp|ight)?[\s,.]*(back to (it|the grind|grinding|work|studying|the books)|time to lock (back )?in|gl|good luck|ok)\W*$/i.test(text)) return;     // filler
-    let t = rpParse(x.at, z); if (t == null){ const q = br[w][Math.floor(Math.random() * br[w].length)]; t = q[0] + 20000; }
-    // into one of their breaks: the one it's in, or the nearest
-    let best = null, bd = Infinity;
-    br[w].forEach(([a, b]) => { const dd = t < a ? a - t : t > b ? t - b : 0; if (dd < bd){ bd = dd; best = [a, b]; } });
-    const a = best[0] + 6000, b = Math.max(a, best[1] - 4000); t = Math.min(b, Math.max(a, t));
-    out.push({t: Math.round(t), w, text, b: best[1]});
+    if (/^\W*(ok(ay)?|alr(ight)?|aight|anyway|welp|ight)?[\s,.]*(back to (it|the grind|grinding|work|studying|the books)|gotta grind|time to lock (back )?in|gl|ggs?|good luck|ok)\W*$/i.test(text)) return;     // filler
+    out.push({t: m.t, w: m.w, text});
   });
-  out.sort((p, q) => p.t - q.t);
-  // typing takes time: space messages out, and drop one that no longer fits in its break
-  const res = [];
-  out.forEach(m => { const prev = res[res.length - 1]; if (prev){ const gap = (prev.w === m.w ? 5000 : 12000) + Math.min(20000, m.text.length * 250); if (m.t < prev.t + gap) m.t = prev.t + gap; } if (m.t > m.b - 1000) m.t = Math.max(prev ? prev.t + 1500 : 0, m.b - 1000); res.push({t: m.t, w: m.w, text: m.text}); });
-  return res;
+  return out;
 }
 
 /* ---- finished lobbies without you: kept so their players' profiles can list them, with replays ---- */
