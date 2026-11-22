@@ -28,7 +28,7 @@ const dcNameOf = w => w === -1 ? myName() : w === -2 ? '' : bot(w).name;
 const dcAv = (w, cls) => w === -1 ? myAvatar(cls) : avatar(bot(w), cls);
 function dcGroupAv(g, cls = ''){ const a = g.m.slice(0, 2); return `<span class="dc-gav ${cls}">${a.map(w => avatar(bot(w), 'sm')).join('')}</span>`; }
 const dcDot = st => `<i class="dc-st ${st}" title="${st === 'study' ? 'Studying' : st === 'on' ? 'Online' : 'Offline'}"></i>`;
-const dcWState = w => dmStudying(w) ? 'study' : dmOnline(w) ? 'on' : 'off';
+const dcWState = w => typeof gcState === 'function' ? gcState(w) : dmStudying(w) ? 'study' : dmOnline(w) ? 'on' : 'off';      // one status everywhere (DMs, groups, member lists)
 function dcPrev(c){
   const m = c.last; if (!m) return 'No messages yet';
   const who = m.me || m.w === -1 ? 'You: ' : c.g && !m.sys ? `${dcNameOf(m.w)}: ` : '';

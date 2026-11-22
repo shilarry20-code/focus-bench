@@ -223,6 +223,8 @@ function gcTick(){
   const now = Date.now(); let fresh = [], changed = false;
   while (GC.q.length && GC.q[0].t <= now){
     const q = GC.q.shift(), g = GC.g[q.g]; changed = true; if (!g || g.left) continue;
+    // someone who's gone offline since this was written doesn't send it (messages from while you were away keep their old time and are fine)
+    if (!q.at && q.w >= 0 && gcState(q.w) === 'off') continue;
     if (q.rx){ const m = GC.msgs.find(x => x.id === q.rx.id); if (m) dcReact(m, q.w, q.rx.e, true); continue; }
     const prevM = gcMsgs(g).filter(x => !x.sys).pop(), re = q.re && !(prevM && prevM.id === q.re) ? q.re : null;      // answering the message right above needs no reply line
     const m = {id: q.id, g: q.g, w: q.w, t: q.at && q.at < now ? q.at : now, ...(q.text ? {text: q.text} : {}), ...(re ? {re} : {}), ...(q.ch ? {ch: q.ch} : {})};

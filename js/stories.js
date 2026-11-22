@@ -181,7 +181,8 @@ async function stDmTick(){
     const w = v[fdHash(s.id + 'who') % Math.min(v.length, 12)].w;
     try {
       const {texts} = await dmWrite(w, `${bot(w).name} just saw ${myName()}'s story (${stAbout(s)}) and messages ${myName()} about it: 1 or 2 short texts reacting to it, like replying to a story on Instagram.`);
-      if (texts.length) dmQueue(w, Date.now() + 4000, texts, {sr: 'your story: ' + stAbout(s)});
+      const off = typeof gcState === 'function' ? gcState(w) === 'off' : !dmOnline(w);
+      if (texts.length) dmQueue(w, off ? Date.now() + 7 * 864e5 : Date.now() + 4000, texts, {sr: 'your story: ' + stAbout(s)});      // offline: it sends when they're back on
     } catch(e){ console.error(e); }
     return;          // one at a time
   }
