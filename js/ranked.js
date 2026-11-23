@@ -857,7 +857,7 @@ function botStats(i){
   const acts = 3 + Math.floor(x[0] * 5), maxDayN = Math.max(1, Math.round(BS[o+F.maxDay] / Math.min(bl, 52)));
   const goalP = clampN(typical(r) * sittingsPerDay(b) / (25 * 6) * .8, 0, .95);
   const st = {
-    n, total, maxSess: BS[o+F.maxSess], named: n, modes, tags: {}, sp, swDot: (modes.stopwatch || 0) > 20 && f() < .3 ? 1 : 0,
+    n, total, maxSess: BS[o+F.maxSess], named: x[1] < .9 ? n : 0, modes, tags: {}, sp, swDot: (modes.stopwatch || 0) > 20 && f() < .3 ? 1 : 0,
     flowMax: modes.flow ? Math.round(BS[o+F.maxSess] * .8) : 0,
     early: morn || f() < .2 ? 1 : 0, dawn: morn && f() < .35 ? 1 : 0, owl: night || f() < .45 ? 1 : 0, midnight: night && days > 20 ? 1 : f() < .1 ? 1 : 0,
     three: night && days > 40 && f() < .25 ? 1 : 0, lunch: f() < .5 ? 1 : 0, monMorning: morn || f() < .2 ? 1 : 0, weekend: days > 5 ? 1 : 0,
@@ -866,12 +866,12 @@ function botStats(i){
     maxDay: BS[o+F.maxDay], maxDayN, comeback: activity(b, r) < .6 && f() < .6 ? 1 : 0, lucky7: maxDayN >= 7 && f() < clampN(yrs * .4, 0, .5) ? 1 : 0,
     fullWeekend: days > 15 && f() < .75 ? 1 : 0, maxWeek: BS[o+F.maxWeek], maxMonth: BS[o+F.maxMonth], perfectWeek: Math.min(7, BS[o+F.best]),
     allDay: BS[o+F.maxDay] > 240 && f() < .55 ? 1 : 0, insomniac: night && f() < clampN(yrs * .15, 0, .4) ? 1 : 0,
-    hours: Math.min(24, Math.round(6 + days / 10 + (b.style === 'Wildcard' ? 5 : 0))), dows: Math.min(7, days >= 14 ? 7 : days),
+    hours: Math.min(days > 250 && x[2] * x[5] < .04 + (b.style === 'Wildcard' ? .03 : 0) ? 24 : 23, Math.round(5 + days / 25 + (b.style === 'Wildcard' ? 4 : 0) + x[2] * 4)), dows: Math.min(7, days >= 14 ? 7 : days),
     taskCount: Math.round(n * (.25 + x[1] * .2)), maxTaskDays: Math.min(days, Math.round(3 + days * (.08 + x[2] * .12))),
     actCount: acts, maxTag: Math.round(total * (.3 + x[3] * .3)), tags5h: Math.min(acts, Math.floor(total / (300 * 1.6))),
     maxGroup: Math.max(1, Math.round(maxDayN * .55)), maxPomoGroup: b.fav === 'pomodoro' ? Math.max(1, Math.round(maxDayN * .55)) : 0,
     c: {notes: Math.round(days * .4 * x[4]), notesDone: Math.round(days * .3 * x[4]), tagsAdded: x[5] < .7 ? 1 : 0, mini: x[6] < .6 ? 1 : 0, focusMode: x[7] < .6 ? 1 : 0,
-        music: Math.round(x[5] * 8), backup: x[6] < .3 ? 1 : 0, edits: x[7] < .5 ? 2 : 0, deletes: x[4] < .4 ? 1 : 0, calMonth: x[3] < .6 ? 1 : 0, awards: 1,
+        music: Math.round(x[5] * 8), backup: x[6] < .3 ? 1 : 0, edits: x[7] < .5 ? 2 : 0, deletes: x[4] < .4 ? 1 : 0, calMonth: x[3] < .6 ? 1 : 0, awards: x[0] * .7 + x[3] * .3 < .82 ? 1 : 0,
         resets: Math.round(x[2] * 30), keys: Math.round(n * x[1] * .5), thunder: x[0] < .3 ? days * 2 : 0},
     set: {themes: 1 + Math.floor(x[1] * x[2] * Object.keys(THEMES).length), fonts: 1 + Math.floor(x[3] * x[4] * Object.keys(DIGIT_FONTS).length), amb: x[5] < .6 ? 1 + Math.floor(x[6] * 4) : 0, accentUsed: x[7] < .3 ? 1 : 0},
     rain: x[5] < .5 ? 1 : 0, storm: x[5] < .3 ? 1 : 0,
@@ -907,7 +907,7 @@ function botBadges(i){
 const TIER_RANK = {legendary:0, platinum:1, gold:2, silver:3, bronze:4};
 let ACH_MAP = null;
 const achById = id => (ACH_MAP || (ACH_MAP = new Map(ACHS.map(a => [a.id, a])))).get(id);
-function rarityOf(id){ return R.rar && R.rar.counts[id] != null ? (R.rar.counts[id] + (ACH.u[id] ? 1 : 0)) / (ROSTER_N + 1) : null; }
+function rarityOf(id){ return R.rar && R.rar.counts[id] != null ? (R.rar.counts[id] + (ACH.u[id] ? 1 : 0)) / ((R.rar.n || ROSTER_N) + 1) : null; }
 function rareSort(ids){
   return ids.slice().sort((p, q) => { const a = rarityOf(p), b = rarityOf(q); if (a != null && b != null && a !== b) return a - b; return TIER_RANK[achById(p).tier] - TIER_RANK[achById(q).tier]; });
 }
@@ -924,10 +924,44 @@ function myFeatured(){
   const chosen = (R.showcase || []).filter(id => ACH.u[id]);
   return chosen.length ? chosen.slice(0, 3) : featured(mine);
 }
+/* People who installed Focus Bench, tried it a little and stopped. They aren't players in the simulated world
+   (no rating, no matches), but they still count as accounts when working out how rare an achievement is,
+   the way a game's achievement percentages include everyone who ever opened it. There are about 1.6 of them
+   for every regular player. Their stats come from a seeded sample of 20,000, scaled up. */
+const CHURN_N = Math.round(ROSTER_N * 1.6), CHURN_S = 20000;
+let churnCounts = null;
+function churnStats(k, tpl){
+  const z = v => Array.isArray(v) ? [] : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([q, w]) => [q, z(w)])) : typeof v === 'number' ? 0 : v;
+  const st = z(tpl), r = mulberry32(0x5eed + k * 2654435761), u = () => r();
+  const n = u() < .22 ? 0 : Math.min(15, 1 + Math.floor(-Math.log(1 - u()) * 3));   // a fifth never finished a session
+  const days = n ? Math.min(n, 1 + Math.floor(u() * u() * 5)) : 0, total = Math.round(n * (12 + u() * 28));
+  Object.assign(st, {n, total, named: n && u() < .55 ? 1 : 0, maxSess: n ? Math.round(Math.min(60, total / n * (1 + u() * .5))) : 0,
+    modes: n ? (u() < .2 ? {pomodoro: n, stopwatch: 1} : {pomodoro: n}) : {}, daysActive: days, bestStreak: days > 1 && u() < .45 ? 2 : days ? 1 : 0,
+    goalDays: n && u() < .18 ? 1 : 0, maxDay: days ? Math.round(total / days) : 0, maxDayN: days ? Math.ceil(n / days) : 0, maxWeek: total, maxMonth: total,
+    weekend: days && u() < .35 ? 1 : 0, dows: days, early: n && u() < .06 ? 1 : 0, owl: n && u() < .12 ? 1 : 0, lunch: n && u() < .1 ? 1 : 0,
+    hours: Math.min(n, 3), taskCount: n && u() < .5 ? 1 + Math.floor(u() * 2) : 0, actCount: n ? 1 + (u() < .12 ? 2 : u() < .2 ? 1 : 0) : 0,
+    maxTaskDays: days ? 1 : 0, maxTag: total, maxGroup: n ? 1 : 0, rain: u() < .08 ? 1 : 0});
+  st.modeCount = Object.keys(st.modes).length; st.perfectWeek = Math.min(7, st.bestStreak);
+  Object.assign(st.c, {awards: u() < .25 ? 1 : 0, notes: u() < .12 ? 1 : 0, notesDone: u() < .06 ? 1 : 0, music: u() < .15 ? 1 : 0, mini: u() < .08 ? 1 : 0,
+    focusMode: u() < .08 ? 1 : 0, keys: Math.floor(u() * u() * 12), resets: Math.floor(u() * 6), tagsAdded: u() < .08 ? 1 : 0, calMonth: u() < .1 ? 1 : 0,
+    guides: u() < .04 ? 1 : 0});
+  Object.assign(st.set, {themes: 1 + (u() < .18 ? 1 + Math.floor(u() * 2) : 0), fonts: 1 + (u() < .08 ? 1 : 0), amb: u() < .12 ? 1 : 0});
+  const played = n ? Math.floor(u() * Math.min(4, n + 1)) : 0;
+  Object.assign(st.r, {played, w: Math.floor(played * u()), best: 0});    // nobody here got through 5 placement games to a rank
+  return st;
+}
+function churnRarity(){
+  if (churnCounts) return churnCounts;
+  const tpl = botStats(0), c = {}; ACHS.forEach(a => { c[a.id] = 0; });
+  for (let k = 0; k < CHURN_S; k++) for (const id of earnedFor(churnStats(k, tpl))) c[id]++;
+  const f = CHURN_N / CHURN_S; Object.keys(c).forEach(id => { c[id] = Math.round(c[id] * f); });
+  return churnCounts = c;
+}
+
 /* one pass over every bot, in small idle chunks: how many bots hold each achievement (rarity, kept
    for the day) and each bot's achievement points (for the leaderboard, redone after each update).
    Badge lists aren't kept for every bot, only for the few on screen. */
-const RAR_V = 2;   // bump when bot stats change so rarity is recounted right away
+const RAR_V = 3;   // bump when bot stats change so rarity is recounted right away
 let passGen = 0, passRunning = false, passWait = [];
 function badgePass(done){
   if (done) passWait.push(done);
@@ -946,7 +980,8 @@ function badgePass(done){
       for (; i < end; i++){ const got = badgeCache.get(i) || earnedFor(botStats(i)); let n = 0; for (const id of got){ counts[id]++; n += PT[id]; } pts[i] = n; }
     }
     if (i < ROSTER_N){ idle(step); return; }
-    R.rar = {day: R.lastSim, counts, v: RAR_V}; lbPts = pts; passRunning = false; saveRanked();
+    const ch = churnRarity(); Object.keys(counts).forEach(id => { counts[id] += ch[id] || 0; });
+    R.rar = {day: R.lastSim, counts, v: RAR_V, n: ROSTER_N + CHURN_N}; lbPts = pts; passRunning = false; saveRanked();
     const w = passWait; passWait = []; w.forEach(f => f());
   };
   idle(step);
