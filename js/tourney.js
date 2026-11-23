@@ -44,33 +44,61 @@ function tnSave(){
 function tnSeedOrder(n){ let o = [1]; while (o.length < n){ const m = o.length * 2 + 1; o = o.flatMap(s => [s, m - s]); } return o; }
 const TN_ORDER = tnSeedOrder(TN_N);
 /* ---- divisions ----
-   Each band runs many tournaments a week, each its own division of up to 32. Between 5% and 10% of a band's players
-   enter (it changes week to week), so the biggest band has well over a thousand divisions. Every division's field comes from the seed (week, band, division) and the
-   players' long-term base rating, so any division, this week's or a past one, always comes out the same.
-   When you sign up you're put in a random division and take one of its 32 places. */
-const TN_ENTER_LO = .05, TN_ENTER_HI = .10, tnPop = [], tnDivCache = new Map();
-// how many divisions a band has this week: 5% to 10% of the band signs up, different every week
-const TN_SIZE_MIN = 18;
-function tnDivCount(band, wk){
-  if (tnPop[band] == null){ const [lo, hi] = tnBandRange(band); let n = 0; for (let i = 0; i < ROSTER_N; i++){ const r = T_BASE[i]; if (r >= lo && r < hi) n++; } tnPop[band] = n; }
-  const rate = wk ? TN_ENTER_LO + mulberry32(fdHash('tnD:' + wk + ':' + band))() * (TN_ENTER_HI - TN_ENTER_LO) : (TN_ENTER_LO + TN_ENTER_HI) / 2;
-  return Math.max(1, Math.round(tnPop[band] * rate / 29));
+   Each band runs many tournaments a week, each a division of 18 to 32 players. Every week each player in a band
+   either signs up or doesn't (players who study most days are likelier to), so 5% to 10% of the band enters,
+   a different share each week. The players who signed up are put in a fixed shuffled order and dealt into
+   divisions in turn. Everything comes from the seed (week, band) and the players' long-term base rating, so a
+   division's players and a player's division always agree, for this week and every past week, and they match
+   what each player's profile shows. When you sign up you're put in a random division, in an open place or,
+   if it's full, in one player's place (they sit that week out). */
+const TN_ENTER_LO = .05, TN_ENTER_HI = .10, TN_SIZE_MIN = 18, tnBandM = [], tnWeekCache = new Map(), tnDivCache = new Map();
+const tnMix = (a, b) => { let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul((b + 0x632be5ab) | 0, 0xc2b2ae35); h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12; h = Math.imul(h, 0x297a2d39); h ^= h >>> 15; return h >>> 0; };
+// the band's players and how likely each is to sign up in a week (relative to the band's average)
+function tnBandMembers(band){
+  if (tnBandM[band]) return tnBandM[band];
+  const [lo, hi] = tnBandRange(band), ids = [];
+  for (let i = 0; i < ROSTER_N; i++){ const r = T_BASE[i]; if (r >= lo && r < hi) ids.push(i); }
+  const m = Int32Array.from(ids), wt = new Float32Array(m.length); let sum = 0;
+  for (let k = 0; k < m.length; k++){ wt[k] = Math.pow(activityI(m[k], T_BASE[m[k]]), 3); sum += wt[k]; }
+  const mean = sum / (m.length || 1); for (let k = 0; k < m.length; k++) wt[k] /= mean;
+  return tnBandM[band] = {m, wt};
 }
+const tnBandOfBot = w => { const r = T_BASE[w]; return TN_BANDS.findIndex((_, b) => { const [lo, hi] = tnBandRange(b); return r >= lo && r < hi; }); };
 // divisions aren't always full: anywhere from 18 to 32 players, most of them close to full. Missing places are byes.
 const tnDivSize = (wk, band, div) => TN_N - Math.floor(Math.pow(mulberry32(fdHash('tnS:' + wk + ':' + band + ':' + div))(), 2.2) * (TN_N - TN_SIZE_MIN + 1));
+// everyone in the band who signed up this week, in the order they're dealt into divisions
+function tnWeekDivs(wk, band){
+  const key = wk + ':' + band; if (tnWeekCache.has(key)) return tnWeekCache.get(key);
+  const {m, wt} = tnBandMembers(band), wn = dayIdx(wk), rate = TN_ENTER_LO + mulberry32(fdHash('tnD:' + key))() * (TN_ENTER_HI - TN_ENTER_LO);
+  const keys = [];
+  for (let k = 0; k < m.length; k++){ const w = m[k]; if (tnMix(wn, w) / 4294967296 < Math.min(.95, rate * wt[k])) keys.push(tnMix(wn * 3 + 1, w) * 1048576 + w); }
+  const ks = Float64Array.from(keys).sort(), order = new Int32Array(ks.length);
+  for (let k = 0; k < ks.length; k++) order[k] = ks[k] % 1048576;
+  // deal them out; a last few too few to fill a division of 18 signed up too late and don't play
+  const starts = [0]; let at = 0;
+  for (let d = 1; ; d++){ const sz = tnDivSize(wk, band, d); if (order.length - at < TN_SIZE_MIN) break; at = Math.min(order.length, at + sz); starts.push(at); }
+  const out = {order, starts, D: Math.max(1, starts.length - 1)};
+  if (tnWeekCache.size > 40) tnWeekCache.clear();
+  tnWeekCache.set(key, out); return out;
+}
+const tnDivCount = (band, wk) => tnWeekDivs(wk || tnWeekOf(Date.now()), band).D;
+const tnJoined = (w, wk) => wk >= botJoinKey(w);
 function tnDivEntry(wk, band, div){
   const key = wk + ':' + band + ':' + div; if (tnDivCache.has(key)) return tnDivCache.get(key);
-  const [lo, hi] = tnBandRange(band), rnd = mulberry32(fdHash('tnd:' + key)), out = new Set(), size = tnDivSize(wk, band, div);
-  // players who study most days are the ones who sign up for a week-long event
-  for (let t = 0; t < 400000 && out.size < size; t++){
-    const w = Math.floor(rnd() * ROSTER_N), r = T_BASE[w];
-    if (r < lo || r >= hi || out.has(w) || wk < botJoinKey(w)) continue;
-    if (rnd() > Math.pow(activityI(w, r), 6)) continue;
-    out.add(w);
-  }
-  const e = {wk, band, div, past: 1, f: [...out].map(w => [w, T_BASE[w]]), my: []};
+  const W = tnWeekDivs(wk, band), a = W.starts[div - 1] ?? 0, z = W.starts[div] ?? a, f = [];
+  for (let k = a; k < z; k++){ const w = W.order[k]; if (tnJoined(w, wk)) f.push([w, T_BASE[w]]); }
+  const e = {wk, band, div, past: 1, f, my: []};
   if (tnDivCache.size > 60) tnDivCache.clear();
   tnDivCache.set(key, e); return e;
+}
+// which division player w played in that week (null if they didn't play), as the bracket you'd see for it
+function tnBotWeek(w, wk){
+  const band = tnBandOfBot(w); if (band < 0 || !tnJoined(w, wk)) return null;
+  const W = tnWeekDivs(wk, band), k = W.order.indexOf(w); if (k < 0 || k >= W.starts[W.starts.length - 1]) return null;
+  let lo = 0, hi = W.starts.length - 1; while (hi - lo > 1){ const mid = (lo + hi) >> 1; if (W.starts[mid] <= k) lo = mid; else hi = mid; }
+  const div = lo + 1, own = tnEntry(wk);
+  if (own && own.band === band && own.div === div) return own.f.some(x => x[0] === w) ? own : null;     // your division: they're in it unless you took their place
+  return tnDivEntry(wk, band, div);
 }
 // the division shown for a week you didn't play
 const tnDefDiv = (wk, band) => 1 + fdHash('tndef:' + wk + ':' + band) % tnDivCount(band, wk);
@@ -285,6 +313,49 @@ function tnBracketHtml(e, B, now){
   const live = B.rounds.some(r => r.some(m => m.st === 'live'));
   return `<div class="card tn-bk"><div class="h first">Bracket</div><p class="hint tn-dayl">${live ? 'Today’s minutes are so far. ' : ''}Tap a name to see their profile.${B.me ? ' Your path is in color.' : ''}</p><div class="tn-tree" data-tn-tree>${cols}</div></div>`;
 }
+/* ---- tournaments on a player's profile ---- */
+const TN_PROF_WEEKS = 8;
+// how far player p got in a bracket
+function tnFinish(B, p){
+  const fin = B.rounds[4][0], th = B.third;
+  if (fin.st === 'done' && (fin.a === p || fin.b === p)) return {place: fin.win === p ? 1 : 2};
+  if (th && th.st === 'done' && (th.a === p || th.b === p)) return {place: th.win === p ? 3 : 4};
+  if (th && th.st === 'live' && (th.a === p || th.b === p)) return {live: 5};
+  for (let k = 0; k < 5; k++){
+    const m = B.rounds[k].find(x => x.a === p || x.b === p); if (!m) return {still: k};
+    if (m.st === 'done' && m.win !== p) return {out: k};
+    if (m.st === 'live') return {live: k};
+    if (m.st === 'future') return {still: k};
+  }
+  return {still: 4};
+}
+function tnFinishText(f){
+  if (f.place) return [['', 'Champion', 'Runner-up', '3rd place', '4th place'][f.place], 'p' + f.place];
+  if (f.out != null) return [`Out in the ${TN_ROUNDS[f.out]}`, 'out'];
+  if (f.live != null) return [f.live === 5 ? 'Playing for 3rd today' : `Playing the ${TN_ROUNDS[f.live]} today`, 'live'];
+  return [f.still === 0 ? 'Starts Monday' : `Through to the ${TN_ROUNDS[f.still]}`, 'live'];
+}
+function tnProfileHtml(w){
+  if (typeof RK_READY === 'undefined' || !RK_READY) return '<p class="hint">Loading…</p>';
+  const now = Date.now(), rows = [];
+  let m = tnMonday(now), titles = 0, played = 0;
+  for (let k = 0; k < TN_PROF_WEEKS; k++, m = tnPlus(m, -7)){
+    const wk = dayKey(m), e = w === ME ? tnEntry(wk) : tnBotWeek(w, wk); if (!e) continue;
+    const B = tnBracket(e, now), p = B.ps.find(x => x.w === w); if (!p) continue;
+    const f = tnFinish(B, p), [txt, cls] = tnFinishText(f); played++; if (f.place === 1) titles++;
+    rows.push(`<li><button class="tn-prw" data-tn-open="1" data-wk="${wk}" data-band="${e.band}" data-div="${e.div || 0}"><span class="tn-pd"><b>${tnRange(wk)}</b><small>${e.div ? tnDivName(e.div) + ' · ' : ''}${TN_BANDS[e.band][2]} · seed ${p.seed} of ${B.ps.length}</small></span><span class="tn-pill ${cls}">${txt}</span></button></li>`);
+  }
+  const who = w === ME ? 'You' : esc(bot(w).name);
+  if (!rows.length) return `<p class="hint">${who} ${w === ME ? 'haven’t' : 'hasn’t'} played a Weekly Tournament in the last ${TN_PROF_WEEKS} weeks.</p>`;
+  return `<p class="hint tn-prs">${who} played ${played} of the last ${TN_PROF_WEEKS} weekly tournaments${titles ? ` and won ${titles === 1 ? 'one' : titles}` : ''}. Tap one to see its bracket.</p><ul class="tn-prl">${rows.join('')}</ul>`;
+}
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-tn-open]'); if (!b) return;
+  const wk = b.dataset.wk, own = tnEntry(wk);
+  TN.pending = own && own.div === +b.dataset.div && wk === tnWeekOf(Date.now()) ? null : {wk, band: +b.dataset.band, div: +b.dataset.div || 0};
+  showPage('tourney');
+});
+
 /* ---- the calendar: one row per week, Monday to Friday are that week's rounds ---- */
 const TN_CAL_BACK = 12;     // months you can go back
 function tnWeekEntry(wk, band){ const own = tnEntry(wk); return own || tnDivEntry(wk, band, tnDefDiv(wk, band)); }
@@ -432,7 +503,7 @@ document.addEventListener('submit', ev => {
   const own = tnEntry(f.dataset.wk);
   TN.wkView = own && own.div === n && own.band === band && f.dataset.wk === tnWeekOf(Date.now()) ? null : {wk: f.dataset.wk, band, div: n}; TN.tab = null; tnRender(); window.scrollTo(0, 0);
 });
-{ const _s = onPageShown; onPageShown = function(name){ const x = _s.apply(this, arguments); if (name === 'tourney'){ TN.wkView = null; TN.cal = null; tnTick(); tnRender(); } return x; }; }
+{ const _s = onPageShown; onPageShown = function(name){ const x = _s.apply(this, arguments); if (name === 'tourney'){ TN.wkView = TN.pending || null; TN.pending = null; TN.tab = null; TN.cal = null; tnTick(); tnRender(); } return x; }; }
 let tnLastDay = null;
 setInterval(() => {
   const d = dayKey(Date.now());
