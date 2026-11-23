@@ -107,41 +107,75 @@ document.addEventListener('click', e => {
   f.classList.toggle('flipped', on); on ? chFlipped.add(w) : chFlipped.delete(w);
 }, true);
 
-/* ---------------- the character picker (in Edit profile) ---------------- */
-let chDraft = null;                  // the look being edited, until you press Save
+/* ---------------- the character creator (a full screen, opened from Edit profile) ---------------- */
+let chDraft = null;                  // the look being edited in Edit profile (kept so older saves still work)
 function chStartEdit(){ chDraft = chMyLook(); }
-const chSw = (key, list, cur) => list.map((c, k) => `<button type="button" data-ch="${key}" data-v="${k}" role="radio" aria-checked="${cur === k}" aria-label="${key} ${k + 1}" style="background:${c}"></button>`).join('');
-const chOpt = (key, list, cur) => list.map(([v, l]) => `<button type="button" class="chip" data-ch="${key}" data-v="${v}" role="radio" aria-checked="${String(cur) === String(v)}">${l}</button>`).join('');
-function chPickerHtml(){
-  if (!chDraft) chStartEdit();
-  const d = chClean(chDraft), row = (t, inner, cls) => `<div class="ch-row"><span>${t}</span><div class="${cls || 'ch-opts'}" role="radiogroup" aria-label="${t}">${inner}</div></div>`;
-  return `<div class="ch-ed"><div class="ch-prev"><span class="av pic xl" id="chPrev">${chBust(d)}</span>
-      <div class="ch-btns"><button type="button" class="small-btn" data-ch-act="random">Randomize</button><button type="button" class="small-btn" data-ch-act="reset">Reset</button></div></div>
-    <div class="ch-rows">
-      ${row('Skin', chSw('sk', CH_SKIN, d.sk), 'ch-sw')}${row('Hair color', chSw('hc', CH_HAIR, d.hc), 'ch-sw')}${row('Hair style', chOpt('hs', CH_HAIRSTYLES, d.hs))}
-      ${row('Outfit', chOpt('ot', CH_OUTFITS, d.ot))}${row('Outfit color', chSw('oc', CH_OUTFIT_C, d.oc), 'ch-sw')}${row('Glasses', chOpt('gl', CH_GLASSES, d.gl))}
-      ${row('Extras', [['hp', 'Headphones'], ['ht', 'Beanie'], ['bl', 'Blush']].map(([k, l]) => `<button type="button" class="chip" data-ch-tg="${k}" aria-pressed="${!!d[k]}">${l}</button>`).join(''))}
-      ${row('Eyes', chOpt('ey', CH_EYES, d.ey))}${row('Mouth', chOpt('mo', CH_MOUTHS, d.mo))}${row('Background', chSw('bg', CH_BG, d.bg), 'ch-sw')}${row('Background style', chOpt('bp', CH_BGPAT, d.bp))}
-    </div></div>`;
+let ccLook = null, ccTab = 0;
+const CC_TABS = [
+  ['Body', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6'],
+  ['Hair', 'M5 13c0-5 3-9 7-9s7 4 7 9c-2-1-4-3-5-5-1 2-4 4-9 5z'],
+  ['Face', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 10h.01M15 10h.01M8.5 14.5c1 1.5 2.2 2 3.5 2s2.500-.5 3.500-2'],
+  ['Clothes', 'M8 4l-5 3 2 4 3-1v10h8V10l3 1 2-4-5-3c-.5 1.500-2 2.500-4 2.500S8.500 5.500 8 4z'],
+  ['Extras', 'M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v5H4zM17 14h3v5h-3z'],
+  ['Backdrop', 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6']
+];
+// a small picture of the character with one thing changed (a crop of the head, or the whole figure)
+const chThumb = (look, over, crop) => chBust(Object.assign({}, look, over)).replace('viewBox="0 0 120 120"', `viewBox="${crop === 'head' ? '24 6 72 72' : '0 0 120 120'}"`);
+function ccSwatches(key, list, d){ return `<div class="cc-sw">${list.map((c, k) => `<button type="button" class="cc-dot" data-cc="${key}" data-v="${k}" aria-pressed="${d[key] === k}" aria-label="${key} ${k + 1}" style="background:${c}"></button>`).join('')}</div>`; }
+function ccTiles(key, list, d, crop, num){ return `<div class="cc-grid">${list.map(([v, l]) => `<button type="button" class="cc-tile" data-cc="${key}" data-v="${v}" aria-pressed="${String(d[key]) === String(v)}"><span class="cc-th">${chThumb(d, {[key]: num ? +v : v}, crop)}</span><span>${l}</span></button>`).join('')}</div>`; }
+function ccToggles(items, d){ return `<div class="cc-grid">${items.map(([k, l]) => `<button type="button" class="cc-tile" data-cc-tg="${k}" aria-pressed="${!!d[k]}"><span class="cc-th">${chThumb(d, {[k]: d[k] ? 0 : 1}, 'head')}</span><span>${d[k] ? 'Remove ' : ''}${l}</span></button>`).join('')}</div>`; }
+const ccH = t => `<h4 class="cc-h">${t}</h4>`;
+function ccPanel(){
+  const d = ccLook;
+  return [
+    ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
+    ccH('Style') + ccTiles('hs', CH_HAIRSTYLES, d, 'head') + ccH('Hair color') + ccSwatches('hc', CH_HAIR, d),
+    ccH('Eyes') + ccTiles('ey', CH_EYES, d, 'head', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'head', true) + ccH('Cheeks') + ccToggles([['bl', 'Blush']], d),
+    ccH('Outfit') + ccTiles('ot', CH_OUTFITS, d, 'full') + ccH('Outfit color') + ccSwatches('oc', CH_OUTFIT_C, d),
+    ccH('Glasses') + ccTiles('gl', CH_GLASSES, d, 'head', true) + ccH('Accessories') + ccToggles([['hp', 'Headphones'], ['ht', 'Beanie']], d),
+    ccH('Color') + ccSwatches('bg', CH_BG, d) + ccH('Pattern') + ccTiles('bp', CH_BGPAT, d, 'full', true)
+  ][ccTab];
 }
+function ccDraw(full){
+  const el = document.getElementById('cc'); if (!el) return;
+  el.querySelector('#ccStage').innerHTML = chBust(ccLook);
+  if (full){
+    el.querySelector('#ccTabs').innerHTML = CC_TABS.map((t, k) => `<button type="button" role="tab" class="cc-tab" data-cc-tab="${k}" aria-selected="${k === ccTab}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${t[1]}"/></svg><span>${t[0]}</span></button>`).join('');
+  }
+  const body = el.querySelector('#ccBody'), top = body.scrollTop;
+  body.innerHTML = ccPanel(); if (!full) body.scrollTop = top;
+}
+function ccOpen(){
+  if (document.getElementById('cc')) return;
+  ccLook = chMyLook(); ccTab = 0;
+  document.body.insertAdjacentHTML('beforeend', `<div id="cc" class="cc" role="dialog" aria-modal="true" aria-label="Character creator">
+    <div class="cc-bar"><button type="button" class="small-btn" data-cc-act="cancel">Cancel</button><b>Your character</b><button type="button" class="btn primary" data-cc-act="save">Done</button></div>
+    <div class="cc-main"><div class="cc-left"><div class="cc-stage" id="ccStage"></div><div class="cc-btns"><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
+    <div class="cc-right"><div class="cc-tabs" id="ccTabs" role="tablist"></div><div class="cc-body" id="ccBody"></div></div></div></div>`);
+  document.body.classList.add('cc-lock'); ccDraw(true);
+  const first = document.querySelector('#cc [data-cc-act="save"]'); if (first) first.focus();
+}
+function ccClose(){ const el = document.getElementById('cc'); if (el) el.remove(); document.body.classList.remove('cc-lock'); }
+function ccSave(){
+  P.myLook = chClean(ccLook); chDraft = null; try { saveP(); } catch (e) {}
+  const svg = chBust(chMyLook());
+  document.querySelectorAll('#ccMini').forEach(x => x.innerHTML = svg);
+  document.querySelectorAll('[data-flip="' + ME + '"] .af-b .av').forEach(x => x.innerHTML = svg);
+  ccClose();
+}
+function ccMiniHtml(){ return `<div class="cc-mini"><span class="av pic xl" id="ccMini">${chBust(chMyLook())}</span><div><button type="button" class="btn" data-cc-act="open">Customize character</button><small class="hint">Hair, face, clothes and more. Tap your profile picture to flip to your character.</small></div></div>`; }
 document.addEventListener('click', e => {
-  const act = e.target.closest('[data-ch-act]'), b = e.target.closest('[data-ch]'), tg = e.target.closest('[data-ch-tg]');
-  if (!act && !b && !tg) return;
-  const ed = e.target.closest('.ch-ed'); if (!ed || !chDraft) return;
-  e.preventDefault();
-  if (act){
-    if (act.dataset.chAct === 'reset') chDraft = chClean(CH_DEFAULT);
-    else chDraft = chClean(chLookOf(Math.floor(Math.random() * 1e9)));
-    ed.outerHTML = chPickerHtml(); return;
+  const a = e.target.closest('[data-cc-act]');
+  if (a){
+    const k = a.dataset.ccAct; e.preventDefault();
+    if (k === 'open') ccOpen(); else if (k === 'cancel') ccClose(); else if (k === 'save') ccSave();
+    else if (ccLook){ ccLook = k === 'reset' ? chClean(CH_DEFAULT) : chClean(chLookOf(Math.floor(Math.random() * 1e9))); ccDraw(false); }
+    return;
   }
-  if (tg){
-    const k = tg.dataset.chTg; chDraft[k] = chDraft[k] ? 0 : 1; chDraft = chClean(chDraft);
-    ed.querySelector('#chPrev').innerHTML = chBust(chDraft); tg.setAttribute('aria-pressed', String(!!chDraft[k])); return;
-  }
-  const k = b.dataset.ch, v = b.dataset.v;
-  chDraft[k] = ['hs', 'ot'].includes(k) ? v : +v;
-  chDraft = chClean(chDraft);
-  ed.querySelector('#chPrev').innerHTML = chBust(chDraft);
-  b.parentNode.querySelectorAll('[data-ch="' + k + '"]').forEach(x => x.setAttribute('aria-checked', String(x.dataset.v) === String(chDraft[k])));
+  if (!ccLook || !e.target.closest('#cc')) return;
+  const t = e.target.closest('[data-cc-tab]'), o = e.target.closest('[data-cc]'), g = e.target.closest('[data-cc-tg]');
+  if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); }
+  else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); }
+  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot'].includes(k) ? o.dataset.v : +o.dataset.v; ccLook = chClean(ccLook); ccDraw(false); }
 }, true);
-
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('cc')) ccClose(); });

@@ -1604,7 +1604,7 @@ function weekStrip(w, weeks){
 function editForm(){
   return `<div class="pf-edit"><label>Display name<input id="pfName" maxlength="20" placeholder="You" value="${esc(P.myName || '')}"></label>
     <div class="pf-hues" role="radiogroup" aria-label="Avatar color">${PROFILE_HUES.map(hh => `<button data-hue="${hh == null ? '' : hh}" role="radio" aria-checked="${(P.myHue ?? null) === hh}" title="${hh == null ? 'Accent color' : ''}" style="${hh == null ? 'background:var(--accent)' : `background:hsl(${hh} 52% 44%)`}"></button>`).join('')}</div>
-    <div class="pf-char"><b>Your character</b><small class="hint">Tap your profile picture to flip it to your character.</small>${chPickerHtml()}</div>
+    <div class="pf-char"><b>Your character</b>${ccMiniHtml()}</div>
     <label>Bio<textarea id="pfBio" maxlength="150" rows="2" placeholder="what you're studying, your goals, anything">${esc(P.myBio || '')}</textarea></label>
     <div class="pf-edit-btns"><button class="small-btn accent" data-pf="save">Save</button><button class="small-btn" data-pf="cancel">Cancel</button></div></div>`;
 }
