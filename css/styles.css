@@ -2735,7 +2735,7 @@ html.st-open{overflow:hidden}
   .tn-pw{grid-template-columns:minmax(0,1fr) auto}.tn-pw .tn-pc{grid-column:1/-1;grid-row:2}
   .tn-pod{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-.tn-dp{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.tn-dp{display:grid;gap:8px}.tn-dpt{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.tn-bands{display:flex;gap:6px;flex-wrap:wrap}
 .tn-dp .hint{margin-top:4px}
 .tn-dpf{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .tn-dpf label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
