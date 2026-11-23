@@ -59,18 +59,29 @@ function elBotPlan(L, w){
   if (L.bp && L.bp[w]) return L.bp[w];
   const rnd = mulberry32(fdHash(L.id + ':' + w)), RL = L.rules.round * 60000, A = elAllow(L.rules).map(m => m * 60000);
   const B = BOTS[w], typ = typical(botRating(w)) * (B.sitMul || 1), g = gaussOf(rnd);
-  const S = clampN(typ * .9 * Math.exp(.28 * g), 25, 720) * 60000;          // how long they can keep going today: the same stamina as in a 1v1 (the last one standing is just the best of the lobby)
-  const style = ['early', 'saver', 'edge', 'calm'][Math.floor(rnd() * 4)];
+  // each bot plays the way its profile says: Steady is even, Sprinter takes many short breaks, Grinder barely breaks and lasts,
+  // Wildcard is all over the place, Night Owl / Early Bird are strong at their own hours of the day and weak at the others
+  const hr = new Date(L.t0).getHours(), morning = hr >= 5 && hr < 12, late = hr >= 22 || hr < 5;
+  const fit = B.style === 'Night Owl' ? (late ? 1 : morning ? -1 : 0) : B.style === 'Early Bird' ? (morning ? 1 : late ? -1 : 0) : 0;
+  const PS = {
+    'Steady':    {stam: 1,    sd: .28, go: .75, use: () => .3 + rnd() * .4,                      over: .03, two: .5},
+    'Sprinter':  {stam: .85,  sd: .28, go: .95, use: () => .2 + rnd() * .3,                      over: .03, two: .85},
+    'Grinder':   {stam: 1.25, sd: .25, go: .55, use: () => .1 + rnd() * .25,                     over: .02, two: .15},
+    'Wildcard':  {stam: 1,    sd: .5,  go: .8,  use: () => rnd() < .5 ? .05 + rnd() * .3 : .7 + rnd() * .29, over: .12, two: .5},
+    'Night Owl': {stam: fit > 0 ? 1.2 : fit < 0 ? .8 : 1, sd: .28, go: fit > 0 ? .55 : fit < 0 ? .95 : .75, use: () => fit > 0 ? .1 + rnd() * .3 : fit < 0 ? .6 + rnd() * .35 : .3 + rnd() * .4, over: fit < 0 ? .06 : .03, two: .5},
+    'Early Bird':{stam: fit > 0 ? 1.2 : fit < 0 ? .8 : 1, sd: .28, go: fit > 0 ? .55 : fit < 0 ? .95 : .75, use: () => fit > 0 ? .1 + rnd() * .3 : fit < 0 ? .6 + rnd() * .35 : .3 + rnd() * .4, over: fit < 0 ? .06 : .03, two: .5}
+  }, P = PS[B.style] || PS.Steady;
+  const S = clampN(typ * .9 * P.stam * Math.exp(P.sd * g), 25, 720) * 60000;          // how long they can keep going today: the same stamina as in a 1v1 (the last one standing is just the best of the lobby)
   const br = []; let out = L.t0 + S, why = 'stopped';
   for (let r = 0; r < 400; r++){
     const rs = L.t0 + r * RL; if (rs >= out) break;
     const a = A[Math.min(r, A.length - 1)];
-    if (a <= 0){ if (rnd() < (style === 'edge' ? .05 : .015)){ const t = Math.round(rs + rnd() * RL); if (t < out){ br.push([t, t + 20000]); out = t + 2000; why = 'break'; } break; } continue; }
-    if (rnd() > {early: .95, saver: .55, edge: .9, calm: .75}[style]) continue;
-    const use = {early: r < 2 ? .75 + rnd() * .25 : .4 + rnd() * .4, saver: .15 + rnd() * .35, edge: .85 + rnd() * .14, calm: .3 + rnd() * .4}[style];
-    const over = rnd() < (style === 'edge' ? .12 : .03) * (a <= 150000 ? 2 : 1);
+    if (a <= 0){ if (rnd() < (B.style === 'Wildcard' ? .05 : .015)){ const t = Math.round(rs + rnd() * RL); if (t < out){ br.push([t, t + 20000]); out = t + 2000; why = 'break'; } break; } continue; }
+    if (rnd() > P.go) continue;
+    const use = P.use();
+    const over = rnd() < P.over * (a <= 150000 ? 2 : 1);
     const tot = over ? a + (5 + rnd() * 80) * 1000 : Math.max(20000, Math.min(a * use, a - 4000));
-    const two = tot > 4 * 60000 && rnd() < .5, l1 = two ? tot * (.3 + rnd() * .4) : tot, l2 = tot - l1;
+    const two = tot > 4 * 60000 && rnd() < P.two, l1 = two ? tot * (.3 + rnd() * .4) : tot, l2 = tot - l1;
     const s1 = Math.round(rs + 60000 + rnd() * Math.max(0, (two ? RL / 2 : RL) - l1 - 120000));
     const parts = two ? [[s1, s1 + l1], [Math.round(rs + RL / 2 + rnd() * Math.max(0, RL / 2 - l2 - 60000)), 0]] : [[s1, s1 + l1]];
     if (two) parts[1][1] = parts[1][0] + l2;
