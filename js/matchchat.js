@@ -41,7 +41,7 @@ function mcRender(){
 function mcPrompt(c, task){
   const B = BOTS[c.b], f = chatFacts(c.b), me = myName(), s = stakes(c.br), r = R.rec[c.b];
   const youMin = Math.round(c.you / 60000), themMin = Math.round((c.tapped ? c.target : c.them) / 60000);
-  const state = c.state === 'done' ? `The match just ended: ${me} ${({W: 'won', L: 'lost', D: 'drew'})[c.res]}.`
+  const state = c.state === 'done' ? `The match just ended: ${me} ${({W: 'won', L: 'lost'})[c.res]}.`
     : !c.you ? `${me} hasn't started studying yet.` : focusing() ? `${me} is focusing right now.` : S.running ? `${me} is on a break.` : `${me} has paused their timer.`;
   const sys = `You write in-match chat messages from ${B.name} to ${me}. They're playing a live match on Focus Bench, a study-timer app for college students: both study at the same time and whoever studies longer wins.
 Write like quick game chat: short, casual, lowercase is fine, friendly trash talk is fine. Keep ${B.name}'s personality. Don't lecture about studying.

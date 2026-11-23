@@ -41,7 +41,7 @@ const dmLinger = w => (8 + ((w * 7919) % 18)) * 60000;
 const dmOnline = w => { try { if (chatWhoOnline().includes(w)) return true; } catch(e){} if (typeof gcAround === 'function' && gcAround(w)) return true; const t = dmLastAct(w); return !!t && Date.now() - t < dmLinger(w); };      // the same 'online' everywhere: DMs, groups, member lists
 const dmStudying = w => { try { return botLiveNow(w); } catch(e){ return false; } };
 const isRival = w => { const r = R.rec[w]; return w === nemesis() || !!(r && r[0] + r[1] + r[2] >= 3); };
-const recStr = w => { const r = R.rec[w]; return r ? `${r[0]}–${r[1]}${r[2] ? '–' + r[2] : ''}` : 'never played'; };
+const recStr = w => { const r = R.rec[w]; return r ? `${r[0]}–${r[1]}` : 'never played'; };
 const lastVs = w => R.hist.find(h => h.b === w);
 // a player can start something only when their last message has been answered and nothing of theirs is waiting
 function dmCanStart(w){
@@ -65,8 +65,8 @@ ${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
   const user = `${B.name}: ${f.rank} (${f.r} Elo), ${f.style}, studies in the ${f.peak.toLowerCase()}, ${f.subj}, emojis: ${emojiStyle(w)}${B.bio ? `. Bio: "${B.bio}"` : ''}.
 ${me}: ${rk.full} (${R.mmr} Elo).
 ${R.cur && R.cur.b === w && R.cur.state === 'live' ? `They are in a live ${R.cur.friendly ? 'friendly' : 'ranked'} match with each other right now (any challenge between them was already accepted).` : ''}
-Their head-to-head record (${me}'s wins–losses${R.rec[w] && R.rec[w][2] ? '–draws' : ''}): ${recStr(w)}${isRival(w) ? ', they are rivals' : ''}.
-${h ? `Their last match: ${winLabel(h.t).toLowerCase()}, ${h.f ? 'friendly' : 'ranked'}, ${me} ${({W: 'won', L: 'lost', D: 'drew'})[h.r]}, ${matchTimes(h).replace(/<[^>]+>/g, '')}${h.f ? '' : `, ${h.d > 0 ? '+' : ''}${h.d} Elo for ${me}`}${Date.now() - h.t < 3600e3 ? ` (it ended ${Math.max(1, Math.round((Date.now() - h.t) / 60000))} min ago)` : ''}.` : 'They have no matches together.'}
+Their head-to-head record (${me}'s wins–losses): ${recStr(w)}${isRival(w) ? ', they are rivals' : ''}.
+${h ? `Their last match: ${winLabel(h.t).toLowerCase()}, ${h.f ? 'friendly' : 'ranked'}, ${me} ${({W: 'won', L: 'lost'})[h.r]}, ${matchTimes(h).replace(/<[^>]+>/g, '')}${h.f ? '' : `, ${h.d > 0 ? '+' : ''}${h.d} Elo for ${me}`}${Date.now() - h.t < 3600e3 ? ` (it ended ${Math.max(1, Math.round((Date.now() - h.t) / 60000))} min ago)` : ''}.` : 'They have no matches together.'}
 It's ${new Date().toLocaleDateString(undefined, {weekday: 'long'})} ${new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
 
 Conversation so far, oldest first (numbered). All of this was ALREADY sent, so none of it can be sent again:
@@ -226,7 +226,7 @@ function dmAfterMatch(c){
   const B = bot(w), theyLost = c.res === 'W', rematch = isRival(w) && theyLost && R.on && Math.random() < .35;
   const mode = rematch && botRating(w) - R.mmr > 150 ? 'f' : 'r';
   const task = rematch ? `${B.name} just lost a ${c.friendly ? 'friendly' : 'ranked'} match to ${myName()} and is sending a ${mode === 'f' ? 'friendly' : 'ranked'} rematch challenge. Write 1 short text to go with it.`
-    : `${B.name} and ${myName()} just finished a ${c.friendly ? 'friendly' : 'ranked'} match: ${B.name} ${({W: 'lost', L: 'won', D: 'drew'})[c.res]}${close ? ', it was close' : blowout ? ', it was one-sided' : ''}${upset ? ', an upset' : ''}. Write 1 or 2 short texts ${B.name} sends about it (gg, salty, impressed, joking, whatever fits them).`;
+    : `${B.name} and ${myName()} just finished a ${c.friendly ? 'friendly' : 'ranked'} match: ${B.name} ${({W: 'lost', L: 'won'})[c.res]}${close ? ', it was close' : blowout ? ', it was one-sided' : ''}${upset ? ', an upset' : ''}. Write 1 or 2 short texts ${B.name} sends about it (gg, salty, impressed, joking, whatever fits them).`;
   setTimeout(async () => {
     if (!dmCanStart(w)) return;
     dmGenBusy[w] = 1; const texts = await dmWrite(w, task); dmGenBusy[w] = 0;
