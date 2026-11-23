@@ -321,10 +321,17 @@ const FD_CAPS = {scene: ['current situation', 'locked in (allegedly)', 'office f
   session: ['done for now', 'that one hurt', 'productive day fr', 'small win'], match: ['gg', 'we take those', 'rematch?', 'good game'], rank: ['new rank unlocked', 'climbing', 'finally']};
 function fdFallbackCap(p){ const a = FD_CAPS[p.type] || FD_CAPS.scene; return p.type === 'match' && p.d.ys < p.d.ts ? 'unlucky. next one' : a[fdHash(p.id) % a.length]; }
 async function fdWriteVisible(list){
-  if (FDV.busy) return; const need = list.filter(p => !p.gen && p.w !== -1).slice(0, 6); if (!need.length) return;
-  FDV.busy = true;
-  try { const ok = await fdWrite(need); if (!ok) need.forEach(p => { if (!GEM.key){ p.cap = p.cap || fdFallbackCap(p); p.gen = 1; } }); saveFeed(); } finally { FDV.busy = false; }
-  renderFeed();
+  // when Gemini is busy (a 503, a cooldown), don't try again right away: failing instantly and then redrawing the Feed
+  // used to call this again at once, forever, which froze the page
+  if (FDV.busy || Date.now() < (FDV.wRetry || 0)) return; const need = list.filter(p => !p.gen && p.w !== -1).slice(0, 6); if (!need.length) return;
+  FDV.busy = true; let changed = false;
+  try {
+    const ok = await fdWrite(need);
+    if (!ok){ need.forEach(p => { if (!GEM.key){ p.cap = p.cap || fdFallbackCap(p); p.gen = 1; changed = true; } }); FDV.wRetry = Date.now() + Math.max(60000, (GEM.wait || 0) - Date.now()); }
+    else changed = true;
+    saveFeed();
+  } finally { FDV.busy = false; }
+  if (changed) renderFeed();
 }
 
 /* ---- cards for real moments ---- */
