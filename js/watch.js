@@ -58,7 +58,7 @@ function wPrompt(task){
   const cast = inRoom.map(i => { const f = chatFacts(i); return `- ${f.name}: ${f.rank}, ${f.subj}, emojis: ${emojiStyle(i)}${i === W.a || i === W.c ? ' (one of the two players; they just stopped and are watching now)' : ''}`; });
   const lead = st.ta === st.tc ? 'tied' : `${st.ta > st.tc ? A.name : C.name} is ahead by ${Math.round(Math.abs(st.ta - st.tc))} min`;
   const res = st.over ? (`It's over: ${W.ma > W.mc ? A.name : C.name} won ${Math.max(W.ma, W.mc)}–${Math.min(W.ma, W.mc)} min (${W.ma > W.mc ? '+' + W.dlt : '+' + -W.dlt} Elo for the winner, the same off the loser).`) : '';
-  const sys = `You write chat messages from spectators watching a live ranked match on Focus Bench, a study-timer app for college students. In a match both players study at the same time and whoever studies longer wins Elo.
+  const sys = `You write chat messages from spectators watching a live ranked match on Focus Desk, a study-timer app for college students. In a match both players study at the same time and whoever studies longer wins Elo.
 The spectators are in a watch room together; some are studying along on their own break schedule. They react to the match like viewers of a stream: hype, predictions, rooting for someone, jokes, surprise when someone stops. They can also just chat with each other a bit.
 Write like quick live-stream chat: short, casual, lowercase is fine, slang is fine. Never formal. No "speaking of…" style bridges.
 ${EMO_RULE}

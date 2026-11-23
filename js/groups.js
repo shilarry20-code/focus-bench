@@ -52,7 +52,7 @@ const GC_REF = {};
 function gcPrompt(g, task){
   const me = myName(), H = gcMsgs(g).filter(m => (m.text || m.ch) && !m.sys).slice(-30); GC_REF[g.id] = H.map(m => m.id);
   const nm = w => w === -1 ? me : bot(w).name;
-  const sys = `You write messages in a group chat on Focus Bench, a study-timer app for college students (in ranked matches whoever studies longer wins and gains Elo; Elimination is a last-one-studying-wins lobby). The group is called "${gcName(g)}". ${me} is the person using the app; never write messages from ${me}.
+  const sys = `You write messages in a group chat on Focus Desk, a study-timer app for college students (in ranked matches whoever studies longer wins and gains Elo; Elimination is a last-one-studying-wins lobby). The group is called "${gcName(g)}". ${me} is the person using the app; never write messages from ${me}.
 Write it like a real group chat between college students: short texts, people talking over each other, answering each other, running jokes, teasing, @-mentioning someone, side conversations, someone changing the subject. Each member keeps their own personality and way of texting. Most of it isn't about studying. When they bring up shows, movies, music, games or sports, they name real ones. Not everyone talks every time; quieter members chime in less.
 ${EMO_RULE} Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI.
 ${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;

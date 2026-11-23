@@ -402,7 +402,7 @@ async function elChatAI(task, talk, G = EL.G, ac = null){
   if (!G) return; elChatBusy = true; elAiLast = Date.now();
   try {
     const S = elState(G, Date.now()), me = myName();
-    const sys = `You write lobby chat for an Elimination game on Focus Bench, a study-timer app for college students. Everyone in the lobby studies at the same time; each round allows a little break time, and going over it (or stopping) knocks you out. Last one studying wins.
+    const sys = `You write lobby chat for an Elimination game on Focus Desk, a study-timer app for college students. Everyone in the lobby studies at the same time; each round allows a little break time, and going over it (or stopping) knocks you out. Last one studying wins.
 People only chat while they're on a break. Write like quick game-lobby chat: short, casual, lowercase is fine, slang is fine, some trash talk and hype, nothing formal. Never start a message with the name of the person it answers.
 Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…"}]}.
 ${typeof EMO_RULE === 'string' ? EMO_RULE + '\n' : ''}${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;

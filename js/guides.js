@@ -203,7 +203,7 @@ function renderGuides(){
       <select id="gClass" aria-label="Class"><option value="all">All classes</option>${classes.map(c => `<option ${GF.cls === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}${GUIDES.some(g => !g.cls) ? `<option value="" ${GF.cls === '' ? 'selected' : ''}>No class</option>` : ''}</select>
       <span class="g-bar-sp"></span><button class="small-btn" data-ga="import">Import</button><button class="small-btn accent" data-ga="new">+ New guide</button></div>
     ${GUIDES.length ? (shown.length ? order.map(c => `<div class="g-group"><div class="h">${c ? esc(c) : 'No class'} <small class="pf-sub">${groups[c].length}</small></div><div class="g-grid">${groups[c].sort((a, b) => (a.exam || '9') .localeCompare(b.exam || '9') || b.updated - a.updated).map(card).join('')}</div></div>`).join('') : `<p class="hint">${archived.length ? 'No active guides match.' : 'No guides match.'}</p>`) + (archived.length ? `<details class="g-archived"${GF.archOpen ? ' open' : ''}><summary>Archived <small class="pf-sub">${archived.length}</small></summary><div class="g-grid">${archived.sort((a, b) => (b.archived || 0) - (a.archived || 0)).map(card).join('')}</div></details>` : '')
-      : `<div class="card g-empty"><b>No study guides yet</b><p>Write one here, or import guides as Markdown, text or JSON files. Ask Claude to “make a Focus Bench study guide” on any topic, then import the file it gives you.</p><div class="g-empty-btns"><button class="small-btn accent" data-ga="new">+ New guide</button><button class="small-btn" data-ga="import">Import</button><button class="small-btn" data-ga="sample">Add a sample guide</button></div></div>`}`;
+      : `<div class="card g-empty"><b>No study guides yet</b><p>Write one here, or import guides as Markdown, text or JSON files. Ask Claude to “make a Focus Desk study guide” on any topic, then import the file it gives you.</p><div class="g-empty-btns"><button class="small-btn accent" data-ga="new">+ New guide</button><button class="small-btn" data-ga="import">Import</button><button class="small-btn" data-ga="sample">Add a sample guide</button></div></div>`}`;
 }
 function renderGuideView(){
   requestAnimationFrame(fitGuideSide);
@@ -312,7 +312,7 @@ function studyGuide(g){
 }
 const SAMPLE_GUIDE = `---
 title: How study guides work
-class: Focus Bench
+class: Focus Desk
 tags: example
 ---
 Study guides are written in **Markdown**. Import them as files, or write them here.

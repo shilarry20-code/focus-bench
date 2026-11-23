@@ -54,7 +54,7 @@ Answer: Assets = Liabilities + Equity
 Why: It always balances.
 Review: Chapter 1`;
 
-const QZ_CLAUDE = `Make a practice quiz I can import into my Focus Bench study app. Use exactly this plain-text format, inside one code block (or as a .md file):
+const QZ_CLAUDE = `Make a practice quiz I can import into my Focus Desk study app. Use exactly this plain-text format, inside one code block (or as a .md file):
 
 ${QZ_FORMAT}
 

@@ -264,7 +264,7 @@ function fdCommenters(p, n){
   for (let k = 0; k < 40 && out.length < n; k++){ const u = Math.random(); add(u < .45 && on.length ? on[Math.floor(Math.random() * on.length)] : sb[clampN(at + Math.floor((Math.random() - .5) * 2000), 0, sb.length - 1)]); }
   return out;
 }
-const FD_SYS = me => `You write posts and comments for the Feed on Focus Bench, a study app for college students that works like Instagram: players post pictures of where they're studying, session receipts, match results and short thoughts, and others like and comment.
+const FD_SYS = me => `You write posts and comments for the Feed on Focus Desk, a study app for college students that works like Instagram: players post pictures of where they're studying, session receipts, match results and short thoughts, and others like and comment.
 Write like real college students on Instagram: short, casual, lowercase is common, slang is fine, inside jokes about classes, finals, coffee, sleep. Captions are usually a few words to one sentence. Comments are short reactions or questions about the post itself: commenters don't talk about their own classes, homework, exams or major (no "my class is worse" comparisons), they react to what the poster said or showed.
 You're told what each picture shows so you know what it looks like. That's background, not a checklist: most captions and comments don't mention anything in it. When one does bring up something you could see, it has to be in that description (never invent objects, decorations, pets or people), and it's one thing said in passing, never a list of what's there.
 ${EMO_RULE}
@@ -334,7 +334,7 @@ function fdCard(p){
   if (p.type === 'session'){
     const d = p.d, st = new Date(p.t - d.min * 60000), hh = Math.floor(d.min / 60), tot = `${Math.floor(d.tot / 60)}h ${d.tot % 60}m`;
     return svg(rc(0, 0, 300, 300, scH(hue + 180, 18, 30), 0) + rc(70, 30, 160, 230, '#f4f1ea', 4) + pa('M70 255 l10 10 l10 -10 l10 10 l10 -10 l10 10 l10 -10 l10 10 l10 -10 l10 10 l10 -10 l10 10 l10 -10 l10 10 l10 -10 l10 10 l10 -10 v-15 h-160z', '#f4f1ea')
-      + tx(150, 58, 'FOCUS BENCH', 10, '#5f5e5a', ' letter-spacing="2"') + ln(85, 68, 215, 68, '#b4b2a9', 1, ' stroke-dasharray="3 3"')
+      + tx(150, 58, 'FOCUS DESK', 10, '#5f5e5a', ' letter-spacing="2"') + ln(85, 68, 215, 68, '#b4b2a9', 1, ' stroke-dasharray="3 3"')
       + tx(150, 110, hh ? `${hh}h ${d.min % 60}m` : `${d.min} min`, 32, '#2c2c2a') + tx(150, 130, esc(String(d.subj).slice(0, 26)), 11, '#5f5e5a')
       + ln(85, 144, 215, 144, '#b4b2a9', 1, ' stroke-dasharray="3 3"')
       + `<g font-size="11" fill="#444" font-family="ui-sans-serif,system-ui"><text x="88" y="166">Mode</text><text x="212" y="166" text-anchor="end">${esc(MODE_NAMES[d.mode] || 'Focus')}</text><text x="88" y="186">Started</text><text x="212" y="186" text-anchor="end">${st.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}</text><text x="88" y="206">Today</text><text x="212" y="206" text-anchor="end">${tot}</text></g>`
