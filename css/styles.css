@@ -2803,3 +2803,7 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .tn-prw:hover{background:var(--soft)}
 .tn-prw .tn-pd{min-width:0}.tn-prw .tn-pill{flex:none}
 .tn-prs{margin-top:4px}
+/* tournament chips */
+.chip-chip .ch-ic,.ch-big svg{width:16px;height:16px;fill:#d24a43;stroke:none}
+.ch-big{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,#d24a43 14%,transparent)}.ch-big svg{width:28px;height:28px}
+.ch-pz li span{font-weight:600}
