@@ -119,8 +119,8 @@ function ewTick(){
     if (now >= E.nextL){ E.nextL = ewLobby(G, 'chat') ? now + 90000 + Math.random() * 120000 : now + 15000; }      // nobody on a break: check again soon
   }
   // deliver what's waiting, one at a time
-  if (E.vq.length && E.vq[0].t <= now){ const x = E.vq.shift(); E.v.push({t: now, w: x.w, text: x.text}); E.v = E.v.slice(-120); ch = true; }
-  if (G.q.length && G.q[0].t <= now && now - (G.lastMsg || 0) > 2200){ const x = G.q.shift(); G.chat.push({t: now, w: x.w, text: x.text}); G.lastMsg = now; ch = true; }
+  if (E.vq.length && E.vq[0].t <= now){ const x = E.vq.shift(); E.v.push({t: now, w: x.w, text: x.text}); E.v = E.v.slice(-120); ch = true; if (typeof acClaim === 'function') acClaim(x.w, x.text); }
+  if (G.q.length && G.q[0].t <= now && now - (G.lastMsg || 0) > 2200){ const x = G.q.shift(); G.chat.push({t: now, w: x.w, text: x.text}); G.lastMsg = now; ch = true; if (typeof acClaim === 'function') acClaim(x.w, x.text); }
   if (ch) elRenderGame(G);
 }
 setInterval(() => { try { ewTick(); } catch(e){ console.error(e); } }, 1000);

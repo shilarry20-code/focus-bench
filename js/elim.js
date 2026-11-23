@@ -384,7 +384,7 @@ function elQ(w, text, at, G = EL.G){ if (!G) return; const t = Math.max(at || Da
 function elChatPump(){
   const G = EL.G; if (!G || !G.q.length) return;
   const now = Date.now(); if (G.q[0].t > now || now - (G.lastMsg || 0) < 2200) return;
-  const x = G.q.shift(); G.chat.push({t: now, w: x.w, text: x.text}); G.lastMsg = now;
+  const x = G.q.shift(); G.chat.push({t: now, w: x.w, text: x.text}); G.lastMsg = now; if (typeof acClaim === 'function') acClaim(x.w, x.text);
   if (!$('#page-elim').hidden && EL.view === 'game') elRenderGame();
 }
 async function elChatAI(task, talk, G = EL.G, ac = null){

@@ -107,7 +107,7 @@ function mcTick(){
   // during a focus block you're both studying: anything they hadn't sent yet is dropped (and they don't start anything)
   if (foc && c.state === 'live' && c.cq.length){ c.cq = []; changed = true; }
   // one message at a time, a couple of seconds apart
-  if (c.cq.length && c.cq[0].t <= now && !foc && now - (c.lastMsg || 0) >= 2200){ const q = c.cq.shift(); c.chat.push({t: now, text: q.text}); c.lastMsg = now; changed = true;
+  if (c.cq.length && c.cq[0].t <= now && !foc && now - (c.lastMsg || 0) >= 2200){ const q = c.cq.shift(); c.chat.push({t: now, text: q.text}); c.lastMsg = now; changed = true; if (typeof acClaim === 'function') acClaim(c.b, q.text);
     if (c.cq.length && c.cq[0].t < now + 2200) c.cq[0].t = now + 2200 + Math.random() * 2500; }
   if (c.state === 'live'){
     if (mcPrevFoc && !foc && c.you > 0 && !c.mcBrk){ c.mcBrk = 1; changed = true; if (Math.random() < .35) mcSay('brk', (6 + Math.random() * 25) * 1000); }
