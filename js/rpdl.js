@@ -207,7 +207,7 @@ setInterval(elxKeep, 30000); setTimeout(elxKeep, 8000);
 
 /* ---- Elimination games on profiles (separate from ranked matches) ---- */
 function profileElim(w){
-  const row = (place, N, name, t, dur, key, d, lab) => `<li class="hr-${place === 1 ? 'W' : 'L'}"><span class="res">${place || '–'}</span><span class="rkg-n">${N}p</span><span class="who"><b>${place ? `${elOrd(place)} of ${N}` : `${N} players`}</b><small>${esc(name)} · lasted ${elClock(dur || 0)}</small></span><span class="tm"></span><span class="dl ${d > 0 ? 'pos' : d < 0 ? 'neg' : 'fr'}">${d ? `${d > 0 ? '+' : ''}${d}` : lab || 'Casual'}</span><span class="when">${winLabel(t)}<button class="rp-v" data-rp="${key}">Replay</button></span></li>`;
+  const row = (place, N, name, t, dur, key, d, lab) => `<li class="hr-${place === 1 ? 'W' : lab === 'Ranked' ? 'L' : 'D'}"><span class="res">${place || '–'}</span><span class="rkg-n">${N}p</span><span class="who"><b>${place ? `${elOrd(place)} of ${N}` : `${N} players`}</b><small>${esc(name)} · lasted ${elClock(dur || 0)}</small></span><span class="tm"></span><span class="dl ${d > 0 ? 'pos' : d < 0 ? 'neg' : 'fr'}">${d ? `${d > 0 ? '+' : ''}${d}` : lab || 'Casual'}</span><span class="when">${winLabel(t)}<button class="rp-v" data-rp="${key}">Replay</button></span></li>`;
   let rows;
   if (w === ME) rows = (EL.hist || []).slice(0, 5).map(h => row(h.place, h.N, h.name || 'Lobby', h.t, h.dur, 'el:' + h.id, h.rated ? h.delta || 0 : 0, h.rated ? 'Ranked' : 'Casual'));
   else {
