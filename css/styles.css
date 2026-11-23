@@ -2874,3 +2874,8 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .cc-stage{width:auto;height:min(calc(100dvh - 200px),560px);max-width:100%;aspect-ratio:4/5}
 .cc-stage svg{animation:none}
 @media (max-width:760px){.cc-stage{height:min(36dvh,300px);width:auto;border-radius:20px}}
+/* keep the creator stage inside its own column */
+.cc-left{min-width:0;min-height:0;overflow:hidden;box-sizing:border-box}
+.cc-stage{height:auto;width:min(100%,calc((100dvh - 200px) * .8),440px);max-width:100%;aspect-ratio:4/5}
+.cc-right{overflow:hidden}
+@media (max-width:760px){.cc-stage{width:min(100%,calc(36dvh * .8),240px);height:auto}}
