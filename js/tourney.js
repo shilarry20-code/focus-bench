@@ -220,6 +220,7 @@ function tnTick(){
     if (!e || !e.my) return;
     for (let k = 0; k < 5; k++){ const dk = tnDayKey(e.wk, k); if (dk < today && e.my[k] == null){ e.my[k] = tnLogMin(dk); changed = true; } }
   });
+  const paidNow = tnPayChips(now); if (paidNow) changed = true;
   const e = tnEntry(tnWeekOf(now));
   if (e){
     const B = tnBracket(e, now), done = B.path.filter(p => p.m.st === 'done'), last = done[done.length - 1];
@@ -231,8 +232,9 @@ function tnTick(){
       const score = noShow ? `${fmtMin(mine)}, and ${oName} didn’t study enough to count` : `${fmtMin(mine)} to ${fmtMin(theirs)} against ${oName}`;
       const nextToday = nextK < 5 && tnDayKey(e.wk, nextK) === today;
       const won = m.win === B.me;
-      const msg = B.place === 1 ? `You won the Weekly Tournament! ${score} in the Final.`
-        : B.place ? `You finished ${tnOrd(B.place)} in the Weekly Tournament (${score} in the ${rn}).`
+      const prize = B.place ? ` +${TN_PRIZE[B.place]} tournament chips.` : '';
+      const msg = B.place === 1 ? `You won the Weekly Tournament! ${score} in the Final.${prize}`
+        : B.place ? `You finished ${tnOrd(B.place)} in the Weekly Tournament (${score} in the ${rn}).${prize}`
         : won ? `You won your ${rn}: ${score}.${nextToday ? ` Your ${['', 'Round of 16', 'quarterfinal', 'semifinal', 'Final'][nextK]} is today.` : ''}`
         : `${oName} knocked you out in the ${rn}: ${mine < TN_MIN ? `you had ${fmtMin(mine)}, under the 10 minutes needed` : `${fmtMin(mine)} to ${fmtMin(theirs)}`}.${last.k === 3 ? ' You play for 3rd place on Friday.' : ''}`;
       e.seen = lastK; changed = true;
@@ -240,6 +242,7 @@ function tnTick(){
     }
   }
   if (changed) tnSave();
+  tnChipRender(); if (paidNow) setTimeout(() => tnChipPop(paidNow), 1600);
   tnDot();
 }
 // a dot on the nav when sign-up is open and you haven't joined, or there's a round today you haven't played yet
@@ -313,6 +316,43 @@ function tnBracketHtml(e, B, now){
   const live = B.rounds.some(r => r.some(m => m.st === 'live'));
   return `<div class="card tn-bk"><div class="h first">Bracket</div><p class="hint tn-dayl">${live ? 'Today’s minutes are so far. ' : ''}Tap a name to see their profile.${B.me ? ' Your path is in color.' : ''}</p><div class="tn-tree" data-tn-tree>${cols}</div></div>`;
 }
+/* ---- tournament chips ----
+   A currency of their own, separate from coins: only the top 4 of a division win any (1st 100, 2nd 50, 3rd 25,
+   4th 10), paid when the bracket finishes on Friday. Each week's prize is saved in R.chips (one line per week,
+   so two devices can't pay it twice, and pruning old brackets never takes chips away). What chips buy comes later. */
+const TN_PRIZE = [0, 100, 50, 25, 10];
+let tnChipIdN = 0;
+const tnChipSvg = cls => { const id = 'tnChipI' + (++tnChipIdN), rects = [0, 60, 120, 180, 240, 300].map(a => `<rect x="10" y="2.1" width="4" height="2.5" fill="#000" transform="rotate(${a} 12 12)"/>`).join('');
+  return `<svg class="${cls || 'ch-ic'}" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="${id}"><g stroke="none"><circle cx="12" cy="12" r="10.5" fill="#fff"/>${rects}</g><circle cx="12" cy="12" r="5.4" fill="none" stroke="#000" stroke-width="1.2"/></mask></defs><circle cx="12" cy="12" r="10.5" mask="url(#${id})"/></svg>`; };
+function tnChipData(){ if (!R.chips || typeof R.chips !== 'object' || !R.chips.e) R.chips = {e: {}}; return R.chips; }
+const tnChipBal = () => R && R.chips && R.chips.e ? Object.values(R.chips.e).reduce((n, x) => n + (x && x.n || 0), 0) : 0;
+// pay finished weeks you placed in (called from tnTick); returns the amount just paid, if any
+function tnPayChips(now){
+  if (!R.tour || !R.tour.e) return 0;
+  let paid = 0;
+  Object.values(R.tour.e).forEach(e => {
+    if (!e || !e.my || !tnOver(e, now)) return;
+    const L = tnChipData().e; if (L[e.wk]) return;
+    const B = tnBracket(e, now), n = B.place ? TN_PRIZE[B.place] : 0;
+    L[e.wk] = {n, p: B.place || 0, div: e.div || 0, band: e.band, t: Date.now()}; paid += n;
+  });
+  return paid;
+}
+function tnChipRender(){
+  const chip = $('#chipChip'); if (!chip || !R) return;
+  const n = tnChipBal(); chip.hidden = false; chip.title = `${n.toLocaleString()} tournament chips`;
+  const b = chip.querySelector('b'); if (b) b.textContent = n.toLocaleString(); else chip.innerHTML = `${tnChipSvg()}<b>${n.toLocaleString()}</b>`;
+}
+function tnChipPop(n){ const chip = $('#chipChip'); if (!chip || !n) return; const el = document.createElement('span'); el.className = 'lv-pop'; el.textContent = `+${n} chips`; chip.appendChild(el); setTimeout(() => el.remove(), 2400); }
+function tnChipsCard(){
+  const n = tnChipBal(), L = R.chips && R.chips.e ? Object.values(R.chips.e).filter(x => x.n).sort((a, b) => b.t - a.t) : [];
+  const wkOf = x => Object.keys(R.chips.e).find(k => R.chips.e[k] === x);
+  return `<div class="lv-card mini-lv ch-card"><div class="lv-top"><span class="ch-big">${tnChipSvg()}</span><div><b>${n.toLocaleString()} tournament chips</b><small>Won by finishing top 4 in a Weekly Tournament</small></div></div>
+    <div class="lv-sub">Prizes</div><ul class="lv-list ch-pz">${[1, 2, 3, 4].map(p => `<li><span>${['', '1st', '2nd', '3rd', '4th'][p]} place</span><b>+${TN_PRIZE[p]}</b></li>`).join('')}</ul>
+    ${L.length ? `<div class="lv-sub">Your winnings</div><ul class="lv-list">${L.slice(0, 8).map(x => `<li><span>${tnRange(wkOf(x))} · ${tnOrd(x.p)}</span><b>+${x.n}</b></li>`).join('')}</ul>` : '<p class="hint">You haven’t won any chips yet. Finish top 4 in your division to win some.</p>'}
+    <p class="hint">What chips can buy is coming later.</p></div><div class="mini-go"><button class="small-btn accent" data-mini-go="tourney">Tournament</button></div>`;
+}
+
 /* ---- tournaments on a player's profile ---- */
 const TN_PROF_WEEKS = 8;
 // how far player p got in a bracket
@@ -424,12 +464,13 @@ function tnRulesHtml(){
     <li>Each rank band runs thousands of divisions a week. You’re put in a random one: up to 32 players from your band, seeded by Elo. When a division isn’t full, the top seeds get a bye (a free pass) through the Round of 32. One round a day: Round of 32 on Monday through the Final on Friday.</li>
     <li>Each round lasts the whole day. Whoever studies more with the Focus timer by midnight wins. Under 10 minutes is a forfeit, and a tie goes to the higher seed.</li>
     <li>Lose and you’re out for the week. The two semifinal losers play for 3rd place on Friday.</li>
-    <li>Tournaments don’t change your Elo. Prizes for the top 4 are coming soon.</li></ul></details>`;
+    <li>Only the top 4 of each division win tournament chips: 100 for 1st, 50 for 2nd, 25 for 3rd and 10 for 4th, paid when the bracket ends on Friday. Chips are their own currency, separate from coins.</li>
+    <li>Tournaments don’t change your Elo.</li></ul></details>`;
 }
 function tnSignupHtml(wk, now){
   const e = tnEntry(wk), myR = Math.round(R.mmr), band = e ? e.band : tnBandOf(myR), end = new Date(wk + 'T00:00').getTime();
   if (!e) return `<div class="card tn-hero"><div><small>Sign-up open · closes in <span data-tn-cd-to="${end}">${tnClock(end)}</span></small><b>Weekly Tournament · ${tnRange(wk)}</b>
-    <p>You’ll be put in a random division of up to 32 players from your band (${TN_BANDS[band][2]}, ${tnDivCount(band, wk).toLocaleString()} divisions this week). One round a day, Monday to Friday, decided by who studies more that day.</p></div>
+    <p>You’ll be put in a random division of up to 32 players from your band (${TN_BANDS[band][2]}, ${tnDivCount(band, wk).toLocaleString()} divisions this week). One round a day, Monday to Friday, decided by who studies more that day. The top 4 win tournament chips (100, 50, 25, 10).</p></div>
     <button class="small-btn accent tn-join" data-tn="join">Join tournament</button></div>`;
   const B = tnBracket(e, now), first = B.rounds[0].find(m => m.a === B.me || m.b === B.me), opp = first.a === B.me ? first.b : first.a;
   const tops = B.ps.slice(0, 4).filter(p => p.w !== ME);
@@ -447,7 +488,7 @@ function tnRender(){
   if (su) html += tnSignupHtml(su, now);
   if (e){
     const B = tnBracket(e, now), over = tnOver(e, now), pl = tnPlaceText(B);
-    const pill = B.place ? `<span class="tn-pill p${B.place}">${pl}</span>` : B.outIn != null ? `<span class="tn-pill out">${pl}</span>` : over ? '' : '<span class="tn-pill live">Still in</span>';
+    const pill = B.place ? `<span class="tn-pill p${B.place}">${pl}${over ? ` · +${TN_PRIZE[B.place]} chips` : ''}</span>` : B.outIn != null ? `<span class="tn-pill out">${pl}</span>` : over ? '' : '<span class="tn-pill live">Still in</span>';
     html += `<div class="card tn-bar"><div><b>Weekly Tournament · ${tnRange(e.wk)}</b><small>${e.div ? tnDivName(e.div) + ' · ' : ''}${TN_BANDS[e.band][2]} · seed ${B.me.seed} of ${B.ps.length} · ${over ? 'finished' : 'unranked, Elo doesn’t change'}</small></div>${pill}</div>`;
     html += tnTodayCard(e, B, now);
     html += `<div class="card"><div class="h first">Your path</div>${tnPathHtml(B)}</div>`;
@@ -511,4 +552,4 @@ setInterval(() => {
   tnCountdowns();
 }, 1000);
 setInterval(() => { tnTick(); if (!$('#page-tourney').hidden && !document.hidden) tnRender(); }, 30000);
-(function tnStart(){ if (typeof RK_READY === 'undefined' || !RK_READY) return setTimeout(tnStart, 2000); tnTick(); tnRender(); })();
+(function tnStart(){ if (typeof RK_READY === 'undefined' || !RK_READY) return setTimeout(tnStart, 2000); tnTick(); tnRender(); tnChipRender(); })();
