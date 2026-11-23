@@ -44,17 +44,17 @@ function tnSave(){
 function tnSeedOrder(n){ let o = [1]; while (o.length < n){ const m = o.length * 2 + 1; o = o.flatMap(s => [s, m - s]); } return o; }
 const TN_ORDER = tnSeedOrder(TN_N);
 /* ---- divisions ----
-   Each band runs many tournaments a week, each its own 32-player division. About 30% of a band's players enter,
-   so a band has thousands of divisions. Every division's field comes from the seed (week, band, division) and the
+   Each band runs many tournaments a week, each its own division of up to 32. Between 5% and 10% of a band's players
+   enter (it changes week to week), so the biggest band has well over a thousand divisions. Every division's field comes from the seed (week, band, division) and the
    players' long-term base rating, so any division, this week's or a past one, always comes out the same.
    When you sign up you're put in a random division and take one of its 32 places. */
-const TN_ENTER = .3, tnPop = [], tnDivCache = new Map();
-// how many divisions a band has this week: sign-ups go up and down from week to week (about ±18%)
+const TN_ENTER_LO = .05, TN_ENTER_HI = .10, tnPop = [], tnDivCache = new Map();
+// how many divisions a band has this week: 5% to 10% of the band signs up, different every week
 const TN_SIZE_MIN = 18;
 function tnDivCount(band, wk){
   if (tnPop[band] == null){ const [lo, hi] = tnBandRange(band); let n = 0; for (let i = 0; i < ROSTER_N; i++){ const r = T_BASE[i]; if (r >= lo && r < hi) n++; } tnPop[band] = n; }
-  const swing = wk ? .82 + mulberry32(fdHash('tnD:' + wk + ':' + band))() * .36 : 1;
-  return Math.max(1, Math.round(tnPop[band] * TN_ENTER * swing / 29));
+  const rate = wk ? TN_ENTER_LO + mulberry32(fdHash('tnD:' + wk + ':' + band))() * (TN_ENTER_HI - TN_ENTER_LO) : (TN_ENTER_LO + TN_ENTER_HI) / 2;
+  return Math.max(1, Math.round(tnPop[band] * rate / 29));
 }
 // divisions aren't always full: anywhere from 18 to 32 players, most of them close to full. Missing places are byes.
 const tnDivSize = (wk, band, div) => TN_N - Math.floor(Math.pow(mulberry32(fdHash('tnS:' + wk + ':' + band + ':' + div))(), 2.2) * (TN_N - TN_SIZE_MIN + 1));
@@ -301,7 +301,7 @@ function tnCalHtml(now){
     const B = e ? tnBracket(e, now) : null, champ = B && B.champ;
     const cells = [0, 1, 2, 3, 4, 5, 6].map(c => {
       const k = c - 1, dd = tnPlus(sun, c), dk = dayKey(dd), out = dd.getMonth() !== m, isToday = dk === today;
-      let cls = 'tn-cd2' + (out ? ' out' : '') + (isToday ? ' today' : '') + (k < 0 || k > 4 ? ' wkend' : ''), body = '';
+      let cls = 'tn-cd2' + (out ? ' out' : '') + (isToday ? ' is-today' : '') + (k < 0 || k > 4 ? ' wkend' : ''), body = '';
       if (k >= 0 && k <= 4){
         let res = '';
         if (own && B){

@@ -2752,7 +2752,7 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .tn-cd2{display:flex;flex-direction:column;gap:1px;min-height:62px;padding:5px 7px;border-radius:calc(var(--r-ctl) * .7);background:var(--soft);min-width:0}
 .tn-cd2.wkend{background:transparent}
 .tn-cd2 > b{font-size:13px}.tn-cd2.out > b{color:var(--muted);font-weight:500}
-.tn-cd2.today > b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px}
+.tn-cd2.is-today > b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px}
 .tn-rn{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .tn-r{font-style:normal;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tn-r span{font-weight:500;font-family:var(--f-mono);font-size:11px}
