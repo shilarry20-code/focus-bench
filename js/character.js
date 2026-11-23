@@ -92,13 +92,20 @@ function chBust(look, id){
 }
 function chBotSvg(i){ let s = CH_CACHE.get(i); if (s === undefined){ s = chBust(chLookOf(i)); if (CH_CACHE.size > 6000) CH_CACHE.clear(); CH_CACHE.set(i, s); } return s; }
 const chMyLook = () => chClean(P.myLook || CH_DEFAULT);
-// replaces the initials circle everywhere a player is shown
-avatar = function(b, cls){
-  const i = b && b.i != null ? b.i : null;
-  return i != null ? `<span class="av pic ${cls || ''}" aria-hidden="true">${chBotSvg(i)}</span>`
-    : `<span class="av ${cls || ''}" style="--h:${b ? b.hue : 0}" aria-hidden="true">${esc(b ? b.ini : '')}</span>`;
-};
-myAvatar = cls => `<span class="av pic me ${cls || ''}" aria-hidden="true">${chBust(chMyLook())}</span>`;
+// the character as a round picture, and the flip on profiles: tap the profile picture to see the character behind it
+const chFlipped = new Set();         // profiles flipped to the character during this visit
+function chFlip(w, cls){
+  const svg = w === ME ? chBust(chMyLook()) : chBotSvg(BOTS[w] && BOTS[w].i != null ? BOTS[w].i : w);
+  return `<button type="button" class="av-flip${chFlipped.has(w) ? ' flipped' : ''}" data-flip="${w}" aria-label="Flip between profile picture and character" title="Tap to flip">
+    <span class="af-in"><span class="af-f">${pAvatar(w, cls)}</span><span class="af-b"><span class="av pic ${cls || ''}" aria-hidden="true">${svg}</span></span></span>
+    <span class="af-tag" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4-4 4"/><path d="M3 11V9a2 2 0 0 1 2-2h16"/><path d="M7 21l-4-4 4-4"/><path d="M21 13v2a2 2 0 0 1-2 2H3"/></svg></span></button>`;
+}
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-flip]'); if (!f) return;
+  e.preventDefault(); e.stopPropagation();
+  const w = +f.dataset.flip, on = !f.classList.contains('flipped');
+  f.classList.toggle('flipped', on); on ? chFlipped.add(w) : chFlipped.delete(w);
+}, true);
 
 /* ---------------- the character picker (in Edit profile) ---------------- */
 let chDraft = null;                  // the look being edited, until you press Save
@@ -138,5 +145,3 @@ document.addEventListener('click', e => {
   b.parentNode.querySelectorAll('[data-ch="' + k + '"]').forEach(x => x.setAttribute('aria-checked', String(x.dataset.v) === String(chDraft[k])));
 }, true);
 
-// the avatar button in the top bar was drawn before this file loaded: draw it again
-try { renderMeBtn(); } catch(e){}
