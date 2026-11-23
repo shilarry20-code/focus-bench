@@ -225,8 +225,10 @@ function toggleSide(){
     const dx = x0 - main.getBoundingClientRect().left;
     if (dx) main.animate([{transform: `translateX(${dx}px)`}, {transform: 'none'}], {duration: 260, easing: 'cubic-bezier(.4,0,.2,1)'});
   }
-  const f = $('#sideHide'); if (f && f.getClientRects().length) f.focus({preventScroll: true});
-  if (P.sideHidden && !P.sideTip){ P.sideTip = 1; saveP(); toast('Press the arrow at the top of the panel, or \\, to open it back up.'); }
+  const f = $('#sideHide');
+  if (P.sideHidden){ if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }   // so the rail can slide away
+  else if (f && f.getClientRects().length) f.focus({preventScroll: true});
+  if (P.sideHidden && !P.sideTip){ P.sideTip = 1; saveP(); toast('Move your mouse to the very left edge of the page, or press \\, to bring the panel back.'); }
 }
 $('#sideHide').onclick = toggleSide;
 applySide();
