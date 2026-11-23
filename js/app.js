@@ -69,6 +69,7 @@ function showPage(name, sec){
     p.hidden = !on;
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.dataset.page === name ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  document.querySelectorAll('.nav-btn[data-act="profile"]').forEach(b => name === 'profile' && typeof profWho !== 'undefined' && profWho === ME ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   $('#moreBtn').classList.toggle('on', ['guides','music','notes','settings','whatsnew'].includes(name) || (name === 'chat' && matchMedia('(max-width:760px)').matches) || ((name === 'leaders' || name === 'elim' || name === 'tourney') && matchMedia('(max-width:760px)').matches));
   $('#nav').classList.remove('more-open');
   $('#pageTitle').textContent = el.dataset.title;
@@ -89,6 +90,14 @@ function showPage(name, sec){
 function openTab(name){ const a = PAGE_ALIAS[name] || name; Array.isArray(a) ? showPage(a[0], a[1]) : showPage(a); }
 $('#nav').addEventListener('click', e => {
   const b = e.target.closest('.nav-btn[data-page]');
+  const act = e.target.closest('.nav-btn[data-act]');
+  if (act){
+    $('#nav').classList.remove('more-open');
+    if (typeof focusing === 'function' && focusing()){ toast('You’re studying. Take a break first.'); return; }
+    if (act.dataset.act === 'profile'){ if (typeof RK_READY !== 'undefined' && RK_READY) openFullProfile(ME); else toast('Still loading. Try again in a moment.'); }
+    else if (typeof ccOpen === 'function') ccOpen();
+    return;
+  }
   if (b){ if (b.dataset.page === 'feed' && !$('#page-feed').hidden && window.scrollY > 0){ feedToTop(); return; } showPage(b.dataset.page); return; }
   if (e.target.closest('#moreBtn')){ if (typeof focusing === 'function' && focusing()) toast('You’re studying. Take a break first.'); else $('#nav').classList.toggle('more-open'); }
 });
