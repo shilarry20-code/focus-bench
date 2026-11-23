@@ -138,6 +138,7 @@ const FD_RATE = [3, 2, 1.4, 1, .8, .8, 1.2, 2.2, 3, 3.4, 3.6, 4, 4.4, 4.4, 4.6, 
 // while the world is still catching up, fill with posts that don't need today's matches and sessions (no waiting)
 function fdFill(){
   if (!RK_READY) return false; if (typeof cloudWriter === 'function' && !cloudWriter()) return false;          // with the shared feed on, only the writer makes posts
+  if (GEM.key && FD.posts.filter(fdPending).length > 24) return false;     // Gemini is behind: let it catch up before making more
   const light = !!simBusy;
   const now = Date.now(), from = Math.max(FD.filled || now - 8 * 3600e3, now - 12 * 3600e3);
   if (now - from < 4 * 60000) return false;
@@ -327,7 +328,7 @@ async function fdWriteVisible(list){
   FDV.busy = true; let changed = false;
   try {
     const ok = await fdWrite(need);
-    if (!ok){ list.filter(p => !p.gen && p.w !== -1).forEach(p => { if (!p.cap){ p.cap = fdFallbackCap(p); changed = true; if (GEM.key) p.fbc = 1; } if (!GEM.key){ p.gen = 1; changed = true; } }); FDV.wRetry = Date.now() + Math.max(60000, (GEM.wait || 0) - Date.now()); }
+    if (!ok){ if (!GEM.key) list.filter(p => !p.gen && p.w !== -1).forEach(p => { p.cap = p.cap || fdFallbackCap(p); p.gen = 1; changed = true; }); FDV.wRetry = Date.now() + Math.max(60000, (GEM.wait || 0) - Date.now()); }
     else changed = true;
     saveFeed();
   } finally { FDV.busy = false; }
@@ -389,8 +390,10 @@ const FD_TABS = [
   ['live', 'Live', '<circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.3 5.3a9.5 9.5 0 0 0 0 13.4M18.7 5.3a9.5 9.5 0 0 1 0 13.4"/>']];
 if (FDV.tab === 'you') FDV.tab = 'for';
 const FD_TOP = {day: ['Today', 864e5], week: ['This week', 7 * 864e5], month: ['This month', 30 * 864e5], all: ['All time', 0]};
+// with Gemini on, someone else's post only shows up once its caption is written (a post is nothing without its caption, and Gemini is sometimes down)
+const fdPending = p => p.w !== -1 && !!GEM.key && !p.gen && !p.del && (!p.cap || !!p.fbc);
 function fdList(){
-  const now = Date.now(), vis = FD.posts.filter(p => p.t <= now && !p.del);
+  const now = Date.now(), vis = FD.posts.filter(p => p.t <= now && !p.del && !fdPending(p));
   if (FDV.tab === 'following') return vis.filter(p => FD.follows.includes(p.w)).sort((a, b) => b.t - a.t);
   if (FDV.tab === 'act' || FDV.tab === 'live') return [];
   if (FDV.tab === 'new') return vis.sort((a, b) => b.t - a.t);
@@ -464,7 +467,7 @@ function renderFeed(){
     + (list.length > FDV.shown ? '<button class="small-btn fd-load" data-fda="more">Show more</button>' : '')
     + (!GEM.key ? '<p class="hint ch-hint">Captions and comments are written once Gemini is set up in <button class="link-btn" data-go="settings" data-sec="set-chat">Settings → Chat</button>.</p>' : '');
   if (FDV.tab === 'act'){ FD.nseen = Date.now(); saveFeed(); fdBadge(); }
-  fdWriteVisible(page);
+  fdWriteVisible(page.concat(FD.posts.filter(p => p.t <= Date.now() && fdPending(p)).sort((a, b) => b.t - a.t).slice(0, 12)));
 }
 function fdBadge(){ const n = FD.notif.filter(x => x.t > FD.nseen).length; document.querySelectorAll('.feed-badge').forEach(b => { b.textContent = n > 99 ? '99+' : n || ''; b.hidden = !n; }); }
 
@@ -750,7 +753,7 @@ document.addEventListener('input', e => {
 });
 
 /* ---- a player's posts on their profile ---- */
-function fdUserPosts(w){ return FD.posts.filter(p => !p.del && p.t <= Date.now() && (w === ME ? p.w === -1 : p.w === w)).sort((a, b) => b.t - a.t); }
+function fdUserPosts(w){ return FD.posts.filter(p => !p.del && !fdPending(p) && p.t <= Date.now() && (w === ME ? p.w === -1 : p.w === w)).sort((a, b) => b.t - a.t); }
 document.addEventListener('click', e => { const b = e.target.closest('[data-goto-post]'); if (!b) return; const p = FD.posts.find(x => x.id === b.dataset.gotoPost); if (!p) return;
   if (b.closest('#page-profile')) return fdView(p);
   FDV.tab = 'new'; FDV.shown = Math.max(FDV.shown, fdList().indexOf(p) + 4); showPage('feed'); setTimeout(() => { const el = document.querySelector(`[data-pid="${p.id}"]`); if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 80); });
