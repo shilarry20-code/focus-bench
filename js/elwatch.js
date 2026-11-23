@@ -60,7 +60,7 @@ About ${ewViewers(G).toLocaleString()} people watching.
 Viewers who can talk:
 ${cast.join('\n')}
 
-Viewer chat so far:
+Viewer chat so far (already sent; never send any of it again):
 ${E.v.slice(-14).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(nothing yet)'}
 
 ${task}`;

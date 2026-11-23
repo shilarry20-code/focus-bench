@@ -69,7 +69,7 @@ Their head-to-head record (${me}'s wins–losses${R.rec[w] && R.rec[w][2] ? '–
 ${h ? `Their last match: ${winLabel(h.t).toLowerCase()}, ${h.f ? 'friendly' : 'ranked'}, ${me} ${({W: 'won', L: 'lost', D: 'drew'})[h.r]}, ${matchTimes(h).replace(/<[^>]+>/g, '')}${h.f ? '' : `, ${h.d > 0 ? '+' : ''}${h.d} Elo for ${me}`}${Date.now() - h.t < 3600e3 ? ` (it ended ${Math.max(1, Math.round((Date.now() - h.t) / 60000))} min ago)` : ''}.` : 'They have no matches together.'}
 It's ${new Date().toLocaleDateString(undefined, {weekday: 'long'})} ${new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
 
-Conversation so far, oldest first (numbered):
+Conversation so far, oldest first (numbered). All of this was ALREADY sent, so none of it can be sent again:
 ${hist}
 
 ${task}

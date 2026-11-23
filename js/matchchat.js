@@ -51,7 +51,7 @@ ${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
 Match: ${c.friendly ? 'friendly (no Elo at stake)' : `ranked (${me} gains ${s.win} Elo for a win, loses ${s.loss} for a loss)`}. Their record before this: ${r ? `${r[0]}–${r[1]}${r[2] ? '–' + r[2] : ''} (${me}'s wins–losses)` : 'first time playing'}.
 So far ${me} has studied ${youMin} min and ${B.name} ${themMin} min${c.tapped && c.state === 'live' ? `, and ${B.name} has stopped for good` : ''}. ${state}
 
-Match chat so far:
+Match chat so far (already sent; never send any of it again):
 ${(c.chat || []).slice(-10).map(m => `${m.me ? me : B.name}: ${m.text}`).join('\n') || '(nothing yet)'}
 
 ${task}`;

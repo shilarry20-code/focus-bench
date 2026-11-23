@@ -397,7 +397,7 @@ Answer with JSON: {"messages":[{"from":"<name exactly as listed>","text":"…"}]
 ${typeof EMO_RULE === 'string' ? EMO_RULE + '\n' : ''}${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
     const user = `Round ${S.r + 1}, ${S.alive} of ${G.L.players.length} still in, ${S.sd ? 'sudden death (no breaks allowed)' : `${elFmtA(S.a / 60000)} of breaks this round`}.
 People who can talk now: ${talk.map(w => `${bot(w).name} (emojis: ${emojiStyle(w)})`).join('; ')}${G === EL.G && !focusing() ? `; ${me} (the user) is on a break too` : ''}.
-Chat so far:
+Chat so far (already sent; never send any of it again):
 ${G.chat.slice(-10).map(x => x.sys ? `[${x.text}]` : `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(nothing yet)'}
 
 ${task} Write 1 to 3 short messages from 1 or 2 of the people who can talk.`;

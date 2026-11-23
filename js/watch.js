@@ -71,7 +71,7 @@ About ${wViewers().toLocaleString()} people are watching. ${focusing() ? '' : `$
 Spectators who can talk:
 ${cast.join('\n')}
 
-Chat so far:
+Chat so far (already sent; never send any of it again):
 ${W.chat.slice(-14).map(x => `${x.w === -1 ? me : bot(x.w).name}: ${x.text}`).join('\n') || '(nothing yet)'}
 
 ${task}`;
