@@ -193,7 +193,8 @@ ${forUser ? chatChallengeNote(cast) : ''}For replyTo use the id of the message b
 // GEM.detail keeps Google's own error message so Settings can show what went wrong.
 // `more`: extra fields each message may carry (e.g. reactions), added to the answer's shape
 async function aiCall(sys, user, more){
-  const models = GEMINI_MODELS.filter(m => !modelOut(m));
+  // a model that just answered 503 (Google's servers overloaded) gets a rest: the other one goes first, so we don't hit the busy one on every request
+  const models = GEMINI_MODELS.filter(m => !modelOut(m)).sort((x, y) => ((GEM.slow && GEM.slow[x] > Date.now()) ? 1 : 0) - ((GEM.slow && GEM.slow[y] > Date.now()) ? 1 : 0));
   if (!models.length){ const until = Math.min(...GEMINI_MODELS.map(m => GEM.out[m])); throw {kind: 'busy', until, msg: 'Both Gemini models have used up today’s free requests.'}; }
   const schema = {type: 'OBJECT', properties: {messages: {type: 'ARRAY', items: {type: 'OBJECT',
     properties: {from: {type: 'STRING'}, text: {type: 'STRING'}, replyTo: {type: 'STRING'}, ...(more || {})}, required: ['from', 'text']}}}, required: ['messages']};
@@ -231,7 +232,7 @@ async function aiCall(sys, user, more){
         if (r.status === 404 || /not found|not supported|is not available|unsupported model/i.test(em)) break;   // next model
         // Google's servers are overloaded (503) or erroring (5xx): asking again in a different shape won't help, so go
         // straight to the next model, and if every model is overloaded, wait a few minutes before trying again
-        if (r.status >= 500){ busy++; break; }
+        if (r.status >= 500){ busy++; GEM.slow = GEM.slow || {}; GEM.slow[model] = Date.now() + 3 * 60000; break; }
         continue;                                                                  // same model, looser request
       }
       const cand = ((j && j.candidates) || [])[0];
@@ -242,7 +243,7 @@ async function aiCall(sys, user, more){
         GEM.detail = last; continue;
       }
       if (GEM.model !== model){ GEM.model = model; }
-      GEM.detail = null; saveAI();
+      GEM.detail = null; if (GEM.slow) delete GEM.slow[model]; saveAI();
       return o.messages;
     }
   }
