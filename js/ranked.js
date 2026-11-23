@@ -1237,6 +1237,13 @@ function renderMatch(fresh){
       </div></div>`;
     return;
   }
+  if (!c && typeof elBusy === 'function' && elBusy()){          // in a group match: this card is about that game, not about starting another
+    const G = EL.G, S = G.L.t0 ? elState(G, Date.now()) : null, n = G.L.players.length;
+    const html = `<div class="card match idle"><div class="h first">${G.L.rules.ranked ? 'Ranked' : 'Elimination'}</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${n}-player ${G.L.rules.ranked ? 'ranked ' : ''}lobby</b><small>${S ? `Round ${S.r + 1} · ${S.alive} of ${n} left` : 'Waiting to start'}</small></span></div><p class="hint">You're in a group match, so you can't start another one until it ends.</p><div class="mi-btns"><button class="small-btn accent" data-el="back">Back to your game →</button></div></div>`;
+    if (slot.dataset.elh !== html){ slot.dataset.elh = html; slot.dataset.key = ''; slot.innerHTML = html; }
+    return;
+  }
+  if (slot.dataset.elh){ delete slot.dataset.elh; slot.dataset.key = ''; }
   if (!c){
     slot.innerHTML = `<div class="card match idle"><div class="h first">Ranked</div><div class="mi-row">${emblem(rk, 'md')}<span><b>${rk.full}</b><small>${R.played < 5 ? `Placement ${R.played}/5` : `${R.mmr.toLocaleString()} Elo`}</small></span></div><p class="hint">${rkMode() === 1 ? 'Get matched with a player near your rating. Whoever studies longer wins.' : `Get matched into ${rkMode() === 8 ? "an" : "a"} ${rkMode()}-player ranked lobby near your rating. Last one studying wins.`}</p><div class="rk-modes" role="radiogroup" aria-label="Match size">${RK_MODES.map(n => `<button class="chip${n === rkMode() ? ' on' : ''}" role="radio" aria-checked="${n === rkMode()}" data-rkmode="${n}">${n === 1 ? '1v1' : n + ' players'}</button>`).join('')}</div><div class="mi-btns"><button class="small-btn accent" data-act="m-find">Find match</button><button class="link-btn" data-go="ranked">Ranked page →</button></div></div>`;
     return;
@@ -1305,7 +1312,7 @@ $('#matchSlot').addEventListener('click', e => {
   if (a && a.dataset.act === 'm-end'){ if (a.dataset.sure){ endMatch('button'); } else { a.dataset.sure = 1; a.textContent = 'Tap again to end'; a.classList.add('danger'); setTimeout(() => { $('#matchSlot').dataset.key = ''; renderMatch(); }, 3500); } return; }
   if (a && a.dataset.act === 'm-dismiss'){ R.cur = null; saveRanked(); renderMatch(); return; }
   const md = e.target.closest('[data-rkmode]'); if (md){ R.qm = +md.dataset.rkmode; saveRanked(); renderMatch(); return; }
-  if (a && a.dataset.act === 'm-find'){ if (rkMode() > 1 && typeof elQueue === 'function'){ elQueue(rkMode()); return; } startSearch(); return; }
+  if (a && a.dataset.act === 'm-find'){ if (typeof elBusy === 'function' && elBusy()){ toast("You’re in a group match right now."); return; } if (rkMode() > 1 && typeof elQueue === 'function'){ elQueue(rkMode()); return; } startSearch(); return; }
   if (a && a.dataset.act === 'm-cancel'){ cancelSearch(); return; }
   if (them && !e.target.closest('.bdg')) openBot(+them.dataset.bot);
 });

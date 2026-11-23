@@ -243,7 +243,7 @@ function elJoin(L){
   let t = now; for (let k = 0; k < need; k++){ t += wait / Math.max(1, need) * (.5 + Math.random()); joinAt.push(Math.round(Math.min(now + wait, t))); }
   const G = {L: {...L, players: [-1, ...have, ...pool.slice(0, need)], joinAt: [now, ...joinAt], t0: 0, mine: true, myR: R.mmr}, me: {ev: [], out: null}, chat: [], q: [], xp: 0, seenOut: [], done: false, at: now};
   G.L.fillEnd = Math.max(...G.L.joinAt);
-  EL.G = G; EL.view = 'game'; EL.tab = 'stand'; saveEl(); showPage('elim'); elRender();
+  EL.G = G; EL.view = 'game'; EL.tab = 'stand'; saveEl(); showPage('elim'); elRender(); if (typeof renderMatch === 'function') renderMatch();
 }
 // the Ranked queue for 4, 8 or 16: a standard lobby around your rating
 function elQueue(N){
@@ -574,6 +574,7 @@ function elRenderGame(Gx){
 }
 // the card on the Ranked page
 function elCardRender(){
+  if (typeof renderMatch === 'function') renderMatch();           // the Ranked card on the Focus page follows the game too
   const box = $('#elCard'); if (!box) return;
   const G = EL.G;
   let status = '';
