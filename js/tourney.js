@@ -289,7 +289,7 @@ function tnBracketHtml(e, B, now){
 const TN_CAL_BACK = 12;     // months you can go back
 function tnWeekEntry(wk, band){ const own = tnEntry(wk); return own || tnDivEntry(wk, band, tnDefDiv(wk, band)); }
 function tnCalHtml(now){
-  const today = dayKey(now), band = tnBandOf(Math.round(R.mmr)), d0 = new Date(now);
+  const today = dayKey(now), band = tnViewBand(), d0 = new Date(now);
   if (!TN.cal) TN.cal = {y: d0.getFullYear(), m: d0.getMonth()};
   const {y, m} = TN.cal, first = new Date(y, m, 1), last = new Date(y, m + 1, 0);
   const minM = new Date(d0.getFullYear(), d0.getMonth() - TN_CAL_BACK, 1), atMin = first <= minM, atMax = y === d0.getFullYear() && m === d0.getMonth();
@@ -297,7 +297,7 @@ function tnCalHtml(now){
   const sun0 = tnPlus(first, -first.getDay());       // rows run Sunday to Saturday; Monday to Friday of each row is a tournament
   for (let sun = sun0; sun <= last; sun = tnPlus(sun, 7)){
     const wkD = tnPlus(sun, 1);
-    const wk = dayKey(wkD), started = wk <= today, own = tnEntry(wk), e = started ? tnWeekEntry(wk, band) : null;
+    const wk = dayKey(wkD), started = wk <= today, own0 = tnEntry(wk), own = own0 && own0.band === band ? own0 : null, e = started ? (own || tnDivEntry(wk, band, tnDefDiv(wk, band))) : null;
     const B = e ? tnBracket(e, now) : null, champ = B && B.champ;
     const cells = [0, 1, 2, 3, 4, 5, 6].map(c => {
       const k = c - 1, dd = tnPlus(sun, c), dk = dayKey(dd), out = dd.getMonth() !== m, isToday = dk === today;
@@ -322,9 +322,9 @@ function tnCalHtml(now){
     rows.push(started ? `<button class="tn-cw${own ? ' mine' : ''}" data-tn="view" data-wk="${wk}" data-band="${own ? own.band : band}" data-div="${own ? own.div || 0 : tnDefDiv(wk, band)}" title="${tnRange(wk)}${champ ? ' · champion ' + tnName(champ.w) : ''}">${cells}${tag}</button>`
       : `<div class="tn-cw future">${cells}${own ? tag : ''}</div>`);
   }
-  return `<div class="card tn-cal"><div class="tn-ch"><div class="h first">Tournament calendar</div><div class="tn-cnav"><button class="small-btn" data-tn="cal" data-d="-1"${atMin ? ' disabled' : ''} aria-label="Previous month">‹</button><b>${first.toLocaleDateString([], {month: 'long', year: 'numeric'})}</b><button class="small-btn" data-tn="cal" data-d="1"${atMax ? ' disabled' : ''} aria-label="Next month">›</button></div></div>
+  return `<div class="card tn-cal"><div class="tn-ch"><div class="h first">Tournament calendar</div>${tnBandChips(band)}<div class="tn-cnav"><button class="small-btn" data-tn="cal" data-d="-1"${atMin ? ' disabled' : ''} aria-label="Previous month">‹</button><b>${first.toLocaleDateString([], {month: 'long', year: 'numeric'})}</b><button class="small-btn" data-tn="cal" data-d="1"${atMax ? ' disabled' : ''} aria-label="Next month">›</button></div></div>
     <div class="tn-cgrid"><div class="tn-cw head">${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(x => `<span>${x}</span>`).join('')}</div>${rows.join('')}</div>
-    <p class="hint">Each week is a tournament. Tap a week to open it: your own division if you played, otherwise one of your band’s. The picture on Friday is that division’s champion.</p></div>`;
+    <p class="hint">Each week is a tournament. Tap a week to open it: your own division if you played, otherwise one of ${band === tnMyBand() ? 'your band’s' : 'this band’s'}. The picture on Friday is that division’s champion.</p></div>`;
 }
 function tnPastViewHtml(v, now){
   const own = tnEntry(v.wk), e = own && (!v.div || own.div === v.div || !own.div) && v.band === own.band ? own : tnDivEntry(v.wk, v.band, v.div || tnDefDiv(v.wk, v.band));
@@ -338,9 +338,13 @@ function tnPastViewHtml(v, now){
     ${tnDivPickHtml(e.wk, e.band, e.div)}`;
 }
 // look at any other division of a week
+// which band the calendar and division picker show: yours unless you pick another
+const tnMyBand = () => tnBandOf(Math.round(R.mmr));
+const tnViewBand = () => TN.band != null ? TN.band : tnMyBand();
+const tnBandChips = cur => `<div class="tn-bands" role="group" aria-label="Rank band">${TN_BANDS.map((b, k) => `<button type="button" class="chip${k === cur ? ' on' : ''}" data-tn="band" data-b="${k}">${b[2]}${k === tnMyBand() ? ' (yours)' : ''}</button>`).join('')}</div>`;
 function tnDivPickHtml(wk, band, cur){
   const D = tnDivCount(band, wk), mine = tnEntry(wk);
-  return `<div class="card tn-dp"><div><div class="h first">Other divisions</div><p class="hint">${D.toLocaleString()} divisions of up to 32 in ${TN_BANDS[band][2]} the week of ${tnRange(wk)}.${mine && mine.div && mine.band === band ? ` You’re in ${tnDivName(mine.div)}.` : ''}</p></div>
+  return `<div class="card tn-dp"><div class="tn-dpt"><div class="h first">Other divisions</div>${tnBandChips(band)}</div><div><p class="hint">${D.toLocaleString()} divisions of up to 32 in ${TN_BANDS[band][2]} the week of ${tnRange(wk)}.${mine && mine.div && mine.band === band ? ` You’re in ${tnDivName(mine.div)}.` : ''}</p></div>
     <form class="tn-dpf" data-wk="${wk}" data-band="${band}"><label>Division <input type="number" min="1" max="${D}" value="${cur || ''}" placeholder="1–${D.toLocaleString()}" inputmode="numeric"></label><button class="small-btn accent">Go</button><button type="button" class="small-btn" data-tn="rand">Random</button>${mine && mine.div && mine.band === band && cur !== mine.div ? '<button type="button" class="small-btn" data-tn="mine">Mine</button>' : ''}</form></div>`;
 }
 function tnRulesHtml(){
@@ -377,13 +381,13 @@ function tnRender(){
     html += tnTodayCard(e, B, now);
     html += `<div class="card"><div class="h first">Your path</div>${tnPathHtml(B)}</div>`;
     html += tnBracketHtml(e, B, now);
-    html += tnDivPickHtml(e.wk, e.band, e.div);
+    { const vb = tnViewBand(); html += tnDivPickHtml(e.wk, vb, vb === e.band ? e.div : null); }
   } else if (!su){
     const sat = tnPlus(tnMonday(now), 5);
     html += `<div class="card tn-hero"><div><small>Next sign-up opens in <span data-tn-cd-to="${sat.getTime()}">${tnClock(sat.getTime())}</span></small><b>Weekly Tournament</b>
       <p>You’re not in this week’s tournament (sign-up closed when Monday started). Sign-up for the next one opens Saturday, ${sat.toLocaleDateString([], {month: 'short', day: 'numeric'})}.</p></div></div>`;
   }
-  if (!e) html += tnDivPickHtml(wk, tnBandOf(Math.round(R.mmr)), null);
+  if (!e) html += tnDivPickHtml(wk, tnViewBand(), null);
   html += tnCalHtml(now);
   html += tnRulesHtml();
   const open = box.querySelector('.tn-rules') && box.querySelector('.tn-rules').open;
@@ -412,6 +416,9 @@ document.addEventListener('click', ev => {
       const div = a === 'mine' ? own.div : 1 + Math.floor(Math.random() * tnDivCount(band, wk));
       TN.wkView = a === 'mine' && wk === tnWeekOf(Date.now()) ? null : {wk, band, div}; TN.tab = null; tnRender(); window.scrollTo(0, 0); }
     else if (a === 'back'){ TN.wkView = null; TN.tab = null; tnRender(); }
+    else if (a === 'band'){ const b = +t.dataset.b; TN.band = b === tnMyBand() ? null : b;
+      if (TN.wkView && t.closest('.tn-dp')) TN.wkView = {wk: TN.wkView.wk, band: b, div: tnDefDiv(TN.wkView.wk, b)};
+      tnRender(); }
     else if (a === 'cal'){ const c = TN.cal; const d = new Date(c.y, c.m + +t.dataset.d, 1); TN.cal = {y: d.getFullYear(), m: d.getMonth()}; tnRender(); }
     return;
   }
