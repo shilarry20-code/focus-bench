@@ -1663,7 +1663,7 @@ function profileMatches(w){
   };
   let rows, more = false;
   if (w === ME){
-    rows = R.hist.slice(0, profMatchN).map(h => youRow(h, true)); more = R.hist.length > profMatchN;
+    rows = R.hist.slice(0, 5).map(h => youRow(h, true)); more = R.hist.length > 5;     // your last 5; the rest are on the Ranked page
     if (!rows.length) return '<p class="hint">No matches yet. Turn on Ranked and start a focus block to get matched.</p>';
   } else {
     m5Backfill(w);
@@ -1676,7 +1676,7 @@ function profileMatches(w){
     rows = [...sim, ...vsYou].sort((a, b) => b.t - a.t);
     if (!rows.length) return '<p class="hint">No ranked matches yet.</p>';
   }
-  return `<ul class="rk-hist pf-matches">${rows.map(html).join('')}</ul>${more ? '<button class="link-btn" data-pf="moreMatches">Show more</button>' : ''}`;
+  return `<ul class="rk-hist pf-matches">${rows.map(html).join('')}</ul>${more ? `<button class="link-btn" data-go="ranked" data-sec="rkHistCard">See all ${R.hist.length.toLocaleString()} →</button>` : ''}`;
 }
 function renderProfilePage(){
   const w = profWho; if (w == null || !RK_READY) return;
