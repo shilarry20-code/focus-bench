@@ -9,7 +9,7 @@ const KEY_ACTIONS = [
   {id: 'mini', name: 'Mini clock', def: 'm'},
   {id: 'focus', name: 'Focus mode', def: 'f'},
   {id: 'side', name: 'Hide or show the side panel', def: '\\'},
-  ...[['focus', 'Focus', '1'], ['stats', 'Stats', '2'], ['ranked', 'Ranked', '3'], ['leaders', 'Leaderboards', '4'], ['awards', 'Awards', '5'],
+  ...[['focus', 'Focus', '1'], ['stats', 'Stats', '2'], ['ranked', 'Ranked', '3'], ['leaders', 'Leaderboards', '4'], ['awards', 'Achievements', '5'],
       ['guides', 'Guides', '6'], ['music', 'Music', '7'], ['notes', 'Notes', '8'], ['settings', 'Settings', '9'], ['chat', 'Chat', '']]
     .map(([pg, n, d]) => ({id: 'p:' + pg, name: `Go to ${n}`, def: d, page: pg}))
 ];

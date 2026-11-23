@@ -482,7 +482,7 @@ $('#guideSlot').addEventListener('change', e => {
 });
 loadGuides();
 
-/* showcase picking on the Awards page */
+/* showcase picking on the Achievements page */
 $('#pane-awards').addEventListener('click', e => {
   const s = e.target.closest('[data-star]'); if (!s) return;
   const id = s.dataset.star; let sc = (R.showcase || myFeatured()).filter(x => ACH.u[x]);
