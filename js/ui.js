@@ -191,6 +191,11 @@ const noteClick = e => {
 };
 $('#noteList').onclick = noteClick; $('#noteArch').onclick = noteClick;
 $('#noteArch').addEventListener('toggle', e => { if (e.target.tagName === 'DETAILS') noteArchOpen = e.target.open; }, true);
+$('#noteArchAll').onclick = () => {
+  const hit = NOTES.filter(n => n.done && !n.arch); if (!hit.length){ toast('Check a note first.'); return; }
+  const t = Date.now(); hit.forEach((n, k) => n.arch = t + k); saveNotes(); renderNotes();
+  undoToast(hit.length === 1 ? 'Note archived' : `${hit.length} notes archived`, () => { hit.forEach(n => delete n.arch); saveNotes(); renderNotes(); });
+};
 $('#noteClear').onclick = () => { NOTES = NOTES.filter(n => !n.done || n.arch); saveNotes(); renderNotes(); };
 document.addEventListener('keydown', e => {
   const t = e.target;
