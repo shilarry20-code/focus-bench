@@ -1029,7 +1029,7 @@ addEventListener('scroll', hideBadgeTip, true);
 function avatar(b, cls){ return `<span class="av ${cls || ''}" style="--h:${b.hue}" aria-hidden="true">${esc(b.ini)}</span>`; }
 const myName = () => ((P.myName || '').trim() || 'You');
 const myIni = () => { const n = (P.myName || '').trim(); if (!n) return 'You'; const w = n.replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/).filter(Boolean); return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || n).slice(0, 2)).toUpperCase(); };
-const myAvatar = cls => `<span class="av me ${cls || ''}${P.myHue != null ? ' hue' : ''}${(P.myName || '').trim() ? ' named' : ''}"${P.myHue != null ? ` style="--h:${P.myHue}"` : ''} aria-hidden="true">${esc(myIni())}</span>`;
+let myAvatar = cls => `<span class="av me ${cls || ''}${P.myHue != null ? ' hue' : ''}${(P.myName || '').trim() ? ' named' : ''}"${P.myHue != null ? ` style="--h:${P.myHue}"` : ''} aria-hidden="true">${esc(myIni())}</span>`;
 
 /* matchmaking */
 function findOpponent(){
@@ -1603,7 +1603,7 @@ function weekStrip(w, weeks){
 }
 function editForm(){
   return `<div class="pf-edit"><label>Display name<input id="pfName" maxlength="20" placeholder="You" value="${esc(P.myName || '')}"></label>
-    <div class="pf-hues" role="radiogroup" aria-label="Avatar color">${PROFILE_HUES.map(hh => `<button data-hue="${hh == null ? '' : hh}" role="radio" aria-checked="${(P.myHue ?? null) === hh}" title="${hh == null ? 'Accent color' : ''}" style="${hh == null ? 'background:var(--accent)' : `background:hsl(${hh} 52% 44%)`}"></button>`).join('')}</div>
+    <div class="pf-char"><b>Your character</b>${chPickerHtml()}</div>
     <label>Bio<textarea id="pfBio" maxlength="150" rows="2" placeholder="what you're studying, your goals, anything">${esc(P.myBio || '')}</textarea></label>
     <div class="pf-edit-btns"><button class="small-btn accent" data-pf="save">Save</button><button class="small-btn" data-pf="cancel">Cancel</button></div></div>`;
 }
@@ -1843,24 +1843,23 @@ function pcAct(a, dk){
 }
 function openFullProfile(w){ if (profWho !== w || !pc) pcReset(); if (profWho !== w) profMatchN = 15; profWho = w; $('#botModal').hidden = true; showPage('profile'); }
 function saveProfileEdit(){
-  const n = ($('#pfName').value || '').trim().slice(0, 20), on = document.querySelector('.pf-hues [aria-checked="true"]');
-  P.myName = n; P.myHue = on && on.dataset.hue !== '' ? +on.dataset.hue : null; const bi = $('#pfBio'); if (bi) P.myBio = bi.value.replace(/\s+/g, ' ').trim().slice(0, 150); saveP(); profEditing = false;
+  const n = ($('#pfName').value || '').trim().slice(0, 20);
+  P.myName = n; if (chDraft) P.myLook = chClean(chDraft); chDraft = null; const bi = $('#pfBio'); if (bi) P.myBio = bi.value.replace(/\s+/g, ' ').trim().slice(0, 150); saveP(); profEditing = false;
   renderMeBtn(); renderMatch(); renderRankChip();
   if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders();
   toast('Profile saved');
 }
 function profClick(e){
   const tb = e.target.closest('[data-pft]'); if (tb){ profTab = tb.dataset.pft; if (P.prof){ P.prof.tab = profTab; saveP(); } renderProfilePage(); return; }
-  const b = e.target.closest('[data-pf]'), hue = e.target.closest('[data-hue]');
-  if (hue){ hue.parentNode.querySelectorAll('[data-hue]').forEach(x => x.setAttribute('aria-checked', x === hue)); return; }
-  if (!b) return;
+  const b = e.target.closest('[data-pf]');
+    if (!b) return;
   const a = b.dataset.pf, inPage = !!e.target.closest('#page-profile'), redraw = () => inPage ? renderProfilePage() : openProfile(profWho);
   if (a === 'full') openFullProfile(profWho);
   else if (b.dataset.pk){ /* handled below */ }
   else if (a === 'back') showPage(profPrev || 'ranked');
   else if (a === 'moreMatches'){ profMatchN += 15; renderProfilePage(); }
-  else if (a === 'edit'){ profEditing = true; redraw(); setTimeout(() => { const f = $('#pfName'); f && f.focus(); }, 0); }
-  else if (a === 'cancel'){ profEditing = false; redraw(); }
+  else if (a === 'edit'){ profEditing = true; chStartEdit(); redraw(); setTimeout(() => { const f = $('#pfName'); f && f.focus(); }, 0); }
+  else if (a === 'cancel'){ profEditing = false; chDraft = null; redraw(); }
   else if (a === 'save'){ saveProfileEdit(); redraw(); }
 }
 $('#botModal').addEventListener('click', e => {

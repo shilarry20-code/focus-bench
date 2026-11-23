@@ -2807,3 +2807,17 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .chip-chip .ch-ic,.ch-big svg{width:16px;height:16px;fill:#d24a43;stroke:none}
 .ch-big{display:grid;place-items:center;flex:none;width:44px;height:44px;aspect-ratio:1;border-radius:50%;background:color-mix(in srgb,#d24a43 14%,transparent)}.ch-big svg{width:28px;height:28px}
 .ch-pz li span{font-weight:600}
+
+/* character picker (Edit profile) */
+.pf-char{display:flex;flex-direction:column;gap:8px}
+.ch-ed{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.ch-prev{display:flex;flex-direction:column;align-items:center;gap:10px;flex:none}
+.ch-btns{display:flex;gap:6px}
+.ch-rows{flex:1;min-width:240px;display:flex;flex-direction:column;gap:8px}
+.ch-row{display:flex;flex-direction:column;gap:4px}
+.ch-row>span{font-size:.78rem;font-weight:600;color:var(--muted)}
+.ch-opts,.ch-sw{display:flex;gap:6px;flex-wrap:wrap}
+.ch-sw button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;padding:0;cursor:pointer;box-shadow:inset 0 0 0 2px var(--surface)}
+.ch-sw button[aria-checked="true"]{border-color:var(--ink)}
+.ch-opts .chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:.8rem;font-weight:600;cursor:pointer;min-height:32px}
+.ch-opts .chip[aria-checked="true"],.ch-opts .chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
