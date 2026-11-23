@@ -1113,8 +1113,8 @@ body.m-off .ach-pop{animation:none!important}
 @media (max-width:640px){.qx-bar{top:4px;padding:10px 12px}.qx-dot{min-width:26px;height:26px}.mb-row{flex-direction:column}.mb-btns{align-self:flex-end}}
 
 /* ---------- hiding the side panel ---------- */
-/* Hiding doesn't remove the panel: it slides down to a slim rail of just the icons (the labels fade out). Icons
-   grow when you hover them, and the arrow at the top slides the full panel back out. Phones use the bottom bar. */
+/* Hiding the panel shrinks it to a slim rail of just the icons (the labels fade out). Icons grow when you hover
+   them, and the arrow at the top slides the full panel back out. Phones use the bottom bar. */
 .brand span{flex:1}
 .brand{position:relative}
 .side-hide{flex:none;border:0;background:none;color:var(--muted);width:28px;height:28px;border-radius:7px;font:inherit;font-size:20px;line-height:1;font-family:var(--f-body,inherit);cursor:pointer;opacity:.7;transition:opacity .15s,background-color .15s,transform .26s cubic-bezier(.4,0,.2,1)}
@@ -1142,6 +1142,14 @@ body.m-off .ach-pop{animation:none!important}
   /* badges and dots become little dots on the corner of the icon */
   body.side-hidden .nav-btn .chat-badge,body.side-hidden .nav-btn .feed-badge{position:absolute;top:5px;left:25px;margin:0;min-width:9px;width:9px;height:9px;padding:0;font-size:0;box-shadow:0 0 0 2px var(--surface)}
   body.side-hidden .nav-btn .wn-dot{position:absolute;top:6px;left:26px;box-shadow:0 0 0 2px var(--surface)}
+}
+/* With a mouse, the hidden panel stays out of sight: only a thin invisible strip at the very left edge of the page is
+   left, and moving the mouse onto it slides the icon rail out over the page (it slides back when the mouse leaves).
+   Touch screens can't hover, so they keep the rail showing. */
+@media (min-width:761px) and (hover:hover){
+  body.side-hidden .shell{grid-template-columns:0px minmax(0,1fr)}
+  body.side-hidden .side{z-index:60;transform:translateX(calc(-100% + 10px));background:transparent;border-right-color:transparent;transition:transform .26s cubic-bezier(.4,0,.2,1) .12s,background-color .2s .12s,border-color .2s .12s,box-shadow .2s .12s,width .26s cubic-bezier(.4,0,.2,1)}
+  body.side-hidden .side:hover,body.side-hidden .side:has(:focus-visible){transform:none;background:var(--surface);border-right-color:var(--line);box-shadow:6px 0 28px rgba(0,0,0,.28);transition-delay:0s}
 }
 body.m-off .shell,body.m-off .side,body.m-off .side *{transition:none!important}
 @media (prefers-reduced-motion: reduce){.shell,.side,.side *{transition:none!important}}
