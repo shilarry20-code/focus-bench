@@ -14,7 +14,9 @@ const CH_BG = ['#f2d675', '#9cc5e8', '#b7dcc2', '#d9c2f0', '#f4b9a8', '#e8b44a',
 const CH_HAIRSTYLES = [['short', 'Short'], ['buzz', 'Buzz'], ['side', 'Side part'], ['curly', 'Curly'], ['spiky', 'Spiky'], ['bob', 'Bob'], ['long', 'Long'], ['bun', 'Bun'], ['afro', 'Afro']];
 const CH_OUTFITS = [['hoodie', 'Hoodie'], ['tee', 'T-shirt'], ['sweater', 'Sweater'], ['coat', 'Lab coat'], ['blazer', 'Blazer']];
 const CH_GLASSES = [['0', 'None'], ['1', 'Round'], ['2', 'Square']];
-const CH_EYES = [['0', 'Dots'], ['1', 'Happy'], ['2', 'Sleepy']];
+const CH_EYES = [['0', 'Round'], ['1', 'Happy'], ['2', 'Sleepy'], ['3', 'Almond'], ['4', 'Wide']];
+const CH_EYE_C = ['#3b2a20', '#7a4a26', '#a8742a', '#4f8f4a', '#2f8f9a', '#4b86c6', '#2b3a8f', '#7d7d86', '#a0337a', '#d8473f'];
+const CH_BROWS = [['0', 'Soft'], ['1', 'Straight'], ['2', 'Arched'], ['3', 'Thick']];
 const CH_MOUTHS = [['0', 'Smile'], ['1', 'Grin'], ['2', 'Calm'], ['3', 'Oh']];
 const CH_BGPAT = [['0', 'Plain'], ['1', 'Spotlight'], ['2', 'Stripe']];
 const CH_GENDER = [['2', 'Neutral'], ['0', 'Masculine'], ['1', 'Feminine']];
@@ -23,7 +25,7 @@ const CH_BOTTOMS = [['jeans', 'Jeans'], ['joggers', 'Joggers'], ['shorts', 'Shor
 const CH_SHOES = [['sneakers', 'Sneakers'], ['boots', 'Boots'], ['slides', 'Slides']];
 const CH_BOTTOM_C = ['#3a5a8c', '#2b3a4f', '#1d1a1a', '#6b6f78', '#a9b4c4', '#8a6a4a', '#5e7a55', '#b04a4a', '#e8e2d0', '#7a63b5'];
 const CH_SHOE_C = ['#f1f1ec', '#1d1a1a', '#d8473f', '#4b86c6', '#e3b04b', '#5e9a6b', '#8a5a33', '#e87ca0'];
-const CH_DEFAULT = {sk: 2, hc: 1, hs: 'short', ot: 'hoodie', oc: 0, gl: 0, hp: 0, ht: 0, ey: 0, mo: 0, bl: 0, bg: 0, bp: 1, gd: 2, bd: 1, bt: 'jeans', bc: 0, sn: 'sneakers', sc: 0, ls: 0};
+const CH_DEFAULT = {sk: 2, hc: 1, hs: 'short', ot: 'hoodie', oc: 0, gl: 0, hp: 0, ht: 0, ey: 0, mo: 0, bl: 0, bg: 0, bp: 1, gd: 2, bd: 1, bt: 'jeans', bc: 0, sn: 'sneakers', sc: 0, ls: 0, ec: 0, br: 0};
 
 // a simulated player's look, worked out from their number
 const CH_CACHE = new Map();
@@ -34,6 +36,7 @@ function chLookOf(i){
     ot: CH_OUTFITS[n(CH_OUTFITS.length)][0], oc: n(CH_OUTFIT_C.length), gl: r() < .35 ? 1 + n(2) : 0, hp: r() < .15 ? 1 : 0, ht: r() < .08 ? 1 : 0,
     ey: [0, 0, 0, 1, 1, 2][n(6)], mo: [0, 0, 0, 1, 2, 3][n(6)], bl: r() < .25 ? 1 : 0, bg: n(CH_BG.length), bp: n(3)};
   o.gd = [0, 1, 2, 2][n(4)]; o.bd = [0, 1, 1, 2][n(4)]; o.bt = CH_BOTTOMS[n(4)][0]; o.bc = n(CH_BOTTOM_C.length); o.sn = CH_SHOES[n(3)][0]; o.sc = n(CH_SHOE_C.length); o.ls = o.gd === 1 && r() < .6 ? 1 : 0;
+  o.ec = n(CH_EYE_C.length); o.br = n(CH_BROWS.length);
   return o;
 }
 // a saved look, cleaned so a bad or old value can never break the drawing
@@ -42,7 +45,7 @@ function chClean(l){
   l = l || {};
   o.sk = num(l.sk, CH_SKIN.length, d.sk); o.hc = num(l.hc, CH_HAIR.length, d.hc); o.oc = num(l.oc, CH_OUTFIT_C.length, d.oc); o.bg = num(l.bg, CH_BG.length, d.bg);
   o.hs = CH_HAIRSTYLES.some(x => x[0] === l.hs) ? l.hs : d.hs; o.ot = CH_OUTFITS.some(x => x[0] === l.ot) ? l.ot : d.ot;
-  o.gl = num(l.gl, 3, 0); o.ey = num(l.ey, 3, 0); o.mo = num(l.mo, 4, 0); o.bp = num(l.bp, 3, d.bp);
+  o.gl = num(l.gl, 3, 0); o.ey = num(l.ey, CH_EYES.length, 0); o.ec = num(l.ec, CH_EYE_C.length, 0); o.br = num(l.br, CH_BROWS.length, 0); o.mo = num(l.mo, 4, 0); o.bp = num(l.bp, 3, d.bp);
   o.hp = l.hp ? 1 : 0; o.ht = l.ht ? 1 : 0; o.bl = l.bl ? 1 : 0; o.ls = l.ls ? 1 : 0;
   o.gd = num(l.gd, 3, d.gd); o.bd = num(l.bd, 3, d.bd); o.bc = num(l.bc, CH_BOTTOM_C.length, d.bc); o.sc = num(l.sc, CH_SHOE_C.length, d.sc);
   o.bt = CH_BOTTOMS.some(x => x[0] === l.bt) ? l.bt : d.bt; o.sn = CH_SHOES.some(x => x[0] === l.sn) ? l.sn : d.sn;
@@ -103,8 +106,22 @@ function chFigure(look){
   const neck = `<rect x="52" y="64" width="16" height="24" fill="${skin}"/><path d="M52 78Q60 84 68 78V84H52Z" fill="#000" opacity=".1"/>`;
   const head = `<circle cx="36.5" cy="53" r="4.2" fill="${skin}"/><circle cx="83.5" cy="53" r="4.2" fill="${skin}"/><ellipse cx="60" cy="50" rx="24" ry="25" fill="${skin}"/>`;
   // face
-  const eyeY = 52, eyes = L.ey === 1 ? `<path d="M46 ${eyeY + 1.5}Q51 ${eyeY - 4} 56 ${eyeY + 1.5}M64 ${eyeY + 1.5}Q69 ${eyeY - 4} 74 ${eyeY + 1.5}" fill="none" stroke="${ink}" stroke-width="2.2" stroke-linecap="round"/>`
-    : L.ey === 2 ? `<path d="M46.5 ${eyeY}H55.5M64.5 ${eyeY}H73.5" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/>` : `<circle cx="51" cy="${eyeY}" r="2.5" fill="${ink}"/><circle cx="69" cy="${eyeY}" r="2.5" fill="${ink}"/>`;
+  const eyeY = 52, ec = CH_EYE_C[L.ec], ecd = chShade(ec, .55), sk = skin, ey = L.ey;
+  const eye = (x, s) => {
+    const iw = ey === 4 ? 4.1 : ey === 3 ? 3 : 3.4, y = ey === 2 ? eyeY + .6 : eyeY, ry = ey === 4 ? 5.4 : ey === 3 ? 4.1 : 4.6, rx = ey === 4 ? 5.9 : 5.5;
+    let g = ey === 3 ? `<path d="M${x - s * 6} ${y + .8}Q${x} ${y - 5} ${x + s * 6} ${y - 1.4}Q${x} ${y + 4.2} ${x - s * 6} ${y + .8}Z" fill="#fff" stroke="${ink}" stroke-width=".7" stroke-linejoin="round"/>`
+      : `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fff" stroke="${ink}" stroke-width=".7"/>`;
+    const ix = x + s * (ey === 3 ? .4 : .2), iy = y + (ey === 1 ? .5 : ey === 2 ? .4 : 0);
+    g += `<circle cx="${ix}" cy="${iy}" r="${iw}" fill="${ec}" stroke="${ecd}" stroke-width=".6"/><circle cx="${ix}" cy="${iy}" r="${(iw * .46).toFixed(2)}" fill="${ink}"/><circle cx="${ix - 1.1}" cy="${iy - 1.2}" r="${(iw * .27).toFixed(2)}" fill="#fff"/><circle cx="${ix + 1.1}" cy="${iy + 1.1}" r="${(iw * .13).toFixed(2)}" fill="#fff" opacity=".8"/>`;
+    if (ey === 1) g += `<path d="M${x - 7} ${y + 7}L${x - 7} ${y + 1.8}Q${x} ${y - 1.4} ${x + 7} ${y + 1.8}L${x + 7} ${y + 7}Z" fill="${sk}"/><path d="M${x - 5.6} ${y + 1.6}Q${x} ${y - 1} ${x + 5.6} ${y + 1.6}" fill="none" stroke="${ink}" stroke-width="1.2" stroke-linecap="round"/>`;
+    if (ey === 2) g += `<path d="M${x - 7} ${y - 7}H${x + 7}V${y - .4}Q${x} ${y + 1.6} ${x - 7} ${y - .4}Z" fill="${sk}"/><path d="M${x - 5.8} ${y - .2}Q${x} ${y + 1.5} ${x + 5.8} ${y - .2}" fill="none" stroke="${ink}" stroke-width="1.8" stroke-linecap="round"/>`;
+    else if (ey !== 1) g += `<path d="M${x - rx} ${y - .3}Q${x} ${y - ry * 1.5} ${x + rx} ${y - .3}" fill="none" stroke="${ink}" stroke-width="1.5" stroke-linecap="round"/>`;
+    return g;
+  };
+  const eyes = eye(51, -1) + eye(69, 1);
+  const bc = chShade(hair, .72), bw = L.br === 3 ? 2.6 : 1.7, by = L.br === 2 ? 41.5 : 42.5;
+  const bro = [`M${43} ${by + 1.6}Q${49} ${by - 1.2} ${57} ${by + .8}M${77} ${by + 1.6}Q${71} ${by - 1.2} ${63} ${by + .8}`, `M43 ${by + 1}L57 ${by}M77 ${by + 1}L63 ${by}`, `M43 ${by + 2}Q50 ${by - 3.4} 57 ${by + 1}M77 ${by + 2}Q70 ${by - 3.4} 63 ${by + 1}`, `M43 ${by + 1.4}Q49 ${by - .6} 57 ${by + .4}M77 ${by + 1.4}Q71 ${by - .6} 63 ${by + .4}`][L.br];
+  const brows = `<path d="${bro}" fill="none" stroke="${bc}" stroke-width="${bw}" stroke-linecap="round"/>`;
   const mouth = L.mo === 1 ? `<path d="M52 61Q60 72 68 61Z" fill="${ink}"/><path d="M54 62.5H66" stroke="#fff" stroke-width="2"/>` : L.mo === 2 ? `<path d="M54 64H66" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>`
     : L.mo === 3 ? `<ellipse cx="60" cy="64" rx="3.2" ry="3.8" fill="${ink}"/>` : `<path d="M52.5 62Q60 69 67.5 62" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>`;
   const blush = L.bl ? '<circle cx="44" cy="60" r="4" fill="#e8837a" opacity=".3"/><circle cx="76" cy="60" r="4" fill="#e8837a" opacity=".3"/>' : '';
@@ -126,8 +143,10 @@ function chFigure(look){
   if (L.gl) acc += `<g fill="none" stroke="${ink}" stroke-width="1.8">${L.gl === 1 ? '<circle cx="51" cy="52" r="7.5"/><circle cx="69" cy="52" r="7.5"/>' : '<rect x="43" y="45.5" width="15" height="13" rx="3"/><rect x="62" y="45.5" width="15" height="13" rx="3"/>'}<path d="M58.5 52H61.5"/></g>`;
   if (L.ht) acc += `<path d="M35 44C34 16 48 10 60 10C72 10 86 16 85 44Z" fill="${dk}"/><rect x="34" y="38" width="52" height="10" rx="4" fill="${top}"/>`;
   if (L.hp) acc += `<path d="M35 52C34 14 86 14 85 52" fill="none" stroke="#c9cfda" stroke-width="4.5"/><rect x="29" y="44" width="11" height="22" rx="5.5" fill="#3a4252"/><rect x="80" y="44" width="11" height="22" rx="5.5" fill="#3a4252"/>`;
-  const lashes = L.ls ? `<path d="M47.500 50.500L44 48.500M49.500 49.500L48 46M72.500 50.500L76 48.500M70.500 49.500L72 46" stroke="${ink}" stroke-width="1.600" stroke-linecap="round"/>` : '';
-  return back + legs + arms + neck + body + head + blush + nose + eyes + lashes + mouth + front + acc;
+  const lashes = L.ls ? `<path d="M45.800 50.500L42.800 48.200M47.600 48.800L45.800 45.600M74.200 50.500L77.200 48.200M72.400 48.800L74.200 45.600" stroke="${ink}" stroke-width="1.400" stroke-linecap="round"/>` : '';
+  const skinHex = skin.toLowerCase(), OL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
+  const ol = str => str.replace(/<(path|rect|circle|ellipse)\b([^>]*?)(\/?)>/g, (m, t, a, c) => /fill="none"|stroke=|opacity=|fill="#000"/.test(a) || a.toLowerCase().includes('fill="' + skinHex + '"') ? m : `<${t}${a} ${OL}${c}>`);
+  return ol(back + legs + arms) + neck + ol(body) + head + blush + nose + eyes + brows + lashes + mouth + ol(front + acc);
 }
 // a picture of the character with its background; the default view is the square portrait (head and shoulders)
 function chFull(look, view){
@@ -206,7 +225,7 @@ function ccPanel(){
   return [
     ccH('Gender') + ccTiles('gd', CH_GENDER, d, 'full', true) + ccH('Body shape') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
     ccH('Style') + ccTiles('hs', CH_HAIRSTYLES, d, 'head') + ccH('Hair color') + ccSwatches('hc', CH_HAIR, d),
-    ccH('Eyes') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face']], d),
+    ccH('Eye shape') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Eye color') + ccSwatches('ec', CH_EYE_C, d) + ccH('Eyebrows') + ccTiles('br', CH_BROWS, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face']], d),
     ccH('Top') + ccTiles('ot', CH_OUTFITS, d, 'top') + ccH('Top color') + ccSwatches('oc', CH_OUTFIT_C, d),
     ccH('Bottoms') + ccTiles('bt', CH_BOTTOMS, d, 'bottoms') + ccH('Color') + ccSwatches('bc', CH_BOTTOM_C, d),
     ccH('Shoes') + ccTiles('sn', CH_SHOES, d, 'shoes') + ccH('Color') + ccSwatches('sc', CH_SHOE_C, d),
