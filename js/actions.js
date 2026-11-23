@@ -138,12 +138,12 @@ function acQueue(w, p, due){
 
 /* ---- they say they did it: make it true ----
    "followed back", "got u added": when a player says in chat that they followed you, they follow you. Nothing is blocked; this only makes the claim real. */
-const AC_FOLLOW_CLAIM = /\b(?:(?:i\s+)?(?:just\s+)?(?:followed|added)\s+(?:you|ya)\b|followed\s+(?:you\s+)?back\b|got\s+(?:you|ya)\s+(?:added|followed)\b|(?:i'm|im|i\s+am)\s+following\s+(?:you|ya)\b|following\s+(?:you|ya)\s+now\b|(?:you're|youre)\s+(?:added|followed)\b)/;
+const AC_FOLLOW_CLAIM = /\b(?:(?:i\s+|just\s+|ok\s+|fine\s+|done\s+)*followed(?!\s+(?:by|up|on|to|in|from)\b)|(?:i\s+)?(?:just\s+)?added\s+(?:you|ya|u|back)\b|follow(?:ed)?\s+(?:sent|done)|got\s+(?:you|ya|u)\s+(?:added|followed)\b|(?:i'm|im|i\s+am)\s+following\s+(?:you|ya|u)\b|following\s+(?:you|ya|u)\s+now\b|(?:you're|youre|ur|u're)\s+(?:added|followed)\b)/;
 function acClaim(w, text){
   try {
     if (w == null || w < 0 || typeof FD === 'undefined' || !FD.followers) return;
     const t = acNorm(text);
-    if (!AC_FOLLOW_CLAIM.test(t) || /\?|\b(?:if|when|whenever|will|gonna|should|wanna|can\s+i|would|ill|i'll|didn't|didnt|haven't|havent|not)\b/.test(t.slice(0, t.search(AC_FOLLOW_CLAIM)))) return;
+    if (!AC_FOLLOW_CLAIM.test(t) || /\?|\b(?:if|when|whenever|will|gonna|should|wanna|can\s+i|would|ill|i'll|didn't|didnt|haven't|havent|not|you|who)\b/.test(t.slice(0, t.search(AC_FOLLOW_CLAIM)))) return;
     if (FD.followers.includes(w) || ACT.q.some(q => q.w === w && q.act === 'follow')) return;
     acQueue(w, {act: 'follow', kind: 'follow', tid: ''}, Date.now() + 1500 + Math.random() * 4000);
   } catch(e){ console.error(e); }
