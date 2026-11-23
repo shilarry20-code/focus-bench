@@ -43,7 +43,7 @@ function mcPrompt(c, task){
   const youMin = Math.round(c.you / 60000), themMin = Math.round((c.tapped ? c.target : c.them) / 60000);
   const state = c.state === 'done' ? `The match just ended: ${me} ${({W: 'won', L: 'lost'})[c.res]}.`
     : !c.you ? `${me} hasn't started studying yet.` : focusing() ? `${me} is focusing right now.` : S.running ? `${me} is on a break.` : `${me} has paused their timer.`;
-  const sys = `You write in-match chat messages from ${B.name} to ${me}. They're playing a live match on Focus Bench, a study-timer app for college students: both study at the same time and whoever studies longer wins.
+  const sys = `You write in-match chat messages from ${B.name} to ${me}. They're playing a live match on Focus Desk, a study-timer app for college students: both study at the same time and whoever studies longer wins.
 Write like quick game chat: short, casual, lowercase is fine, friendly trash talk is fine. Keep ${B.name}'s personality. Don't lecture about studying.
 Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. ${EMO_RULE} Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Every message is from ${B.name}.
 ${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;

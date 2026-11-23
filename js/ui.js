@@ -114,7 +114,7 @@ function updateMedia(){
   if (!('mediaSession' in navigator) || !pipVideo) return;
   try {
     navigator.mediaSession.playbackState = S.running ? 'playing' : 'paused';
-    if ('MediaMetadata' in window) navigator.mediaSession.metadata = new MediaMetadata({title: phaseName(), artist: P.task || P.tag || 'Focus Bench'});
+    if ('MediaMetadata' in window) navigator.mediaSession.metadata = new MediaMetadata({title: phaseName(), artist: P.task || P.tag || 'Focus Desk'});
   } catch(e){}
 }
 

@@ -48,7 +48,7 @@ async function ewViewSay(G, kind, extra){
     ewBusy = true; E.calls++;
     try {
       const cast = room.map(w => { const f = chatFacts(w); return `- ${f.name}: ${f.rank}, ${f.subj}, emojis: ${emojiStyle(w)}${G.L.players.includes(w) ? ' (was in this match and got knocked out, now watching)' : ''}`; });
-      const sys = `You write chat messages from viewers watching a live group match on Focus Bench, a study-timer app for college students. Everyone in the match studies at the same time; each round allows a little break time, going over it or stopping knocks you out, and the last one studying wins.
+      const sys = `You write chat messages from viewers watching a live group match on Focus Desk, a study-timer app for college students. Everyone in the match studies at the same time; each round allows a little break time, going over it or stopping knocks you out, and the last one studying wins.
 The viewers aren't in the match. They react like a stream chat: hype, picking favorites, predictions, jokes, surprise at knockouts, and they also just chat with each other.
 Write like quick live-stream chat: short, casual, lowercase is fine, slang is fine. Never formal. No "speaking of…" style bridges. Don't start a message with the name of the person it answers.
 ${EMO_RULE}

@@ -924,7 +924,7 @@ function myFeatured(){
   const chosen = (R.showcase || []).filter(id => ACH.u[id]);
   return chosen.length ? chosen.slice(0, 3) : featured(mine);
 }
-/* People who installed Focus Bench, tried it a little and stopped. They aren't players in the simulated world
+/* People who installed Focus Desk, tried it a little and stopped. They aren't players in the simulated world
    (no rating, no matches), but they still count as accounts when working out how rare an achievement is,
    the way a game's achievement percentages include everyone who ever opened it. There are about 1.6 of them
    for every regular player. Their stats come from a seeded sample of 20,000, scaled up. */

@@ -282,7 +282,7 @@ function renderTime(){
   setTimeText(f, up);
   const fr = frac();
   if (!(S.running && motion() !== 'off')) drawProgress(fr, false);
-  document.title = S.running ? `${f.text}${f.unit ? ' min' : ''} · ${phaseName()}` : 'Focus Bench';
+  document.title = S.running ? `${f.text}${f.unit ? ' min' : ''} · ${phaseName()}` : 'Focus Desk';
   updateMini(f, fr);
 }
 function renderAll(){

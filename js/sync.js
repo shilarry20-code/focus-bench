@@ -1,5 +1,5 @@
 /* ---------- sync across devices through a private GitHub gist ----------
-   The data lives in one private gist ("Focus Bench sync", file focus-bench-sync.json) on your GitHub account.
+   The data lives in one private gist ("Focus Desk sync", file focus-bench-sync.json) on your GitHub account.
    Each device reads it, merges it with what it has, and writes the result back. Nothing else is involved: the
    app talks straight to api.github.com with a token that can only touch gists.
 
@@ -14,9 +14,9 @@
    (dead), so a deletion on one device isn't undone by the other. The newest change wins.
    The token is kept in this browser only (fb.sync), never in backups or in the gist. */
 
-const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Bench sync', SYNC_API = 'https://api.github.com';
-const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Bench sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 23 · 207';
+const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Desk sync', SYNC_API = 'https://api.github.com';
+const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Desk sync');
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 23 · 208';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -384,7 +384,7 @@ function renderSyncPanel(){
     <div class="sync-push"><button class="link-btn" id="syncPushSet">Use this device's settings on all devices</button><small class="hint">Style, timer, sounds and activities. Your other devices switch to them the next time they sync.</small></div>
     ${SYNC.err && SYNC.err !== 'offline' && /token/i.test(SYNC.err) ? `<p class="hint">Make a new token and paste it below. <a href="${SYNC_TOKEN_URL}" target="_blank" rel="noopener">Create a GitHub token ↗</a></p><span class="sync-row"><input type="password" id="syncTok" placeholder="ghp_…" autocomplete="off" spellcheck="false" aria-label="New GitHub token"><button class="small-btn accent" id="syncConnect">Use this token</button></span>` : ''}
     ${syncShowQR ? `<div class="sync-qr"><div class="sync-qr-img" id="syncQRImg" aria-label="QR code for connecting another device">Loading…</div>
-      <div><p><b>Scan this with your phone's camera.</b> It opens Focus Bench and turns on sync there. Or open the link on any other device.</p>
+      <div><p><b>Scan this with your phone's camera.</b> It opens Focus Desk and turns on sync there. Or open the link on any other device.</p>
       <div class="confirm"><button class="small-btn" id="syncCopyLink">Copy link</button></div>
       <p class="hint">The code contains your token, so anyone who scans it can see your synced data. Don't share it.</p></div></div>` : ''}`;
   if (syncShowQR) drawSyncQR();

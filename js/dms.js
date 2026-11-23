@@ -56,7 +56,7 @@ const matchBusy = () => !!((R.cur && R.cur.state === 'live') || MQ);
 /* ---- Gemini writes what they say ---- */
 function dmPrompt(w, task){
   const B = bot(w), f = chatFacts(w), me = myName(), h = lastVs(w), rk = myRk();
-  const sys = `You write direct messages that ${B.name}, a player of Focus Bench, sends to another player, ${me}. Focus Bench is a study-timer app for college students; in ranked matches whoever studies longer wins and gains Elo.
+  const sys = `You write direct messages that ${B.name}, a player of Focus Desk, sends to another player, ${me}. Focus Desk is a study-timer app for college students; in ranked matches whoever studies longer wins and gains Elo.
 Write like real texting between two college students: casual, short, lowercase is fine, sometimes several short texts in a row. Keep ${B.name}'s own personality. They can talk about anything; most texts shouldn't be about studying or work, and don't tack study talk onto messages. When they bring up shows, movies, music, games or sports, they name the real ones (no vague "that show").
 Each player has their own emoji habit (given next to their name): \"often\" uses emojis in a lot of messages, \"sometimes\" now and then, \"never\" not at all; at most a couple per message. ${EMO_RULE} Keep it friendly and appropriate: no explicit content, no slurs or harassment. Never mention AI. Don't check in on how ${me} is doing and don't congratulate rank-ups unprompted. Every message is from ${B.name}.
 ${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;

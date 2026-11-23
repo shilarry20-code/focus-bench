@@ -289,7 +289,7 @@ focus music
 studying in bed
 the quiet floor
 a study buddy
-their Focus Bench streak
+their Focus Desk streak
 a long session
 grinding before a deadline
 a study plan

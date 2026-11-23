@@ -17,8 +17,8 @@ $('#bkDownload').onclick = () => {
 };
 function restoreBackup(raw){
   let data;
-  try { data = JSON.parse(String(raw).trim()); } catch(e){ toast("That isn't a Focus Bench backup. Copy the whole backup and try again."); return; }
-  if (!data || data.app !== 'focus-bench' || !Array.isArray(data.log)){ toast("That isn't a Focus Bench backup. Copy the whole backup and try again."); return; }
+  try { data = JSON.parse(String(raw).trim()); } catch(e){ toast("That isn't a Focus Desk backup. Copy the whole backup and try again."); return; }
+  if (!data || data.app !== 'focus-bench' || !Array.isArray(data.log)){ toast("That isn't a Focus Desk backup. Copy the whole backup and try again."); return; }
   const key = s => [s.t, s.min, s.task || '', s.tag || ''].join('|'), have = new Set(LOG.map(key));
   const fresh = data.log.filter(s => s && typeof s.t === 'number' && typeof s.min === 'number' && !have.has(key(s)));
   LOG = LOG.concat(fresh).sort((a,b) => a.t - b.t); store.set('fb.log', LOG);

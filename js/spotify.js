@@ -142,7 +142,7 @@ function renderMusic(){
   $('#spTry').hidden = !IS_FILE || IN_VIEWER;
   $('#spTry').textContent = P.music.tryFile ? 'Go back to the Open in Spotify button' : 'Try the built-in player anyway';
   $('#spNote').textContent = IS_FILE && !IN_VIEWER && !P.music.tryFile
-    ? "Spotify's player doesn't load when Focus Bench is opened as a file from your computer, so your music opens in Spotify instead and the timer can't control it. Use the website version for the built-in player."
+    ? "Spotify's player doesn't load when Focus Desk is opened as a file from your computer, so your music opens in Spotify instead and the timer can't control it. Use the website version for the built-in player."
     : canEmbed()
     ? 'Full songs play when you are signed in to Spotify in this browser. If you are not, Spotify only plays 30-second previews. The timer controls this player, not the Spotify app on your computer or phone.'
     : "This page runs inside Claude's viewer, which doesn't allow embedded players, so your music opens in Spotify instead and the timer can't control it. Use the website version for the built-in player.";
