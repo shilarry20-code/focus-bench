@@ -154,16 +154,16 @@ function lfRow(ev){
   else if (ev.kind === 'hours'){ ic = 'flame'; txt = `${lfName(ev.i)} <span>passed ${ev.h} hours today</span>`; }
   else if (ev.kind === 'rank'){ ic = 'up'; txt = `${lfName(ev.i)} <span>reached ${emblem(ev.rk, 'xs')} ${esc(ev.rk.full)}</span>`; }
   else if (ev.kind === 'match'){ const p = ev.p, aw = p.ma >= p.mc, w = aw ? p.a : p.c, l = aw ? p.c : p.a, wm = Math.max(p.ma, p.mc), lm = Math.min(p.ma, p.mc), d = Math.abs(p.dlt);
-    ic = 'swords'; txt = p.ma === p.mc ? `${lfName(p.a)} <span>drew with</span> ${lfName(p.c)} <span>· ${wm}–${lm} min</span>` : `${lfName(w)} <em class="lft-d up">+${d}</em> <span>beat</span> ${lfName(l)} <em class="lft-d down">−${d}</em> <span>· ${wm}–${lm} min</span>`; }
-  else if (ev.kind === 'mine'){ const h = ev.h; ic = 'you'; txt = `<b>You</b> <span>${({W: 'beat', L: 'lost to', D: 'drew with'})[h.r]}</span> ${lfName(h.b)} <span>· ${h.you}–${h.them} min${h.f ? ' · friendly' : ` · ${h.d > 0 ? '+' : ''}${h.d}`}</span>`; }
+    ic = 'swords'; txt = `${lfName(w)} <em class="lft-d up">+${d}</em> <span>beat</span> ${lfName(l)} <em class="lft-d down">−${d}</em> <span>· ${wm}–${lm} min</span>`; }
+  else if (ev.kind === 'mine'){ const h = ev.h; ic = 'you'; txt = `<b>You</b> <span>${({W: 'beat', L: 'lost to'})[h.r]}</span> ${lfName(h.b)} <span>· ${h.you}–${h.them} min${h.f ? ' · friendly' : ` · ${h.d > 0 ? '+' : ''}${h.d}`}</span>`; }
   return `<li class="lf-${ev.kind}"><i class="lf-ic lf-ic-${ic}" aria-hidden="true"></i><span class="lf-txt">${txt}</span><time>${lfAgo(ev.t)}</time></li>`;
 }
 function lfTopRow(ev){
-  const p = ev.p, draw = p.ma === p.mc, aw = p.ma > p.mc;
+  const p = ev.p, aw = p.ma > p.mc;
   const side = (i, r, mins, d) => { const q = posOf(i) + 1, pos = q <= 1000 ? `#${q} · ` : '', cls = d > 0 ? 'up' : d < 0 ? 'down' : '';
     return `<span class="lft-p${d > 0 ? ' won' : ''}">${avatar(bot(i), 'sm')}<span>${lfName(i)}<small>${pos}${emblem(rankOf(r), 'xs')} ${r.toLocaleString()} · ${mins} min</small><em class="lft-d ${cls}">${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)} Elo</em></span></span>`; };
   const ago = lfAgo(ev.t);
-  return `<li>${side(p.a, p.ra, p.ma, p.dlt)}<span class="lft-vs">${draw ? 'Draw' : 'vs'}<time>${ago === 'now' ? 'just now' : ago + ' ago'}</time></span>${side(p.c, p.rc, p.mc, -p.dlt)}</li>`;
+  return `<li>${side(p.a, p.ra, p.ma, p.dlt)}<span class="lft-vs">vs<time>${ago === 'now' ? 'just now' : ago + ' ago'}</time></span>${side(p.c, p.rc, p.mc, -p.dlt)}</li>`;
 }
 function renderLive(force){
   // it's drawn on Ranked, and in the Feed's Live tab

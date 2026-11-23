@@ -5,7 +5,7 @@
      challenges  50-100 each (daily), 300-500 (weekly), 1,000-1,500 (monthly), by difficulty; finishing a whole set pays
                  +300, +1,500 or +5,000 on top
      awards      25 coins per achievement point (bronze 125 up to legendary 2,500)
-     ranked 1v1  a win pays 4x your rank's base, a loss 1x (a draw 2x)
+     ranked 1v1  a win pays 4x your rank's base, a loss 1x
      Elimination every player in a ranked lobby adds 1.25x their own rank base to a prize pool, and the pool is shared by
                  place: 4 players or fewer pay 1st only (100%), 5-8 pay the top 3 (50/30/20), 9-16 pay the top 5
                  (35/25/20/12/8). Everyone else gets nothing from the match.
@@ -18,7 +18,7 @@ const CO_BASE0 = 300, CO_STEP = 100, CO_DIVSTEP = 25, CO_PARAGON = 1600;
 const CO_FULL_MIN = 240, CO_GOAL = 50, CO_ACH = 25, CO_POOL = 1.25;
 const CO_CH_RANGE = {d: [50, 100, .8, 1.2, 5], w: [300, 500, 1, 1.3, 25], m: [1000, 1500, 1, 1.3, 50]};   // lo, hi, difficulty range, rounding
 const CO_CH_SET = {d: 300, w: 1500, m: 5000};
-const CO_V1 = {W: 4, L: 1, D: 2};
+const CO_V1 = {W: 4, L: 1};
 const coSplit = n => n <= 4 ? [1] : n <= 8 ? [.5, .3, .2] : [.35, .25, .2, .12, .08];
 const coMult = s => s >= 14 ? 1.5 : s >= 7 ? 1.25 : s >= 3 ? 1.1 : 1;
 

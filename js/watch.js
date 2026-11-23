@@ -57,7 +57,7 @@ function wPrompt(task){
   const inRoom = wRoom();
   const cast = inRoom.map(i => { const f = chatFacts(i); return `- ${f.name}: ${f.rank}, ${f.subj}, emojis: ${emojiStyle(i)}${i === W.a || i === W.c ? ' (one of the two players; they just stopped and are watching now)' : ''}`; });
   const lead = st.ta === st.tc ? 'tied' : `${st.ta > st.tc ? A.name : C.name} is ahead by ${Math.round(Math.abs(st.ta - st.tc))} min`;
-  const res = st.over ? (W.ma === W.mc ? 'It ended in a draw.' : `It's over: ${W.ma > W.mc ? A.name : C.name} won ${Math.max(W.ma, W.mc)}–${Math.min(W.ma, W.mc)} min (${W.ma > W.mc ? '+' + W.dlt : '+' + -W.dlt} Elo for the winner, the same off the loser).`) : '';
+  const res = st.over ? (`It's over: ${W.ma > W.mc ? A.name : C.name} won ${Math.max(W.ma, W.mc)}–${Math.min(W.ma, W.mc)} min (${W.ma > W.mc ? '+' + W.dlt : '+' + -W.dlt} Elo for the winner, the same off the loser).`) : '';
   const sys = `You write chat messages from spectators watching a live ranked match on Focus Bench, a study-timer app for college students. In a match both players study at the same time and whoever studies longer wins Elo.
 The spectators are in a watch room together; some are studying along on their own break schedule. They react to the match like viewers of a stream: hype, predictions, rooting for someone, jokes, surprise when someone stops. They can also just chat with each other a bit.
 Write like quick live-stream chat: short, casual, lowercase is fine, slang is fine. Never formal. No "speaking of…" style bridges.
@@ -159,12 +159,12 @@ function renderWatch(fresh){
   slot.querySelectorAll('.w-p').forEach(el => {
     const i = +el.dataset.wp, on = i === W.a ? st.aOn : st.cOn, t = i === W.a ? st.ta : st.tc, won = st.over && (i === W.a ? W.ma > W.mc : W.mc > W.ma);
     el.querySelector('.w-time').textContent = wClock(t);
-    el.querySelector('.w-st').innerHTML = on ? '<i class="w-on"></i>Studying' : st.over ? (W.ma === W.mc ? 'Draw' : won ? `<b class="lft-d up">Won · +${Math.abs(W.dlt)} Elo</b>` : `<b class="lft-d down">Lost · −${Math.abs(W.dlt)} Elo</b>`) : 'Stopped';
+    el.querySelector('.w-st').innerHTML = on ? '<i class="w-on"></i>Studying' : st.over ? (won ? `<b class="lft-d up">Won · +${Math.abs(W.dlt)} Elo</b>` : `<b class="lft-d down">Lost · −${Math.abs(W.dlt)} Elo</b>`) : 'Stopped';
     el.classList.toggle('off', !on && !won); el.classList.toggle('won', won);
   });
   slot.querySelector('.w-view').textContent = `${wViewers().toLocaleString()} watching`;
   const gap = Math.abs(st.ta - st.tc);
-  slot.querySelector('.w-lead').textContent = st.over ? (W.ma === W.mc ? 'It’s a draw.' : `${W.ma > W.mc ? A.name : C.name} wins by ${Math.round(Math.abs(W.ma - W.mc))} min. The room closes in a few minutes.`)
+  slot.querySelector('.w-lead').textContent = st.over ? (`${W.ma > W.mc ? A.name : C.name} wins by ${Math.round(Math.abs(W.ma - W.mc))} min. The room closes in a few minutes.`)
     : gap < 1 ? 'Dead even.' : `${st.ta > st.tc ? A.name : C.name} is ahead by ${Math.floor(gap)} min${(!st.aOn || !st.cOn) ? ` · ${st.aOn ? C.name : A.name} has stopped, so ${st.aOn ? A.name : C.name} just has to keep going` : ''}.`;
   if (wBigOn) wGraph(slot.querySelector('.w-graph'), st);
   const al = slot.querySelector('.w-along');
@@ -195,7 +195,7 @@ function wTick(){
   [[W.a, W.ea], [W.c, W.ec]].forEach(([i, e]) => { if (st.m >= e && !W.seen[i]){ W.seen[i] = 1; changed = true;
     W.chat.push({t: now, sys: 1, text: `${bot(i).name} stopped at ${Math.floor(e - (i === W.a ? W.sa : W.sc))} min.`});
     if (!st.over){ if (foc) W.later = 'stop:' + i; else wSay('stop', 1500, bot(i).name); } } });
-  if (st.over && !W.seen.end){ W.seen.end = 1; changed = true; W.chat.push({t: now, sys: 1, text: W.ma === W.mc ? 'Draw.' : `${bot(W.ma > W.mc ? W.a : W.c).name} wins.`}); W.q = []; wSay('end', 1500); }
+  if (st.over && !W.seen.end){ W.seen.end = 1; changed = true; W.chat.push({t: now, sys: 1, text: `${bot(W.ma > W.mc ? W.a : W.c).name} wins.`}); W.q = []; wSay('end', 1500); }
   if (foc && W.q.length){ W.q = []; changed = true; }                    // the room waits while you focus
   // one message at a time, a couple of seconds apart (after a break or a pause, the backlog comes in one by one)
   if (W.q.length && W.q[0].t <= now && !foc && now - (W.lastMsg || 0) >= 2200){ const x = W.q.shift(); W.chat.push({t: now, w: x.w, text: x.text}); W.lastMsg = now; changed = true; if (typeof acClaim === 'function') acClaim(x.w, x.text);

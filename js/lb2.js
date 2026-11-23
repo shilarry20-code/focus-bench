@@ -146,7 +146,7 @@ function lbYouCard(c, V, t){
     if (mark){ const w = V.at(mark[1] - 1), gap = V.val(w) - me + 1; next += `<div class="hint">${lbGapTxt(c.u, Math.max(1, gap))} to reach the top ${mark[0]}%</div>`; } }
   let extra = '';
   if (c.id === 'rkp' && myGames() < 20){ next = `<div>Play ${20 - myGames()} more rated game${20 - myGames() === 1 ? '' : 's'} to get a win rate on this board.</div>`; }
-  if (c.id === 'rkp' && myGames()) extra = `<div class="hint">${R.w}–${R.l}${R.d ? '–' + R.d : ''} in rated games · ${winPct(R.w, myGames())}</div>`;
+  if (c.id === 'rkp' && myGames()) extra = `<div class="hint">${R.w}–${R.l} in rated games · ${winPct(R.w, myGames())}</div>`;
   if (c.id === 'cur'){ const today = LOG.filter(x => dayKey(x.t) === dayKey(Date.now())).reduce((n, x) => n + x.min, 0); if (today < 10) extra = `<div class="hint">${t.cur ? 'Study 10+ minutes today to keep your streak.' : 'Study 10+ minutes today to start a streak.'}</div>`; }
   if (c.id === 'pts') extra = `<div class="hint">${ACHS.filter(a => ACH.u[a.id]).length} of ${ACHS.length} achievements unlocked.</div>`;
   return `<div class="lb2-you"><small class="hint">Your standing · ${esc(c.name)}${all ? '' : ` · ${LB_FILTERS.find(f => f[0] === P.lbFilt)[1]}`}</small><div class="lb2-big">#${place.toLocaleString()}</div>

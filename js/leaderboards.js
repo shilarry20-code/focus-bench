@@ -49,7 +49,7 @@ function rkArrs(){
   }
   return (RKA = {v: botsVer, src: RK_EW, w, p});
 }
-const myGames = () => R.w + R.l + R.d;
+const myGames = () => R.w + R.l;
 const myWinP10 = () => myGames() >= 20 ? Math.round(R.w / myGames() * 1000) : 0;
 const winPct = (w, g) => g ? (Math.round(w / g * 1000) / 10).toFixed(1) + '%' : '–';
 // the board only ever shows the top 50 and the few players around you, so instead of sorting all 682,925 players,

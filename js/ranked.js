@@ -373,7 +373,7 @@ function loadRanked(){
   if (!R.para) R.para = {h: null, since: 0, reign: {}, long: {}};
   RK_READY = false;
   return loadBots().catch(e => { console.error(e); }).then(() => {
-    rTables(); RK_READY = true; try { rkRepairWL(); } catch(e){ console.error(e); } botsChanged(); if (document.body.dataset.page === 'profile') setTimeout(() => { if (profWho !== ME && !BOTS[profWho]) showPage(profPrev || 'ranked'); else renderProfilePage(); }, 0);
+    rTables(); RK_READY = true; try { rkRepairWL(); rkNoDraws(); } catch(e){ console.error(e); } botsChanged(); if (document.body.dataset.page === 'profile') setTimeout(() => { if (profWho !== ME && !BOTS[profWho]) showPage(profPrev || 'ranked'); else renderProfilePage(); }, 0);
     updateParagon(true);
     saveRanked(true);
     const show = () => { renderRankChip(); renderMatch(); if (!$('#page-ranked').hidden) renderRanked(); if (!$('#page-leaders').hidden) renderLeaders(); };
@@ -1044,7 +1044,7 @@ function oppReach(c, ms){ let acc = 0; for (const [a, b] of c.plan){ if (acc + (
 const oppThem = (c, now) => c.plan.reduce((n, [a, b]) => n + Math.max(0, Math.min(now, b) - a), 0);
 const oppState = (c, now) => now >= c.plan[c.plan.length - 1][1] ? 'stopped' : c.plan.some(([a, b]) => now >= a && now < b) ? 'studying' : now < c.plan[0][0] ? 'starting' : 'break';
 const kFactor = () => R.played < 5 ? 40 : 24;
-function stakes(br){ const E = 1 / (1 + Math.pow(10, (br - R.mmr) / 400)), K = kFactor(); return {E, win: Math.round(K * (1 - E)), loss: Math.round(K * E), draw: Math.round(K * (.5 - E))}; }
+function stakes(br){ const E = 1 / (1 + Math.pow(10, (br - R.mmr) / 400)), K = kFactor(); return {E, win: Math.round(K * (1 - E)), loss: Math.round(K * E)}; }
 function startMatch(found, friendly){
   const b = found != null ? found : findOpponent(), br = botRating(b), now = Date.now();
   const lines = [...CHAT].sort(() => Math.random() - .5).slice(0, 6);
@@ -1099,6 +1099,15 @@ function renderQueue(){
 }
 // repair: from Nov 20 (04:02 ET) a bug skipped counting your rated wins, losses and draws (and counted friendly ones):
 // put them right once from your match history
+// there are no draws any more: each old one becomes the win or loss its Elo change says it was
+function rkNoDraws(){
+  if (R.noDraw || !R.hist) return;
+  let seen = 0, add = [0, 0];
+  R.hist.forEach(h => { if (h.r !== 'D') return; const win = (h.d || 0) > 0; h.r = win ? 'W' : 'L'; if (!h.f){ seen++; add[win ? 0 : 1]++; const rec = R.rec[h.b]; if (rec && rec[2] > 0){ rec[2]--; rec[win ? 0 : 1]++; } } });
+  R.w += add[0]; R.l += add[1] + Math.max(0, (R.d || 0) - seen);          // draws too old to be in the history count as losses
+  Object.values(R.rec).forEach(rec => { if (rec[2] > 0){ rec[1] += rec[2]; rec[2] = 0; } });
+  R.d = 0; R.noDraw = 1; saveRanked();
+}
 function rkRepairWL(){
   if (R.fixWL || !R.hist) return; const T = Date.UTC(2026, 10, 20, 9, 2);
   R.hist.filter(h => h.t >= T).forEach(h => {
@@ -1115,7 +1124,7 @@ function finalize(res, why){
     if (why !== 'silent') toast('Match not rated: you studied less than 10 minutes.');
     return;
   }
-  const s = stakes(c.br), delta = c.friendly ? 0 : res === 'W' ? s.win : res === 'D' ? s.draw : -s.loss;
+  const s = stakes(c.br), delta = c.friendly ? 0 : res === 'W' ? s.win : -s.loss;
   const before = rankOf(R.mmr);
   const wasUn = rkUnplaced();
   if (!c.friendly){ R.mmr = clampN(R.mmr + delta, 100, 5000); R.best = Math.max(R.best, R.mmr); R.played++; }
@@ -1123,10 +1132,9 @@ function finalize(res, why){
   const rec = R.rec[c.b] || (R.rec[c.b] = [0, 0, 0]);
   const nem = nemesis();
   if (!c.friendly && RK_LW && c.b >= 0 && c.b < ROSTER_N){ if (res === 'W') RK_LL[c.b]++; else if (res === 'L') RK_LW[c.b]++; markBots(); }
-  if (c.friendly){ if (res === 'W') rec[0]++; else if (res === 'L') rec[1]++; else rec[2]++; }
+  if (c.friendly){ if (res === 'W') rec[0]++; else rec[1]++; }
   else if (res === 'W'){ R.w++; R.ws++; R.bestWs = Math.max(R.bestWs, R.ws); rec[0]++; R.bestUpset = Math.max(R.bestUpset, c.br - c.mmr0); if (nem === c.b) R.revenge = 1; if (c.mmr0 >= 2400) R.profWins++; }
-  else if (res === 'L'){ R.l++; R.ws = 0; rec[1]++; }
-  else { R.d++; rec[2]++; }
+  else { R.l++; R.ws = 0; rec[1]++; }
   const after = rankOf(R.mmr);
   R.hist.forEach(x => { if (x.open){ x.ys = Math.round(x.ys); delete x.open; } });      // only one open at a time
   R.hist.unshift({t: Math.min(Date.now(), c.decT || Date.now()), b: c.b, br: c.br, you: youMin, them: themMin, ys: Math.round(c.you / 1000), ts: Math.round(c.target / 1000), r: res, d: delta, m: R.mmr, tap: c.tapped ? 1 : 0, ...(c.friendly ? {f: 1} : {}), ...(why === 'open' ? {open: 1, c0: c.t0} : {})});
@@ -1214,7 +1222,7 @@ const fmtSec = sec => { const m = Math.floor(sec / 60), x = sec % 60; return `${
 function matchTimes(h){
   if (h.open) return `<span class="tbd" title="Still studying: your time is set when you pause or end your session">TBD</span> <i>vs</i> ${fmtSec(h.ts)}`;
   if (h.ys == null){   // older matches saved minutes only
-    return h.r === 'D' ? `${fmtMin(h.you)} <i>vs</i> ${fmtMin(h.them)}` : fmtMin(h.you);
+    return fmtMin(h.you);
   }
   const close = Math.abs(h.ys - h.ts) < 120, f = x => close ? fmtSec(x) : fmtMin(Math.round(x / 60));
   return `${f(h.ys)} <i>vs</i> ${f(h.ts)}`;
@@ -1275,7 +1283,7 @@ function renderMatch(fresh){
     : `${osTxt}. ${ahead ? `You’re ahead by ${mm(gap)}.` : `You’re behind by ${mm(gap)}.`} Stopping your timer locks in your time.`;
   let result = '';
   if (!live){
-    const res = {W:'Victory', L:'Defeat', D:'Draw'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
+    const res = {W:'Victory', L:'Defeat'}[c.res], nrk = myRk(), prog = nrk.hi ? (R.mmr - nrk.lo) / (nrk.hi - nrk.lo) : 1;
     const sec = ms => fmtSec(Math.round(ms / 1000));
     const oh = R.hist.find(x => x.open && x.c0 === c.t0);
     const how = oh ? `TBD vs ${sec(c.target)} <small class="tbd-note">Your time keeps counting through your focus blocks (not breaks) until you pause or end your session. You can find your next match now.</small>` : c.res === 'W' && c.you - c.target < 120000 ? `${sec(c.you)} vs ${sec(c.target)}` : `${mm(c.you)} vs ${mm(c.target)}`;
@@ -1343,14 +1351,14 @@ let rkHistShown = 30;
 function renderRanked(){
   if (!RK_READY){ $('#rkHero').innerHTML = `<p class="hint">Loading ${(ROSTER_N + 1).toLocaleString()} players…</p>`; return; }
   const rk = myRk(), next = rk.hi ? rankOf(rk.hi) : null, prog = rk.hi ? (R.mmr - rk.lo) / (rk.hi - rk.lo) : 1;
-  const games = R.w + R.l + R.d, wr = games ? (Math.round(R.w / games * 1000) / 10).toFixed(1) : '0.0';
+  const games = R.w + R.l, wr = games ? (Math.round(R.w / games * 1000) / 10).toFixed(1) : '0.0';
   $('#rkHero').innerHTML = `${emblem(rk, 'xl')}<div class="rk-hero-tx"><small>${rk.un ? `Placement ${R.played}/${PLACE_N}` : 'Your rank'}</small><b style="color:${rk.c}">${rk.full}</b>
     ${rk.un ? `<span>Play ${PLACE_N - R.played} more rated game${PLACE_N - R.played === 1 ? '' : 's'} (1v1 or group) to get your rank.</span><span class="bar2 big"><i style="width:${R.played / PLACE_N * 100}%;background:var(--accent)"></i></span><small>You can be placed anywhere from Freshman I up to Scholar III.</small>` : `<span>${R.mmr.toLocaleString()} Elo · best ${R.best.toLocaleString()}</span>
     <span class="bar2 big"><i style="width:${prog * 100}%;background:${rk.c}"></i></span>
     <small>${next ? `${(rk.hi - R.mmr).toLocaleString()} Elo to ${next.full}` : rk.i === PARAGON_I ? 'You hold the Paragon title: no one is rated higher. Keep it.' : 'Be the highest-rated player of all to claim Paragon.'}</small>`}
     <span class="bdgs lg">${myFeatured().map(id => badgeHtml(id, 'lg')).join('')}<button class="link-btn" data-go="awards">Change showcase →</button></span></div>
     <div class="rk-find">${rkFindHtml()}</div>`;
-  $('#rkKpis').innerHTML = `<div class="stat"><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><span>wins–losses${R.d ? '–draws' : ''}</span></div><div class="stat"><b>${wr}%</b><span>win rate</span></div><div class="stat"><b>${R.ws}</b><span>win streak · best ${R.bestWs}</span></div><div class="stat"><b>${R.played}</b><span>matches played</span></div>`;
+  $('#rkKpis').innerHTML = `<div class="stat"><b>${R.w}–${R.l}</b><span>wins–losses</span></div><div class="stat"><b>${wr}%</b><span>win rate</span></div><div class="stat"><b>${R.ws}</b><span>win streak · best ${R.bestWs}</span></div><div class="stat"><b>${R.played}</b><span>matches played</span></div>`;
   renderEloChart();
   const groupRow = g => `<li class="hr-${g.p === 1 ? 'W' : 'L'}"><span class="res">${g.p}</span><span class="rkg-n">${g.N}p</span><span class="who"><b>${elOrd(g.p)} of ${g.N}</b><small>${g.N}-player match${g.pl ? ` · placement ${g.pl} of ${PLACE_N}` : ''} · lasted ${elClock(g.dur || 0)}</small></span><span class="tm"></span><span class="dl ${g.d >= 0 ? 'pos' : 'neg'}">${g.pl ? '' : `${g.d > 0 ? '+' : ''}${g.d}<small>${g.m.toLocaleString()}</small>`}</span><span class="when">${new Date(g.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}${g.id ? `<button class="rp-v" data-rp="el:${g.id}">Replay</button>` : ''}</span></li>`;
   const oneRow = h => { const B = BOTS[h.b], rkb = rankOf(h.br); return `<li class="hr-${h.r}"><span class="res">${h.r}</span>${avatar(B, 'sm')}<span class="who"><button class="lnk" data-bot="${h.b}">${esc(B.name)}</button><small>1v1 · ${rkb.full} · ${h.br.toLocaleString()} · ${B.style}</small></span><span class="tm">${matchTimes(h)}</span>${dlCell(h)}<span class="when">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}<button class="rp-v" data-rp="rk:me:${h.t}">Replay</button></span></li>`; };
@@ -1362,7 +1370,7 @@ function renderRanked(){
   const order = sortedBots(); let pos = order.findIndex(i => botRating(i) < R.mmr); if (pos < 0) pos = order.length;
   const from = Math.max(0, pos - 10), to = Math.min(order.length, pos + 10), nem = nemesis();
   const row = (i, place) => { const B = BOTS[i], r = botRating(i), para = R.para.h === i, mv = r - OV_R[i] - PREV[i], rec = R.rec[i], feat = botFeatured(i)[0];
-    return `<li data-bot="${i}"${para ? ' class="para-row"' : ''}><span class="pl">#${place.toLocaleString()}</span><span class="mv ${mv > 0 ? 'up' : mv < 0 ? 'dn' : ''}">${mv > 0 ? '▲' : mv < 0 ? '▼' : ''}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)}</b><small>${B.style}${rec ? ` · ${i === nem ? 'nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'rival' : 'played'} ${rec[0]}–${rec[1]}` : ''}</small></span>${feat ? badgeHtml(feat) : '<span></span>'}${emblem(rkOf(i), 'xs')}<span class="rt">${r.toLocaleString()}</span></li>`; };
+    return `<li data-bot="${i}"${para ? ' class="para-row"' : ''}><span class="pl">#${place.toLocaleString()}</span><span class="mv ${mv > 0 ? 'up' : mv < 0 ? 'dn' : ''}">${mv > 0 ? '▲' : mv < 0 ? '▼' : ''}</span>${avatar(B, 'sm')}<span class="who"><b>${esc(B.name)}</b><small>${B.style}${rec ? ` · ${i === nem ? 'nemesis' : rec[0] + rec[1] >= 3 ? 'rival' : 'played'} ${rec[0]}–${rec[1]}` : ''}</small></span>${feat ? badgeHtml(feat) : '<span></span>'}${emblem(rkOf(i), 'xs')}<span class="rt">${r.toLocaleString()}</span></li>`; };
   let lad = '';
   for (let k = from; k < pos; k++) lad += row(order[k], k + 1);
   lad += `<li class="me" data-me><span class="pl">#${(pos + 1).toLocaleString()}</span><span class="mv"></span>${myAvatar('sm')}<span class="who"><b>${esc(myName())}</b><small>${rk.sh}</small></span>${myFeatured()[0] ? badgeHtml(myFeatured()[0]) : '<span></span>'}${emblem(rk, 'xs')}<span class="rt">${R.mmr.toLocaleString()}</span></li>`;
@@ -1409,7 +1417,7 @@ function renderEloChart(){
     const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, k = clampN(Math.round((x - pl) / (W - pl - pr) * (pts.length - 1)), 1, pts.length - 1), h = hs[k - 1];
     guide.setAttribute('x1', X(k)); guide.setAttribute('x2', X(k));
     tip.hidden = false; tip.style.left = `${X(k) / W * 100}%`; tip.style.top = `${Y(pts[k]) / H * 100}%`;
-    tip.innerHTML = `<b>${h.m.toLocaleString()}</b> <span class="${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><small>${h.g ? `${elOrd(h.p)} of ${h.N} · group` : `${{W:'Win',L:'Loss',D:'Draw'}[h.r]} vs ${esc(BOTS[h.b].name)}`}</small>`;
+    tip.innerHTML = `<b>${h.m.toLocaleString()}</b> <span class="${h.d >= 0 ? 'pos' : 'neg'}">${h.d > 0 ? '+' : ''}${h.d}</span><small>${h.g ? `${elOrd(h.p)} of ${h.N} · group` : `${{W:'Win',L:'Loss'}[h.r]} vs ${esc(BOTS[h.b].name)}`}</small>`;
   };
   svg.onpointerleave = () => { tip.hidden = true; guide.setAttribute('x1', -10); guide.setAttribute('x2', -10); };
 }
@@ -1585,11 +1593,11 @@ function openProfile(w){
   if (!RK_READY) return;
   profWho = w; hideBadgeTip();
   const st = pStats(w), feat = w === ME ? myFeatured() : botFeatured(w), rec = w === ME ? null : R.rec[w], nem = nemesis(), strip = weekStrip(w, 4);
-  const games = R.w + R.l + R.d;
+  const games = R.w + R.l;
   const tiles = w === ME
-    ? [[fmtMin(st.total).replace(/ \d+m$/, ''), 'studied in total'], [st.cur, 'day streak'], [st.best, 'best streak (days)'], [`${R.w}–${R.l}${R.d ? '–' + R.d : ''}`, games ? `ranked · ${Math.round(R.w / games * 100)}% wins` : 'ranked record']]
+    ? [[fmtMin(st.total).replace(/ \d+m$/, ''), 'studied in total'], [st.cur, 'day streak'], [st.best, 'best streak (days)'], [`${R.w}–${R.l}`, games ? `ranked · ${Math.round(R.w / games * 100)}% wins` : 'ranked record']]
     : [[`~${fmtMin(st.sit)}`, 'typical sitting'], [fmtMin(st.total).replace(/ \d+m$/, ''), 'studied in total'], [st.best, 'best streak (days)'],
-       [rec ? `${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}` : '–', rec ? (w === nem ? 'your record · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? 'your record · rival' : 'your record') : 'not played yet']];
+       [rec ? `${rec[0]}–${rec[1]}` : '–', rec ? (w === nem ? 'your record · nemesis' : rec[0] + rec[1] >= 3 ? 'your record · rival' : 'your record') : 'not played yet']];
   $('#botModalBody').innerHTML = `${profileHead(w)}
     <div class="bm-grid">${tiles.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div>
     <div class="h">Last 4 weeks <small class="pf-sub">${strip.active} active day${strip.active === 1 ? '' : 's'}</small></div><div class="hm-strip">${strip.h}</div>
@@ -1607,13 +1615,13 @@ function winLabel(t){
   return dk === today ? 'Today' : dk === dayKey(y.getTime()) ? 'Yesterday' : d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
 }
 function profileMatches(w){
-  const res = (r, d) => r === 'W' ? 'Win' : r === 'L' ? 'Loss' : 'Draw';
+  const res = (r, d) => r === 'W' ? 'Win' : 'Loss';
   const row = m => `<li class="hr-${m.r}"><span class="res" title="${res(m.r)}">${m.r}</span>${m.you ? myAvatar('sm') : avatar(BOTS[m.opp], 'sm')}
     <span class="who">${m.you ? `<b>You</b>` : `<button class="lnk" data-bot="${m.opp}">${esc(BOTS[m.opp].name)}</button>`}${m.vsYou ? ' <i class="pf-vs">vs you</i>' : ''}<small>${m.sub}</small></span>
     <span class="tm">${m.tm}</span><span class="dl ${m.f ? 'fr' : m.d >= 0 ? 'pos' : 'neg'}">${m.f ? 'Friendly' : `${m.d > 0 ? '+' : ''}${m.d}`}${m.after != null && !m.f ? `<small>${m.after.toLocaleString()}</small>` : ''}</span><span class="when">${m.when}${m.key ? `<button class="rp-v" data-rp="${m.key}">Replay</button>` : ''}</span></li>`;
   const html = row;
   const youRow = (h, mine) => {      // one of your real matches, from your side or theirs
-    const B = BOTS[h.b], r = mine ? h.r : ({W: 'L', L: 'W', D: 'D'})[h.r], swap = !mine;
+    const B = BOTS[h.b], r = mine ? h.r : ({W: 'L', L: 'W'})[h.r], swap = !mine;
     const tm = h.ys == null ? `${fmtMin(swap ? h.them : h.you)} <i>vs</i> ${fmtMin(swap ? h.you : h.them)}` : (x => swap ? x.split(' <i>vs</i> ').reverse().join(' <i>vs</i> ') : x)(matchTimes(h));
     return {t: h.t, key: 'rk:me:' + h.t, r, f: h.f, d: mine ? h.d : -h.d, after: mine ? h.m : null, opp: h.b, you: !mine, vsYou: false,
       sub: mine ? `${rankOf(h.br).full} · ${h.br.toLocaleString()} then` : `${rankOf(R.mmr).full}`, tm, when: `${winLabel(h.t)}, ${new Date(h.t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'})}`};
@@ -1625,7 +1633,7 @@ function profileMatches(w){
   } else {
     m5Backfill(w);
     const clock = t => new Date(t).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'});
-    const sim = m5List(w).map(m => ({t: m.t, key: `rk:m5:${w}:${m.code}`, r: m.a > m.b ? 'W' : m.a < m.b ? 'L' : 'D', d: m.d, after: m.after, opp: m.opp,
+    const sim = m5List(w).map(m => ({t: m.t, key: `rk:m5:${w}:${m.code}`, r: m.a > m.b ? 'W' : 'L', d: m.d, after: m.after, opp: m.opp,
       sub: `${rankOf(m.oppR).full} · ${m.oppR.toLocaleString()} then`, tm: `${fmtMin(m.a)} <i>vs</i> ${fmtMin(m.b)}`,
       when: `${winLabel(m.t0)}, ${clock(m.t0)}–${clock(m.t)}`}));
     const oldest = sim.length ? sim[sim.length - 1].t : 0;
@@ -1660,12 +1668,12 @@ function renderProfilePage(){
   // ranked
   let ranked;
   if (w === ME){
-    const games = R.w + R.l + R.d, last = R.hist.filter(h => !h.f).slice(0, 10);
-    ranked = `<div class="pf-kv"><span><b>${R.w}–${R.l}${R.d ? '–' + R.d : ''}</b><small>wins–losses${R.d ? '–draws' : ''}</small></span><span><b>${games ? Math.round(R.w / games * 100) : 0}%</b><small>win rate</small></span><span><b>${R.best.toLocaleString()}</b><small>best Elo</small></span><span><b>${R.bestWs}</b><small>best win streak</small></span></div>
-      <div class="pf-dots">${last.length ? last.map(h => `<i class="d-${h.r}" title="${{W:'Win', L:'Loss', D:'Draw'}[h.r]} vs ${esc(BOTS[h.b].name)}">${h.r}</i>`).join('') : '<span class="hint">No matches yet.</span>'}</div>${last.length ? '<small class="pf-sub">Last 10 matches, newest first</small>' : ''}`;
+    const games = R.w + R.l, last = R.hist.filter(h => !h.f).slice(0, 10);
+    ranked = `<div class="pf-kv"><span><b>${R.w}–${R.l}</b><small>wins–losses</small></span><span><b>${games ? Math.round(R.w / games * 100) : 0}%</b><small>win rate</small></span><span><b>${R.best.toLocaleString()}</b><small>best Elo</small></span><span><b>${R.bestWs}</b><small>best win streak</small></span></div>
+      <div class="pf-dots">${last.length ? last.map(h => `<i class="d-${h.r}" title="${{W:'Win', L:'Loss'}[h.r]} vs ${esc(BOTS[h.b].name)}">${h.r}</i>`).join('') : '<span class="hint">No matches yet.</span>'}</div>${last.length ? '<small class="pf-sub">Last 10 matches, newest first</small>' : ''}`;
   } else {
     const rec = R.rec[w], hs = R.hist.filter(h => h.b === w).slice(0, 5), nem = nemesis();
-    ranked = rec ? `<div class="pf-kv"><span><b>${rec[0]}–${rec[1]}${rec[2] ? '–' + rec[2] : ''}</b><small>your record vs ${esc(B.name)}${w === nem ? ' · nemesis' : rec[0] + rec[1] + rec[2] >= 3 ? ' · rival' : ''}</small></span></div>
+    ranked = rec ? `<div class="pf-kv"><span><b>${rec[0]}–${rec[1]}</b><small>your record vs ${esc(B.name)}${w === nem ? ' · nemesis' : rec[0] + rec[1] >= 3 ? ' · rival' : ''}</small></span></div>
       <ul class="rk-hist pf-h2h">${hs.map(h => `<li class="hr-${h.r}"><span class="res">${h.r}</span><span class="who">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span><span class="tm">${matchTimes(h)}</span>${dlCell(h)}</li>`).join('')}</ul>`
       : `<p class="hint">You haven't played ${esc(B.name)} yet. Matches pair you with players near your rating.</p>`;
   }
@@ -1681,7 +1689,7 @@ function renderProfilePage(){
   const fy = w !== ME && typeof FD !== 'undefined' && FD.followers.includes(w);
   const fb = soc ? socFollowedBy(w) : [], fbTxt = fb.length ? `Followed by ${fb.slice(0, 2).map(a => `<button class="lnk" data-bot="${a}">${esc(bot(a).name)}</button>`).join(', ')}${fb.length > 2 ? ` and ${fb.length - 2} other${fb.length - 2 === 1 ? '' : 's'} you follow` : ''}` : '';
   let wr = '–';
-  if (w === ME){ const g = R.w + R.l + R.d; if (g) wr = winPct(R.w, g); }
+  if (w === ME){ const g = R.w + R.l; if (g) wr = winPct(R.w, g); }
   else { try { rkCounts(); if (rkReconcile(w)) RKA = null; const g = rkGames(w); if (g >= 20) wr = winPct(rkWins(w), g); } catch(e){} }
   const chips = [[st.total >= 60 ? Math.floor(st.total / 60).toLocaleString() + 'h' : st.total + 'm', 'studied'], [`${st.cur}d`, 'streak'], [wr, 'win rate'], ['#' + place.toLocaleString(), 'overall']];
   const bio = w === ME ? (P.myBio || '') : B.bio;
@@ -1859,7 +1867,7 @@ function rkModesRender(){
   const el = $('#rkModes'); if (!el) return;
   const gm = R.gm || {}, cell = (t, w, l, d) => { const g = w + l + (d || 0), p = g ? (Math.round(w / g * 1000) / 10).toFixed(1) : '0.0';
     return `<div class="rkm"><small>${t}</small><b>${w}–${l}${d ? '–' + d : ''}</b><span>${p}% wins</span></div>`; };
-  el.innerHTML = `<div class="h first">Record by mode</div><div class="rkm-row">${cell('1v1', R.w, R.l, R.d)}${[4, 8, 16].map(n => { const x = gm[n] || {w: 0, l: 0}; return cell(`${n} players`, x.w, x.l); }).join('')}</div><p class="hint">In group games a win is finishing 1st; anything else counts as a loss.</p>`;
+  el.innerHTML = `<div class="h first">Record by mode</div><div class="rkm-row">${cell('1v1', R.w, R.l)}${[4, 8, 16].map(n => { const x = gm[n] || {w: 0, l: 0}; return cell(`${n} players`, x.w, x.l); }).join('')}</div><p class="hint">In group games a win is finishing 1st; anything else counts as a loss.</p>`;
 }
 function rkGroupHist(){
   const el = $('#rkGHist'); if (!el) return;

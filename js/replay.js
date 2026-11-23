@@ -58,7 +58,7 @@ async function rpGetRk(key){
   const w = +a; m5Backfill(w); const m = m5List(w).find(x => String(x.code) === b); if (!m) return null;
   const t0 = m.t0, W = Math.max(m.t - m.t0, Math.max(m.a, m.b) * 60000 * 1.12), bA = rpBlocks(w, t0, m.a * 60000, `${w}:${m.code}:a`, t0 + W, m.a >= m.b), bC = rpBlocks(m.opp, t0, m.b * 60000, `${w}:${m.code}:b`, t0 + W, m.b > m.a);
   // both stop when the longer one finishes; stretch to the recorded end
-  return {A: w, C: m.opp, t0, end: Math.max(bA.length ? bA[bA.length - 1][1] : t0, bC.length ? bC[bC.length - 1][1] : t0), evA: rpEv(bA), evC: rpEv(bC), res: m.a > m.b ? 'W' : m.a < m.b ? 'L' : 'D', d: m.d, rA: m.after != null ? m.after - (m.d || 0) : botRating(w), rC: m.oppR, totA: m.a * 60000, totC: m.b * 60000};
+  return {A: w, C: m.opp, t0, end: Math.max(bA.length ? bA[bA.length - 1][1] : t0, bC.length ? bC[bC.length - 1][1] : t0), evA: rpEv(bA), evC: rpEv(bC), res: m.a > m.b ? 'W' : 'L', d: m.d, rA: m.after != null ? m.after - (m.d || 0) : botRating(w), rC: m.oppR, totA: m.a * 60000, totC: m.b * 60000};
 }
 
 /* ---- the player: a full-screen replay with a video-style control bar at the bottom ---- */
@@ -132,7 +132,7 @@ function rpEvents(d, tr){
       if (lb !== 0 && Math.sign(lb) !== last){ const x = a + Math.abs(la) / Math.abs(lb - la) * (b - a); add(Math.round(x), 'lead', `${rpNm(lb > 0 ? tr[0].w : tr[1].w)} ${rpV(lb > 0 ? tr[0].w : tr[1].w, 'takes', 'take')} the lead`, lb > 0 ? tr[0].w : tr[1].w); last = Math.sign(lb); }
     }
     (d.chat || []).sort((a, b) => a.t - b.t).forEach(m => { const w = m.w != null ? m.w : m.me ? -1 : d.C; add(m.t, 'chat', `${w === -1 ? myName() : bot(w).name}: ${m.text}`, w); });
-    add(d.end, 'win', d.res === 'D' ? 'Draw' : `${rpNm(d.res === 'W' ? d.A : d.C)} ${rpV(d.res === 'W' ? d.A : d.C, 'wins', 'win')} · ${elClock(d.totA)} vs ${elClock(d.totC)}`, d.res === 'W' ? d.A : d.C);
+    add(d.end, 'win', `${rpNm(d.res === 'W' ? d.A : d.C)} ${rpV(d.res === 'W' ? d.A : d.C, 'wins', 'win')} · ${elClock(d.totA)} vs ${elClock(d.totC)}`, d.res === 'W' ? d.A : d.C);
   } else {
     const G = d.G, L = G.L, RL = L.rules.round * 60000, A = elAllow(L.rules), N = L.players.length;
     add(L.t0, 'start', `The game starts · ${N} players · ${elFmtA(A[0])} of breaks`);
