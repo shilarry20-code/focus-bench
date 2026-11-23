@@ -2821,3 +2821,14 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .ch-sw button[aria-checked="true"]{border-color:var(--ink)}
 .ch-opts .chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:.8rem;font-weight:600;cursor:pointer;min-height:32px}
 .ch-opts .chip[aria-checked="true"],.ch-opts .chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+/* flip a profile picture to the character */
+.av-flip{position:relative;display:inline-block;padding:0;border:0;background:none;border-radius:50%;perspective:700px;cursor:pointer;line-height:0;flex:none;color:var(--ink)}
+.av-flip .af-in{position:relative;display:block;transition:transform .6s cubic-bezier(.4,.2,.2,1);transform-style:preserve-3d;border-radius:50%}
+.av-flip.flipped .af-in{transform:rotateY(180deg)}
+.af-f,.af-b{display:block;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:50%}
+.af-b{position:absolute;inset:0;transform:rotateY(180deg)}
+.af-b .av{width:100%;height:100%}
+.af-tag{position:absolute;right:-3px;bottom:-3px;width:24px;height:24px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.av-flip:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.av-flip .af-in{transition:none}}
