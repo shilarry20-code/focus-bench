@@ -1570,12 +1570,12 @@ button.ch-re:hover{border-left-color:var(--accent);color:var(--ink)}
 .more-btn{position:relative}.wn-more{position:absolute;top:6px;right:calc(50% - 16px)}
 .tbd{font-weight:700;color:var(--accent)}.tbd-note{display:block;font-size:12px;color:var(--muted);margin-top:4px;font-weight:400}
 /* feed pictures: a thin dark outline around objects and people (not backgrounds, glows or shadows) so they stand out */
-svg.scene .ol :is(path, rect, circle, ellipse):not([stroke]):not([opacity]){stroke:rgba(20,16,12,.7);stroke-width:1.4px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+svg.scene .ol :is(path, rect, circle, ellipse):not([stroke]):not([opacity]){stroke:rgba(20,16,12,.7);stroke-width:.7px;stroke-linejoin:round}
 
 /* feed */
 .fd-tabs{display:flex;align-items:center;gap:6px;max-width:620px;margin:0 auto 12px}.fd-tabs .fd-new{margin-left:auto}.fd-tabs b{background:var(--accent);color:var(--on-accent);border-radius:9px;font-size:11px;padding:1px 6px;margin-left:4px}
 .fd-body{max-width:620px;margin:0 auto}
-.fd-post{padding:0;overflow:hidden;margin-bottom:14px}
+.fd-post{padding:0;overflow:hidden;margin-bottom:14px;content-visibility:auto;contain-intrinsic-size:auto 640px}
 .fd-h{display:flex;align-items:center;gap:10px;padding:10px 14px}.fd-who{flex:1;display:flex;flex-direction:column;min-width:0}.fd-who .lnk,.fd-who b{font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fd-who small{color:var(--muted);font-size:12px}
 .fd-x{border:0;background:none;color:var(--muted);font-size:20px;line-height:1;padding:4px 8px;cursor:pointer}
 .fd-media{line-height:0;user-select:none}.fd-media svg,.fd-prev svg,.fd-thumb svg{width:100%;height:auto;display:block}
