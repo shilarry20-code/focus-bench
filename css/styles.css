@@ -514,11 +514,11 @@ body:not(.m-off) .streak-chip[data-state="risk"] .fl{animation:flicker 1.6s ease
 .keylist span{color:var(--muted);margin-left:4px}
 /* Awards and Music pages use more width */
 #page-awards .ach-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:8px}
-#page-music .sp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
-#page-music .sp-sugs{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
-#page-music .sp-add{flex-direction:row;flex-wrap:wrap}
-#page-music .sp-add input{flex:1 1 260px}
-#page-music .sp-add button{align-self:stretch}
+#set-music .sp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+#set-music .sp-sugs{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+#set-music .sp-add{flex-direction:row;flex-wrap:wrap}
+#set-music .sp-add input{flex:1 1 260px}
+#set-music .sp-add button{align-self:stretch}
 @media (max-width:1180px){
   .focus-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"timer timer" "left right"}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -545,7 +545,7 @@ body:not(.m-off) .streak-chip[data-state="risk"] .fl{animation:flicker 1.6s ease
   .focus-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"timer" "left" "right"}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .card{padding:16px}
-  #page-awards .ach-list,#page-music .sp-grid{grid-template-columns:minmax(0,1fr)}
+  #page-awards .ach-list,#set-music .sp-grid{grid-template-columns:minmax(0,1fr)}
   .ach-pop{bottom:calc(84px + env(safe-area-inset-bottom,0px));top:auto}
   .toast{bottom:calc(90px + env(safe-area-inset-bottom,0px))}
 }

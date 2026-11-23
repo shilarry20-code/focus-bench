@@ -10,7 +10,7 @@ const KEY_ACTIONS = [
   {id: 'focus', name: 'Focus mode', def: 'f'},
   {id: 'side', name: 'Hide or show the side panel', def: '\\'},
   ...[['focus', 'Focus', '1'], ['stats', 'Stats', '2'], ['ranked', 'Ranked', '3'], ['leaders', 'Leaderboards', '4'], ['awards', 'Achievements', '5'],
-      ['guides', 'Guides', '6'], ['music', 'Music', '7'], ['notes', 'Notes', '8'], ['settings', 'Settings', '9'], ['chat', 'Chat', '']]
+      ['guides', 'Guides', '6'], ['notes', 'Notes', '8'], ['settings', 'Settings', '9'], ['chat', 'Chat', '']]
     .map(([pg, n, d]) => ({id: 'p:' + pg, name: `Go to ${n}`, def: d, page: pg}))
 ];
 const keyOf = id => { const o = P.keys || {}; if (id in o) return o[id]; const a = KEY_ACTIONS.find(x => x.id === id); return a ? a.def : ''; };
