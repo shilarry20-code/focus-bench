@@ -87,10 +87,10 @@ function gcQueue(g, got, t0, span, past){
     const n = s => { const v = parseInt(String(s || '').replace(/\D/g, ''), 10); return v && ref[v - 1] ? ref[v - 1] : null; };
     t += span ? step * (.4 + Math.random() * 1.2) : (2 + Math.random() * 7 + text.length * .05) * 1000;
     const rx = dcOneEmoji(x.react), rTo = n(x.reactTo);
-    if (rx && rTo) GC.q.push({id: chatId() + 'x' + k, g: g.id, w, t: past ? Date.now() + 800 * k : Math.round(t - 1500), ...(past ? {at: Math.round(t - 1500)} : {}), rx: {id: rTo, e: rx}});
+    if (rx && rTo) GC.q.push({id: chatId() + 'x' + k, g: g.id, w, t: past ? Date.now() + 100 * k : Math.round(t - 1500), ...(past ? {at: Math.round(t - 1500)} : {}), rx: {id: rTo, e: rx}});
     let re = n(x.replyTo); const tgt = re && GC.msgs.find(y => y.id === re);
     if (re && (!tgt || tgt.w === w || reLeft <= 0)) re = null; if (re) reLeft--;
-    if (text) GC.q.push({id: chatId() + 'g' + k, g: g.id, w, t: past ? Date.now() + 600 + 700 * k : Math.round(t), ...(past ? {at: Math.round(t)} : {}), text, ...(re ? {re} : {})});
+    if (text) GC.q.push({id: chatId() + 'g' + k, g: g.id, w, t: past ? Date.now() + 150 + 100 * k : Math.round(t), ...(past ? {at: Math.round(t)} : {}), text, ...(re ? {re} : {})});
   });
   GC.q.sort((a, b) => a.t - b.t); saveGc();
   return items.length;
@@ -227,7 +227,7 @@ function gcTick(){
     if (!q.at && q.w >= 0 && gcState(q.w) === 'off') continue;
     if (q.rx){ const m = GC.msgs.find(x => x.id === q.rx.id); if (m) dcReact(m, q.w, q.rx.e, true); continue; }
     const prevM = gcMsgs(g).filter(x => !x.sys).pop(), re = q.re && !(prevM && prevM.id === q.re) ? q.re : null;      // answering the message right above needs no reply line
-    const m = {id: q.id, g: q.g, w: q.w, t: q.at && q.at < now ? q.at : now, ...(q.text ? {text: q.text} : {}), ...(re ? {re} : {}), ...(q.ch ? {ch: q.ch} : {})};
+    const m = {id: q.id, g: q.g, w: q.w, t: q.at && q.at < now ? q.at : (!q.ch && q.t < now - 8000 ? q.t : now), ...(q.text ? {text: q.text} : {}), ...(re ? {re} : {}), ...(q.ch ? {ch: q.ch} : {})};
     GC.msgs.push(m); fresh.push(m);
   }
   if (now - gcLastTick > 1000){ gcLastTick = now; const before = JSON.stringify(GC.msgs.filter(m => m.ch).map(m => m.ch)); gcChTick(now); if (JSON.stringify(GC.msgs.filter(m => m.ch).map(m => m.ch)) !== before) changed = true; }

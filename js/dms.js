@@ -264,7 +264,7 @@ async function dmAway(){
       dmGenBusy[w] = 1;
       const texts = await dmWrite(w, `${bot(w).name} messaged ${myName()} a while ago, around ${new Date(when).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}, and ${myName()} is only now seeing it. Write the 1 or 2 short texts ${bot(w).name} sent then. ${Math.random() < .25 ? 'Follow up on what they last talked about, or their last match.' : `Starting point: ${pickTopic(w)}. Take it wherever feels natural for them.`} Don't mention ${myName()} being away or offline.${openerAvoid()}`);
       dmGenBusy[w] = 0;
-      if (texts.length){ noteOpener(texts[0]); const base = Date.now() + 2500 + k * 4000; texts.forEach((text, j) => DMS.q.push({id: chatId() + 'a' + j, t: base + j * (4000 + Math.random() * 5000), at: Math.round(when + j * (20 + Math.random() * 60) * 1000), w, text})); }
+      if (texts.length){ noteOpener(texts[0]); const base = Date.now() + 1500 + k * 300; texts.forEach((text, j) => DMS.q.push({id: chatId() + 'a' + j, t: base + j * 300, at: Math.round(when + j * (20 + Math.random() * 60) * 1000), w, text})); }
     }
     DMS.q.sort((a, b) => a.t - b.t); saveDms(); dmRefresh();
   } catch(e){ console.error(e); } finally { dmAwayBusy = false; }
@@ -322,7 +322,8 @@ function dmTick(){
     const q = DMS.q.shift();
     if (q.rx){ const m = DMS.msgs.find(x => x.id === q.rx.id); if (m) dcReact(m, q.w, q.rx.e, true); changed = true; continue; }
     const last = gapOk.has(q.w) ? gapOk.get(q.w) : Math.max(0, ...DMS.msgs.filter(x => x.w === q.w && !x.me).slice(-1).map(x => x.got || 0));
-    if (!q.upd && now - last < 2500){ q.t = Math.max(last, holdT.get(q.w) || 0) + 2500 + (1 + Math.random() * 4 + (q.text || '').length * .05) * 1000; holdT.set(q.w, q.t); held.push(q); changed = true; continue; }
+    const late = !q.upd && !q.ch && q.t < now - 8000;          // it came due while the app was closed: it arrived back then, not now
+    if (!q.upd && !late && now - last < 2500){ q.t = Math.max(last, holdT.get(q.w) || 0) + 2500 + (1 + Math.random() * 4 + (q.text || '').length * .05) * 1000; holdT.set(q.w, q.t); held.push(q); changed = true; continue; }
     if (q.upd){                                 // their answer to your challenge; too late if it already ran out
       const c = DMS.msgs.find(x => x.id === q.upd.id);
       if (!(c && c.ch && c.ch.st === 'p' && now < c.ch.exp)){ changed = true; continue; }
@@ -331,9 +332,9 @@ function dmTick(){
     }
     const prevM = DMS.msgs.filter(x => x.w === q.w && !x.del).pop(), tgt = q.re ? DMS.msgs.find(x => x.id === q.re) : null;
     const re = tgt && tgt.me && !(prevM && prevM.id === q.re) && !DMS.msgs.some(x => x.w === q.w && x.re && !x.me && x.got > now - 600000) ? q.re : null;   // only for an older message of yours, and rarely
-    const m = {id: q.id, t: q.at && q.at < now ? q.at : now, w: q.w, text: q.text || '', ai: 1, ...(re ? {re} : {}), ...(q.sr ? {sr: q.sr} : {})};      // messages sent while you were away keep their time
+    const m = {id: q.id, t: q.at && q.at < now ? q.at : late ? q.t : now, w: q.w, text: q.text || '', ai: 1, ...(re ? {re} : {}), ...(q.sr ? {sr: q.sr} : {})};      // messages sent while you were away keep their time
     if (q.ch) m.ch = {mode: q.ch.mode, exp: now + CH_THEIRS, st: 'p', by: 'them'};
-    if (m.text || m.ch){ m.got = now; DMS.msgs.push(m); fresh.push(m); gapOk.set(q.w, now); }
+    if (m.text || m.ch){ m.got = late ? m.t : now; DMS.msgs.push(m); fresh.push(m); if (!late) gapOk.set(q.w, now); }
     changed = true;
   }
   if (held.length){ DMS.q.push(...held); DMS.q.sort((a, b) => a.t - b.t); }
