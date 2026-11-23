@@ -616,7 +616,10 @@ function rkReconcile(i){
   try { m5Backfill(i); } catch(e){}
   const old = m5List(i).filter(m => m.t < RK_T0), w = old.filter(m => m.a > m.b).length, l = old.length - w;
   const g0 = RK_EW[i] + RK_EL[i], [we, le] = rkEst(i, Math.max(0, g0 - old.length));
-  RK_EW[i] = we + w; RK_EL[i] = le + l; RK_REC[i] = 1; markBots();
+  RK_EW[i] = we + w; RK_EL[i] = le + l; RK_REC[i] = 1;
+  // their ranked Elimination games count too (a win is 1st), so a record never reads 100% next to a 5th place in their history
+  try { if (typeof elxOf === 'function'){ const seen = new Set(), xs = (typeof ELX !== 'undefined' ? ELX.filter(x => x.rk && x.ps.some(([p]) => p === i)).map(x => ({id: x.id, place: x.ps.find(([p]) => p === i)[1]})) : []).concat(elxOf(i).filter(x => x.ranked)); xs.forEach(x => { if (seen.has(x.id)) return; seen.add(x.id); if (x.place === 1) RK_EW[i]++; else RK_EL[i]++; }); } } catch(e){}
+  markBots();
   return true;
 }
 function m5Init(rec){
