@@ -39,6 +39,9 @@ button{cursor:pointer}
 .nav-btn:hover{background:var(--soft);color:var(--ink)}
 .nav-btn[aria-current="page"]{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent)}
 .more-btn{display:none}
+.nav-label{font-family:var(--f-mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);opacity:.65;padding:14px 10px 5px}
+.brand + .nav-label{padding-top:0}
+.nav-extra .nav-label{margin-top:2px}
 .nav-extra{display:flex;flex-direction:column;gap:2px;flex:1}
 .nav-spacer{flex:1}
 .main{min-width:0;width:100%;max-width:1320px;margin:0 auto;padding-block:18px 56px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
