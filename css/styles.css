@@ -1113,34 +1113,42 @@ body.m-off .ach-pop{animation:none!important}
 @media (max-width:640px){.qx-bar{top:4px;padding:10px 12px}.qx-dot{min-width:26px;height:26px}.mb-row{flex-direction:column}.mb-btns{align-self:flex-end}}
 
 /* ---------- hiding the side panel ---------- */
-/* The panel keeps its width and slides left while its grid column shrinks to 0, so the page widens smoothly. */
+/* Hiding doesn't remove the panel: it slides down to a slim rail of just the icons (the labels fade out). Icons
+   grow when you hover them, and the arrow at the top slides the full panel back out. Phones use the bottom bar. */
 .brand span{flex:1}
-.side-hide{flex:none;border:0;background:none;color:var(--muted);width:28px;height:28px;border-radius:7px;font:inherit;font-size:20px;line-height:1;font-family:var(--f-body,inherit);cursor:pointer;opacity:.7;transition:opacity .15s,background-color .15s}
+.brand{position:relative}
+.side-hide{flex:none;border:0;background:none;color:var(--muted);width:28px;height:28px;border-radius:7px;font:inherit;font-size:20px;line-height:1;font-family:var(--f-body,inherit);cursor:pointer;opacity:.7;transition:opacity .15s,background-color .15s,transform .26s cubic-bezier(.4,0,.2,1)}
 .side-hide:hover,.side-hide:focus-visible{opacity:1;background:var(--soft);color:var(--ink)}
-.shell{transition:grid-template-columns .26s cubic-bezier(.4,0,.2,1)}
-.side{width:212px;box-sizing:border-box}
-body.side-hidden .shell{grid-template-columns:0px minmax(0,1fr)}
-body.side-hidden .side{transform:translateX(-100%);visibility:hidden}
-/* while it's hidden, hovering the very left edge shows an accent glow down the whole edge, a faint wash, and a
-   short gray grab handle like a drawer pull; the whole edge strip is clickable */
-.side-edge{display:none;position:fixed;left:0;top:0;bottom:0;width:14px;padding:0;margin:0;border:0;background:none;z-index:40;cursor:pointer}
-.side-edge:hover,.side-edge:focus-visible{width:22px;outline:none}
-body.side-hidden .side-edge{display:block}
-body.focus-mode .side-edge{display:none}
-.side-edge::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--accent);box-shadow:0 0 22px 7px color-mix(in srgb,var(--accent) 50%,transparent);opacity:0;transition:opacity .2s ease}
-.side-edge::after{content:"";position:absolute;left:8px;top:50%;width:4px;height:48px;margin-top:-24px;border-radius:2px;background:var(--muted);opacity:0;transform:translateX(-4px);transition:opacity .2s ease,transform .2s ease}
-.side-edge:hover::before,.side-edge:focus-visible::before{opacity:.95}
-.side-edge:hover::after,.side-edge:focus-visible::after{opacity:.75;transform:none}
-@media (hover:none){body.side-hidden .side-edge::before{opacity:.45}body.side-hidden .side-edge::after{opacity:.5;transform:none}}
-.side{transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s}
-body.side-hidden .side{transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s .26s}
-body.m-off .shell,body.m-off .side,body.m-off .side-edge::before,body.m-off .side-edge::after{transition:none!important}
-@media (prefers-reduced-motion: reduce){.shell,.side,.side-edge::before,.side-edge::after{transition:none!important}}
+@media (min-width:761px){
+  .side{width:212px;box-sizing:border-box;overflow-x:hidden;transition:width .26s cubic-bezier(.4,0,.2,1)}
+  .brand{padding-right:42px;transition:padding .26s cubic-bezier(.4,0,.2,1)}
+  .brand span{min-width:0;overflow:hidden}
+  .nav-btn{position:relative}
+  .nav-btn span,.nav-label,.nav-live{white-space:nowrap}
+  .nav-btn svg{transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+  .nav-btn span,.brand svg,.brand span,.nav-live{transition:opacity .15s}
+  .nav-label{border-top:1px solid transparent;transition:font-size .26s cubic-bezier(.4,0,.2,1),padding .26s cubic-bezier(.4,0,.2,1),margin .26s cubic-bezier(.4,0,.2,1),border-color .26s,opacity .15s}
+  .side-hide{position:absolute;top:0;right:8px;transition:opacity .15s,background-color .15s,transform .26s cubic-bezier(.4,0,.2,1),right .26s cubic-bezier(.4,0,.2,1),width .26s cubic-bezier(.4,0,.2,1),height .26s cubic-bezier(.4,0,.2,1)}
+
+  body.side-hidden .shell{grid-template-columns:64px minmax(0,1fr)}
+  body.side-hidden .side{width:64px}
+  body.side-hidden .brand{padding-right:8px}
+  body.side-hidden .brand svg,body.side-hidden .brand span{opacity:0}
+  body.side-hidden .side-hide{right:0;width:40px;height:32px;opacity:.9;background:var(--soft);transform:rotate(180deg)}
+  body.side-hidden .side-hide:hover,body.side-hidden .side-hide:focus-visible{background:color-mix(in srgb,var(--accent) 16%,var(--soft));color:var(--accent)}
+  body.side-hidden .nav-btn span,body.side-hidden .nav-btn kbd,body.side-hidden .nav-live{opacity:0!important;pointer-events:none}
+  body.side-hidden .nav-btn:hover svg,body.side-hidden .nav-btn:focus-visible svg{transform:scale(1.32)}
+  body.side-hidden .nav-label{font-size:0;padding:0;margin:8px 14px;opacity:1;border-top-color:var(--line);overflow:hidden}
+  /* badges and dots become little dots on the corner of the icon */
+  body.side-hidden .nav-btn .chat-badge,body.side-hidden .nav-btn .feed-badge{position:absolute;top:5px;left:25px;margin:0;min-width:9px;width:9px;height:9px;padding:0;font-size:0;box-shadow:0 0 0 2px var(--surface)}
+  body.side-hidden .nav-btn .wn-dot{position:absolute;top:6px;left:26px;box-shadow:0 0 0 2px var(--surface)}
+}
+body.m-off .shell,body.m-off .side,body.m-off .side *{transition:none!important}
+@media (prefers-reduced-motion: reduce){.shell,.side,.side *{transition:none!important}}
 @media (max-width:760px){
-  .side-hide,body.side-hidden .side-edge{display:none}
+  .side-hide{display:none}
   .side{width:auto}
   body.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
-  body.side-hidden:not(.focus-mode) .side{transform:none;visibility:visible}
 }
 body.focus-mode.side-hidden .shell{grid-template-columns:minmax(0,1fr)}
 
