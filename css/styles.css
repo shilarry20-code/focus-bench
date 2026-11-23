@@ -2647,3 +2647,7 @@ html.st-open{overflow:hidden}
 
 .nav-btn.locked{opacity:.35;cursor:not-allowed;filter:grayscale(1)}
 .nav-btn.locked:hover{background:none}
+
+/* the Elo change and the rating after it sit on two lines, not run together */
+.rk-hist .dl{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.rk-hist .dl small{font-weight:500;color:var(--muted);font-size:11px}
