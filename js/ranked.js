@@ -1694,7 +1694,7 @@ function renderProfilePage(){
   const chips = [[st.total >= 60 ? Math.floor(st.total / 60).toLocaleString() + 'h' : st.total + 'm', 'studied'], [`${st.cur}d`, 'streak'], [wr, 'win rate'], ['#' + place.toLocaleString(), 'overall']];
   const bio = w === ME ? (P.myBio || '') : B.bio;
   const cnt = (n, l, kind) => kind ? `<button class="pf-cnt" data-soc="${kind}" data-soc-w="${w === ME ? 'me' : w}"><b>${fmtCount(n)}</b><small>${l}</small></button>` : `<span class="pf-cnt"><b>${n.toLocaleString()}</b><small>${l}</small></span>`;
-  const TABS = [['posts', 'Posts'], ['stats', 'Stats'], ['ranked', 'Ranked'], ['awards', 'Awards']];
+  const TABS = [['posts', 'Posts'], ['stats', 'Stats'], ['ranked', 'Ranked'], ['awards', 'Achievements']];
   const tabBody = {
     posts: () => posts.length ? `<div class="fd-grid pf-posts">${posts.map(p => `<button class="fd-thumb" data-goto-post="${p.id}" aria-label="Open post">${fdMedia(p)}</button>`).join('')}</div>`
       : `<p class="hint pf-empty">${w === ME ? 'No posts yet. Make one from the Feed.' : 'No posts yet.'}</p>`,

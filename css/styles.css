@@ -1605,7 +1605,7 @@ button.pf-cnt{cursor:pointer}button.pf-cnt:hover{background:var(--soft)}
 .pf-chips span{background:var(--soft);border-radius:10px;padding:8px 6px;text-align:center;display:flex;flex-direction:column}
 .pf-chips b{font-size:16px}.pf-chips small{color:var(--muted);font-size:12px}
 .pf-tabs{display:flex;border-bottom:1px solid var(--line)}
-.pf-tabs button{flex:1;background:none;border:0;border-bottom:2px solid transparent;padding:10px 4px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+.pf-tabs button{flex:1;min-width:0;white-space:nowrap;background:none;border:0;border-bottom:2px solid transparent;padding:10px 4px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
 .pf-tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--text)}
 .pf-tabbody{display:flex;flex-direction:column;gap:14px}
 .pf-posts{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}

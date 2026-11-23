@@ -181,7 +181,7 @@ const ACHS = [
   ['edit','explore','bronze','Revisionist','Edit a logged session.', s => s.c.edits, 1],
   ['del','explore','bronze','Clean Slate','Delete a logged session.', s => s.c.deletes, 1],
   ['bigpic','explore','bronze','The Big Picture','Open the monthly calendar.', s => s.c.calMonth, 1],
-  ['trophy','explore','bronze','Trophy Hunter','Open the Awards tab.', s => s.c.awards, 1],
+  ['trophy','explore','bronze','Trophy Hunter','Open the Achievements tab.', s => s.c.awards, 1],
   ['resets','explore','bronze','Commitment Issues','Reset the timer 10 times.', s => s.c.resets, 10, {secret:1}],
   ['curator','explore','silver','Curator','Add 5 things to your music.', s => s.c.music, 5],
   ['keys25','explore','silver','Keyboard Warrior','Use keyboard shortcuts 25 times.', s => s.c.keys, 25],
@@ -316,7 +316,7 @@ function checkAch(){
   if (!ACH.seeded){
     // first run: don't flood the screen with history you already earned
     ACH.seeded = true; saveAch();
-    toast(`You've already earned ${fresh.length} achievement${fresh.length===1?'':'s'} from your history. Open the Awards tab to see them.`);
+    toast(`You've already earned ${fresh.length} achievement${fresh.length===1?'':'s'} from your history. Open the Achievements tab to see them.`);
   } else fresh.forEach(a => achPopQueue.push(a));
   renderAchHeader(); renderAwards(); achPopNext();
 }
@@ -337,7 +337,7 @@ function achPopNext(){
   setTimeout(() => { el.classList.add('out'); setTimeout(() => { el.hidden = true; el.classList.remove('in','out'); achPopBusy = false; achPopNext(); }, 350); }, a.tier === 'legendary' ? 6500 : 4200);
 }
 
-/* header and Awards tab */
+/* header and Achievements tab */
 function renderAchHeader(){
   const n = Object.keys(ACH.u).length;
   $('#achBtn b').textContent = n; $('#achBtn span').textContent = `/${ACHS.length}`;

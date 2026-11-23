@@ -4,14 +4,14 @@
      daily goal  +50 on each day you reach it
      challenges  50-100 each (daily), 300-500 (weekly), 1,000-1,500 (monthly), by difficulty; finishing a whole set pays
                  +300, +1,500 or +5,000 on top
-     awards      25 coins per achievement point (bronze 125 up to legendary 2,500)
+     achievements 25 coins per achievement point (bronze 125 up to legendary 2,500)
      ranked 1v1  a win pays 4x your rank's base, a loss 1x
      Elimination every player in a ranked lobby adds 1.25x their own rank base to a prize pool, and the pool is shared by
                  place: 4 players or fewer pay 1st only (100%), 5-8 pay the top 3 (50/30/20), 9-16 pay the top 5
                  (35/25/20/12/8). Everyone else gets nothing from the match.
    Rank base: 300 at Freshman I, +25 for each division, +100 for each full rank (Laureate 1,300), Paragon 1,600.
    Friendly matches, casual lobbies, watching and quizzes pay nothing.
-   Studying, the daily goal, challenges and awards are worked out from your history (so you start with what you've already
+   Studying, the daily goal, challenges and achievements are worked out from your history (so you start with what you've already
    earned), and each of those totals only ever goes up: deleting a session never takes coins back. Matches are written
    to a ledger, one line per match, so two devices merge without counting a match twice. What's spent will be a ledger too. */
 const CO_BASE0 = 300, CO_STEP = 100, CO_DIVSTEP = 25, CO_PARAGON = 1600;
