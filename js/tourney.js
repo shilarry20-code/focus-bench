@@ -69,7 +69,10 @@ const tnDivSize = (wk, band, div) => TN_N - Math.floor(Math.pow(mulberry32(fdHas
 // everyone in the band who signed up this week, in the order they're dealt into divisions
 function tnWeekDivs(wk, band){
   const key = wk + ':' + band; if (tnWeekCache.has(key)) return tnWeekCache.get(key);
-  const {m, wt} = tnBandMembers(band), wn = dayIdx(wk), rate = TN_ENTER_LO + mulberry32(fdHash('tnD:' + key))() * (TN_ENTER_HI - TN_ENTER_LO);
+  const {m, wt} = tnBandMembers(band), wn = dayIdx(wk);
+  let rate = TN_ENTER_LO + mulberry32(fdHash('tnD:' + key))() * (TN_ENTER_HI - TN_ENTER_LO);
+  // a small band (the top ranks have only a hundred or so players) would never fill a division of 18 at 5–10%, so more of its players enter
+  rate = Math.max(rate, (TN_SIZE_MIN + 8 + mulberry32(fdHash('tnF:' + key))() * 10) / Math.max(1, m.length));
   const keys = [];
   for (let k = 0; k < m.length; k++){ const w = m[k]; if (tnMix(wn, w) / 4294967296 < Math.min(.95, rate * wt[k])) keys.push(tnMix(wn * 3 + 1, w) * 1048576 + w); }
   const ks = Float64Array.from(keys).sort(), order = new Int32Array(ks.length);
