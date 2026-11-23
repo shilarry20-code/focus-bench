@@ -50,8 +50,17 @@ function pageRestore(name){
   const go = () => { window.scrollTo(0, pos.y); if (pos.anchor){ const el = document.querySelector(`#fdBody .fd-post[data-pid="${pos.anchor.pid}"]`); if (el) window.scrollTo(0, window.scrollY + el.getBoundingClientRect().top - pos.anchor.top); } };
   go(); requestAnimationFrame(() => requestAnimationFrame(go)); setTimeout(go, 120);
 }
+// while you're studying, only the Focus page is open (and the Elimination page when you're in a group match)
+const navLocked = name => typeof focusing === 'function' && focusing() && name !== 'focus' && !(name === 'elim' && typeof elBusy === 'function' && elBusy());
+function navLockRender(){
+  const on = n => !navLocked(n);
+  document.querySelectorAll('.nav-btn[data-page]').forEach(b => { const lock = !on(b.dataset.page); if (b.classList.contains('locked') !== lock){ b.classList.toggle('locked', lock); lock ? b.setAttribute('aria-disabled', 'true') : b.removeAttribute('aria-disabled'); } });
+  const mb = $('#moreBtn'); if (mb){ const lock = !!(typeof focusing === 'function' && focusing()); if (mb.classList.contains('locked') !== lock){ mb.classList.toggle('locked', lock); lock ? mb.setAttribute('aria-disabled', 'true') : mb.removeAttribute('aria-disabled'); if (lock) $('#nav').classList.remove('more-open'); } }
+}
+setInterval(navLockRender, 400);
 function showPage(name, sec){
   const el = $('#page-' + name); if (!el) return;
+  if (navLocked(name)){ toast('You’re studying. Take a break first' + (typeof elBusy === 'function' && elBusy() ? ' (or head to your group match).' : '.')); return; }
   const from = document.body.dataset.page, back = from === 'profile' && name === profPrev && name !== 'profile';
   if (from && from !== name && name === 'profile') pageMemo(from);
   document.querySelectorAll('.page').forEach(p => {
@@ -81,7 +90,7 @@ function openTab(name){ const a = PAGE_ALIAS[name] || name; Array.isArray(a) ? s
 $('#nav').addEventListener('click', e => {
   const b = e.target.closest('.nav-btn[data-page]');
   if (b){ if (b.dataset.page === 'feed' && !$('#page-feed').hidden && window.scrollY > 0){ feedToTop(); return; } showPage(b.dataset.page); return; }
-  if (e.target.closest('#moreBtn')) $('#nav').classList.toggle('more-open');
+  if (e.target.closest('#moreBtn')){ if (typeof focusing === 'function' && focusing()) toast('You’re studying. Take a break first.'); else $('#nav').classList.toggle('more-open'); }
 });
 document.addEventListener('click', e => {
   if (!e.target.closest('#nav')) $('#nav').classList.remove('more-open');
