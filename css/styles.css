@@ -2673,7 +2673,7 @@ html.st-open{overflow:hidden}
 
 /* Weekly Tournament */
 .tn-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;display:inline-block}.tn-dot[hidden]{display:none}
-.tn-page{display:grid;gap:14px;max-width:980px}
+.tn-page{display:grid;gap:14px;max-width:980px;width:100%;margin-inline:auto}
 .tn-hero{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .tn-hero > div{flex:1;min-width:240px}
 .tn-hero small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}
