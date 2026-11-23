@@ -2895,3 +2895,7 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .cc-stage{height:auto;width:min(100%,calc((100dvh - 200px) * .8),440px);max-width:100%;aspect-ratio:4/5}
 .cc-right{overflow:hidden}
 @media (max-width:760px){.cc-stage{width:min(100%,calc(36dvh * .8),240px);height:auto}}
+
+.cc-custom{position:relative;display:inline-block;overflow:hidden;cursor:pointer}
+.cc-custom input{position:absolute;inset:-8px;width:56px;height:56px;opacity:0;cursor:pointer;padding:0;border:0}
+.cc-custom[aria-pressed="true"]{box-shadow:0 0 0 3px var(--accent)}
