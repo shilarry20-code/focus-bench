@@ -204,7 +204,17 @@ document.addEventListener('keydown', e => {
   if (typeof runShortcut === 'function') runShortcut(e);      // your shortcuts (js/keys.js)
 });
 /* hiding the side panel (computers only; phones use the bottom bar), remembered between visits */
-function applySide(){ document.body.classList.toggle('side-hidden', !!P.sideHidden); }
+function applySide(){
+  const hid = !!P.sideHidden;
+  document.body.classList.toggle('side-hidden', hid);
+  const b = $('#sideHide'); if (b){ b.title = hid ? 'Show the side panel (\\)' : 'Hide the side panel (\\)'; b.setAttribute('aria-label', hid ? 'Show the side panel' : 'Hide the side panel'); b.setAttribute('aria-expanded', hid ? 'false' : 'true'); }
+  // while it's a rail of icons, hovering an icon names the page
+  document.querySelectorAll('#nav .nav-btn').forEach(n => {
+    const s = n.querySelector('span');
+    if (hid && s && !n.title){ n.title = s.textContent.trim(); n.dataset.railTip = '1'; }
+    else if (!hid && n.dataset.railTip){ n.removeAttribute('title'); delete n.dataset.railTip; }
+  });
+}
 // The layout changes once; the page then slides into place with a transform (cheap), instead of the column
 // width animating, which made the browser re-lay out the whole page on every frame.
 function toggleSide(){
@@ -215,11 +225,10 @@ function toggleSide(){
     const dx = x0 - main.getBoundingClientRect().left;
     if (dx) main.animate([{transform: `translateX(${dx}px)`}, {transform: 'none'}], {duration: 260, easing: 'cubic-bezier(.4,0,.2,1)'});
   }
-  const f = P.sideHidden ? $('#sideShow') : $('#sideHide'); if (f && f.getClientRects().length) f.focus({preventScroll: true});
-  if (P.sideHidden && !P.sideTip){ P.sideTip = 1; saveP(); toast('Hover the left edge or press \\ to bring the panel back.'); }
+  const f = $('#sideHide'); if (f && f.getClientRects().length) f.focus({preventScroll: true});
+  if (P.sideHidden && !P.sideTip){ P.sideTip = 1; saveP(); toast('Press the arrow at the top of the panel, or \\, to open it back up.'); }
 }
 $('#sideHide').onclick = toggleSide;
-$('#sideShow').onclick = toggleSide;
 applySide();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderLookSound(); });
 
