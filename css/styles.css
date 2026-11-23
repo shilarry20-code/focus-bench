@@ -2644,3 +2644,6 @@ html.st-open{overflow:hidden}
 .el-tl ol{height:300px;max-height:none}
 
 #watchSlot:empty,#guideSlot:empty,#chalSlot:empty{display:none}
+
+.nav-btn.locked{opacity:.35;cursor:not-allowed;filter:grayscale(1)}
+.nav-btn.locked:hover{background:none}
