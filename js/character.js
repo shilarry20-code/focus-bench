@@ -14,7 +14,7 @@ const CH_BG = ['#f2d675', '#9cc5e8', '#b7dcc2', '#d9c2f0', '#f4b9a8', '#e8b44a',
 const CH_HAIRSTYLES = [['short', 'Short'], ['buzz', 'Buzz'], ['side', 'Side part'], ['curly', 'Curly'], ['spiky', 'Spiky'], ['bob', 'Bob'], ['long', 'Long'], ['bun', 'Bun'], ['afro', 'Afro']];
 const CH_OUTFITS = [['hoodie', 'Hoodie'], ['tee', 'T-shirt'], ['sweater', 'Sweater'], ['coat', 'Lab coat'], ['blazer', 'Blazer']];
 const CH_GLASSES = [['0', 'None'], ['1', 'Round'], ['2', 'Square']];
-const CH_EYES = [['0', 'Round'], ['1', 'Happy'], ['2', 'Sleepy'], ['3', 'Almond'], ['4', 'Wide']];
+const CH_EYES = [['0', 'Round'], ['1', 'Happy'], ['2', 'Sleepy'], ['3', 'Tall'], ['4', 'Big']];
 const CH_EYE_C = ['#3b2a20', '#7a4a26', '#a8742a', '#4f8f4a', '#2f8f9a', '#4b86c6', '#2b3a8f', '#7d7d86', '#a0337a', '#d8473f'];
 const CH_BROWS = [['0', 'Soft'], ['1', 'Straight'], ['2', 'Arched'], ['3', 'Thick']];
 const CH_MOUTHS = [['0', 'Smile'], ['1', 'Grin'], ['2', 'Calm'], ['3', 'Oh']];
@@ -108,14 +108,11 @@ function chFigure(look){
   // face
   const eyeY = 52, ec = CH_EYE_C[L.ec], ecd = chShade(ec, .55), sk = skin, ey = L.ey;
   const eye = (x, s) => {
-    const iw = ey === 4 ? 4.1 : ey === 3 ? 3 : 3.4, y = ey === 2 ? eyeY + .6 : eyeY, ry = ey === 4 ? 5.4 : ey === 3 ? 4.1 : 4.6, rx = ey === 4 ? 5.9 : 5.5;
-    let g = ey === 3 ? `<path d="M${x - s * 6} ${y + .8}Q${x} ${y - 5} ${x + s * 6} ${y - 1.4}Q${x} ${y + 4.2} ${x - s * 6} ${y + .8}Z" fill="#fff" stroke="${ink}" stroke-width=".7" stroke-linejoin="round"/>`
-      : `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fff" stroke="${ink}" stroke-width=".7"/>`;
-    const ix = x + s * (ey === 3 ? .4 : .2), iy = y + (ey === 1 ? .5 : ey === 2 ? .4 : 0);
-    g += `<circle cx="${ix}" cy="${iy}" r="${iw}" fill="${ec}" stroke="${ecd}" stroke-width=".6"/><circle cx="${ix}" cy="${iy}" r="${(iw * .46).toFixed(2)}" fill="${ink}"/><circle cx="${ix - 1.1}" cy="${iy - 1.2}" r="${(iw * .27).toFixed(2)}" fill="#fff"/><circle cx="${ix + 1.1}" cy="${iy + 1.1}" r="${(iw * .13).toFixed(2)}" fill="#fff" opacity=".8"/>`;
-    if (ey === 1) g += `<path d="M${x - 7} ${y + 7}L${x - 7} ${y + 1.8}Q${x} ${y - 1.4} ${x + 7} ${y + 1.8}L${x + 7} ${y + 7}Z" fill="${sk}"/><path d="M${x - 5.6} ${y + 1.6}Q${x} ${y - 1} ${x + 5.6} ${y + 1.6}" fill="none" stroke="${ink}" stroke-width="1.2" stroke-linecap="round"/>`;
-    if (ey === 2) g += `<path d="M${x - 7} ${y - 7}H${x + 7}V${y - .4}Q${x} ${y + 1.6} ${x - 7} ${y - .4}Z" fill="${sk}"/><path d="M${x - 5.8} ${y - .2}Q${x} ${y + 1.5} ${x + 5.8} ${y - .2}" fill="none" stroke="${ink}" stroke-width="1.8" stroke-linecap="round"/>`;
-    else if (ey !== 1) g += `<path d="M${x - rx} ${y - .3}Q${x} ${y - ry * 1.5} ${x + rx} ${y - .3}" fill="none" stroke="${ink}" stroke-width="1.5" stroke-linecap="round"/>`;
+    const rx = ey === 3 ? 2.6 : ey === 4 ? 4.2 : 3.4, ry = ey === 3 ? 4.4 : ey === 4 ? 4.6 : 3.7, y = eyeY + (ey === 2 ? .8 : 0);
+    // a simple eye: a colored oval with a dark pupil and one highlight
+    let g = `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${ec}"/><ellipse cx="${x}" cy="${y + .4}" rx="${(rx * .5).toFixed(2)}" ry="${(ry * .5).toFixed(2)}" fill="${ink}"/><circle cx="${x - 1}" cy="${y - 1.3}" r="${(rx * .3).toFixed(2)}" fill="#fff"/>`;
+    if (ey === 1) g += `<path d="M${x - 6} ${y + 7} L${x - 6} ${y + 1.6} Q${x} ${y - 1.6} ${x + 6} ${y + 1.6} L${x + 6} ${y + 7} Z" fill="${sk}"/><path d="M${x - 4.6} ${y + 1.4} Q${x} ${y - 1.2} ${x + 4.6} ${y + 1.4}" fill="none" stroke="${ink}" stroke-width="1.3" stroke-linecap="round"/>`;
+    if (ey === 2) g += `<path d="M${x - 6} ${y - 7} H${x + 6} V${y - .6} H${x - 6} Z" fill="${sk}"/><path d="M${x - 4.8} ${y - .6} H${x + 4.8}" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`;
     return g;
   };
   const eyes = eye(51, -1) + eye(69, 1);
