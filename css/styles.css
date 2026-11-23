@@ -2642,3 +2642,5 @@ html.st-open{overflow:hidden}
 #rpView .el-chat .el-cl{flex:none;height:170px}
 #rpView .el-sidecol .el-chat .el-cl{height:240px}
 .el-tl ol{height:300px;max-height:none}
+
+#watchSlot:empty,#guideSlot:empty,#chalSlot:empty{display:none}

@@ -229,7 +229,7 @@ function gcTick(){
     if (q.rx){ const m = GC.msgs.find(x => x.id === q.rx.id); if (m) dcReact(m, q.w, q.rx.e, true); continue; }
     const prevM = gcMsgs(g).filter(x => !x.sys).pop(), re = q.re && !(prevM && prevM.id === q.re) ? q.re : null;      // answering the message right above needs no reply line
     const m = {id: q.id, g: q.g, w: q.w, t: q.at && q.at < now ? q.at : (!q.ch && q.t < now - 8000 ? q.t : now), ...(q.text ? {text: q.text} : {}), ...(re ? {re} : {}), ...(q.ch ? {ch: q.ch} : {})};
-    GC.msgs.push(m); fresh.push(m);
+    GC.msgs.push(m); fresh.push(m); if (m.text && typeof acClaim === 'function') acClaim(m.w, m.text);
   }
   if (now - gcLastTick > 1000){ gcLastTick = now; const before = JSON.stringify(GC.msgs.filter(m => m.ch).map(m => m.ch)); gcChTick(now); if (JSON.stringify(GC.msgs.filter(m => m.ch).map(m => m.ch)) !== before) changed = true; }
   // a group's own conversation, one request at a time

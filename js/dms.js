@@ -334,7 +334,7 @@ function dmTick(){
     const re = tgt && tgt.me && !(prevM && prevM.id === q.re) && !DMS.msgs.some(x => x.w === q.w && x.re && !x.me && x.got > now - 600000) ? q.re : null;   // only for an older message of yours, and rarely
     const m = {id: q.id, t: q.at && q.at < now ? q.at : late ? q.t : now, w: q.w, text: q.text || '', ai: 1, ...(re ? {re} : {}), ...(q.sr ? {sr: q.sr} : {})};      // messages sent while you were away keep their time
     if (q.ch) m.ch = {mode: q.ch.mode, exp: now + CH_THEIRS, st: 'p', by: 'them'};
-    if (m.text || m.ch){ m.got = late ? m.t : now; DMS.msgs.push(m); fresh.push(m); if (!late) gapOk.set(q.w, now); }
+    if (m.text || m.ch){ m.got = late ? m.t : now; DMS.msgs.push(m); fresh.push(m); if (m.text && typeof acClaim === 'function') acClaim(m.w, m.text); if (!late) gapOk.set(q.w, now); }
     changed = true;
   }
   if (held.length){ DMS.q.push(...held); DMS.q.sort((a, b) => a.t - b.t); }

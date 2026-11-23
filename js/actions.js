@@ -46,7 +46,9 @@ function acParse(text){
   const lk = acHits(t, "\\b(?:like|liked|likes|heart|hearted|upvote|upvoted|react to|reacted to)\\b", new RegExp('^\\s*(?:and\\s+\\w+\\s+)?(?:' + AC_MY + '|(?:it|that|this|them|those|these)\\b|the\\s+(?:post|posts|story|pic|pics|photo|comment))'));
   if (lk && !/^\s*(?:your|ur)\b/.test(lk.post)) out.push({act: 'like', obj: acObj(lk.post)});
   else if (!lk && /\b(?:like|heart)\s+and\s+(?:follow|comment|repost|share)\b/.test(t) && !AC_SAYS.test(t.slice(0, t.search(/\b(?:like|heart)\s+and\b/)).trimEnd())) out.push({act: 'like', obj: 'any'});
-  const fo = acHits(t, "\\b(?:follow|followed|following)\\b", /^\s*(?:me\b|my\b|back\b|us\b|him\b|her\b|me back)/);
+  const fo = acHits(t, "\\b(?:follow|followed|following)\\b", /^\s*(?:me\b|my\b|back\b|us\b|him\b|her\b|me back|for\s+follow\b|4\s*follow\b|each\s*other\b)/)
+    || acHits(t, "\\b(?:f4f|f\\/f|follow4follow)\\b", /^/)
+    || acHits(t, "\\badd\\b", /^\s*(?:me|us)\b(?!\s+(?:to|in|into|as)\b)/);
   if (fo && !/\b(?:following me)\b/.test(' ' + fo.before + ' ')) out.push({act: 'follow', obj: ''});
   let cm = acHits(t, "\\b(?:comment|commented)\\b", /^\s*(?:on\b|under\b|something\b|smth\b|sth\b|at\b|back\b|then\b|please\b|here\b|there\b|a\b)[^.?!]{0,36}?(?:\b(?:my|mine|it|that|this)\b|$)|^\s*(?:on|under)\b/);
   if (cm && AC_DET.test(cm.before)) cm = null;                                      // "my comment", "a comment" the noun
@@ -132,6 +134,19 @@ function acPrepMany(ws, text){
 }
 function acQueue(w, p, due){
   ACT.q.push({id: chatId() + 'q', w, act: p.act, kind: p.kind, tid: p.tid, due: Math.round(due || Date.now() + 5000)}); saveAc();
+}
+
+/* ---- they say they did it: make it true ----
+   "followed back", "got u added": when a player says in chat that they followed you, they follow you. Nothing is blocked; this only makes the claim real. */
+const AC_FOLLOW_CLAIM = /\b(?:(?:i\s+)?(?:just\s+)?(?:followed|added)\s+(?:you|ya)\b|followed\s+(?:you\s+)?back\b|got\s+(?:you|ya)\s+(?:added|followed)\b|(?:i'm|im|i\s+am)\s+following\s+(?:you|ya)\b|following\s+(?:you|ya)\s+now\b|(?:you're|youre)\s+(?:added|followed)\b)/;
+function acClaim(w, text){
+  try {
+    if (w == null || w < 0 || typeof FD === 'undefined' || !FD.followers) return;
+    const t = acNorm(text);
+    if (!AC_FOLLOW_CLAIM.test(t) || /\?|\b(?:if|when|whenever|will|gonna|should|wanna|can\s+i|would|ill|i'll|didn't|didnt|haven't|havent|not)\b/.test(t.slice(0, t.search(AC_FOLLOW_CLAIM)))) return;
+    if (FD.followers.includes(w) || ACT.q.some(q => q.w === w && q.act === 'follow')) return;
+    acQueue(w, {act: 'follow', kind: 'follow', tid: ''}, Date.now() + 1500 + Math.random() * 4000);
+  } catch(e){ console.error(e); }
 }
 
 /* ---- doing it ---- */

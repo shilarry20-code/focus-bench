@@ -198,7 +198,7 @@ function wTick(){
   if (st.over && !W.seen.end){ W.seen.end = 1; changed = true; W.chat.push({t: now, sys: 1, text: W.ma === W.mc ? 'Draw.' : `${bot(W.ma > W.mc ? W.a : W.c).name} wins.`}); W.q = []; wSay('end', 1500); }
   if (foc && W.q.length){ W.q = []; changed = true; }                    // the room waits while you focus
   // one message at a time, a couple of seconds apart (after a break or a pause, the backlog comes in one by one)
-  if (W.q.length && W.q[0].t <= now && !foc && now - (W.lastMsg || 0) >= 2200){ const x = W.q.shift(); W.chat.push({t: now, w: x.w, text: x.text}); W.lastMsg = now; changed = true;
+  if (W.q.length && W.q[0].t <= now && !foc && now - (W.lastMsg || 0) >= 2200){ const x = W.q.shift(); W.chat.push({t: now, w: x.w, text: x.text}); W.lastMsg = now; changed = true; if (typeof acClaim === 'function') acClaim(x.w, x.text);
     if (W.q.length && W.q[0].t < now + 2200) W.q[0].t = now + 2200 + Math.random() * 2500; }
   if (!foc){
     if (wPrevFoc){ if (W.later){ const who = +W.later.split(':')[1]; W.later = null; wSay('stop', 2000, bot(who).name); } else if (now - W.last > 90000) wSay('open', 3000); }
