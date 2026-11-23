@@ -81,14 +81,17 @@ function chBuild(L){
 function chFigure(look){
   const L = chClean(look), skin = CH_SKIN[L.sk], hair = CH_HAIR[L.hc], top = CH_OUTFIT_C[L.oc], ink = '#1a1f2b', M = chBuild(L), cx = 60, dk = chShade(top, .78);
   let back = '', body = '', front = '';
-  // hair that sits behind the head and shoulders
-  if (L.hs === 'pigtails') back += [-1, 1].map(q => `<path d="M${60 + q * 26} 40C${60 + q * 42} 44 ${60 + q * 44} 70 ${60 + q * 36} 82C${60 + q * 30} 72 ${60 + q * 28} 58 ${60 + q * 24} 44Z" fill="${hair}"/>`).join('');
-  if (L.hs === 'ponytail') back += `<path d="M72 28C98 26 104 56 94 80C90 66 86 52 76 44Z" fill="${hair}"/>`;
-  if (L.hs === 'braid') back += [0, 1, 2, 3, 4].map(k => `<ellipse cx="${88 + (k % 2 ? 2 : -2)}" cy="${56 + k * 11}" rx="6" ry="6.500" fill="${hair}"/>`).join('');
-  if (L.hs === 'wavy') back += `<path d="M31 46C22 62 36 70 28 84C26 96 44 102 48 102L72 102C76 102 94 96 92 84C84 70 98 62 89 46Z" fill="${hair}"/>`;
-  if (L.hs === 'long') back += `<path d="M32 46C26 80 34 102 48 102L72 102C86 102 94 80 88 46Z" fill="${hair}"/>`;
-  if (L.hs === 'afro') back += `<circle cx="60" cy="40" r="33" fill="${hair}"/>`;
-  if (L.hs === 'bob') back += `<path d="M34 42C28 66 32 78 44 78L76 78C88 78 92 66 86 42Z" fill="${hair}"/>`;
+  // hair is drawn in two layers: one behind the head and shoulders, one in front. Every style is built from the head's own size, so it follows the face shape.
+  const hw = [24, 22, 26, 24, 24][L.fs], HT = [25, 24, 27, 26, 27.5][L.fs], l = 59 - hw, r = 61 + hw, dy = HT - 25, tie = top, hs = L.hs;
+  const tail = (q, x, y, w, len) => `<path d="M${x} ${y}C${x + q * w} ${y + 4} ${x + q * w * 1.1} ${y + len * .6} ${x + q * w * .5} ${y + len}C${x - q * 2} ${y + len * .7} ${x - q * 4} ${y + 8} ${x - q * 6} ${y + 2}Z" fill="${hair}"/>`;
+  const wave = (x0, q) => `M${x0} 44C${x0 - q * 9} 58 ${x0 + q * 4} 66 ${x0 - q * 3} 80C${x0 - q * 8} 92 ${x0 + q * 6} 98 ${x0 + q * 12} 102`;
+  if (hs === 'pigtails') back += tail(-1, l - 1, 36, 15, 44) + tail(1, r + 1, 36, 15, 44);
+  else if (hs === 'ponytail') back += `<path d="M70 ${22 + dy}C98 ${12 + dy} 108 44 96 74C91 56 86 42 78 34Z" fill="${hair}"/>`;
+  else if (hs === 'wavy') back += `<path d="${wave(l - 1, 1)}L${r - 12} 102C${r - 6} 98 ${r + 8} 92 ${r + 4} 80C${r - 3} 66 ${r + 9} 58 ${r + 1} 44Z" fill="${hair}"/>`;
+  else if (hs === 'long') back += `<path d="M${l - 1} 44C${l - 8} 78 ${l - 3} 104 ${l + 10} 104L${r - 10} 104C${r + 3} 104 ${r + 8} 78 ${r + 1} 44Z" fill="${hair}"/>`;
+  else if (hs === 'bob') back += `<path d="M${l - 2} 44C${l - 7} 62 ${l - 3} 76 ${l + 8} 77L${r - 8} 77C${r + 3} 76 ${r + 7} 62 ${r + 2} 44Z" fill="${hair}"/>`;
+  else if (hs === 'afro') back += `<circle cx="60" cy="${39 + dy}" r="33" fill="${hair}"/>`;
+  else if (hs === 'curly') back += [[l - 3, 46], [l - 4, 57], [r + 3, 46], [r + 4, 57]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7.5" fill="${hair}"/>`).join('');
   // legs, bottoms and shoes
   const pc = CH_BOTTOM_C[L.bc], pdk = chShade(pc, .8), shc = CH_SHOE_C[L.sc], legW = M.hp - 2, ankW = Math.round((1 + legW * .58) * 10) / 10;
   const outerAt = y => 1 + (M.hp - 1 - 1) + (ankW - (M.hp - 1)) * (y - 156) / 68;
@@ -144,7 +147,7 @@ function chFigure(look){
   else body = garment('#2e3648') + `<path d="M47 86L60 112L73 86Z" fill="#f4f1e8"/><path d="M47 86L60 112L50 124M73 86L60 112L70 124" stroke="#1d2433" stroke-width="2.500" fill="none"/><circle cx="60" cy="140" r="2" fill="#1d2433"/>`;
   // neck, ears, head
   const neck = `<rect x="52" y="64" width="16" height="24" fill="${skin}"/><path d="M52 78Q60 84 68 78V84H52Z" fill="#000" opacity=".1"/>`;
-  const hw = [24, 22, 26, 24, 24][L.fs], earX = hw - .5, earR = [4.2, 3.6, 5.8, 3][L.ea];
+  const earX = hw - .5, earR = [4.2, 3.6, 5.8, 3][L.ea];
   const earPath = q => L.ea === 1 ? `<path d="M${60 + q * earX} 50L${60 + q * (earX + 9)} 41L${60 + q * (earX + 3)} 58Z" fill="${skin}"/>` : `<circle cx="${60 + q * earX}" cy="53" r="${earR}" fill="${skin}"/>`;
   const faceShape = [`<ellipse cx="60" cy="50" rx="24" ry="25" fill="${skin}"/>`, `<ellipse cx="60" cy="51" rx="22" ry="27" fill="${skin}"/>`, `<ellipse cx="60" cy="50.500" rx="26" ry="23.500" fill="${skin}"/>`,
     `<rect x="36" y="26" width="48" height="50" rx="17" fill="${skin}"/>`, `<path d="M36 44C36 30 48 25 60 28C72 25 84 30 84 44C84 60 70 77 60 77C50 77 36 60 36 44Z" fill="${skin}"/>`][L.fs];
@@ -186,25 +189,25 @@ function chFigure(look){
   const freck = L.fk ? [[46, 58], [49, 60.500], [44, 61], [71, 58], [74, 60.500], [76, 61], [53, 59.500], [67, 59.500]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#a8643c" opacity=".55"/>`).join('') : '';
   // front hair
   if (L.ot === 'turtle') front += `<rect x="49" y="76" width="22" height="13" rx="6" fill="${dk}"/>`;
-  const cap = `<path d="M35 50C32 28 46 20 60 20C74 20 88 28 85 50C80 38 70 34 60 34C50 34 40 38 35 50Z" fill="${hair}"/>`;
-  const hs = L.hs;
-  if (hs === 'buzz') front += `<path d="M36 46C36 28 48 24 60 24C72 24 84 28 84 46C78 36 70 32 60 32C50 32 42 36 36 46Z" fill="${hair}" opacity=".9"/>`;
-  else if (hs === 'side') front += `<path d="M34 52C30 26 50 18 66 22C80 24 90 36 85 52C82 40 74 34 62 34C50 36 42 42 34 52Z" fill="${hair}"/>`;
-  else if (hs === 'curly') front += `<g fill="${hair}">${[[40, 36], [49, 28], [60, 24], [71, 28], [80, 36], [84, 46], [36, 46]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9"/>`).join('')}</g>` + cap;
-  else if (hs === 'spiky') front += `<path d="M34 50L36 28L44 36L48 20L56 32L62 17L68 32L76 20L78 36L86 28L86 50C80 38 70 34 60 34C50 34 40 38 34 50Z" fill="${hair}"/>`;
-  else if (hs === 'bob') front += cap + `<path d="M34 48C30 62 34 72 42 72L46 50Z M86 48C90 62 86 72 78 72L74 50Z" fill="${hair}"/>`;
-  else if (hs === 'long') front += cap + `<path d="M34 48C30 70 36 86 46 86L48 52Z M86 48C90 70 84 86 74 86L72 52Z" fill="${hair}"/>`;
-  else if (hs === 'bun') front += `<circle cx="60" cy="16" r="11" fill="${hair}"/>` + cap;
+  const cap = (up, inner) => `<path d="M${l} 52C${l - 1} ${HT + 3} ${l + 9} ${HT - up} 60 ${HT - up}C${r - 9} ${HT - up} ${r + 1} ${HT + 3} ${r} 52C${r - 2} 43 ${r - 8} ${HT + inner - 1} 60 ${HT + inner}C${l + 8} ${HT + inner - 1} ${l + 2} 43 ${l} 52Z" fill="${hair}"/>`;
+  const strip = (q, x, bottom) => { const m = 46 + (bottom - 46) * .55; return `<path d="M${x} 46C${x + q * 3} ${m} ${x + q * 2} ${bottom - 4} ${x + q} ${bottom}Q${x - q * 3} ${bottom + 1} ${x - q * 8} ${bottom - 3}C${x - q * 9} ${m} ${x - q * 8} 56 ${x - q * 7} 48Z" fill="${hair}"/>`; };
+  if (hs === 'buzz') front += cap(2, 9).replace('fill="', 'opacity=".92" fill="');
+  else if (hs === 'side') front += `<path d="M${l} 52C${l - 2} ${HT + 2} ${l + 10} ${HT - 7} 62 ${HT - 6}C${r - 4} ${HT - 5} ${r + 1} ${HT + 4} ${r} 52C${r - 3} 45 ${r - 8} 40 66 ${HT + 8}C54 ${HT + 11} ${l + 8} 42 ${l} 52Z" fill="${hair}"/>`;
+  else if (hs === 'curly') front += `<g fill="${hair}">${[[41, 31], [50, 25], [60, 22], [70, 25], [79, 31]].map(([x, y]) => `<circle cx="${x}" cy="${y + dy}" r="8.500"/>`).join('')}</g>` + cap(2, 10);
+  else if (hs === 'spiky'){ const P = [[l, 52], [l - 2, 32], [l + 7, 38], [l + 8, 17], [l + 19, 32], [53, 11], [61, 30], [70, 12], [77, 33], [r - 7, 18], [r - 8, 38], [r + 2, 31], [r, 52]].map(([x, y]) => `${x} ${y + (y < 50 ? dy : 0)}`); front += `<path d="M${P.join('L')}C${r - 2} 43 ${r - 8} ${HT + 8} 60 ${HT + 9}C${l + 8} ${HT + 8} ${l + 2} 43 ${l} 52Z" fill="${hair}"/>`; }
+  else if (hs === 'bob') front += cap(5, 10) + strip(-1, l - 1, 72) + strip(1, r + 1, 72);
+  else if (hs === 'long') front += cap(5, 10) + strip(-1, l - 1, 92) + strip(1, r + 1, 92);
+  else if (hs === 'bun') front += `<circle cx="60" cy="${14 + dy}" r="11" fill="${hair}"/><rect x="51" y="${23 + dy}" width="18" height="4" rx="2" fill="${tie}"/>` + cap(5, 10);
   else if (hs === 'bald') front += '';
-  else if (hs === 'mohawk') front += `<path d="M36 46C36 30 48 26 60 26C72 26 84 30 84 46C78 36 70 32 60 32C50 32 42 36 36 46Z" fill="${hair}" opacity=".35"/><path d="M53 36L50 10Q60 2 70 10L67 36Z" fill="${hair}"/>`;
-  else if (hs === 'pigtails') front += cap + [-1, 1].map(q => `<rect x="${60 + q * 26 - 3}" y="40" width="6" height="5" rx="2" fill="${chShade(hair, .6)}"/>`).join('');
-  else if (hs === 'ponytail') front += cap + `<rect x="73" y="38" width="7" height="6" rx="2" fill="${chShade(hair, .6)}" transform="rotate(20 76 41)"/>`;
-  else if (hs === 'braid') front += cap + `<path d="M85 46C90 52 92 60 88 68L84 52Z" fill="${hair}"/>`;
-  else if (hs === 'curtains') front += `<path d="M34 52C30 26 50 18 60 22C58 36 46 44 34 52Z M86 52C90 26 70 18 60 22C62 36 74 44 86 52Z" fill="${hair}"/>`;
-  else if (hs === 'wavy') front += cap + `<path d="M34 48C28 58 36 66 31 76L40 56Z M86 48C92 58 84 66 89 76L80 56Z" fill="${hair}"/>`;
-  else if (hs === 'slick') front += `<path d="M35 48C33 26 48 18 60 18C74 18 87 26 85 48C82 34 72 28 60 28C48 28 38 34 35 48Z" fill="${hair}"/><path d="M40 32C44 10 76 8 82 32C74 22 50 20 40 32Z" fill="${hair}"/>`;
-  else if (hs === 'afro') front += `<path d="M36 48C34 30 46 22 60 22C74 22 86 30 84 48C78 38 70 34 60 34C50 34 42 38 36 48Z" fill="${hair}"/>`;
-  else front += cap;
+  else if (hs === 'mohawk') front += `<path d="M${l + 1} 48C${l + 1} ${HT + 2} ${l + 12} ${HT - 1} 60 ${HT - 1}C${r - 12} ${HT - 1} ${r - 1} ${HT + 2} ${r - 1} 48C${r - 6} 38 ${r - 12} ${HT + 8} 60 ${HT + 8}C${l + 12} ${HT + 8} ${l + 6} 38 ${l + 1} 48Z" fill="${hair}" opacity=".3"/><path d="M53 ${HT + 9}L50 ${HT - 14}Q60 ${HT - 22} 70 ${HT - 14}L67 ${HT + 9}Z" fill="${hair}"/>`;
+  else if (hs === 'pigtails') front += cap(5, 10) + [-1, 1].map(q => `<rect x="${(q < 0 ? l - 1 : r + 1) - 4}" y="34" width="8" height="6" rx="3" fill="${tie}"/>`).join('');
+  else if (hs === 'ponytail') front += cap(5, 10) + `<rect x="73" y="${27 + dy}" width="8" height="6" rx="3" fill="${tie}" transform="rotate(30 77 ${30 + dy})"/>`;
+  else if (hs === 'braid'){ front += cap(5, 10) + strip(1, r + 1, 60); for (let k = 0; k < 6; k++) front += `<ellipse cx="${r + 5 + (k % 2 ? 1.6 : -1.6)}" cy="${60 + k * 9}" rx="5.200" ry="5.800" fill="${hair}"/>`; front += `<rect x="${r + 1}" y="112" width="9" height="4" rx="2" fill="${tie}"/>`; }
+  else if (hs === 'curtains') front += `<path d="M${l} 56C${l - 2} ${HT + 2} ${l + 10} ${HT - 5} 60 ${HT - 5}C59 ${HT + 8} 52 ${HT + 17} ${l + 9} 49L${l + 6} 56Z M${r} 56C${r + 2} ${HT + 2} ${r - 10} ${HT - 5} 60 ${HT - 5}C61 ${HT + 8} 68 ${HT + 17} ${r - 9} 49L${r - 6} 56Z" fill="${hair}"/>`;
+  else if (hs === 'wavy') front += cap(5, 10) + [-1, 1].map(q => { const x = q < 0 ? l - 1 : r + 1; return `<path d="M${x} 46C${x - q * 4} 58 ${x + q} 64 ${x - q * 2} 76C${x + q * 4} 69 ${x + q * 8} 58 ${x + q * 7} 48Z" fill="${hair}"/>`; }).join('');
+  else if (hs === 'slick') front += cap(8, 5) + `<path d="M${l + 8} ${HT - 2}C46 ${HT - 12} 74 ${HT - 12} ${r - 8} ${HT - 2}" fill="none" stroke="${chShade(hair, .6)}" stroke-width="1.200" stroke-linecap="round"/>`;
+  else if (hs === 'afro') front += `<path d="M${l + 1} 50C${l - 1} ${HT} ${l + 10} ${HT - 4} 60 ${HT - 4}C${r - 10} ${HT - 4} ${r + 1} ${HT} ${r - 1} 50C${r - 6} 40 ${r - 12} ${HT + 8} 60 ${HT + 8}C${l + 12} ${HT + 8} ${l + 6} 40 ${l + 1} 50Z" fill="${hair}" stroke="none"/><path d="M${l + 1} 50C${l + 6} 40 ${l + 12} ${HT + 8} 60 ${HT + 8}C${r - 12} ${HT + 8} ${r - 6} 40 ${r - 1} 50" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="1.100" stroke-linejoin="round"/>`;
+  else front += cap(5, 9);
   // accessories
   let acc = '';
   if (L.gl){
@@ -307,7 +310,7 @@ function ccPanel(){
   return [
     ccH('Gender') + ccTiles('gd', CH_GENDER, d, 'full', true) + ccH('Body shape') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
     ccH('Style') + ccTiles('hs', CH_HAIRSTYLES, d, 'head') + ccH('Hair color') + ccSwatches('hc', CH_HAIR, d),
-    ccH('Eye shape') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Eye color') + ccSwatches('ec', CH_EYE_C, d, 'eh') + ccH('Eyebrows') + ccTiles('br', CH_BROWS, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face']], d),
+    ccH('Face shape') + ccTiles('fs', CH_FACES, d, 'face', true) + ccH('Eye shape') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Eye color') + ccSwatches('ec', CH_EYE_C, d, 'eh') + ccH('Eyebrows') + ccTiles('br', CH_BROWS, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face']], d),
     ccH('Top') + ccTiles('ot', CH_OUTFITS, d, 'top') + ccH('Top color') + ccSwatches('oc', CH_OUTFIT_C, d),
     ccH('Bottoms') + ccTiles('bt', CH_BOTTOMS, d, 'bottoms') + ccH('Color') + ccSwatches('bc', CH_BOTTOM_C, d),
     ccH('Shoes') + ccTiles('sn', CH_SHOES, d, 'shoes') + ccH('Color') + ccSwatches('sc', CH_SHOE_C, d),
