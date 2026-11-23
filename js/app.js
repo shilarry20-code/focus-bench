@@ -36,7 +36,7 @@ let streakDay = dayKey(Date.now());
 setInterval(() => { if (dayKey(Date.now()) !== streakDay){ streakDay = dayKey(Date.now()); renderLog(); } }, 60000);
 
 /* ---------- pages & navigation ---------- */
-const PAGE_ALIAS = {log:'stats', cal:'stats', timer:['settings','set-timer'], sound:['settings','set-sound'], look:['settings','set-look']};
+const PAGE_ALIAS = {log:'stats', cal:'stats', timer:['settings','set-timer'], sound:['settings','set-sound'], look:['settings','set-look'], music:['settings','set-music']};
 // where you were on a page when you opened someone's full profile, so Back returns you to the same spot
 // (on the Feed it's pinned to the post you were looking at, in case new posts came in above it meanwhile)
 const PAGE_POS = {};
@@ -70,7 +70,7 @@ function showPage(name, sec){
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.dataset.page === name ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   document.querySelectorAll('.nav-btn[data-act="profile"]').forEach(b => name === 'profile' && typeof profWho !== 'undefined' && profWho === ME ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
-  $('#moreBtn').classList.toggle('on', ['guides','music','notes','settings','whatsnew'].includes(name) || (name === 'chat' && matchMedia('(max-width:760px)').matches) || ((name === 'leaders' || name === 'elim' || name === 'tourney') && matchMedia('(max-width:760px)').matches));
+  $('#moreBtn').classList.toggle('on', ['guides','notes','settings','whatsnew'].includes(name) || (name === 'chat' && matchMedia('(max-width:760px)').matches) || ((name === 'leaders' || name === 'elim' || name === 'tourney') && matchMedia('(max-width:760px)').matches));
   $('#nav').classList.remove('more-open');
   $('#pageTitle').textContent = el.dataset.title;
   document.body.dataset.page = name;
@@ -166,7 +166,7 @@ $('#dockSound').onclick = () => {
 };
 $('#dockMusic').onclick = () => {
   const it = spWanted().it;
-  if (!it){ showPage('music'); return; }
+  if (!it){ openTab('music'); return; }
   if (!canEmbed()){ window.open(spUrl(it), '_blank', 'noopener'); return; }
   spPaused ? spPlay() : spPause();
   setTimeout(renderDock, 300);
