@@ -302,14 +302,14 @@ ${cs.length ? `Then one comment each from: ${cs.map(w => { const g = chatFacts(w
       let text = String(x.text || '').replace(/https?:\/\/\S+/g, '').replace(/#\w+/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
       text = emotionOnly(stripSegue(text)); if (!text) return;
       const cap = /^cap\s+/i.test(to), [k, at] = to.replace(/^cap\s+/i, '').split(/\s*@\s*/), p = posts.find(q => q.k === k.trim()); if (!p) return;
-      if (cap && w === p.w){ if (!p.cap) p.cap = text; return; }
+      if (cap && w === p.w){ if (!p.cap || p.fbc){ p.cap = text; delete p.fbc; } return; }
       if (p.cm.length >= 10) return;
       const {re, text: t2} = fdAnswerTo(p, at, text, me);
       if (!fdSelfOk(p, w, re)) return;
       const prev = p.cm.length ? p.cm[p.cm.length - 1].t : p.t;
       p.cm.push({id: p.id + 'c' + p.cm.length, w, t: Math.round(Math.max(prev, p.t) + (2 + Math.random() * 40) * 60000), text: t2.replace(/^\[play\]\s*/i, ''), play: /^\[play\]/i.test(t2), re, lk: fdCmLikes(p, !!re)});
     });
-    posts.forEach(p => { p.gen = 1; if (p.cap) noteOpener(p.cap); else p.cap = fdFallbackCap(p); delete p.k; delete p._cs; });
+    posts.forEach(p => { p.gen = 1; if (p.cap && !p.fbc) noteOpener(p.cap); else if (!p.cap) p.cap = fdFallbackCap(p); delete p.fbc; delete p.k; delete p._cs; });
     return true;
   } catch(e){
     if (e.kind === 'busy' || e.kind === 'key') GEM.wait = aiBackoff(e); if (e.msg) GEM.detail = e.msg; try { saveAI(); } catch(err){}
@@ -327,7 +327,7 @@ async function fdWriteVisible(list){
   FDV.busy = true; let changed = false;
   try {
     const ok = await fdWrite(need);
-    if (!ok){ need.forEach(p => { if (!GEM.key){ p.cap = p.cap || fdFallbackCap(p); p.gen = 1; changed = true; } }); FDV.wRetry = Date.now() + Math.max(60000, (GEM.wait || 0) - Date.now()); }
+    if (!ok){ list.filter(p => !p.gen && p.w !== -1).forEach(p => { if (!p.cap){ p.cap = fdFallbackCap(p); changed = true; if (GEM.key) p.fbc = 1; } if (!GEM.key){ p.gen = 1; changed = true; } }); FDV.wRetry = Date.now() + Math.max(60000, (GEM.wait || 0) - Date.now()); }
     else changed = true;
     saveFeed();
   } finally { FDV.busy = false; }
