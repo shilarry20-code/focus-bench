@@ -61,10 +61,11 @@ ${typeof TALK_RULES === 'string' ? TALK_RULES : ''}`;
   const user = `Members:\n${roster}\n${me} (${myRk().full}, ${R.mmr} Elo) is in the group too.
 It's ${new Date().toLocaleDateString(undefined, {weekday: 'long'})} ${new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}.
 
-Chat so far, oldest first (numbered):
+Chat so far, oldest first (numbered). All of this was ALREADY sent, so none of it can be sent again:
 ${hist}
 
 ${task}
+Every new message has to say something new: never repeat, copy or reword a message from the chat above, even when you're asked to pick up where it left off. Move on to a new point, a reaction, or a new subject.
 Each item: "from" (a member's name exactly as listed), "text". Optional: "replyTo" (the number of a message it answers; leave it out almost always: real people only use reply to point back at an older message when the chat has moved on and it would be unclear otherwise; never for the message right before, never for their own message), "react" (an emoji reaction) with "reactTo" (the number of the message it reacts to); an item can be just a reaction with empty text.`;
   return {sys, user};
 }
