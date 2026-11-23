@@ -2862,3 +2862,12 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .cc-mini > div{display:flex;flex-direction:column;gap:6px;align-items:flex-start;max-width:320px}
 @media (max-width:760px){.cc-main{grid-template-columns:1fr;grid-template-rows:auto 1fr}.cc-left{padding:10px 14px;flex-direction:row;gap:14px}.cc-stage{width:140px;border-radius:20px}.cc-btns{flex-direction:column}.cc-grid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}}
 @media (prefers-reduced-motion:reduce){.cc-stage svg{animation:none}}
+
+/* drag to flip, and the full-body creator stage */
+.av-flip{cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.av-flip.dragging{cursor:grabbing}
+.av-flip.dragging .af-in{transition:none}
+.af-tag{display:none}
+.cc-stage{width:auto;height:min(calc(100dvh - 200px),560px);max-width:100%;aspect-ratio:4/5}
+.cc-stage svg{animation:none}
+@media (max-width:760px){.cc-stage{height:min(36dvh,300px);width:auto;border-radius:20px}}
