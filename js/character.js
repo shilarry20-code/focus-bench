@@ -11,9 +11,9 @@ const CH_SKIN = ['#f6d7c3', '#eec4a5', '#e0ac85', '#c98e64', '#a86f48', '#7c4f31
 const CH_HAIR = ['#1d1a1a', '#3b2a20', '#5d3b25', '#8a5a33', '#c9a26a', '#e8d29a', '#b4472b', '#7d7d86', '#2b3a8f', '#a0337a', '#2f8f6b', '#e7e7ea', '#f08cb6'];
 const CH_OUTFIT_C = ['#c9805a', '#4b86c6', '#5e9a6b', '#7a63b5', '#3a4252', '#d8473f', '#e3b04b', '#6fa38a', '#b9c2cf', '#e87ca0', '#2f3e5c', '#f1f1ec'];
 const CH_BG = ['#f2d675', '#9cc5e8', '#b7dcc2', '#d9c2f0', '#f4b9a8', '#e8b44a', '#8fb3a8', '#c9cfda', '#f0a8c0', '#5b7f9e', '#3a4252', '#c9805a'];
-const CH_HAIRSTYLES = [['short', 'Short'], ['buzz', 'Buzz'], ['side', 'Side part'], ['curly', 'Curly'], ['spiky', 'Spiky'], ['bob', 'Bob'], ['long', 'Long'], ['bun', 'Bun'], ['afro', 'Afro']];
-const CH_OUTFITS = [['hoodie', 'Hoodie'], ['tee', 'T-shirt'], ['sweater', 'Sweater'], ['coat', 'Lab coat'], ['blazer', 'Blazer']];
-const CH_GLASSES = [['0', 'None'], ['1', 'Round'], ['2', 'Square']];
+const CH_HAIRSTYLES = [['short', 'Short'], ['buzz', 'Buzz'], ['side', 'Side part'], ['curly', 'Curly'], ['spiky', 'Spiky'], ['bob', 'Bob'], ['long', 'Long'], ['bun', 'Bun'], ['afro', 'Afro'], ['bald', 'Bald'], ['mohawk', 'Mohawk'], ['pigtails', 'Pigtails'], ['ponytail', 'Ponytail'], ['braid', 'Braid'], ['curtains', 'Curtains'], ['wavy', 'Wavy'], ['slick', 'Slick']];
+const CH_OUTFITS = [['hoodie', 'Hoodie'], ['tee', 'T-shirt'], ['sweater', 'Sweater'], ['coat', 'Lab coat'], ['blazer', 'Blazer'], ['tank', 'Tank'], ['polo', 'Polo'], ['jacket', 'Jacket'], ['jersey', 'Jersey'], ['turtle', 'Turtleneck']];
+const CH_GLASSES = [['0', 'None'], ['1', 'Round'], ['2', 'Square'], ['3', 'Aviator'], ['4', 'Cat-eye'], ['5', 'Shades']];
 const CH_EYES = [['0', 'Round'], ['1', 'Happy'], ['2', 'Sleepy'], ['3', 'Tall'], ['4', 'Big']];
 const CH_EYE_C = ['#3b2a20', '#7a4a26', '#a8742a', '#4f8f4a', '#2f8f9a', '#4b86c6', '#2b3a8f', '#7d7d86', '#a0337a', '#d8473f'];
 const CH_BROWS = [['0', 'Soft'], ['1', 'Straight'], ['2', 'Arched'], ['3', 'Thick']];
@@ -21,23 +21,37 @@ const CH_MOUTHS = [['0', 'Smile'], ['1', 'Grin'], ['2', 'Calm'], ['3', 'Oh'], ['
 const CH_BGPAT = [['0', 'Plain'], ['1', 'Spotlight'], ['2', 'Stripe']];
 const CH_GENDER = [['2', 'Neutral'], ['0', 'Masculine'], ['1', 'Feminine']];
 const CH_BUILD = [['0', 'Slim'], ['1', 'Average'], ['2', 'Broad']];
-const CH_BOTTOMS = [['jeans', 'Jeans'], ['joggers', 'Joggers'], ['shorts', 'Shorts'], ['skirt', 'Skirt']];
-const CH_SHOES = [['sneakers', 'Sneakers'], ['boots', 'Boots'], ['slides', 'Slides']];
+const CH_BOTTOMS = [['jeans', 'Jeans'], ['joggers', 'Joggers'], ['shorts', 'Shorts'], ['skirt', 'Skirt'], ['cargo', 'Cargo'], ['leggings', 'Leggings'], ['capris', 'Capris']];
+const CH_SHOES = [['sneakers', 'Sneakers'], ['boots', 'Boots'], ['slides', 'Slides'], ['hightops', 'High-tops'], ['loafers', 'Loafers'], ['heels', 'Heels'], ['sandals', 'Sandals']];
 const CH_BOTTOM_C = ['#3a5a8c', '#2b3a4f', '#1d1a1a', '#6b6f78', '#a9b4c4', '#8a6a4a', '#5e7a55', '#b04a4a', '#e8e2d0', '#7a63b5'];
 const CH_SHOE_C = ['#f1f1ec', '#1d1a1a', '#d8473f', '#4b86c6', '#e3b04b', '#5e9a6b', '#8a5a33', '#e87ca0'];
-const CH_DEFAULT = {sk: 2, hc: 1, hs: 'short', ot: 'hoodie', oc: 0, gl: 0, hp: 0, ht: 0, ey: 0, mo: 0, bl: 0, bg: 0, bp: 1, gd: 2, bd: 1, bt: 'jeans', bc: 0, sn: 'sneakers', sc: 0, ls: 0, ec: 0, br: 0, eh: ''};
+const CH_FACES = [['0', 'Round'], ['1', 'Oval'], ['2', 'Wide'], ['3', 'Square'], ['4', 'Heart']];
+const CH_NOSES = [['0', 'Line'], ['1', 'Button'], ['2', 'Hooked'], ['3', 'Wide'], ['4', 'Pointed']];
+const CH_EARS = [['0', 'Round'], ['1', 'Pointed'], ['2', 'Big'], ['3', 'Small']];
+const CH_FACIAL = [['0', 'None'], ['1', 'Stubble'], ['2', 'Mustache'], ['3', 'Beard']];
+const CH_HANDS = [['0', 'Mitten'], ['1', 'Fingers'], ['2', 'Fist']];
+const CH_POSES = [['0', 'Relaxed'], ['1', 'Arms out'], ['2', 'Wave']];
+const CH_HATS = [['0', 'None'], ['1', 'Beanie'], ['2', 'Bucket'], ['3', 'Headband']];
+const CH_EARRINGS = [['0', 'None'], ['1', 'Studs'], ['2', 'Hoops'], ['3', 'Dangles']];
+const CH_DEFAULT = {sk: 2, hc: 1, hs: 'short', ot: 'hoodie', oc: 0, gl: 0, hp: 0, ht: 0, ey: 0, mo: 0, bl: 0, bg: 0, bp: 1, gd: 2, bd: 1, bt: 'jeans', bc: 0, sn: 'sneakers', sc: 0, ls: 0, ec: 0, br: 0, eh: '', fs: 0, nz: 0, ea: 0, fh: 0, fk: 0, hd: 0, ap: 0, ha: 0, eg: 0, sf: 0, nk: 0};
 
 // a simulated player's look, worked out from their number
 const CH_CACHE = new Map();
 function chLookOf(i){
   const r = mulberry32((i * 2654435761 >>> 0) ^ 0x7f4a7c15), n = a => Math.floor(r() * a);
   const sk = [0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5, 6][n(12)], natural = r() < .8;
-  const o = {sk, hc: natural ? [0, 0, 1, 1, 1, 2, 2, 3, 4, 5, 6, 7][n(12)] : 8 + n(5), hs: CH_HAIRSTYLES[n(CH_HAIRSTYLES.length)][0],
-    ot: CH_OUTFITS[n(CH_OUTFITS.length)][0], oc: n(CH_OUTFIT_C.length), gl: r() < .35 ? 1 + n(2) : 0, hp: r() < .15 ? 1 : 0, ht: r() < .08 ? 1 : 0,
+  const o = {sk, hc: natural ? [0, 0, 1, 1, 1, 2, 2, 3, 4, 5, 6, 7][n(12)] : 8 + n(5), hs: CH_HAIRSTYLES[n(9)][0],
+    ot: CH_OUTFITS[n(5)][0], oc: n(CH_OUTFIT_C.length), gl: r() < .35 ? 1 + n(2) : 0, hp: r() < .15 ? 1 : 0, ht: r() < .08 ? 1 : 0,
     ey: [0, 0, 0, 1, 1, 2][n(6)], mo: [0, 0, 0, 1, 2, 3][n(6)], bl: r() < .25 ? 1 : 0, bg: n(CH_BG.length), bp: n(3)};
   o.gd = [0, 1, 2, 2][n(4)]; o.bd = [0, 1, 1, 2][n(4)]; o.bt = CH_BOTTOMS[n(4)][0]; o.bc = n(CH_BOTTOM_C.length); o.sn = CH_SHOES[n(3)][0]; o.sc = n(CH_SHOE_C.length); o.ls = o.gd === 1 && r() < .6 ? 1 : 0;
   o.ec = n(CH_EYE_C.length); o.br = n(CH_BROWS.length);
   if (r() < .3) o.mo = 4 + n(6); if (r() < .15) n(7);   // old lip-color draw, kept so every bot's look stays the same
+  // newer options, drawn last so older looks never change; most bots keep the plain version
+  if (r() < .5) o.fs = n(CH_FACES.length); if (r() < .4) o.nz = n(CH_NOSES.length); if (r() < .3) o.ea = n(CH_EARS.length);
+  if (r() < .25) o.fk = 1; if (r() < .2 && o.gd !== 1) o.fh = 1 + n(3); if (r() < .25) o.hd = n(CH_HANDS.length); if (r() < .2) o.ap = n(3);
+  if (r() < .12) o.ha = 1 + n(3); if (r() < .15) o.eg = 1 + n(3); if (r() < .1) o.sf = 1; if (r() < .1) o.nk = 1;
+  if (r() < .25) o.hs = CH_HAIRSTYLES[9 + n(8)][0]; if (r() < .2) o.ot = CH_OUTFITS[5 + n(5)][0]; if (r() < .2) o.bt = CH_BOTTOMS[4 + n(3)][0]; if (r() < .2) o.sn = CH_SHOES[3 + n(4)][0];
+  if (r() < .1) o.gl = 3 + n(3);
   return o;
 }
 // a saved look, cleaned so a bad or old value can never break the drawing
@@ -46,9 +60,11 @@ function chClean(l){
   l = l || {};
   o.sk = num(l.sk, CH_SKIN.length, d.sk); o.hc = num(l.hc, CH_HAIR.length, d.hc); o.oc = num(l.oc, CH_OUTFIT_C.length, d.oc); o.bg = num(l.bg, CH_BG.length, d.bg);
   o.hs = CH_HAIRSTYLES.some(x => x[0] === l.hs) ? l.hs : d.hs; o.ot = CH_OUTFITS.some(x => x[0] === l.ot) ? l.ot : d.ot;
-  o.gl = num(l.gl, 3, 0); o.ey = num(l.ey, CH_EYES.length, 0); o.ec = num(l.ec, CH_EYE_C.length, 0); o.br = num(l.br, CH_BROWS.length, 0); o.mo = num(l.mo, CH_MOUTHS.length, 0);
+  o.gl = num(l.gl, CH_GLASSES.length, 0); o.ey = num(l.ey, CH_EYES.length, 0); o.ec = num(l.ec, CH_EYE_C.length, 0); o.br = num(l.br, CH_BROWS.length, 0); o.mo = num(l.mo, CH_MOUTHS.length, 0);
   const hex = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : ''; o.eh = hex(l.eh);   // an eye color picked freely instead of from the list
   o.bp = num(l.bp, 3, d.bp);
+  o.fs = num(l.fs, CH_FACES.length, 0); o.nz = num(l.nz, CH_NOSES.length, 0); o.ea = num(l.ea, CH_EARS.length, 0); o.fh = num(l.fh, CH_FACIAL.length, 0); o.hd = num(l.hd, CH_HANDS.length, 0); o.ap = num(l.ap, CH_POSES.length, 0); o.ha = num(l.ha, CH_HATS.length, 0); o.eg = num(l.eg, CH_EARRINGS.length, 0);
+  o.fk = l.fk ? 1 : 0; o.sf = l.sf ? 1 : 0; o.nk = l.nk ? 1 : 0;
   o.hp = l.hp ? 1 : 0; o.ht = l.ht ? 1 : 0; o.bl = l.bl ? 1 : 0; o.ls = l.ls ? 1 : 0;
   o.gd = num(l.gd, 3, d.gd); o.bd = num(l.bd, 3, d.bd); o.bc = num(l.bc, CH_BOTTOM_C.length, d.bc); o.sc = num(l.sc, CH_SHOE_C.length, d.sc);
   o.bt = CH_BOTTOMS.some(x => x[0] === l.bt) ? l.bt : d.bt; o.sn = CH_SHOES.some(x => x[0] === l.sn) ? l.sn : d.sn;
@@ -66,6 +82,10 @@ function chFigure(look){
   const L = chClean(look), skin = CH_SKIN[L.sk], hair = CH_HAIR[L.hc], top = CH_OUTFIT_C[L.oc], ink = '#1a1f2b', M = chBuild(L), cx = 60, dk = chShade(top, .78);
   let back = '', body = '', front = '';
   // hair that sits behind the head and shoulders
+  if (L.hs === 'pigtails') back += [-1, 1].map(q => `<path d="M${60 + q * 26} 40C${60 + q * 42} 44 ${60 + q * 44} 70 ${60 + q * 36} 82C${60 + q * 30} 72 ${60 + q * 28} 58 ${60 + q * 24} 44Z" fill="${hair}"/>`).join('');
+  if (L.hs === 'ponytail') back += `<path d="M72 28C98 26 104 56 94 80C90 66 86 52 76 44Z" fill="${hair}"/>`;
+  if (L.hs === 'braid') back += [0, 1, 2, 3, 4].map(k => `<ellipse cx="${88 + (k % 2 ? 2 : -2)}" cy="${56 + k * 11}" rx="6" ry="6.500" fill="${hair}"/>`).join('');
+  if (L.hs === 'wavy') back += `<path d="M31 46C22 62 36 70 28 84C26 96 44 102 48 102L72 102C76 102 94 96 92 84C84 70 98 62 89 46Z" fill="${hair}"/>`;
   if (L.hs === 'long') back += `<path d="M32 46C26 80 34 102 48 102L72 102C86 102 94 80 88 46Z" fill="${hair}"/>`;
   if (L.hs === 'afro') back += `<circle cx="60" cy="40" r="33" fill="${hair}"/>`;
   if (L.hs === 'bob') back += `<path d="M34 42C28 66 32 78 44 78L76 78C88 78 92 66 86 42Z" fill="${hair}"/>`;
@@ -74,40 +94,61 @@ function chFigure(look){
   const outerAt = y => 1 + (M.hp - 1 - 1) + (ankW - (M.hp - 1)) * (y - 156) / 68;
   const leg = (s, y0, y1, fill) => `<path d="M${cx + s} ${y0}L${cx + s * outerAt(y0)} ${y0}L${cx + s * outerAt(y1)} ${y1}L${cx + s} ${y1}Z" fill="${fill}"/>`;
   let legs = `<ellipse cx="60" cy="239" rx="${Math.round(M.hp + 10)}" ry="5" fill="#000" opacity=".16"/>`;
-  const long = L.bt === 'jeans' || L.bt === 'joggers';
+  const long = ['jeans', 'joggers', 'cargo', 'leggings'].includes(L.bt);
   legs += leg(-1, 150, 226, skin) + leg(1, 150, 226, skin);
   if (long){
     legs += leg(-1, 146, 224, pc) + leg(1, 146, 224, pc) + `<path d="M${cx} 148V168" stroke="${pdk}" stroke-width="1.6"/>`;
     if (L.bt === 'joggers') legs += [-1, 1].map(s => `<path d="M${cx + s * outerAt(214)} 214L${cx + s * outerAt(224)} 224L${cx + s * 1} 224L${cx + s} 214Z" fill="${pdk}"/>`).join('');
-  } else if (L.bt === 'shorts') legs += leg(-1, 146, 190, pc) + leg(1, 146, 190, pc);
+    if (L.bt === 'cargo') legs += [-1, 1].map(q => `<rect x="${q < 0 ? cx - M.hp + 1 : cx + M.hp - 13}" y="168" width="12" height="13" rx="2" fill="${pdk}"/>`).join('');
+    if (L.bt === 'leggings') legs += [-1, 1].map(q => `<path d="M${cx + q * 6} 160L${cx + q * (outerAt(200) - 2)} 205" stroke="#fff" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/>`).join('');
+  } else if (L.bt === 'shorts' || L.bt === 'capris') { const e = L.bt === 'capris' ? 204 : 190; legs += leg(-1, 146, e, pc) + leg(1, 146, e, pc); }
   else legs += `<path d="M${cx - M.wa} 146H${cx + M.wa}L${cx + M.hp + 12} 192Q${cx} 199 ${cx - M.hp - 12} 192Z" fill="${pc}"/><path d="M${cx - M.hp - 4} 186Q${cx} 193 ${cx + M.hp + 4} 186" fill="none" stroke="${pdk}" stroke-width="1.6" opacity=".6"/>`;
   legs += `<rect x="${cx - M.wa}" y="144" width="${2 * M.wa}" height="6" rx="2" fill="${pdk}"/>`;
   for (const s of [-1, 1]){
     const mid = cx + s * (1 + ankW / 2), xa = mid - ankW / 2 - 1 - (s < 0 ? 8 : 0), xb = mid + ankW / 2 + 1 + (s > 0 ? 8 : 0);
-    if (L.sn === 'boots') legs += `<rect x="${mid - ankW / 2 - 2}" y="208" width="${ankW + 4}" height="30" rx="4" fill="${shc}"/><rect x="${xa}" y="230" width="${xb - xa}" height="8" rx="3" fill="${shc}"/><rect x="${xa}" y="235" width="${xb - xa}" height="3.5" rx="1.5" fill="#1d1a1a" opacity=".6"/>`;
+    if (L.sn === 'hightops') legs += `<rect x="${xa}" y="210" width="${xb - xa}" height="28" rx="6" fill="${shc}"/><rect x="${xa}" y="234" width="${xb - xa}" height="4.500" rx="2" fill="#fff"/><path d="M${mid - 4} 216H${mid + 4}M${mid - 4} 221H${mid + 4}M${mid - 4} 226H${mid + 4}" stroke="#fff" stroke-width="1.400" stroke-linecap="round"/>`;
+    else if (L.sn === 'loafers') legs += `<rect x="${xa}" y="224" width="${xb - xa}" height="14" rx="6.500" fill="${shc}"/><rect x="${xa}" y="235" width="${xb - xa}" height="3" rx="1.500" fill="#1d1a1a"/><rect x="${mid - 3}" y="226" width="6" height="3" rx="1" fill="${chShade(shc, .7)}"/>`;
+    else if (L.sn === 'heels') legs += `<path d="M${xa} 234Q${xa} 225 ${mid} 224Q${xb} 225 ${xb} 234Z" fill="${shc}"/><rect x="${mid - 1.5}" y="233" width="3" height="6" rx="1" fill="${chShade(shc, .7)}"/><rect x="${xa}" y="232" width="${xb - xa}" height="2" fill="${chShade(shc, .75)}"/>`;
+    else if (L.sn === 'sandals') legs += `<rect x="${xa}" y="230" width="${xb - xa}" height="8" rx="3.500" fill="${skin}"/><rect x="${xa}" y="236" width="${xb - xa}" height="2.500" rx="1.200" fill="${shc}"/><rect x="${xa + 2}" y="229" width="${xb - xa - 4}" height="2.500" rx="1" fill="${shc}"/><rect x="${mid - 1.5}" y="224" width="3" height="7" fill="${shc}"/>`;
+    else if (L.sn === 'boots') legs += `<rect x="${mid - ankW / 2 - 2}" y="208" width="${ankW + 4}" height="30" rx="4" fill="${shc}"/><rect x="${xa}" y="230" width="${xb - xa}" height="8" rx="3" fill="${shc}"/><rect x="${xa}" y="235" width="${xb - xa}" height="3.5" rx="1.5" fill="#1d1a1a" opacity=".6"/>`;
     else if (L.sn === 'slides') legs += `<rect x="${xa}" y="230" width="${xb - xa}" height="8" rx="3.5" fill="${skin}"/><rect x="${xa}" y="234.500" width="${xb - xa}" height="3.5" rx="1.5" fill="#3a4252"/><rect x="${mid - ankW / 2 - 1}" y="226" width="${ankW + 2}" height="6" rx="2" fill="${shc}"/>`;
     else legs += `<rect x="${xa}" y="222" width="${xb - xa}" height="16" rx="7" fill="${shc}"/><rect x="${xa}" y="234" width="${xb - xa}" height="4.500" rx="2" fill="#fff" opacity=".85"/><rect x="${xa}" y="234" width="${xb - xa}" height="4.500" rx="2" fill="none" stroke="#000" stroke-opacity=".15"/>`;
   }
   // outfit
-  const hemY = {hoodie: 160, tee: 154, sweater: 160, coat: 190, blazer: 162}[L.ot], flare = L.ot === 'coat' ? 8 : 1;
+  const hemY = {hoodie: 160, tee: 154, sweater: 160, coat: 190, blazer: 162, tank: 154, polo: 156, jacket: 164, jersey: 158, turtle: 158}[L.ot], flare = L.ot === 'coat' ? 8 : 1;
   const garment = fill => `<path d="M${cx - M.ts} 108C${cx - M.ts} 92 ${cx - 26} 84 ${cx} 84C${cx + 26} 84 ${cx + M.ts} 92 ${cx + M.ts} 108L${cx + M.wa} 148Q${cx + M.wa} 154 ${cx + M.hp + flare} ${hemY}L${cx - M.hp - flare} ${hemY}Q${cx - M.wa} 154 ${cx - M.wa} 148Z" fill="${fill}"/>`;
-  const sleeve = L.ot === 'coat' ? '#f1f1ec' : L.ot === 'blazer' ? '#2e3648' : top, sleeveEnd = L.ot === 'tee' ? 120 : 144;
+  const sleeve = L.ot === 'tank' ? skin : L.ot === 'coat' ? '#f1f1ec' : L.ot === 'blazer' ? '#2e3648' : top, sleeveEnd = ['tee', 'polo', 'jersey'].includes(L.ot) ? 120 : L.ot === 'tank' ? 96 : 144;
   let arms = '';
+  const HL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
+  const hand = (hx, hy, s) => L.hd === 1 ? `<rect x="${hx - 6}" y="${hy - 6}" width="12" height="11" rx="4" fill="${skin}" ${HL}/>` + [0, 1, 2, 3].map(i => `<rect x="${hx - 6 + i * 3.1}" y="${hy + 2}" width="2.900" height="9.500" rx="1.450" fill="${skin}" ${HL}/>`).join('') + `<ellipse cx="${hx - s * 6.500}" cy="${hy - 1}" rx="2.500" ry="4.800" fill="${skin}" ${HL} transform="rotate(${s * 22} ${hx - s * 6.500} ${hy - 1})"/>`
+    : L.hd === 2 ? `<rect x="${hx - 6.500}" y="${hy - 6}" width="13" height="13" rx="5" fill="${skin}" ${HL}/><path d="M${hx - 3} ${hy - 1}H${hx + 3}M${hx - 4} ${hy + 3}H${hx + 4}" stroke="rgba(20,16,12,.5)" stroke-width=".9" stroke-linecap="round"/>`
+    : `<circle cx="${hx}" cy="${hy}" r="7.500" fill="${skin}"/>`;
   for (const s of [-1, 1]){
+    const a0 = arms.length;
     const x = s < 0 ? cx - M.sw : cx + M.sw - 15;
-    arms += `<rect x="${x}" y="94" width="15" height="54" rx="7.500" fill="${skin}"/><circle cx="${cx + s * (M.sw - 7.5)}" cy="148" r="7.500" fill="${skin}"/><rect x="${x}" y="94" width="15" height="${sleeveEnd - 94}" rx="7.500" fill="${sleeve}"/>`;
+    arms += `<rect x="${x}" y="94" width="15" height="54" rx="7.500" fill="${skin}"/>${hand(cx + s * (M.sw - 7.5), 148, s)}<rect x="${x}" y="94" width="15" height="${sleeveEnd - 94}" rx="7.500" fill="${sleeve}"/>`;
     if (L.ot === 'hoodie' || L.ot === 'sweater') arms += `<rect x="${x}" y="${sleeveEnd - 7}" width="15" height="7" rx="3" fill="${dk}"/>`;
     if (L.ot === 'coat') arms += `<rect x="${x}" y="${sleeveEnd - 5}" width="15" height="5" rx="2.500" fill="#c9cfda"/>`;
+    const rot = L.ap === 1 ? -s * 14 : L.ap === 2 && s > 0 ? -168 : 0; if (rot) arms = arms.slice(0, a0) + `<g transform="rotate(${rot} ${cx + s * (M.sw - 7.500)} 96)">` + arms.slice(a0) + '</g>';
   }
   const band = `<rect x="${cx - M.hp - flare}" y="${hemY - 6}" width="${2 * (M.hp + flare)}" height="6" rx="2.500" fill="${dk}"/>`;
   if (L.ot === 'hoodie') body = garment(top) + `<path d="M42 86C48 102 72 102 78 86C70 94 50 94 42 86Z" fill="${dk}"/><path d="M54 96L53 112M66 96L67 112" stroke="${dk}" stroke-width="2" stroke-linecap="round"/><path d="M${cx - 18} 128H${cx + 18}L${cx + 22} 150H${cx - 22}Z" fill="${dk}" opacity=".5"/>` + band;
   else if (L.ot === 'tee') body = garment(top) + `<path d="M48 85C52 98 68 98 72 85Z" fill="${skin}"/>`;
   else if (L.ot === 'sweater') body = garment(top) + `<path d="M46 84C50 94 70 94 74 84L74 90C70 98 50 98 46 90Z" fill="${dk}"/><path d="M${cx - M.ts + 3} 118H${cx + M.ts - 3}M${cx - M.ts + 3} 126H${cx + M.ts - 3}" stroke="${dk}" stroke-width="1.5" opacity=".55"/>` + band;
   else if (L.ot === 'coat') body = garment('#f1f1ec') + `<path d="M60 88L46 124M60 88L74 124" stroke="#c9cfda" stroke-width="3" fill="none"/><path d="M46 86L60 108L74 86Z" fill="${top}"/><path d="M60 108V188" stroke="#c9cfda" stroke-width="2"/><path d="M${cx - M.hp + 2} 156H${cx - M.hp + 16}M${cx + M.hp - 16} 156H${cx + M.hp - 2}" stroke="#c9cfda" stroke-width="2.500" stroke-linecap="round"/>`;
+  else if (L.ot === 'tank') body = garment(skin) + `<path d="M${cx - 22} 84H${cx - 13}Q${cx} 106 ${cx + 13} 84H${cx + 22}Q${cx + M.ts - 4} 110 ${cx + M.wa} 148Q${cx + M.wa} 154 ${cx + M.hp + 1} 154L${cx - M.hp - 1} 154Q${cx - M.wa} 154 ${cx - M.wa} 148Q${cx - M.ts + 4} 110 ${cx - 22} 84Z" fill="${top}"/>`;
+  else if (L.ot === 'polo') body = garment(top) + `<path d="M46 85L58 98L53 103L44 92Z M74 85L62 98L67 103L76 92Z" fill="${dk}"/><path d="M60 98V118" stroke="${dk}" stroke-width="2"/><circle cx="60" cy="104" r="1.200" fill="#fff"/><circle cx="60" cy="112" r="1.200" fill="#fff"/>`;
+  else if (L.ot === 'jacket') body = garment(top) + `<path d="M60 90V164" stroke="${dk}" stroke-width="2.200"/><path d="M44 85Q60 97 76 85L78 92Q60 106 42 92Z" fill="${dk}"/><path d="M${cx - M.hp + 4} 140H${cx - 8}M${cx + 8} 140H${cx + M.hp - 4}" stroke="${dk}" stroke-width="2" stroke-linecap="round"/>`;
+  else if (L.ot === 'jersey') body = garment(top) + `<path d="M47 85L60 102L73 85Z" fill="${skin}"/><path d="M47 85L60 102L73 85" fill="none" stroke="#fff" stroke-width="2.200"/><text x="60" y="136" font-size="22" font-weight="800" text-anchor="middle" fill="#fff" font-family="Inter,Arial,sans-serif">7</text><rect x="${cx - M.hp}" y="${hemY - 11}" width="${2 * M.hp}" height="3" fill="#fff"/>`;
+  else if (L.ot === 'turtle') body = garment(top) + `<path d="M${cx - M.ts + 3} 120H${cx + M.ts - 3}" stroke="${dk}" stroke-width="1.600"/>`;
   else body = garment('#2e3648') + `<path d="M47 86L60 112L73 86Z" fill="#f4f1e8"/><path d="M47 86L60 112L50 124M73 86L60 112L70 124" stroke="#1d2433" stroke-width="2.500" fill="none"/><circle cx="60" cy="140" r="2" fill="#1d2433"/>`;
   // neck, ears, head
   const neck = `<rect x="52" y="64" width="16" height="24" fill="${skin}"/><path d="M52 78Q60 84 68 78V84H52Z" fill="#000" opacity=".1"/>`;
-  const head = `<circle cx="36.5" cy="53" r="4.2" fill="${skin}"/><circle cx="83.5" cy="53" r="4.2" fill="${skin}"/><ellipse cx="60" cy="50" rx="24" ry="25" fill="${skin}"/>`;
+  const hw = [24, 22, 26, 24, 24][L.fs], earX = hw - .5, earR = [4.2, 3.6, 5.8, 3][L.ea];
+  const earPath = q => L.ea === 1 ? `<path d="M${60 + q * earX} 50L${60 + q * (earX + 9)} 41L${60 + q * (earX + 3)} 58Z" fill="${skin}"/>` : `<circle cx="${60 + q * earX}" cy="53" r="${earR}" fill="${skin}"/>`;
+  const faceShape = [`<ellipse cx="60" cy="50" rx="24" ry="25" fill="${skin}"/>`, `<ellipse cx="60" cy="51" rx="22" ry="27" fill="${skin}"/>`, `<ellipse cx="60" cy="50.500" rx="26" ry="23.500" fill="${skin}"/>`,
+    `<rect x="36" y="26" width="48" height="50" rx="17" fill="${skin}"/>`, `<path d="M36 44C36 30 48 25 60 28C72 25 84 30 84 44C84 60 70 77 60 77C50 77 36 60 36 44Z" fill="${skin}"/>`][L.fs];
+  const head = earPath(-1) + earPath(1) + faceShape;
   // face
   const eyeY = 52, ec = L.eh || CH_EYE_C[L.ec], ecd = chShade(ec, .55), sk = skin, ey = L.ey;
   const eye = (x, s) => {
@@ -136,8 +177,15 @@ function chFigure(look){
     `<path d="M55.500 63.500Q60 66.500 64.500 63.500" ${st}/><path d="M53.500 62.500L52.500 61.500M66.500 62.500L67.500 61.500" stroke="#000" stroke-opacity=".25" stroke-width="1.200" stroke-linecap="round"/>`
   ][L.mo];
   const blush = L.bl ? '<circle cx="44" cy="60" r="4" fill="#e8837a" opacity=".3"/><circle cx="76" cy="60" r="4" fill="#e8837a" opacity=".3"/>' : '';
-  const nose = `<path d="M60 55V59" stroke="#000" stroke-width="1.6" stroke-linecap="round" opacity=".14"/>`;
+  const nst = 'fill="none" stroke="#000" stroke-opacity=".3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"';
+  const nose = [`<path d="M60 55V59" stroke="#000" stroke-width="1.6" stroke-linecap="round" opacity=".14"/>`, `<path d="M57.500 58.500Q60 61 62.500 58.500" ${nst}/>`, `<path d="M60.500 51L58.500 58Q60 60 62.500 58" ${nst}/>`,
+    `<path d="M55.500 58Q60 61.500 64.500 58" ${nst}/><path d="M56.500 56.500L55.500 58M63.500 56.500L64.500 58" ${nst}/>`, `<path d="M60 50.500L57.500 59H62.500" ${nst}/>`][L.nz];
+  const fhs = L.fh === 1 ? `<path d="M39 56Q41 74 60 77Q79 74 81 56Q70 68 60 68Q50 68 39 56Z" fill="${hair}" opacity=".3"/>`
+    : L.fh === 2 ? `<path d="M51 60Q55 56.500 60 58.500Q65 56.500 69 60Q65 62 60 60.500Q55 62 51 60Z" fill="${hair}"/>`
+    : L.fh === 3 ? `<path d="M38 54Q36 80 60 83Q84 80 82 54Q80 70 70 72Q60 67 50 72Q40 70 38 54Z" fill="${hair}"/><path d="M51 60Q55 56.500 60 58.500Q65 56.500 69 60Q65 62 60 60.500Q55 62 51 60Z" fill="${hair}"/>` : '';
+  const freck = L.fk ? [[46, 58], [49, 60.500], [44, 61], [71, 58], [74, 60.500], [76, 61], [53, 59.500], [67, 59.500]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#a8643c" opacity=".55"/>`).join('') : '';
   // front hair
+  if (L.ot === 'turtle') front += `<rect x="49" y="76" width="22" height="13" rx="6" fill="${dk}"/>`;
   const cap = `<path d="M35 50C32 28 46 20 60 20C74 20 88 28 85 50C80 38 70 34 60 34C50 34 40 38 35 50Z" fill="${hair}"/>`;
   const hs = L.hs;
   if (hs === 'buzz') front += `<path d="M36 46C36 28 48 24 60 24C72 24 84 28 84 46C78 36 70 32 60 32C50 32 42 36 36 46Z" fill="${hair}" opacity=".9"/>`;
@@ -147,17 +195,37 @@ function chFigure(look){
   else if (hs === 'bob') front += cap + `<path d="M34 48C30 62 34 72 42 72L46 50Z M86 48C90 62 86 72 78 72L74 50Z" fill="${hair}"/>`;
   else if (hs === 'long') front += cap + `<path d="M34 48C30 70 36 86 46 86L48 52Z M86 48C90 70 84 86 74 86L72 52Z" fill="${hair}"/>`;
   else if (hs === 'bun') front += `<circle cx="60" cy="16" r="11" fill="${hair}"/>` + cap;
+  else if (hs === 'bald') front += '';
+  else if (hs === 'mohawk') front += `<path d="M36 46C36 30 48 26 60 26C72 26 84 30 84 46C78 36 70 32 60 32C50 32 42 36 36 46Z" fill="${hair}" opacity=".35"/><path d="M53 36L50 10Q60 2 70 10L67 36Z" fill="${hair}"/>`;
+  else if (hs === 'pigtails') front += cap + [-1, 1].map(q => `<rect x="${60 + q * 26 - 3}" y="40" width="6" height="5" rx="2" fill="${chShade(hair, .6)}"/>`).join('');
+  else if (hs === 'ponytail') front += cap + `<rect x="73" y="38" width="7" height="6" rx="2" fill="${chShade(hair, .6)}" transform="rotate(20 76 41)"/>`;
+  else if (hs === 'braid') front += cap + `<path d="M85 46C90 52 92 60 88 68L84 52Z" fill="${hair}"/>`;
+  else if (hs === 'curtains') front += `<path d="M34 52C30 26 50 18 60 22C58 36 46 44 34 52Z M86 52C90 26 70 18 60 22C62 36 74 44 86 52Z" fill="${hair}"/>`;
+  else if (hs === 'wavy') front += cap + `<path d="M34 48C28 58 36 66 31 76L40 56Z M86 48C92 58 84 66 89 76L80 56Z" fill="${hair}"/>`;
+  else if (hs === 'slick') front += `<path d="M35 48C33 26 48 18 60 18C74 18 87 26 85 48C82 34 72 28 60 28C48 28 38 34 35 48Z" fill="${hair}"/><path d="M40 32C44 10 76 8 82 32C74 22 50 20 40 32Z" fill="${hair}"/>`;
   else if (hs === 'afro') front += `<path d="M36 48C34 30 46 22 60 22C74 22 86 30 84 48C78 38 70 34 60 34C50 34 42 38 36 48Z" fill="${hair}"/>`;
   else front += cap;
   // accessories
   let acc = '';
-  if (L.gl) acc += `<g fill="none" stroke="${ink}" stroke-width="1.8">${L.gl === 1 ? '<circle cx="51" cy="52" r="7.5"/><circle cx="69" cy="52" r="7.5"/>' : '<rect x="43" y="45.5" width="15" height="13" rx="3"/><rect x="62" y="45.5" width="15" height="13" rx="3"/>'}<path d="M58.5 52H61.5"/></g>`;
+  if (L.gl){
+    const fr = [null, '<circle cx="51" cy="52" r="7.5"/><circle cx="69" cy="52" r="7.5"/>', '<rect x="43" y="45.5" width="15" height="13" rx="3"/><rect x="62" y="45.5" width="15" height="13" rx="3"/>',
+      '<path d="M43 47H58V53Q58 60 50.500 60Q43 60 43 53Z"/><path d="M77 47H62V53Q62 60 69.500 60Q77 60 77 53Z"/>',
+      '<path d="M43 51Q43 46 47 46L58 48V55Q56 59 50 59Q43 59 43 51Z"/><path d="M77 51Q77 46 73 46L62 48V55Q64 59 70 59Q77 59 77 51Z"/>',
+      `<rect x="43" y="46" width="15" height="11" rx="4" fill="${ink}"/><rect x="62" y="46" width="15" height="11" rx="4" fill="${ink}"/>`][L.gl];
+    acc += `<g fill="none" stroke="${ink}" stroke-width="1.8">${fr}<path d="M58 51H62"/></g>`;
+  }
+  if (L.ha === 1) acc += `<path d="M35 44C34 14 86 14 85 44Z" fill="${top}"/><rect x="34" y="37" width="52" height="9" rx="4.500" fill="${dk}"/><circle cx="60" cy="14" r="5" fill="${dk}"/>`;
+  if (L.ha === 2) acc += `<path d="M38 40C38 18 82 18 82 40Z" fill="${top}"/><ellipse cx="60" cy="40" rx="31" ry="6.500" fill="${dk}"/>`;
+  if (L.ha === 3) acc += `<path d="M35 38Q60 26 85 38L85 45Q60 33 35 45Z" fill="${top}"/>`;
+  if (L.eg){ const gold = '#e3b04b'; acc += [-1, 1].map(q => { const x = 60 + q * earX; return L.eg === 1 ? `<circle cx="${x}" cy="57.500" r="1.800" fill="${gold}"/>` : L.eg === 2 ? `<circle cx="${x}" cy="61" r="3.600" fill="none" stroke="${gold}" stroke-width="1.400"/>` : `<path d="M${x} 57.500V63" stroke="${gold}" stroke-width="1.200"/><circle cx="${x}" cy="65" r="2.200" fill="${gold}"/>`; }).join(''); }
+  if (L.sf) acc += `<path d="M43 80Q60 94 77 80L79 91Q60 104 41 91Z" fill="${CH_OUTFIT_C[(L.oc + 5) % 12]}"/><path d="M66 94L75 116L67 118L61 98Z" fill="${CH_OUTFIT_C[(L.oc + 5) % 12]}"/>`;
+  if (L.nk) acc += `<path d="M47 86Q60 106 73 86" fill="none" stroke="#e3b04b" stroke-width="1.400"/><circle cx="60" cy="100" r="2.600" fill="#e3b04b" stroke="#8a6a1a" stroke-width=".8"/>`;
   if (L.ht) acc += `<path d="M35 44C34 16 48 10 60 10C72 10 86 16 85 44Z" fill="${dk}"/><rect x="34" y="38" width="52" height="10" rx="4" fill="${top}"/>`;
   if (L.hp) acc += `<path d="M35 52C34 14 86 14 85 52" fill="none" stroke="#c9cfda" stroke-width="4.5"/><rect x="29" y="44" width="11" height="22" rx="5.5" fill="#3a4252"/><rect x="80" y="44" width="11" height="22" rx="5.5" fill="#3a4252"/>`;
   const lashes = L.ls ? `<path d="M45.800 50.500L42.800 48.200M47.600 48.800L45.800 45.600M74.200 50.500L77.200 48.200M72.400 48.800L74.200 45.600" stroke="${ink}" stroke-width="1.400" stroke-linecap="round"/>` : '';
   const skinHex = skin.toLowerCase(), OL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
   const ol = str => str.replace(/<(path|rect|circle|ellipse)\b([^>]*?)(\/?)>/g, (m, t, a, c) => /fill="none"|stroke=|opacity=|fill="#000"/.test(a) || a.toLowerCase().includes('fill="' + skinHex + '"') ? m : `<${t}${a} ${OL}${c}>`);
-  return ol(back + legs + arms) + neck + ol(body) + head + blush + nose + eyes + brows + lashes + mouth + ol(front + acc);
+  return ol(back + legs + arms) + neck + ol(body) + head + blush + freck + fhs + nose + eyes + brows + lashes + mouth + ol(front + acc);
 }
 // a picture of the character with its background; the default view is the square portrait (head and shoulders)
 function chFull(look, view){
