@@ -145,7 +145,7 @@ function dmSend(w, text, re){
     if (off && !seenOk && texts.length) dmNoLateOpener(texts);
     dmGenBusy[w] = 0;
     const t0 = off ? Date.now() + 7 * 864e5 : Math.max(Date.now() + 2500, Date.now() + d - 4000), had = new Set(DMS.q.map(q => q.id));
-    if (ac && texts.length) ac.commit(t0 + 2500 + Math.random() * 5000);
+    if (ac && texts.length) ac.commit(t0 + texts.length * 4000 + 2000 + Math.random() * 5000);          // after the last line has landed, so a 'done' never comes after the like
     if (mine && pendingCh(w) === pend){
       DMS.q = DMS.q.filter(q => !(q.upd && q.upd.id === pend.id));          // this reply is their answer
       dmQueue(w, t0, texts, {upd: {id: pend.id, st: pend.ch.yes ? 'a' : 'd'}});

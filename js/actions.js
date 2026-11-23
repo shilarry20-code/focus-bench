@@ -111,9 +111,9 @@ function acPrep(w, text, opt = {}){
       : `${me} asks ${B.name} to ${what}. ${B.name} DOESN'T do it: the reply is a casual no, an excuse or a joke in their own words.`);
     if (yes) plan.push({act: r.act, kind: tg.kind, tid: tg.id});
   });
-  if (!reqs.length && opt.offer !== false && Math.random() < .05){            // now and then they offer on their own
+  if (!reqs.length && opt.offer !== false && Math.random() < .05){            // now and then they like or follow on their own
     const acts = ['like', 'like', 'follow'], act = acts[Math.floor(Math.random() * acts.length)], tg = acPick(act, w, 'any');
-    if (!tg.none && !tg.done){ notes.push(`While replying, ${B.name} also mentions in a few casual words that they're about to ${AC_WHAT[act](tg.desc)} (like "lemme go like your story"); they're doing it right now.`); plan.push({act, kind: tg.kind, tid: tg.id}); }
+    if (!tg.none && !tg.done) plan.push({act, kind: tg.kind, tid: tg.id});          // on their own they just do it, without announcing it in the chat
   }
   return {note: notes.length ? ' ' + notes.join(' ') : '', plan, commit(due){ plan.forEach(p => acQueue(w, p, due)); }};
 }
