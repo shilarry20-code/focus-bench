@@ -300,11 +300,11 @@ const CC_TABS = [
 const chThumb = (look, over, crop) => chFull(Object.assign({}, look, over), CC_THUMB[crop]);
 function ccSwatches(key, list, d, hexKey){
   const free = hexKey && d[hexKey];
-  return `<div class="cc-sw">${list.map((c, k) => `<button type="button" class="cc-dot" data-cc="${key}" data-v="${k}" aria-pressed="${d[key] === k && !free}" aria-label="${key} ${k + 1}" style="background:${c}"></button>`).join('')}${hexKey ? `<label class="cc-dot cc-custom" aria-pressed="${!!free}" title="Pick any color" style="background:${free || 'conic-gradient(#e53935,#fdd835,#43a047,#00acc1,#3949ab,#d81b60,#e53935)'}"><input type="color" data-cc-hex="${hexKey}" value="${free || list[d[key]] || '#888888'}" aria-label="Custom color"></label>` : ''}</div>`;
+  return `<div class="ccr-sw">${list.map((c, k) => `<button type="button" class="ccr-dot" data-cc="${key}" data-v="${k}" aria-pressed="${d[key] === k && !free}" aria-label="${key} ${k + 1}" style="background:${c}"></button>`).join('')}${hexKey ? `<label class="ccr-dot ccr-custom" aria-pressed="${!!free}" title="Pick any color" style="background:${free || 'conic-gradient(#e53935,#fdd835,#43a047,#00acc1,#3949ab,#d81b60,#e53935)'}"><input type="color" data-cc-hex="${hexKey}" value="${free || list[d[key]] || '#888888'}" aria-label="Custom color"></label>` : ''}</div>`;
 }
-function ccTiles(key, list, d, crop, num){ return `<div class="cc-grid">${list.map(([v, l]) => `<button type="button" class="cc-tile" data-cc="${key}" data-v="${v}" aria-pressed="${String(d[key]) === String(v)}"><span class="cc-th">${chThumb(d, {[key]: num ? +v : v}, crop)}</span><span>${l}</span></button>`).join('')}</div>`; }
-function ccToggles(items, d){ return `<div class="cc-grid">${items.map(([k, l, crop]) => `<button type="button" class="cc-tile" data-cc-tg="${k}" aria-pressed="${!!d[k]}"><span class="cc-th">${chThumb(d, {[k]: d[k] ? 0 : 1}, crop)}</span><span>${d[k] ? 'Remove ' : ''}${l}</span></button>`).join('')}</div>`; }
-const ccH = t => `<h4 class="cc-h">${t}</h4>`;
+function ccTiles(key, list, d, crop, num){ return `<div class="ccr-grid">${list.map(([v, l]) => `<button type="button" class="ccr-tile" data-cc="${key}" data-v="${v}" aria-pressed="${String(d[key]) === String(v)}"><span class="ccr-th">${chThumb(d, {[key]: num ? +v : v}, crop)}</span><span>${l}</span></button>`).join('')}</div>`; }
+function ccToggles(items, d){ return `<div class="ccr-grid">${items.map(([k, l, crop]) => `<button type="button" class="ccr-tile" data-cc-tg="${k}" aria-pressed="${!!d[k]}"><span class="ccr-th">${chThumb(d, {[k]: d[k] ? 0 : 1}, crop)}</span><span>${d[k] ? 'Remove ' : ''}${l}</span></button>`).join('')}</div>`; }
+const ccH = t => `<h4 class="ccr-h">${t}</h4>`;
 function ccPanel(){
   const d = ccLook;
   return [
@@ -333,21 +333,21 @@ function ccCam(name){
 function ccDraw(full){
   const el = document.getElementById('cc'); if (!el) return;
   el.querySelector('#ccStage').innerHTML = chFull(ccLook, ccView.join(' '));
-  if (full) el.querySelector('#ccTabs').innerHTML = CC_TABS.map((t, k) => `<button type="button" role="tab" class="cc-tab" data-cc-tab="${k}" aria-selected="${k === ccTab}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${t[2]}"/></svg><span>${t[0]}</span></button>`).join('');
+  if (full) el.querySelector('#ccTabs').innerHTML = CC_TABS.map((t, k) => `<button type="button" role="tab" class="ccr-tab" data-cc-tab="${k}" aria-selected="${k === ccTab}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${t[2]}"/></svg><span>${t[0]}</span></button>`).join('');
   const body = el.querySelector('#ccBody'), top = body.scrollTop;
   body.innerHTML = ccPanel(); body.scrollTop = full ? 0 : top;
 }
 function ccOpen(){
   if (document.getElementById('cc')) return;
   ccLook = chMyLook(); ccTab = 0; ccView = CC_VIEWS.full.slice();
-  document.body.insertAdjacentHTML('beforeend', `<div id="cc" class="cc" role="dialog" aria-modal="true" aria-label="Character creator">
-    <div class="cc-bar"><button type="button" class="small-btn" data-cc-act="cancel">Cancel</button><b>Your character</b><button type="button" class="btn primary" data-cc-act="save">Done</button></div>
-    <div class="cc-main"><div class="cc-left"><div class="cc-stage" id="ccStage"></div><div class="cc-btns"><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
-    <div class="cc-right"><div class="cc-tabs" id="ccTabs" role="tablist"></div><div class="cc-body" id="ccBody"></div></div></div></div>`);
-  document.body.classList.add('cc-lock'); ccDraw(true);
+  document.body.insertAdjacentHTML('beforeend', `<div id="cc" class="ccr" role="dialog" aria-modal="true" aria-label="Character creator">
+    <div class="ccr-bar"><button type="button" class="small-btn" data-cc-act="cancel">Cancel</button><b>Your character</b><button type="button" class="btn primary" data-cc-act="save">Done</button></div>
+    <div class="ccr-main"><div class="ccr-left"><div class="ccr-stage" id="ccStage"></div><div class="ccr-btns"><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
+    <div class="ccr-right"><div class="ccr-tabs" id="ccTabs" role="tablist"></div><div class="ccr-body" id="ccBody"></div></div></div></div>`);
+  document.body.classList.add('ccr-lock'); ccDraw(true);
   const first = document.querySelector('#cc [data-cc-act="save"]'); if (first) first.focus();
 }
-function ccClose(){ const el = document.getElementById('cc'); if (el) el.remove(); document.body.classList.remove('cc-lock'); }
+function ccClose(){ const el = document.getElementById('cc'); if (el) el.remove(); document.body.classList.remove('ccr-lock'); }
 function ccSave(){
   P.myLook = chClean(ccLook); chDraft = null; try { saveP(); } catch (e) {}
   const svg = chBust(chMyLook());
@@ -355,7 +355,7 @@ function ccSave(){
   document.querySelectorAll('[data-flip="' + ME + '"] .af-b .av').forEach(x => x.innerHTML = svg);
   ccClose();
 }
-function ccMiniHtml(){ return `<div class="cc-mini"><span class="av pic xl" id="ccMini">${chBust(chMyLook())}</span><div><button type="button" class="btn" data-cc-act="open">Customize character</button><small class="hint">Body, hair, face, clothes and more. Drag your profile picture sideways to flip it to your character.</small></div></div>`; }
+function ccMiniHtml(){ return `<div class="ccr-mini"><span class="av pic xl" id="ccMini">${chBust(chMyLook())}</span><div><button type="button" class="btn" data-cc-act="open">Customize character</button><small class="hint">Body, hair, face, clothes and more. Drag your profile picture sideways to flip it to your character.</small></div></div>`; }
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-cc-act]');
   if (a){
