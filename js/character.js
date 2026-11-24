@@ -302,6 +302,7 @@ function chFigure(look){
   else if (hs === 'slick') front += cap(8, 5) + `<path d="M${l + 8} ${HT - 2}C46 ${HT - 12} 74 ${HT - 12} ${r - 8} ${HT - 2}" fill="none" stroke="${chShade(hair, .6)}" stroke-width="1.200" stroke-linecap="round"/>`;
   else if (hs === 'afro') front += `<path d="M${l + 1} 50C${l - 1} ${HT} ${l + 10} ${HT - 4} 60 ${HT - 4}C${r - 10} ${HT - 4} ${r + 1} ${HT} ${r - 1} 50C${r - 6} 40 ${r - 12} ${HT + 8} 60 ${HT + 8}C${l + 12} ${HT + 8} ${l + 6} 40 ${l + 1} 50Z" fill="${hair}" stroke="none"/><path d="M${l + 1} 50C${l + 6} 40 ${l + 12} ${HT + 8} 60 ${HT + 8}C${r - 12} ${HT + 8} ${r - 6} 40 ${r - 1} 50" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="1.100" stroke-linejoin="round"/>`;
   else front += cap(5, 9);
+  if (L.sf) back += `<path d="M46 83Q60 72 74 83L71 85Q60 77.500 49 85Z" fill="${chShade(CH_OUTFIT_C[(L.oc + 5) % 12], .72)}"/>`;
   // a hat squashes tall hair styles flat underneath it
   const hatOn = [1, 2, 4].includes(L.ha);
   if (hatOn && ['spiky', 'mohawk', 'afro', 'bun', 'curly', 'slick'].includes(hs)) front = frontBefore + cap(5, 9);
@@ -334,12 +335,13 @@ function chFigure(look){
     return L.eg === 1 ? `<circle cx="${x}" cy="${y}" r="1.800" fill="${gold}" ${AO}/>`
       : L.eg === 2 ? `<circle cx="${x + q * .600}" cy="${y + 3.200}" r="3.200" fill="none" stroke="${gold}" stroke-width="1.500"/>`
       : `<path d="M${x} ${y}V${y + 3}" stroke="${gold}" stroke-width="1.200"/><path d="M${x} ${y + 3}Q${x + 2.600} ${y + 6.500} ${x} ${y + 8}Q${x - 2.600} ${y + 6.500} ${x} ${y + 3}Z" fill="${gold}" ${AO}/>`; }).join('');
-  if (L.nk) acc += `<path d="M52.500 80C52.500 90 56.500 94 60 94C63.500 94 67.500 90 67.500 80" fill="none" stroke="${gold}" stroke-width="1.300"/><path d="M60 94.500L62.300 97.300L60 100.200L57.700 97.300Z" fill="${gold}" ${AO}/>`;
-  if (L.sf){   // scarf: wrapped around the neck, with two ends hanging down the front
-    const sc = CH_OUTFIT_C[(L.oc + 5) % 12], scd = chShade(sc, .72);
-    acc += `<path d="M58 92L61.500 92L63 118H57Z" fill="${scd}"/><path d="M61 91L70 93L71.500 119H62.500Z" fill="${sc}"/><path d="M62.300 105H71M62.500 110H71.200" stroke="${scd}" stroke-width="1.500"/><path d="M64 119V122.500M67 119V122.500M70 119V122.500" stroke="${sc}" stroke-width="1.600" stroke-linecap="round"/>`
-      + `<path d="M42 84C43 77 51 74.500 53 78.500Q60 84.500 67 78.500C69 74.500 77 77 78 84C78 92 67 99 60 99C53 99 42 92 42 84Z" fill="${sc}"/><path d="M45.500 89Q60 97.500 74.500 89" fill="none" stroke="${scd}" stroke-width="1.100"/>`;
+  if (L.nk) acc += `<path d="M52 75.500Q53.900 77 53.800 81C53.600 88 56.500 93.500 60 94C63.500 93.500 66.400 88 66.200 81Q66.100 77 68 75.500" fill="none" stroke="${gold}" stroke-width="1.300"/><circle cx="60" cy="95" r="1" fill="none" stroke="${gold}" stroke-width="1"/><path d="M60 96L62.300 98.800L60 101.700L57.700 98.800Z" fill="${gold}" ${AO}/>`;
+  if (L.sf){   // scarf: a band looped around the neck (its back shows behind the neck), knotted at one side with both ends hanging
+    const sc = CH_OUTFIT_C[(L.oc + 5) % 12], scd = chShade(sc, .72), fr = (x0, x1, y) => [0, 1, 2].map(k => `M${x0 + (x1 - x0) * (k + .5) / 3} ${y}v3.200`).join('');
+    acc += `<path d="M64 92L69 92.500L68.500 116.500H61.500Z" fill="${scd}"/><path d="M66.500 92L71.500 90.500L76 112.500L69.500 114Z" fill="${sc}"/><path d="M68.300 101.500L73.300 100.400M69 106L74.200 104.900" stroke="${scd}" stroke-width="1.400"/><path d="${fr(61.500, 68.500, 116.500)}" stroke="${scd}" stroke-width="1.400" stroke-linecap="round"/><path d="${fr(69.500, 76, 113)}" stroke="${sc}" stroke-width="1.400" stroke-linecap="round"/>`
+      + `<path d="M49 79.500Q60 90.500 71 79.500C74 79 77.500 80.500 77 84Q60 100 43 84C42.500 80.500 46 79 49 79.500Z" fill="${sc}"/><path d="M46.500 85.500Q60 95.500 73.500 85.500" fill="none" stroke="${scd}" stroke-width="1"/><ellipse cx="67.500" cy="91" rx="4.600" ry="3.900" fill="${sc}"/>`;
   }
+
 
   const lashes = L.ls ? `<path d="M45.800 50.500L42.800 48.200M47.600 48.800L45.800 45.600M74.200 50.500L77.200 48.200M72.400 48.800L74.200 45.600" stroke="${ink}" stroke-width="1.400" stroke-linecap="round"/>` : '';
   const skinHex = skin.toLowerCase(), OL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
