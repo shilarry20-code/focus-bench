@@ -29,11 +29,10 @@ const CH_FACES = [['0', 'Round'], ['1', 'Oval'], ['2', 'Wide'], ['3', 'Square'],
 const CH_NOSES = [['0', 'Line'], ['1', 'Button'], ['2', 'Hooked'], ['3', 'Wide'], ['4', 'Pointed']];
 const CH_EARS = [['0', 'Round'], ['1', 'Pointed'], ['2', 'Big'], ['3', 'Small']];
 const CH_FACIAL = [['0', 'None'], ['1', 'Stubble'], ['2', 'Mustache'], ['3', 'Beard']];
-const CH_HANDS = [['0', 'Mitten'], ['1', 'Fingers'], ['2', 'Fist']];
 const CH_POSES = [['0', 'Relaxed'], ['1', 'Arms out'], ['2', 'Wave']];
 const CH_HATS = [['0', 'None'], ['1', 'Beanie'], ['2', 'Bucket'], ['3', 'Headband']];
 const CH_EARRINGS = [['0', 'None'], ['1', 'Studs'], ['2', 'Hoops'], ['3', 'Dangles']];
-const CH_DEFAULT = {sk: 2, hc: 1, hs: 'short', ot: 'hoodie', oc: 0, gl: 0, hp: 0, ht: 0, ey: 0, mo: 0, bl: 0, bg: 0, bp: 1, gd: 2, bd: 1, bt: 'jeans', bc: 0, sn: 'sneakers', sc: 0, ls: 0, ec: 0, br: 0, eh: '', fs: 0, nz: 0, ea: 0, fh: 0, fk: 0, hd: 0, ap: 0, ha: 0, eg: 0, sf: 0, nk: 0};
+const CH_DEFAULT = {sk: 2, hc: 1, hs: 'short', ot: 'hoodie', oc: 0, gl: 0, hp: 0, ht: 0, ey: 0, mo: 0, bl: 0, bg: 0, bp: 1, gd: 2, bd: 1, bt: 'jeans', bc: 0, sn: 'sneakers', sc: 0, ls: 0, ec: 0, br: 0, eh: '', fs: 0, nz: 0, ea: 0, fh: 0, fk: 0, ap: 0, ha: 0, eg: 0, sf: 0, nk: 0};
 
 // a simulated player's look, worked out from their number
 const CH_CACHE = new Map();
@@ -48,7 +47,7 @@ function chLookOf(i){
   if (r() < .3) o.mo = 4 + n(6); if (r() < .15) n(7);   // old lip-color draw, kept so every bot's look stays the same
   // newer options, drawn last so older looks never change; most bots keep the plain version
   if (r() < .5) o.fs = n(5); if (r() < .4) o.nz = n(CH_NOSES.length); if (r() < .3) o.ea = n(CH_EARS.length);
-  if (r() < .25) o.fk = 1; if (r() < .2 && o.gd !== 1) o.fh = 1 + n(3); if (r() < .25) o.hd = n(CH_HANDS.length); if (r() < .2) o.ap = n(3);
+  if (r() < .25) o.fk = 1; if (r() < .2 && o.gd !== 1) o.fh = 1 + n(3); if (r() < .25) n(3); if (r() < .2) o.ap = n(3);
   if (r() < .12) o.ha = 1 + n(3); if (r() < .15) o.eg = 1 + n(3); if (r() < .1) o.sf = 1; if (r() < .1) o.nk = 1;
   if (r() < .25) o.hs = CH_HAIRSTYLES[9 + n(8)][0]; if (r() < .2) o.ot = CH_OUTFITS[5 + n(5)][0]; if (r() < .2) o.bt = CH_BOTTOMS[4 + n(3)][0]; if (r() < .2) o.sn = CH_SHOES[3 + n(4)][0];
   if (r() < .1) o.gl = 3 + n(3);
@@ -63,7 +62,7 @@ function chClean(l){
   o.gl = num(l.gl, CH_GLASSES.length, 0); o.ey = num(l.ey, CH_EYES.length, 0); o.ec = num(l.ec, CH_EYE_C.length, 0); o.br = num(l.br, CH_BROWS.length, 0); o.mo = num(l.mo, CH_MOUTHS.length, 0);
   const hex = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : ''; o.eh = hex(l.eh);   // an eye color picked freely instead of from the list
   o.bp = num(l.bp, 3, d.bp);
-  o.fs = num(l.fs, CH_FACES.length, 0); o.nz = num(l.nz, CH_NOSES.length, 0); o.ea = num(l.ea, CH_EARS.length, 0); o.fh = num(l.fh, CH_FACIAL.length, 0); o.hd = num(l.hd, CH_HANDS.length, 0); o.ap = num(l.ap, CH_POSES.length, 0); o.ha = num(l.ha, CH_HATS.length, 0); o.eg = num(l.eg, CH_EARRINGS.length, 0);
+  o.fs = num(l.fs, CH_FACES.length, 0); o.nz = num(l.nz, CH_NOSES.length, 0); o.ea = num(l.ea, CH_EARS.length, 0); o.fh = num(l.fh, CH_FACIAL.length, 0); o.ap = num(l.ap, CH_POSES.length, 0); o.ha = num(l.ha, CH_HATS.length, 0); o.eg = num(l.eg, CH_EARRINGS.length, 0);
   o.fk = l.fk ? 1 : 0; o.sf = l.sf ? 1 : 0; o.nk = l.nk ? 1 : 0;
   o.hp = l.hp ? 1 : 0; o.ht = l.ht ? 1 : 0; o.bl = l.bl ? 1 : 0; o.ls = l.ls ? 1 : 0;
   o.gd = num(l.gd, 3, d.gd); o.bd = num(l.bd, 3, d.bd); o.bc = num(l.bc, CH_BOTTOM_C.length, d.bc); o.sc = num(l.sc, CH_SHOE_C.length, d.sc);
@@ -151,16 +150,17 @@ function chFigure(look){
   const outerAt = y => 1 + (M.hp - 1 - 1) + (ankW - (M.hp - 1)) * (y - 156) / 68;
   const leg = (s, y0, y1, fill) => `<path d="M${cx + s} ${y0}L${cx + s * outerAt(y0)} ${y0}L${cx + s * outerAt(y1)} ${y1}L${cx + s} ${y1}Z" fill="${fill}"/>`;
   let legs = `<ellipse cx="60" cy="239" rx="${Math.round(M.hp + 10)}" ry="5" fill="#000" opacity=".16"/>`;
+  const hemY = {hoodie: 160, tee: 154, sweater: 160, coat: 190, blazer: 162, tank: 154, polo: 156, jacket: 164, jersey: 158, turtle: 158}[L.ot], flare = L.ot === 'coat' ? 8 : 1;
+  const yT = L.ot === 'coat' ? 172 : hemY - 4;   // bottoms start just under the top's hem
   const long = ['jeans', 'joggers', 'cargo', 'leggings'].includes(L.bt);
-  legs += leg(-1, 150, 226, skin) + leg(1, 150, 226, skin);
+  legs += leg(-1, Math.max(150, yT), 226, skin) + leg(1, Math.max(150, yT), 226, skin);
   if (long){
-    legs += leg(-1, 146, 224, pc) + leg(1, 146, 224, pc) + `<path d="M${cx} 148V168" stroke="${pdk}" stroke-width="1.6"/>`;
+    legs += leg(-1, yT, 224, pc) + leg(1, yT, 224, pc) + `<path d="M${cx} ${yT}V${yT + 20}" stroke="${pdk}" stroke-width="1.6"/>`;
     if (L.bt === 'joggers') legs += [-1, 1].map(s => `<path d="M${cx + s * outerAt(214)} 214L${cx + s * outerAt(224)} 224L${cx + s * 1} 224L${cx + s} 214Z" fill="${pdk}"/>`).join('');
     if (L.bt === 'cargo') legs += [-1, 1].map(q => `<rect x="${q < 0 ? cx - M.hp + 1 : cx + M.hp - 13}" y="168" width="12" height="13" rx="2" fill="${pdk}"/>`).join('');
     if (L.bt === 'leggings') legs += [-1, 1].map(q => `<path d="M${cx + q * 6} 160L${cx + q * (outerAt(200) - 2)} 205" stroke="#fff" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/>`).join('');
-  } else if (L.bt === 'shorts' || L.bt === 'capris') { const e = L.bt === 'capris' ? 204 : 190; legs += leg(-1, 146, e, pc) + leg(1, 146, e, pc); }
-  else legs += `<path d="M${cx - M.wa} 146H${cx + M.wa}L${cx + M.hp + 12} 192Q${cx} 199 ${cx - M.hp - 12} 192Z" fill="${pc}"/><path d="M${cx - M.hp - 4} 186Q${cx} 193 ${cx + M.hp + 4} 186" fill="none" stroke="${pdk}" stroke-width="1.6" opacity=".6"/>`;
-  legs += `<rect x="${cx - M.wa}" y="144" width="${2 * M.wa}" height="6" rx="2" fill="${pdk}"/>`;
+  } else if (L.bt === 'shorts' || L.bt === 'capris') { const e = L.bt === 'capris' ? 204 : 190; legs += leg(-1, yT, e, pc) + leg(1, yT, e, pc); }
+  else legs += `<path d="M${cx - M.hp} ${yT}H${cx + M.hp}L${cx + M.hp + 12} 192Q${cx} 199 ${cx - M.hp - 12} 192Z" fill="${pc}"/><path d="M${cx - M.hp - 4} 186Q${cx} 193 ${cx + M.hp + 4} 186" fill="none" stroke="${pdk}" stroke-width="1.6" opacity=".6"/>`;
   for (const s of [-1, 1]){
     const mid = cx + s * (1 + ankW / 2), xa = mid - ankW / 2 - 1 - (s < 0 ? 8 : 0), xb = mid + ankW / 2 + 1 + (s > 0 ? 8 : 0);
     if (L.sn === 'hightops') legs += `<rect x="${xa}" y="210" width="${xb - xa}" height="28" rx="6" fill="${shc}"/><rect x="${xa}" y="234" width="${xb - xa}" height="4.500" rx="2" fill="#fff"/><path d="M${mid - 4} 216H${mid + 4}M${mid - 4} 221H${mid + 4}M${mid - 4} 226H${mid + 4}" stroke="#fff" stroke-width="1.400" stroke-linecap="round"/>`;
@@ -172,14 +172,11 @@ function chFigure(look){
     else legs += `<rect x="${xa}" y="222" width="${xb - xa}" height="16" rx="7" fill="${shc}"/><rect x="${xa}" y="234" width="${xb - xa}" height="4.500" rx="2" fill="#fff" opacity=".85"/><rect x="${xa}" y="234" width="${xb - xa}" height="4.500" rx="2" fill="none" stroke="#000" stroke-opacity=".15"/>`;
   }
   // outfit
-  const hemY = {hoodie: 160, tee: 154, sweater: 160, coat: 190, blazer: 162, tank: 154, polo: 156, jacket: 164, jersey: 158, turtle: 158}[L.ot], flare = L.ot === 'coat' ? 8 : 1;
   const garment = fill => `<path d="M${cx - M.ts} 108C${cx - M.ts} 92 ${cx - 26} 84 ${cx} 84C${cx + 26} 84 ${cx + M.ts} 92 ${cx + M.ts} 108L${cx + M.wa} 148Q${cx + M.wa} 154 ${cx + M.hp + flare} ${hemY}L${cx - M.hp - flare} ${hemY}Q${cx - M.wa} 154 ${cx - M.wa} 148Z" fill="${fill}"/>`;
   const sleeve = L.ot === 'tank' ? skin : L.ot === 'coat' ? '#f1f1ec' : L.ot === 'blazer' ? '#2e3648' : top, sleeveEnd = ['tee', 'polo', 'jersey'].includes(L.ot) ? 120 : L.ot === 'tank' ? 96 : 144;
   let arms = '';
   const HL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
-  const hand = (hx, hy, s) => L.hd === 1 ? `<rect x="${hx - 6}" y="${hy - 6}" width="12" height="11" rx="4" fill="${skin}" ${HL}/>` + [0, 1, 2, 3].map(i => `<rect x="${hx - 6 + i * 3.1}" y="${hy + 2}" width="2.900" height="9.500" rx="1.450" fill="${skin}" ${HL}/>`).join('') + `<ellipse cx="${hx - s * 6.500}" cy="${hy - 1}" rx="2.500" ry="4.800" fill="${skin}" ${HL} transform="rotate(${s * 22} ${hx - s * 6.500} ${hy - 1})"/>`
-    : L.hd === 2 ? `<rect x="${hx - 6.500}" y="${hy - 6}" width="13" height="13" rx="5" fill="${skin}" ${HL}/><path d="M${hx - 3} ${hy - 1}H${hx + 3}M${hx - 4} ${hy + 3}H${hx + 4}" stroke="rgba(20,16,12,.5)" stroke-width=".9" stroke-linecap="round"/>`
-    : `<circle cx="${hx}" cy="${hy}" r="7.500" fill="${skin}"/>`;
+  const hand = (hx, hy, s) => `<ellipse cx="${hx - s * 5.800}" cy="${hy - .500}" rx="2.600" ry="4.200" fill="${skin}" ${HL} transform="rotate(${s * 24} ${hx - s * 5.800} ${hy - .500})"/><path d="M${hx - 6.500} ${hy - 7}H${hx + 6.500}V${hy + 2}A6.500 6.500 0 0 1 ${hx - 6.500} ${hy + 2}Z" fill="${skin}" stroke="none"/><path d="M${hx - 6.500} ${hy - 4}V${hy + 2}A6.500 6.500 0 0 0 ${hx + 6.500} ${hy + 2}V${hy - 4}" fill="none" ${HL}/>`;
   for (const s of [-1, 1]){
     const a0 = arms.length;
     const x = s < 0 ? cx - M.sw : cx + M.sw - 15;
