@@ -242,8 +242,9 @@ function chFigure(look){
   const lum = (n => (((n >> 16) & 255) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11) / 255)(parseInt(skin.slice(1), 16)), nc = lum < .36 ? chShade(skin, 1.45) : chShade(skin, .7);
   const earPath = q => { const x = 60 + q * earX;
     const shape = L.ea === 1 ? `<path d="M${x - q * 2} 46.500C${x + q * 2} 45.500 ${x + q * 5} 42.500 ${x + q * 7.500} 40.500C${x + q * 6.800} 46.500 ${x + q * 5.500} 53.500 ${x + q * 1.800} 57.500C${x} 58.800 ${x - q * 2} 57.500 ${x - q * 2} 55.500Z" fill="${skin}"/>` : `<circle cx="${x}" cy="53" r="${earR}" fill="${skin}"/>`;
-    const ix = x + q * (L.ea === 1 ? 2 : earR * .3), ir = L.ea === 1 ? 3.200 : earR * .5;
-    return shape + `<path d="M${ix} ${53 - ir}Q${ix + q * ir * .9} 53 ${ix} ${53 + ir}" fill="none" stroke="${nc}" stroke-width="1.100" stroke-linecap="round"/>`; };
+    const ix = x + q * earR * .3, ir = earR * .5;
+    const inner = L.ea === 1 ? `M${x + q * 5.400} 44.500C${x + q * 4.600} 49 ${x + q * 3.600} 52.500 ${x + q * 1.600} 55` : `M${ix} ${53 - ir}Q${ix + q * ir * .9} 53 ${ix} ${53 + ir}`;
+    return shape + `<path d="${inner}" fill="none" stroke="${nc}" stroke-width="1.100" stroke-linecap="round"/>`; };
   const faceShape = [`<ellipse cx="60" cy="50" rx="24" ry="25" fill="${skin}"/>`, `<ellipse cx="60" cy="51" rx="22" ry="27" fill="${skin}"/>`, `<ellipse cx="60" cy="50.500" rx="26" ry="23.500" fill="${skin}"/>`,
     `<rect x="36" y="26" width="48" height="50" rx="17" fill="${skin}"/>`, `<path d="M36 44C36 30 48 25 60 28C72 25 84 30 84 44C84 60 70 77 60 77C50 77 36 60 36 44Z" fill="${skin}"/>`,
     `<ellipse cx="60" cy="51" rx="21" ry="28" fill="${skin}"/>`,
@@ -280,11 +281,12 @@ function chFigure(look){
   ][L.mo];
   const blush = L.bl ? '<ellipse cx="44.500" cy="60.500" rx="4.300" ry="2.700" fill="#e8837a" opacity=".38"/><ellipse cx="75.500" cy="60.500" rx="4.300" ry="2.700" fill="#e8837a" opacity=".38"/>' : '';
   const nst = `fill="none" stroke="${nc}" stroke-width="1.600" stroke-linecap="round" stroke-linejoin="round"`;
-  const nose = [`<path d="M61 53.500Q58.400 57 60 58.700Q61.100 59.400 62.300 58.600" ${nst}/>`,
-    `<ellipse cx="60" cy="57.300" rx="2.700" ry="2" fill="${nc}"/><ellipse cx="59.300" cy="56.700" rx=".900" ry=".600" fill="#fff" opacity=".35"/>`,
-    `<path d="M59 50.500Q62 55 61.800 57.500Q61.600 59.500 59.200 59.100" ${nst}/>`,
-    `<path d="M60 53.500Q61.300 56.400 63.300 57.100Q63.900 59 62 59.200Q61 58.600 60 59.200Q59 58.600 58 59.200Q56.100 59 56.700 57.100Q58.700 56.400 60 53.500Z" fill="${nc}"/>`,
-    `<path d="M60.300 52L62.800 58.300Q61.300 59.300 59.300 58.600" ${nst}/>`][L.nz];
+  // every nose is a line drawing centered on the middle of the face; with a mustache it sits a little higher so both fit
+  const nose = `<g${[2, 3].includes(L.fh) ? ' transform="translate(0 -1.800)"' : ''}>` + [`<path d="M60.300 54.200Q59.200 56.800 60 58.700" ${nst}/>`,
+    `<path d="M58.100 55.600Q56.900 58.900 60 59.200Q63.100 58.900 61.900 55.600" ${nst}/>`,
+    `<path d="M58.800 50.800Q61.600 55 61.300 57.400Q61 59.300 59 59" ${nst}/>`,
+    `<path d="M58.400 54.300Q58 56.500 56.600 57.400Q55.900 58.700 57.400 59.100Q58.700 59.300 60 58.600Q61.300 59.300 62.600 59.100Q64.100 58.700 63.400 57.400Q62 56.500 61.600 54.300" ${nst}/>`,
+    `<path d="M59.300 52L61.700 58.200Q60.300 59 58.700 58.600" ${nst}/>`][L.nz] + '</g>';
   const fb = [75, 78, 74, 76, 77, 79, 77, 77, 77][L.fs], FO = 'stroke="rgba(20,16,12,.72)" stroke-width="1" stroke-linejoin="round"';
   const stache = `<path d="M60 57.300C57 55.900 52.500 56.300 50.600 59.600C51.800 60.300 53.200 60.200 54.200 59.500C56 58.900 58.200 59.200 60 59.100C61.800 59.200 64 58.900 65.800 59.500C66.800 60.200 68.200 60.300 69.400 59.600C67.500 56.300 63 55.900 60 57.300Z" fill="${hair}" ${FO}/>`;
   let fhs = '';
@@ -362,7 +364,7 @@ function chFigure(look){
   const lashes = L.ls ? `<path d="M45.800 50.500L42.800 48.200M47.600 48.800L45.800 45.600M74.200 50.500L77.200 48.200M72.400 48.800L74.200 45.600" stroke="${ink}" stroke-width="1.400" stroke-linecap="round"/>` : '';
   const skinHex = skin.toLowerCase(), OL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
   const ol = str => str.replace(/<(path|rect|circle|ellipse)\b([^>]*?)(\/?)>/g, (m, t, a, c) => /fill="none"|stroke=|opacity=|fill="#000"/.test(a) ? m : `<${t}${a} ${OL}${c}>`);
-  return ol(back + legs + arms) + neck + ol(body) + hands + ol(head) + blush + freck + fhs + nose + eyes + brows + lashes + mouth + ol(front + acc);
+  return ol(back + legs + arms) + neck + ol(body) + hands + ol(head) + blush + freck + nose + fhs + eyes + brows + lashes + mouth + ol(front + acc);
 }
 // a picture of the character with its background; the default view is the square portrait (head and shoulders)
 function chFull(look, view){
