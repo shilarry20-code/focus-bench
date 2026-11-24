@@ -223,7 +223,7 @@ function chFigure(look, turned){   // turned: seen from behind
     const rot = L.ap === 1 ? -s * 14 : L.ap === 2 && s > 0 ? -168 : -s * 5, rg = `<g transform="rotate(${rot} ${cx + s * (M.sw - 7.500)} 96)">`;
     arms = arms.slice(0, a0) + rg + arms.slice(a0) + '</g>';
     const longS = sleeveEnd > 130, rr = !longS ? 0 : L.ot === 'hoodie' || L.ot === 'sweater' ? 3 : L.ot === 'coat' ? 2.500 : 7.500;
-    hands += rg + hand(cx + s * (M.sw - 7.500), longS ? sleeveEnd + .400 : 141, s, rr) + '</g>';
+    hands += rg + hand(cx + s * (M.sw - 7.500), longS ? sleeveEnd + .400 : 141, L.ap === 2 && s > 0 ? -s : s, rr) + '</g>';   // a waving hand turns to show the palm, thumb toward the head
   }
   const band = `<rect x="${cx - M.hp - flare}" y="${hemY - 6}" width="${2 * (M.hp + flare)}" height="6" rx="2.500" fill="${dk}"/>`;
   const ring = (w, d, c, sw) => `<path d="M${cx - w} 84.500C${cx - w} ${d} ${cx + w} ${d} ${cx + w} 84.500" fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round"/>`;
