@@ -300,8 +300,12 @@ function chFigure(look){
   else if (L.fh === 2) fhs = stache;
   else if (L.fh === 3){   // beard: the face outline grown a little and cut off above the cheeks, with an open area for the mouth and cheeks
     const iw = hw - 4.500, open = `C${60 - iw + .500} 61 52 63.500 51.800 65.500C53 72 67 72 68.200 65.500C68 63.500 ${60 + iw - .500} 61 ${60 + iw} 56`;
-    beard = `<clipPath id="chb${fid}"><rect x="0" y="41" width="120" height="70"/></clipPath><g clip-path="url(#chb${fid})"><path d="${faceD}" ${scaled(1.070)} fill="${hair}" ${FO}/></g>`
-      + `<path d="M${60 - iw} 40V56${open}V40Z" fill="${skin}" stroke="none"/><path d="M${60 - iw} 41V56${open}V41" fill="none" ${FO}/>`;
+    // above the jaw the beard stays inside the face's own outline (so it never juts out past the head), and the sideburns end in a curve that tapers toward the cheek
+    const cut = `M0 120V41H${60 - hw - 2}Q${60 - iw - 1} 41.500 ${60 - iw} 47.500H${60 + iw}Q${60 + iw + 1} 41.500 ${60 + hw + 2} 41H120V120Z`;
+    const edge = `M${60 - hw - 2} 41Q${60 - iw - 1} 41.500 ${60 - iw} 47.500M${60 + hw + 2} 41Q${60 + iw + 1} 41.500 ${60 + iw} 47.500`;
+    beard = `<clipPath id="chb${fid}"><path d="${cut}"/></clipPath><clipPath id="chf${fid}"><path d="${faceD}"/><rect x="0" y="57" width="120" height="60"/></clipPath>`
+      + `<g clip-path="url(#chb${fid})"><g clip-path="url(#chf${fid})"><path d="${faceD}" ${scaled(1.070)} fill="${hair}" ${FO}/><path d="${edge}" fill="none" ${FO}/></g></g>`
+      + `<path d="M${60 - iw} 47V56${open}V47Z" fill="${skin}" stroke="none"/><path d="M${60 - iw} 47.500V56${open}V47.500" fill="none" ${FO}/>`;
     fhs = stache;
   }
   const freck = L.fk ? [[46, 58], [49, 60.500], [44, 61], [71, 58], [74, 60.500], [76, 61], [53, 59.500], [67, 59.500]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#a8643c" opacity=".55"/>`).join('') : '';
