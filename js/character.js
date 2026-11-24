@@ -335,12 +335,16 @@ function chFigure(look){
     return L.eg === 1 ? `<circle cx="${x}" cy="${y}" r="1.800" fill="${gold}" ${AO}/>`
       : L.eg === 2 ? `<circle cx="${x + q * .600}" cy="${y + 3.200}" r="3.200" fill="none" stroke="${gold}" stroke-width="1.500"/>`
       : `<path d="M${x} ${y}V${y + 3}" stroke="${gold}" stroke-width="1.200"/><path d="M${x} ${y + 3}Q${x + 2.600} ${y + 6.500} ${x} ${y + 8}Q${x - 2.600} ${y + 6.500} ${x} ${y + 3}Z" fill="${gold}" ${AO}/>`; }).join('');
-  if (L.nk) acc += `<path d="M52.300 81.500C53 88.500 56 92 60 92C64 92 67 88.500 67.700 81.500" fill="none" stroke="${gold}" stroke-width="1.300"/><circle cx="60" cy="93" r="1" fill="none" stroke="${gold}" stroke-width="1"/><path d="M60 94L62.300 96.800L60 99.700L57.700 96.800Z" fill="${gold}" ${AO}/>`;
-  if (L.sf){   // scarf: one piece, a band looped around the neck that turns down into a hanging end on one side
-    const sc = CH_OUTFIT_C[(L.oc + 5) % 12], scd = chShade(sc, .72);
-    acc += `<path d="M49 79.500Q60 90.500 71 79.500C73.500 78.800 76.800 80.500 77 84L75 113.500H65.500L64.500 91.400Q53.740 94.100 43 84C43.200 80.500 46.500 78.800 49 79.500Z" fill="${sc}"/>`
-      + `<path d="M46.500 85.500Q55 91.500 64.300 90.500M65 101.500H74.300M65.200 105.500H74.600" fill="none" stroke="${scd}" stroke-width="1.300"/><path d="M67.200 113.500v3.400M70.200 113.500v3.400M73.200 113.500v3.400" stroke="${sc}" stroke-width="1.500" stroke-linecap="round"/>`;
+  if (L.nk){   // necklace: the chain comes out from behind the neck where it meets the shoulders and hangs in a U to a pendant; dark edge first, gold on top
+    const ch = 'M49.800 84.300C51.500 90.500 55.500 94.500 60 94.800C64.500 94.500 68.500 90.500 70.200 84.300';
+    acc += `<path d="${ch}" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="2.900" stroke-linecap="round"/><path d="${ch}" fill="none" stroke="${gold}" stroke-width="1.500" stroke-linecap="round"/><circle cx="60" cy="96.200" r="1.300" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="2.500"/><circle cx="60" cy="96.200" r="1.300" fill="none" stroke="${gold}" stroke-width="1.100"/><path d="M60 97.300L62.500 100.300L60 103.400L57.500 100.300Z" fill="${gold}" ${AO}/>`;
   }
+  if (L.sf){   // scarf: one piece, a band looped around the neck with a narrow end hanging straight down from under it
+    const sc = CH_OUTFIT_C[(L.oc + 5) % 12], scd = chShade(sc, .72);
+    acc += `<path d="M49 79.500Q60 90.500 71 79.500C73.500 78.800 76.800 80.500 77 84Q73.750 87.060 70.500 88.950L71 113Q71 114 70 114H64Q63 114 63 113L63 91.750Q53 93.410 43 84C43.200 80.500 46.500 78.800 49 79.500Z" fill="${sc}"/>`
+      + `<path d="M63.500 102.500H70.500M63.500 106.500H70.500" stroke="${scd}" stroke-width="1.400"/><path d="M64.600 114v3.300M67 114v3.300M69.400 114v3.300" stroke="${sc}" stroke-width="1.400" stroke-linecap="round"/>`;
+  }
+
 
 
 
