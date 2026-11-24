@@ -236,7 +236,7 @@ function chFigure(look){
   else if (L.ot === 'turtle') body = garment(top, 9.500, `L${cx - 9} 73Q${cx} 70.500 ${cx + 9} 73L${cx + 9.500} 84`) + `<path d="M${cx - 9} 79Q${cx} 81.500 ${cx + 9} 79" fill="none" stroke="${dk}" stroke-width="1.400"/><path d="M${cx - M.ts + 3} 120H${cx + M.ts - 3}" stroke="${dk}" stroke-width="1.600"/>`;
   else body = under('#f4f1e8') + garment('#2e3648', 12, `L${cx} 116L${cx + 12} 84`) + `<path d="M${cx - 12} 84.500L${cx - 16} 100L${cx - 2} 113M${cx + 12} 84.500L${cx + 16} 100L${cx + 2} 113" stroke="#1d2433" stroke-width="1.800" fill="none" stroke-linejoin="round"/><circle cx="60" cy="128" r="2" fill="#1d2433"/><circle cx="60" cy="140" r="2" fill="#1d2433"/>`;
   // neck, ears, head
-  const neck = `<rect x="52" y="64" width="16" height="24" fill="${skin}" stroke="none"/><path d="M50 84H70L74 90V106H46V90Z" fill="${skin}" stroke="none"/><path d="M52 64V87M68 64V87" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="1.1"/><path d="M52 78Q60 84 68 78V84H52Z" fill="#000" opacity=".1"/>`;
+  const neck = `<rect x="52" y="64" width="16" height="24" fill="${skin}" stroke="none"/><path d="M50 84H70L74 90V106H46V90Z" fill="${skin}" stroke="none"/><path d="M52 64V87M68 64V87" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="1.1"/>`;
   const earX = hw - .5, earR = [4.2, 3.6, 5.8, 3][L.ea];
   const earPath = q => L.ea === 1 ? `<path d="M${60 + q * earX} 50L${60 + q * (earX + 9)} 41L${60 + q * (earX + 3)} 58Z" fill="${skin}"/>` : `<circle cx="${60 + q * earX}" cy="53" r="${earR}" fill="${skin}"/>`;
   const faceShape = [`<ellipse cx="60" cy="50" rx="24" ry="25" fill="${skin}"/>`, `<ellipse cx="60" cy="51" rx="22" ry="27" fill="${skin}"/>`, `<ellipse cx="60" cy="50.500" rx="26" ry="23.500" fill="${skin}"/>`,
