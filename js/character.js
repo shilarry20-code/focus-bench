@@ -290,7 +290,11 @@ function chFigure(look){
   const fb = [75, 78, 74, 76, 77, 79, 77, 77, 77][L.fs], FO = 'stroke="rgba(20,16,12,.72)" stroke-width="1" stroke-linejoin="round"';
   const stache = `<path d="M60 57.300C57 55.900 52.500 56.300 50.600 59.600C51.800 60.300 53.200 60.200 54.200 59.500C56 58.900 58.200 59.200 60 59.100C61.800 59.200 64 58.900 65.800 59.500C66.800 60.200 68.200 60.300 69.400 59.600C67.500 56.300 63 55.900 60 57.300Z" fill="${hair}" ${FO}/>`;
   let fhs = '';
-  if (L.fh === 1){ const fx = hw - 1.500, fy = fb - 50; for (const f of [.8, .88, .96]) for (let a = 28; a <= 152; a += 8.500){ const t = (a + (f * 37 % 5)) * Math.PI / 180, x = 60 + Math.cos(t) * fx * f, y = 50 + Math.sin(t) * fy * f; if (y > 57 && !(Math.abs(x - 60) < 10 && y < 70)) fhs += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r=".550" fill="${hair}" opacity=".7"/>`; } }
+  if (L.fh === 1){   // stubble: rows of dots along the jaw, one half generated and mirrored so both sides match
+    const fx = hw - 1.500, fy = fb - 50, dots = [];
+    [.8, .88, .96].forEach((f, k) => { for (let a = 90 - (k % 2 ? 4.250 : 0); a >= 26; a -= 8.500){ const t = a * Math.PI / 180, dx = Math.cos(t) * fx * f, y = 50 + Math.sin(t) * fy * f;
+      if (y > 57 && !(Math.abs(dx) < 10 && y < 70)) { dots.push([60 + dx, y]); if (dx > .1) dots.push([60 - dx, y]); } } });
+    fhs = dots.map(([x, y]) => `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r=".550" fill="${hair}" opacity=".7"/>`).join(''); }
   else if (L.fh === 2) fhs = stache;
   else if (L.fh === 3) fhs = `<path d="M${60 - hw + .300} 46Q${60 - hw + 4.500} 49 ${60 - hw + 4.500} 56C${60 - hw + 5} 61 52 63.500 51.800 65.500C53 72 67 72 68.200 65.500C68 63.500 ${60 + hw - 5} 61 ${60 + hw - 4.500} 56Q${60 + hw - 4.500} 49 ${60 + hw - .300} 46C${60 + hw + .500} 70 70 ${fb + 5} 60 ${fb + 5.500}C50 ${fb + 5} ${60 - hw - .500} 70 ${60 - hw + .300} 46Z" fill="${hair}" ${FO}/>` + stache;
   const freck = L.fk ? [[46, 58], [49, 60.500], [44, 61], [71, 58], [74, 60.500], [76, 61], [53, 59.500], [67, 59.500]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#a8643c" opacity=".55"/>`).join('') : '';
