@@ -20,6 +20,8 @@ const CH_BROWS = [['0', 'Soft'], ['1', 'Straight'], ['2', 'Arched'], ['3', 'Thic
 const CH_MOUTHS = [['0', 'Smile'], ['1', 'Grin'], ['2', 'Calm'], ['3', 'Oh'], ['4', 'Smirk'], ['5', 'Laugh'], ['6', 'Frown'], ['7', 'Tongue'], ['8', 'Cat'], ['9', 'Soft']];
 const CH_BGPAT = [['0', 'Plain'], ['1', 'Spotlight'], ['2', 'Stripe']];
 const CH_GENDER = [['0', 'Male'], ['1', 'Female'], ['2', 'Non-binary']];   // who the character is (gn)
+// symbols: male (circle with an arrow), female (circle with a cross), non-binary (circle with an asterisk above)
+const CH_GENDER_ICON = {0: 'M10 20a6 6 0 1 0 0-12a6 6 0 1 0 0 12M14.300 9.700L20 4M15 4h5v5', 1: 'M12 15a5.500 5.500 0 1 0 0-11a5.500 5.500 0 1 0 0 11M12 15v7M9 19h6', 2: 'M12 22a5 5 0 1 0 0-10a5 5 0 1 0 0 10M12 12V2M8.500 4L15.500 8M15.500 4L8.500 8'};
 const CH_BODYTYPE = [['0', 'Broad shoulders'], ['1', 'Curvy'], ['2', 'Straight']];   // the body's proportions (gd)
 const CH_BUILD = [['0', 'Slim'], ['1', 'Average'], ['2', 'Broad']];
 const CH_BOTTOMS = [['jeans', 'Jeans'], ['joggers', 'Joggers'], ['shorts', 'Shorts'], ['skirt', 'Skirt'], ['cargo', 'Cargo'], ['leggings', 'Leggings'], ['capris', 'Capris']];
@@ -460,7 +462,7 @@ const ccH = t => `<h4 class="ccr-h">${t}</h4>`;
 function ccPanel(){
   const d = ccLook;
   return [
-    ccH('Gender') + `<div class="ccr-seg" role="radiogroup" aria-label="Gender">${CH_GENDER.map(([v, n]) => `<button type="button" role="radio" class="ccr-segb" data-cc="gn" data-v="${v}" aria-checked="${String(d.gn) === v}" aria-pressed="${String(d.gn) === v}">${n}</button>`).join('')}</div>` + ccH('Body type') + ccTiles('gd', CH_BODYTYPE, d, 'full', true) + ccH('Build') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Pose') + ccTiles('ap', CH_POSES, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
+    ccH('Gender') + `<div class="ccr-seg" role="radiogroup" aria-label="Gender">${CH_GENDER.map(([v, n]) => `<button type="button" role="radio" class="ccr-segb" data-cc="gn" data-v="${v}" aria-checked="${String(d.gn) === v}" aria-pressed="${String(d.gn) === v}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${CH_GENDER_ICON[v]}"/></svg>${n}</button>`).join('')}</div>` + ccH('Body type') + ccTiles('gd', CH_BODYTYPE, d, 'full', true) + ccH('Build') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Pose') + ccTiles('ap', CH_POSES, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
     ccH('Style') + ccTiles('hs', CH_HAIRSTYLES, d, 'head') + ccH('Hair color') + ccSwatches('hc', CH_HAIR, d),
     ccH('Face shape') + ccTiles('fs', CH_FACES, d, 'face', true) + ccH('Eye shape') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Eye color') + ccSwatches('ec', CH_EYE_C, d, 'eh') + ccH('Eyebrows') + ccTiles('br', CH_BROWS, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Nose') + ccTiles('nz', CH_NOSES, d, 'face', true) + ccH('Ears') + ccTiles('ea', CH_EARS, d, 'head', true) + ccH('Facial hair') + ccTiles('fh', CH_FACIAL, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face'], ['fk', 'Freckles', 'face']], d),
     ccH('Top') + ccTiles('ot', CH_OUTFITS, d, 'top') + ccH('Top color') + ccSwatches('oc', CH_OUTFIT_C, d, 'oh'),
