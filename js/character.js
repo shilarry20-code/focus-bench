@@ -238,7 +238,12 @@ function chFigure(look){
   // neck, ears, head
   const neck = `<rect x="52" y="64" width="16" height="24" fill="${skin}" stroke="none"/><path d="M50 84H70L74 90V106H46V90Z" fill="${skin}" stroke="none"/><path d="M52 64V87M68 64V87" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="1.1"/>`;
   const earX = hw - .5, earR = [4.2, 3.6, 5.8, 3][L.ea];
-  const earPath = q => L.ea === 1 ? `<path d="M${60 + q * earX} 50L${60 + q * (earX + 9)} 41L${60 + q * (earX + 3)} 58Z" fill="${skin}"/>` : `<circle cx="${60 + q * earX}" cy="53" r="${earR}" fill="${skin}"/>`;
+  // nc: a shade of the skin used for nose and ear details, darker on light skin and lighter on dark skin so it always shows
+  const lum = (n => (((n >> 16) & 255) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11) / 255)(parseInt(skin.slice(1), 16)), nc = lum < .36 ? chShade(skin, 1.45) : chShade(skin, .7);
+  const earPath = q => { const x = 60 + q * earX;
+    const shape = L.ea === 1 ? `<path d="M${x - q * 2} 46.500C${x + q * 2} 45.500 ${x + q * 5} 42.500 ${x + q * 7.500} 40.500C${x + q * 6.800} 46.500 ${x + q * 5.500} 53.500 ${x + q * 1.800} 57.500C${x} 58.800 ${x - q * 2} 57.500 ${x - q * 2} 55.500Z" fill="${skin}"/>` : `<circle cx="${x}" cy="53" r="${earR}" fill="${skin}"/>`;
+    const ix = x + q * (L.ea === 1 ? 2 : earR * .3), ir = L.ea === 1 ? 3.200 : earR * .5;
+    return shape + `<path d="M${ix} ${53 - ir}Q${ix + q * ir * .9} 53 ${ix} ${53 + ir}" fill="none" stroke="${nc}" stroke-width="1.100" stroke-linecap="round"/>`; };
   const faceShape = [`<ellipse cx="60" cy="50" rx="24" ry="25" fill="${skin}"/>`, `<ellipse cx="60" cy="51" rx="22" ry="27" fill="${skin}"/>`, `<ellipse cx="60" cy="50.500" rx="26" ry="23.500" fill="${skin}"/>`,
     `<rect x="36" y="26" width="48" height="50" rx="17" fill="${skin}"/>`, `<path d="M36 44C36 30 48 25 60 28C72 25 84 30 84 44C84 60 70 77 60 77C50 77 36 60 36 44Z" fill="${skin}"/>`,
     `<ellipse cx="60" cy="51" rx="21" ry="28" fill="${skin}"/>`,
@@ -273,13 +278,19 @@ function chFigure(look){
     `<path d="M52 62Q56 66.500 60 62Q64 66.500 68 62" ${st}/>`,
     `<path d="M55.500 63.500Q60 66.500 64.500 63.500" ${st}/><path d="M53.500 62.500L52.500 61.500M66.500 62.500L67.500 61.500" stroke="#000" stroke-opacity=".25" stroke-width="1.200" stroke-linecap="round"/>`
   ][L.mo];
-  const blush = L.bl ? '<circle cx="44" cy="60" r="4" fill="#e8837a" opacity=".3"/><circle cx="76" cy="60" r="4" fill="#e8837a" opacity=".3"/>' : '';
-  const nst = 'fill="none" stroke="#000" stroke-opacity=".3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"';
-  const nose = [`<path d="M60 55V59" stroke="#000" stroke-width="1.6" stroke-linecap="round" opacity=".14"/>`, `<path d="M57.500 58.500Q60 61 62.500 58.500" ${nst}/>`, `<path d="M60.500 51L58.500 58Q60 60 62.500 58" ${nst}/>`,
-    `<path d="M55.500 58Q60 61.500 64.500 58" ${nst}/><path d="M56.500 56.500L55.500 58M63.500 56.500L64.500 58" ${nst}/>`, `<path d="M60 50.500L57.500 59H62.500" ${nst}/>`][L.nz];
-  const fhs = L.fh === 1 ? `<path d="M39 56Q41 74 60 77Q79 74 81 56Q70 68 60 68Q50 68 39 56Z" fill="${hair}" opacity=".3"/>`
-    : L.fh === 2 ? `<path d="M51 60Q55 56.500 60 58.500Q65 56.500 69 60Q65 62 60 60.500Q55 62 51 60Z" fill="${hair}"/>`
-    : L.fh === 3 ? `<path d="M38 54Q36 80 60 83Q84 80 82 54Q80 70 70 72Q60 67 50 72Q40 70 38 54Z" fill="${hair}"/><path d="M51 60Q55 56.500 60 58.500Q65 56.500 69 60Q65 62 60 60.500Q55 62 51 60Z" fill="${hair}"/>` : '';
+  const blush = L.bl ? '<ellipse cx="44.500" cy="60.500" rx="4.300" ry="2.700" fill="#e8837a" opacity=".38"/><ellipse cx="75.500" cy="60.500" rx="4.300" ry="2.700" fill="#e8837a" opacity=".38"/>' : '';
+  const nst = `fill="none" stroke="${nc}" stroke-width="1.600" stroke-linecap="round" stroke-linejoin="round"`;
+  const nose = [`<path d="M61 53.500Q58.400 57 60 58.700Q61.100 59.400 62.300 58.600" ${nst}/>`,
+    `<ellipse cx="60" cy="57.300" rx="2.700" ry="2" fill="${nc}"/><ellipse cx="59.300" cy="56.700" rx=".900" ry=".600" fill="#fff" opacity=".35"/>`,
+    `<path d="M59 50.500Q62 55 61.800 57.500Q61.600 59.500 59.200 59.100" ${nst}/>`,
+    `<path d="M60 53.500Q61.300 56.400 63.300 57.100Q63.900 59 62 59.200Q61 58.600 60 59.200Q59 58.600 58 59.200Q56.100 59 56.700 57.100Q58.700 56.400 60 53.500Z" fill="${nc}"/>`,
+    `<path d="M60.300 52L62.800 58.300Q61.300 59.300 59.300 58.600" ${nst}/>`][L.nz];
+  const fb = [75, 78, 74, 76, 77, 79, 77, 77, 77][L.fs], FO = 'stroke="rgba(20,16,12,.72)" stroke-width="1" stroke-linejoin="round"';
+  const stache = `<path d="M60 57.300C57 55.900 52.500 56.300 50.600 59.600C51.800 60.300 53.200 60.200 54.200 59.500C56 58.900 58.200 59.200 60 59.100C61.800 59.200 64 58.900 65.800 59.500C66.800 60.200 68.200 60.300 69.400 59.600C67.500 56.300 63 55.900 60 57.300Z" fill="${hair}" ${FO}/>`;
+  let fhs = '';
+  if (L.fh === 1){ const fx = hw - 1.500, fy = fb - 50; for (const f of [.8, .88, .96]) for (let a = 28; a <= 152; a += 8.500){ const t = (a + (f * 37 % 5)) * Math.PI / 180, x = 60 + Math.cos(t) * fx * f, y = 50 + Math.sin(t) * fy * f; if (y > 57 && !(Math.abs(x - 60) < 10 && y < 70)) fhs += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r=".550" fill="${hair}" opacity=".7"/>`; } }
+  else if (L.fh === 2) fhs = stache;
+  else if (L.fh === 3) fhs = `<path d="M${60 - hw + .300} 46Q${60 - hw + 4.500} 49 ${60 - hw + 4.500} 56C${60 - hw + 5} 61 52 63.500 51.800 65.500C53 72 67 72 68.200 65.500C68 63.500 ${60 + hw - 5} 61 ${60 + hw - 4.500} 56Q${60 + hw - 4.500} 49 ${60 + hw - .300} 46C${60 + hw + .500} 70 70 ${fb + 5} 60 ${fb + 5.500}C50 ${fb + 5} ${60 - hw - .500} 70 ${60 - hw + .300} 46Z" fill="${hair}" ${FO}/>` + stache;
   const freck = L.fk ? [[46, 58], [49, 60.500], [44, 61], [71, 58], [74, 60.500], [76, 61], [53, 59.500], [67, 59.500]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#a8643c" opacity=".55"/>`).join('') : '';
   // front hair
   const frontBefore = front;
