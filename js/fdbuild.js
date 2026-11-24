@@ -99,7 +99,7 @@ They come from: ${who}. Most of them comment once.${poster != null ? ` ${fdNameO
 }
 // turn Gemini's messages into comments on the post (the same code places comments written overnight: js/cbcore.js)
 function cbApply(p, got, names, now, tags = {}){ return cbApplyCore(p, got, names, now, tags, {me: myName(), nameOf: fdNameOf, likes: fdLikes(p)}); }
-let cbBusy = false, cbNext = 0;
+let cbBusy = false, cbNext = 0, cbDrawn = 0;
 async function cbRun(){
   if (typeof cloudWriter === 'function' && !cloudWriter()) return;
   const now = Date.now();
@@ -113,7 +113,7 @@ async function cbRun(){
     const got = await aiCall(job.sys, job.user.replace('{MORE}', '').replace('{N}', n), {bld: true});
     const added = cbApply(p, got, job.names, now, job.tags), b = cbDay();
     b.n++; b.c += added; GEM.bldAt = Date.now(); saveAI(); saveFeed();
-    if (FDV.view === p.id) fdViewRefresh(); else if (!$('#page-feed').hidden && !document.hidden) renderFeed();
+    if (FDV.view === p.id) fdViewRefresh(); else if (!$('#page-feed').hidden && !document.hidden && Date.now() - cbDrawn > 60000){ cbDrawn = Date.now(); renderFeed(); }     // a full redraw every few seconds made the browser's memory climb
     cbNext = Date.now() + (added ? 6000 : 60000);
   } catch(e){
     if (e.kind === 'busy') cbNext = e.short ? Date.now() + 90000 : (e.until || Date.now() + 3600e3);
