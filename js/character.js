@@ -115,12 +115,26 @@ function chFigure(look){
       return `<path d="M${o.map(P).join('L')}L${inn.map(P).join('L')}Z" fill="${hair}" stroke-linejoin="round"/>`;
     },
     braid: () => {
-      const x0 = r + 3, n = 7, h = 8.500, w = 5.500, y0 = 45, yb = y0 + n * h; let d = `M${x0 - w} ${y0}`;
-      for (let k = 1; k <= n; k++) d += arc([x0 - w, y0 + (k - 1) * h], [x0 - w, y0 + k * h], 0, .62);
-      d += `L${x0 + w} ${yb}`; for (let k = n - 1; k >= 0; k--) d += arc([x0 + w, y0 + (k + 1) * h], [x0 + w, y0 + k * h], 0, .62);
-      d += arc([x0 + w, y0], [x0 - w, y0], 0, .55);
-      const creases = Array.from({length: n - 1}, (_, k) => `M${x0 - w + .5} ${y0 + (k + 1) * h}Q${x0} ${y0 + (k + 1) * h + 4} ${x0 + w - .5} ${y0 + (k + 1) * h}`).join('');
-      return `<path d="M${x0 - 4} ${yb - 1}Q${x0} ${yb + 10} ${x0 + 4} ${yb - 1}Z" fill="${hair}"/><path d="${d}Z" fill="${hair}"/><path d="${creases}" fill="none" stroke="${chShade(hair, .55)}" stroke-width="1.100" stroke-linecap="round"/><rect x="${x0 - 5}" y="${yb - 3}" width="10" height="4" rx="2" fill="${tie}"/>`;
+      // a side braid: the hair is swept over to one side, gathered behind the ear, and the braid hangs over the shoulder.
+      // Its pieces alternate left and right and get a little narrower toward the end, like a real braid.
+      const n = 6, h = 8.200, y0 = 58, x0 = r + 1, cxAt = t => x0 - 3 * t, wAt = t => 6.800 - 2.600 * t, yb = y0 + n * h, dk2 = chShade(hair, .55);
+      const Lp = [], Rp = [];
+      for (let k = 0; k <= n; k++){ const t = k / n; Lp.push([cxAt(t) - wAt(t), y0 + k * h]); }
+      for (let k = 0; k < n; k++){ const t = (k + .5) / n; Rp.push([cxAt(t) + wAt(t), y0 + (k + .5) * h]); }
+      Rp.push([cxAt(1) + wAt(1), yb]);
+      let d = `M${P(Lp[0])}`;
+      for (let k = 1; k <= n; k++) d += arc(Lp[k - 1], Lp[k], 0, .6);
+      d += `Q${P([cxAt(1), yb + 2])} ${P(Rp[n])}`;
+      for (let k = n; k >= 1; k--) d += arc(Rp[k], Rp[k - 1], 0, .6);
+      d += arc(Rp[0], Lp[0], 0, .7) + 'Z';
+      let cr = '';
+      for (let k = 1; k < n; k++){ const c = cxAt((k + .3) / n); cr += `M${P([Lp[k][0] + .6, Lp[k][1]])}Q${P([c - 1, Lp[k][1] + 1])} ${P([c + 1.500, Lp[k][1] + h * .48])}`; }
+      for (let k = 0; k < n; k++){ const c = cxAt((k + .8) / n); cr += `M${P([Rp[k][0] - .6, Rp[k][1]])}Q${P([c + 1, Rp[k][1] + 1])} ${P([c - 1.500, Rp[k][1] + h * .48])}`; }
+      const cb = cxAt(1), tuft = `<path d="M${cb - 3.500} ${yb}C${cb - 7} ${yb + 6} ${cb - 4} ${yb + 10} ${cb} ${yb + 11}C${cb + 4} ${yb + 10} ${cb + 7} ${yb + 6} ${cb + 3.500} ${yb}Z" fill="${hair}"/>`;
+      const braid = tuft + `<path d="${d}" fill="${hair}"/><path d="${cr}" fill="none" stroke="${dk2}" stroke-width="1.100" stroke-linecap="round"/><rect x="${cb - 4.500}" y="${yb - 2}" width="9" height="4" rx="2" fill="${tie}"/>`;
+      // the hair on the head, swept to the braid side and gathered behind the ear, as one piece over the top of the braid
+      const head = `<path d="M${l} 54C${l - 1} ${HT + 3} ${l + 9} ${T} 60 ${T}C${r - 9} ${T} ${r + 1} ${HT + 3} ${r + 1} 50C${r + 3} 55 ${x0 + 6} 58 ${x0 + 6.500} 62Q${x0} 67 ${x0 - 6} 62C${r - 3} 58 ${r - 4} 53 ${r - 4} 47C${r - 7} ${HT + 11} 66 ${HT + 7} 58 ${HT + 8}C50 ${HT + 9} ${l + 5} 41 ${l + 3} 48L${l + 1.500} 54Z" fill="${hair}"/>`;
+      return braid + head;
     }
   };
   const tail = (q, x, y, w, len) => `<path d="M${x} ${y}C${x + q * w} ${y + 4} ${x + q * w * 1.1} ${y + len * .6} ${x + q * w * .5} ${y + len}C${x - q * 2} ${y + len * .7} ${x - q * 4} ${y + 8} ${x - q * 6} ${y + 2}Z" fill="${hair}"/>`;
@@ -246,7 +260,7 @@ function chFigure(look){
   else if (hs === 'mohawk') front += `<path d="M${l + 1} 48C${l + 1} ${HT + 2} ${l + 12} ${HT - 1} 60 ${HT - 1}C${r - 12} ${HT - 1} ${r - 1} ${HT + 2} ${r - 1} 48C${r - 6} 38 ${r - 12} ${HT + 8} 60 ${HT + 8}C${l + 12} ${HT + 8} ${l + 6} 38 ${l + 1} 48Z" fill="${hair}" opacity=".3"/><path d="M53 ${HT + 9}L50 ${HT - 14}Q60 ${HT - 22} 70 ${HT - 14}L67 ${HT + 9}Z" fill="${hair}"/>`;
   else if (hs === 'pigtails') front += cap(5, 10) + [-1, 1].map(q => `<rect x="${(q < 0 ? l - 1 : r + 1) - 4}" y="34" width="8" height="6" rx="3" fill="${tie}"/>`).join('');
   else if (hs === 'ponytail') front += cap(5, 10) + `<rect x="73" y="${27 + dy}" width="8" height="6" rx="3" fill="${tie}" transform="rotate(30 77 ${30 + dy})"/>`;
-  else if (hs === 'braid') front += HAIR.braid() + cap(5, 10);
+  else if (hs === 'braid') front += HAIR.braid();
   else if (hs === 'curtains') front += `<path d="M${l} 56C${l - 2} ${HT + 2} ${l + 10} ${HT - 5} 60 ${HT - 5}C59 ${HT + 8} 52 ${HT + 17} ${l + 9} 49L${l + 6} 56Z M${r} 56C${r + 2} ${HT + 2} ${r - 10} ${HT - 5} 60 ${HT - 5}C61 ${HT + 8} 68 ${HT + 17} ${r - 9} 49L${r - 6} 56Z" fill="${hair}"/>`;
   else if (hs === 'wavy') front += HAIR.wavy();
   else if (hs === 'slick') front += cap(8, 5) + `<path d="M${l + 8} ${HT - 2}C46 ${HT - 12} 74 ${HT - 12} ${r - 8} ${HT - 2}" fill="none" stroke="${chShade(hair, .6)}" stroke-width="1.200" stroke-linecap="round"/>`;
