@@ -172,7 +172,7 @@ function chFigure(look){
     else legs += `<rect x="${xa}" y="222" width="${xb - xa}" height="16" rx="7" fill="${shc}"/><rect x="${xa}" y="234" width="${xb - xa}" height="4.500" rx="2" fill="#fff" opacity=".85"/><rect x="${xa}" y="234" width="${xb - xa}" height="4.500" rx="2" fill="none" stroke="#000" stroke-opacity=".15"/>`;
   }
   // outfit
-  const garment = fill => `<path d="M${cx - M.ts} 108C${cx - M.ts} 92 ${cx - 26} 84 ${cx} 84C${cx + 26} 84 ${cx + M.ts} 92 ${cx + M.ts} 108L${cx + M.wa} 148Q${cx + M.wa} 154 ${cx + M.hp + flare} ${hemY}L${cx - M.hp - flare} ${hemY}Q${cx - M.wa} 154 ${cx - M.wa} 148Z" fill="${fill}"/>`;
+  const garment = fill => `<path d="M${cx - M.ts} 112C${cx - M.ts - 1} 107 ${cx - M.sw + 1.500} 107 ${cx - M.sw + 1.500} 100C${cx - M.sw + 1.500} 91 ${cx - 15} 84 ${cx} 84C${cx + 15} 84 ${cx + M.sw - 1.500} 91 ${cx + M.sw - 1.500} 100C${cx + M.sw - 1.500} 107 ${cx + M.ts + 1} 107 ${cx + M.ts} 112L${cx + M.wa} 148Q${cx + M.wa} 154 ${cx + M.hp + flare} ${hemY}L${cx - M.hp - flare} ${hemY}Q${cx - M.wa} 154 ${cx - M.wa} 148Z" fill="${fill}"/>`;
   const sleeve = L.ot === 'tank' ? skin : L.ot === 'coat' ? '#f1f1ec' : L.ot === 'blazer' ? '#2e3648' : top, sleeveEnd = ['tee', 'polo', 'jersey'].includes(L.ot) ? 120 : L.ot === 'tank' ? 96 : 144;
   let arms = '';
   const HL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
