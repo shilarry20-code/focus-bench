@@ -363,10 +363,11 @@ function fdCard(p){
   return svg(bg.svg + lines.slice(0, 9).map((l, k) => tx(150, 150 - (n - 1) * size * .65 + k * size * 1.3 + size * .35, esc(l), size, dark ? '#24221f' : '#fff', ` font-weight="800"${dark ? '' : ' stroke="rgba(0,0,0,.18)" stroke-width="2" paint-order="stroke"'}`)).join(''));
 }
 const FD_MEDIA = new Map();       // a post's picture markup, kept so redraws don't rebuild every scene (other people's posts never change)
+// what a post's picture is made from: while this is the same, so is the picture (null for your own posts, which can be edited)
+const fdMediaKey = p => p.w === -1 ? null : p.id + '|' + (p.cap && p.type === 'text' ? p.cap : '') + '|' + (p.board ? p.board.join('/') : '') + '|' + (p.bg ? 1 : 0);
 function fdMedia(p){
-  const mk = () => p.type === 'scene' ? sceneSvg(fdSpec(p), p.id) : fdCard(p);
-  if (p.w === -1) return mk();
-  const key = p.id + '|' + (p.cap && p.type === 'text' ? p.cap : '') + '|' + (p.board ? p.board.join('/') : '') + '|' + (p.bg ? 1 : 0);
+  const mk = () => p.type === 'scene' ? sceneSvg(fdSpec(p), p.id) : fdCard(p), key = fdMediaKey(p);
+  if (key === null) return mk();
   let m = FD_MEDIA.get(key); if (m !== undefined) return m;
   m = mk(); FD_MEDIA.set(key, m); if (FD_MEDIA.size > 150) FD_MEDIA.delete(FD_MEDIA.keys().next().value);
   return m;
@@ -375,12 +376,12 @@ function fdMedia(p){
 /* ---- drawing the feed ---- */
 const fdAgo = t => { const s = (Date.now() - t) / 1000; return s < 60 ? 'now' : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`; };
 let fdWho = w => w === -1 ? `<b>${esc(myName())}</b>` : `<button class="lnk" data-bot="${w}">${esc(bot(w).name)}</button>`;
-function fdPostHtml(p){
+function fdPostHtml(p, noMedia){
   const me = p.w === -1, B = me ? null : bot(p.w), cms = fdShownComments(p), open = FDV.open[p.id], likes = fdLikes(p), fol = !me && FD.follows.includes(p.w);
   const roots = cms.filter(c => !c.re || !cms.some(x => x.id === c.re)), show = roots.slice().sort((a, b) => fdLk(b, p) - fdLk(a, p)).slice(0, 2), re = FDV.re[p.id], nc = fdCount(p);
   return `<article class="card fd-post" data-pid="${p.id}">
     <header class="fd-h">${me ? myAvatar('sm') : avatar(B, 'sm')}<span class="fd-who">${fdWho(p.w)}<small>${me ? 'You' : esc(B.subject)} · ${fdAgo(p.t)}</small></span>${me ? '' : `<button class="small-btn${fol ? '' : ' accent'} fd-fol" data-fda="follow">${fol ? 'Following' : 'Follow'}</button>`}</header>
-    <div class="fd-media" data-fda="dbl">${fdMedia(p)}</div>
+    <div class="fd-media" data-fda="dbl">${noMedia ? '' : fdMedia(p)}</div>
     <div class="fd-b"><div class="fd-act"><button class="fd-like${FD.liked[p.id] ? ' on' : ''}" data-fda="like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg></button><button class="fd-cbtn" data-fda="comments" aria-label="Comments"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/></svg></button></div>
     <div class="fd-likes">${fdLikesLine(p)}</div>
     ${p.type !== 'text' && p.cap ? `<p class="fd-cap">${fdWho(p.w)} ${atLinks(esc(p.cap))}</p>` : !p.cap && !p.gen && !me ? '<p class="fd-cap hint">…</p>' : ''}
@@ -470,13 +471,14 @@ function fdDrawPosts(host, page){
   const make = html => { const t = document.createElement('template'); t.innerHTML = html; return t.content.firstElementChild; };
   const ids = new Set(); let cur = host.firstElementChild;
   for (const p of page){
-    const html = fdPostHtml(p), same = FD_HTML.get(p.id) === html; ids.add(p.id); FD_HTML.set(p.id, html);
+    // compare without the big picture markup (it's covered by the picture's key); build the full card only when something changed
+    const mk = fdMediaKey(p), lite = fdPostHtml(p, mk !== null), sig = mk === null ? lite : lite + '\u0001' + mk, old = have.get(p.id), same = !!old && FD_HTML.get(p.id) === sig; ids.add(p.id); FD_HTML.set(p.id, sig);
+    const html = same ? '' : mk === null ? lite : fdPostHtml(p);
     if (cur && cur.dataset.pid === p.id){
       if (!same){ const n = make(html); cur.replaceWith(n); cur = n; }
       cur = cur.nextElementSibling;
     } else {
-      const old = have.get(p.id);
-      if (old && same) host.insertBefore(old, cur);
+      if (same) host.insertBefore(old, cur);
       else { host.insertBefore(make(html), cur); if (old) old.remove(); }
     }
   }
