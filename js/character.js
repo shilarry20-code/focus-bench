@@ -19,7 +19,8 @@ const CH_EYE_C = ['#3b2a20', '#7a4a26', '#a8742a', '#4f8f4a', '#2f8f9a', '#4b86c
 const CH_BROWS = [['0', 'Soft'], ['1', 'Straight'], ['2', 'Arched'], ['3', 'Thick']];
 const CH_MOUTHS = [['0', 'Smile'], ['1', 'Grin'], ['2', 'Calm'], ['3', 'Oh'], ['4', 'Smirk'], ['5', 'Laugh'], ['6', 'Frown'], ['7', 'Tongue'], ['8', 'Cat'], ['9', 'Soft']];
 const CH_BGPAT = [['0', 'Plain'], ['1', 'Spotlight'], ['2', 'Stripe']];
-const CH_GENDER = [['2', 'Neutral'], ['0', 'Masculine'], ['1', 'Feminine']];
+const CH_GENDER = [['0', 'Male'], ['1', 'Female'], ['2', 'Non-binary']];   // who the character is (gn)
+const CH_BODYTYPE = [['0', 'Broad shoulders'], ['1', 'Curvy'], ['2', 'Straight']];   // the body's proportions (gd)
 const CH_BUILD = [['0', 'Slim'], ['1', 'Average'], ['2', 'Broad']];
 const CH_BOTTOMS = [['jeans', 'Jeans'], ['joggers', 'Joggers'], ['shorts', 'Shorts'], ['skirt', 'Skirt'], ['cargo', 'Cargo'], ['leggings', 'Leggings'], ['capris', 'Capris']];
 const CH_SHOES = [['sneakers', 'Sneakers'], ['boots', 'Boots'], ['slides', 'Slides'], ['hightops', 'High-tops'], ['loafers', 'Loafers'], ['heels', 'Heels'], ['sandals', 'Sandals']];
@@ -65,7 +66,7 @@ function chClean(l){
   o.fs = num(l.fs, CH_FACES.length, 0); o.nz = num(l.nz, CH_NOSES.length, 0); o.ea = num(l.ea, CH_EARS.length, 0); o.fh = num(l.fh, CH_FACIAL.length, 0); o.ap = num(l.ap, CH_POSES.length, 0); o.ha = num(l.ha, CH_HATS.length, 0); if (!o.ha && l.ht) o.ha = 1; o.eg = num(l.eg, CH_EARRINGS.length, 0);   // the old hat toggle becomes the beanie
   o.fk = l.fk ? 1 : 0; o.sf = l.sf ? 1 : 0; o.nk = l.nk ? 1 : 0;
   o.hp = l.hp ? 1 : 0; o.ht = 0; o.bl = l.bl ? 1 : 0; o.ls = l.ls ? 1 : 0;
-  o.gd = num(l.gd, 3, d.gd); o.bd = num(l.bd, 3, d.bd); o.bc = num(l.bc, CH_BOTTOM_C.length, d.bc); o.sc = num(l.sc, CH_SHOE_C.length, d.sc);
+  o.gd = num(l.gd, 3, d.gd); o.gn = num(l.gn, 3, o.gd); o.bd = num(l.bd, 3, d.bd); o.bc = num(l.bc, CH_BOTTOM_C.length, d.bc); o.sc = num(l.sc, CH_SHOE_C.length, d.sc);
   o.bt = CH_BOTTOMS.some(x => x[0] === l.bt) ? l.bt : d.bt; o.sn = CH_SHOES.some(x => x[0] === l.sn) ? l.sn : d.sn;
   return o;
 }
@@ -459,7 +460,7 @@ const ccH = t => `<h4 class="ccr-h">${t}</h4>`;
 function ccPanel(){
   const d = ccLook;
   return [
-    ccH('Gender') + ccTiles('gd', CH_GENDER, d, 'full', true) + ccH('Body shape') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Pose') + ccTiles('ap', CH_POSES, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
+    ccH('Gender') + `<div class="ccr-seg" role="radiogroup" aria-label="Gender">${CH_GENDER.map(([v, n]) => `<button type="button" role="radio" class="ccr-segb" data-cc="gn" data-v="${v}" aria-checked="${String(d.gn) === v}" aria-pressed="${String(d.gn) === v}">${n}</button>`).join('')}</div>` + ccH('Body type') + ccTiles('gd', CH_BODYTYPE, d, 'full', true) + ccH('Build') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Pose') + ccTiles('ap', CH_POSES, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
     ccH('Style') + ccTiles('hs', CH_HAIRSTYLES, d, 'head') + ccH('Hair color') + ccSwatches('hc', CH_HAIR, d),
     ccH('Face shape') + ccTiles('fs', CH_FACES, d, 'face', true) + ccH('Eye shape') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Eye color') + ccSwatches('ec', CH_EYE_C, d, 'eh') + ccH('Eyebrows') + ccTiles('br', CH_BROWS, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Nose') + ccTiles('nz', CH_NOSES, d, 'face', true) + ccH('Ears') + ccTiles('ea', CH_EARS, d, 'head', true) + ccH('Facial hair') + ccTiles('fh', CH_FACIAL, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face'], ['fk', 'Freckles', 'face']], d),
     ccH('Top') + ccTiles('ot', CH_OUTFITS, d, 'top') + ccH('Top color') + ccSwatches('oc', CH_OUTFIT_C, d, 'oh'),
@@ -519,7 +520,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-cc-tab]'), o = e.target.closest('[data-cc]'), g = e.target.closest('[data-cc-tg]');
   if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); ccCam(CC_TABS[ccTab][1]); }
   else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); }
-  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccLook = chClean(ccLook); ccDraw(false); }
+  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccLook = chClean(ccLook); ccDraw(false); }
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('cc')) ccClose(); });
 
