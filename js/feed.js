@@ -362,7 +362,15 @@ function fdCard(p){
   const n = Math.min(9, lines.length), bg = fdTextBgSvg(fdTextBg0(p), p.id), dark = bg.ink === 'dark';
   return svg(bg.svg + lines.slice(0, 9).map((l, k) => tx(150, 150 - (n - 1) * size * .65 + k * size * 1.3 + size * .35, esc(l), size, dark ? '#24221f' : '#fff', ` font-weight="800"${dark ? '' : ' stroke="rgba(0,0,0,.18)" stroke-width="2" paint-order="stroke"'}`)).join(''));
 }
-const fdMedia = p => p.type === 'scene' ? sceneSvg(fdSpec(p), p.id) : fdCard(p);
+const FD_MEDIA = new Map();       // a post's picture markup, kept so redraws don't rebuild every scene (other people's posts never change)
+function fdMedia(p){
+  const mk = () => p.type === 'scene' ? sceneSvg(fdSpec(p), p.id) : fdCard(p);
+  if (p.w === -1) return mk();
+  const key = p.id + '|' + (p.cap && p.type === 'text' ? p.cap : '') + '|' + (p.board ? p.board.join('/') : '') + '|' + (p.bg ? 1 : 0);
+  let m = FD_MEDIA.get(key); if (m !== undefined) return m;
+  m = mk(); FD_MEDIA.set(key, m); if (FD_MEDIA.size > 150) FD_MEDIA.delete(FD_MEDIA.keys().next().value);
+  return m;
+}
 
 /* ---- drawing the feed ---- */
 const fdAgo = t => { const s = (Date.now() - t) / 1000; return s < 60 ? 'now' : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`; };
@@ -394,15 +402,16 @@ const FD_TOP = {day: ['Today', 864e5], week: ['This week', 7 * 864e5], month: ['
 const fdPending = p => p.w !== -1 && !!GEM.key && !p.gen && !p.del && (!p.cap || !!p.fbc);
 function fdList(){
   const now = Date.now(), vis = FD.posts.filter(p => p.t <= now && !p.del && !fdPending(p));
+  const by = (list, f) => { const m = new Map(list.map(p => [p, f(p)])); return list.sort((a, b) => m.get(b) - m.get(a)); };      // each score worked out once
   if (FDV.tab === 'following') return vis.filter(p => FD.follows.includes(p.w)).sort((a, b) => b.t - a.t);
   if (FDV.tab === 'act' || FDV.tab === 'live') return [];
   if (FDV.tab === 'new') return vis.sort((a, b) => b.t - a.t);
   // Hot: likes and comments for how old the post is, so something blowing up right now beats a big post from this morning
-  if (FDV.tab === 'hot'){ const hs = p => (fdLikes(p) + 3 * fdCount(p)) / Math.pow((now - p.t) / 3600e3 + 2, 1.5); return vis.filter(p => now - p.t < 2 * 864e5).sort((a, b) => hs(b) - hs(a)); }
-  if (FDV.tab === 'top'){ const win = FD_TOP[FDV.top][1]; return vis.filter(p => !win || now - p.t < win).sort((a, b) => fdLikes(b) - fdLikes(a)); }
+  if (FDV.tab === 'hot') return by(vis.filter(p => now - p.t < 2 * 864e5), p => (fdLikes(p) + 3 * fdCount(p)) / Math.pow((now - p.t) / 3600e3 + 2, 1.5));
+  if (FDV.tab === 'top'){ const win = FD_TOP[FDV.top][1]; return by(vis.filter(p => !win || now - p.t < win), fdLikes); }
   // For you: newest first, nudged up for people you follow and popular posts
-  const sc = p => p.t / 3600e3 + (FD.follows.includes(p.w) ? 1.5 : 0) + Math.log10(1 + p.L) * .35 + (p.w === -1 ? 2 : 0);
-  return vis.sort((a, b) => sc(b) - sc(a));
+  const fol = new Set(FD.follows);
+  return by(vis, p => p.t / 3600e3 + (fol.has(p.w) ? 1.5 : 0) + Math.log10(1 + p.L) * .35 + (p.w === -1 ? 2 : 0));
 }
 // the name in a notification opens their profile
 function fdNoteHtml(n){
@@ -452,20 +461,46 @@ document.addEventListener('click', e => {
   const m = e.target.closest('[data-fdact-more]'); if (m){ if (m.dataset.fdactMore === 'likes') FDV.likeN = (FDV.likeN || 24) + 24; else FDV.cmN = (FDV.cmN || 30) + 30; renderFeed(); }
 });
 document.addEventListener('click', e => { const r = e.target.closest('[data-open-post]'); if (!r || e.target.closest('[data-bot]')) return; const p = FD.posts.find(x => x.id === r.dataset.openPost); if (p) fdView(p); });
+// set a box's contents only when they differ from what's already there
+function fdSet(el, html){ if (!el || el._fdh === html) return; el._fdh = html; el.innerHTML = html; }
+const FD_HTML = new Map();       // what each post card on screen was last drawn from
+// draw the posts: a card whose markup didn't change keeps its page elements (no rebuild, no flicker, no memory churn)
+function fdDrawPosts(host, page){
+  const have = new Map(); for (const a of host.children) if (a.dataset && a.dataset.pid) have.set(a.dataset.pid, a);
+  const make = html => { const t = document.createElement('template'); t.innerHTML = html; return t.content.firstElementChild; };
+  const ids = new Set(); let cur = host.firstElementChild;
+  for (const p of page){
+    const html = fdPostHtml(p), same = FD_HTML.get(p.id) === html; ids.add(p.id); FD_HTML.set(p.id, html);
+    if (cur && cur.dataset.pid === p.id){
+      if (!same){ const n = make(html); cur.replaceWith(n); cur = n; }
+      cur = cur.nextElementSibling;
+    } else {
+      const old = have.get(p.id);
+      if (old && same) host.insertBefore(old, cur);
+      else { host.insertBefore(make(html), cur); if (old) old.remove(); }
+    }
+  }
+  while (cur){ const nx = cur.nextElementSibling; cur.remove(); cur = nx; }
+  for (const k of FD_HTML.keys()) if (!ids.has(k)) FD_HTML.delete(k);
+}
 function renderFeed(){
   fdViewRefresh();
   const el = $('#fdBody'); if (!el || $('#page-feed').hidden) return;
   if (!RK_READY || !FD_READY){ el.innerHTML = '<p class="hint">Loading the feed…</p>'; return; }
   const n = FD.notif.filter(x => x.t > FD.nseen).length;
-  $('#fdTabs').innerHTML = '<div class="fd-tabrow">' + FD_TABS.map(([k, t, ic]) => `<button class="ct-btn${FDV.tab === k ? ' on' : ''}" data-fdt="${k}"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${t}</button>`).join('') + '</div>'
-    + `<div class="fd-acts"><button class="fd-act-btn${FDV.tab === 'act' ? ' on' : ''}" data-fdt="act" aria-label="Activity" title="Activity"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg>${n ? `<b>${n > 99 ? '99+' : n}</b>` : ''}</button><button class="small-btn accent fd-new" data-fda="compose">New post</button></div>`;
+  fdSet($('#fdTabs'), '<div class="fd-tabrow">' + FD_TABS.map(([k, t, ic]) => `<button class="ct-btn${FDV.tab === k ? ' on' : ''}" data-fdt="${k}"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${t}</button>`).join('') + '</div>'
+    + `<div class="fd-acts"><button class="fd-act-btn${FDV.tab === 'act' ? ' on' : ''}" data-fdt="act" aria-label="Activity" title="Activity"><svg class="fd-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.5 4.6 3.3 7.5 3.3c1.7 0 3.3.8 4.5 2 1.2-1.2 2.8-2 4.5-2 2.9 0 5.1 2.2 5.1 5.1 0 3.5-3.2 6.4-8.3 11L12 20.6z"/></svg>${n ? `<b>${n > 99 ? '99+' : n}</b>` : ''}</button><button class="small-btn accent fd-new" data-fda="compose">New post</button></div>`);
   const list = fdList(), page = list.slice(0, FDV.shown);
   const top = FDV.tab === 'top' ? `<div class="seg fd-topwin" role="group" aria-label="Top posts from">${Object.entries(FD_TOP).map(([k, [l]]) => `<button data-fdtop="${k}" aria-pressed="${FDV.top === k}">${l}</button>`).join('')}</div>` : FDV.tab === 'act' ? fdNotifHtml() : '';
   fdStrip(); fdSideDraw();
   if (FDV.tab === 'live'){ el.innerHTML = `<div id="fdComp">${FDV.composer ? fdComposerHtml() : ''}</div><div class="card lf-card" id="fdLive"><p class="hint">Counting who’s studying…</p></div>`; if (lfFresh(() => renderLive(true))) renderLive(true); return; }
-  el.innerHTML = `<div id="fdComp">${FDV.composer ? fdComposerHtml() : ''}</div>` + top + (FDV.tab === 'act' ? '' : page.length ? page.map(fdPostHtml).join('') : `<p class="hint fd-empty">${FDV.tab === 'following' ? 'Follow people from their posts or profiles to see them here.' : 'Nothing yet.'}</p>`)
+  // three boxes: the composer and tab options, the posts, and the foot; each is only redrawn when it changed
+  if (!el.querySelector(':scope > #fdPosts')){ el._fdh = null; FD_HTML.clear(); el.innerHTML = '<div id="fdHead"></div><div id="fdPosts"></div><div id="fdFoot"></div>'; }
+  fdSet(el.querySelector('#fdHead'), `<div id="fdComp">${FDV.composer ? fdComposerHtml() : ''}</div>` + top);
+  fdDrawPosts(el.querySelector('#fdPosts'), FDV.tab === 'act' ? [] : page);
+  fdSet(el.querySelector('#fdFoot'), (FDV.tab === 'act' || page.length ? '' : `<p class="hint fd-empty">${FDV.tab === 'following' ? 'Follow people from their posts or profiles to see them here.' : 'Nothing yet.'}</p>`)
     + (list.length > FDV.shown ? '<button class="small-btn fd-load" data-fda="more">Show more</button>' : '')
-    + (!GEM.key ? '<p class="hint ch-hint">Captions and comments are written once Gemini is set up in <button class="link-btn" data-go="settings" data-sec="set-chat">Settings → Chat</button>.</p>' : '');
+    + (!GEM.key ? '<p class="hint ch-hint">Captions and comments are written once Gemini is set up in <button class="link-btn" data-go="settings" data-sec="set-chat">Settings → Chat</button>.</p>' : ''));
   if (FDV.tab === 'act'){ FD.nseen = Date.now(); saveFeed(); fdBadge(); }
   fdWriteVisible(page.concat(FD.posts.filter(p => p.t <= Date.now() && fdPending(p)).sort((a, b) => b.t - a.t).slice(0, 12)));
 }
@@ -768,7 +803,7 @@ setTimeout(fdBadge, 3000);
 /* ---- live, in the Feed: a strip of who's live (like stories), and a side column on wide screens ---- */
 function fdStrip(){
   const el = $('#fdStrip'); if (!el || !RK_READY) return;
-  if (FDV.tab === 'live' || FDV.tab === 'act'){ el.innerHTML = ''; return; }
+  if (FDV.tab === 'live' || FDV.tab === 'act'){ fdSet(el, ''); return; }
   const live = typeof wLiveTop === 'function' ? wLiveTop().slice(0, 6) : [], seen = new Set(), ppl = [];
   const add = w => { if (w >= 0 && !seen.has(w) && botLiveNow(w)){ seen.add(w); ppl.push(w); } };
   FD.follows.forEach(add); Object.keys(R.rec || {}).map(Number).filter(w => isRival(w)).forEach(add);
@@ -777,26 +812,26 @@ function fdStrip(){
   const items = live.map(p => { const top = p.ra >= p.rc ? p.a : p.c, oth = top === p.a ? p.c : p.a;
       return `<button class="fd-st live" data-watch="${p.a}-${p.c}" title="Watch ${esc(bot(p.a).name)} vs ${esc(bot(p.c).name)}"><span class="fd-ring">${avatar(bot(top), 'md')}</span><b class="fd-livetag">LIVE</b><small>${esc(short(bot(top).name))} vs ${esc(short(bot(oth).name))}</small></button>`; })
     .concat(ppl.slice(0, 24).map(w => `<button class="fd-st" data-bot="${w}" title="${esc(bot(w).name)} is studying"><span class="fd-ring">${avatar(bot(w), 'md')}</span><small>${esc(short(bot(w).name))}</small></button>`));
-  el.innerHTML = items.length ? `<div class="card fd-strip-card"><div class="fd-strip-h">Live now</div><div class="fd-strip-row">${items.join('')}</div></div>` : '';
+  fdSet(el, items.length ? `<div class="card fd-strip-card"><div class="fd-strip-h">Live now</div><div class="fd-strip-row">${items.join('')}</div></div>` : '');
 }
 function fdSideDraw(){
   const el = $('#fdSide'); if (!el || !RK_READY || $('#page-feed').hidden) return;
   el.hidden = FDV.tab === 'live';                                        // the Live tab already shows all of it
   if (el.hidden) return;
   if (getComputedStyle(el).display === 'none') return;                  // narrow screens: no side column
-  if (!lfFresh(fdSideDraw)){ el.innerHTML = '<div class="card"><p class="hint">Counting who’s studying…</p></div>'; return; }
+  if (!lfFresh(fdSideDraw)){ fdSet(el, '<div class="card"><p class="hint">Counting who’s studying…</p></div>'); return; }
   const H = LF.hours, mx = Math.max(1, ...H), {h} = lfNow();
   const bars = Array.from({length: 24}, (_, x) => x > h ? '<span class="fut"><i></i></span>' : `<span class="${x === h ? 'now' : ''}${x < 4 ? ' tl' : x > 19 ? ' tr' : ''}" tabindex="0" data-tip="${x === h ? 'Now' : hourLabel(x)}: ${H[x].toLocaleString()} studying"><i style="--v:${Math.max(.04, H[x] / mx).toFixed(3)}"></i></span>`).join('');
   const tab = LF.tab || 'you', live = typeof wLiveTop === 'function' ? wLiveTop().slice(0, 2) : [];
   const evs = (tab === 'top' ? LF.events.filter(x => x.kind === 'match' && Math.max(x.p.ra, x.p.rc) >= LF.top) : LF.events.filter(x => tab === 'you' ? x.you : x.all)).slice(0, 7);
-  el.innerHTML = `<div class="card fd-side-card"><div class="h first lf-h"><span><i class="lf-dot" aria-hidden="true"></i>Studying now</span></div>
+  fdSet(el, `<div class="card fd-side-card"><div class="h first lf-h"><span><i class="lf-dot" aria-hidden="true"></i>Studying now</span></div>
       <div class="lf-count"><b>${LF.live.toLocaleString()}</b><span>studying</span></div>
       <div class="lf-bars sm" aria-label="Players studying in each hour today">${bars}</div>
       ${LF.trend.length ? `<div class="fd-chips">${LF.trend.slice(0, 4).map(([s]) => lfSubj(s)).join('')}</div>` : ''}</div>
     <div class="card fd-side-card"><div class="fd-side-hd"><span class="h first">Happening now</span><span class="fd-mini-tabs">${LF_TABS.map(([k, n]) => `<button data-lft="${k}" aria-pressed="${tab === k}">${k === 'you' ? 'For you' : k === 'top' ? 'Top' : 'All'}</button>`).join('')}</span></div>
       ${live.length ? `<ul class="fd-livem">${live.map(p => `<li><span class="lf-dot" aria-hidden="true"></span><span><b>${esc(bot(p.a).name)}</b> vs <b>${esc(bot(p.c).name)}</b></span><button class="small-btn" data-watch="${p.a}-${p.c}">Watch</button></li>`).join('')}</ul>` : ''}
       ${evs.length ? `<ul class="lf-feed sm">${evs.map(ev => ev.kind === 'match' && tab === 'top' ? lfRow(ev) : lfRow(ev)).join('')}</ul>` : '<p class="hint">It’s quiet right now.</p>'}
-      <button class="link-btn fd-seeall" data-fdt="live">See all →</button></div>`;
+      <button class="link-btn fd-seeall" data-fdt="live">See all →</button></div>`);
 }
 setInterval(() => { if (!$('#page-feed').hidden && !document.hidden){ fdStrip(); fdSideDraw(); if (FDV.tab === 'live') renderLive(); } }, 30000);
 document.addEventListener('click', e => { if (e.target.closest('#fdSide [data-lft]')) setTimeout(fdSideDraw, 0); });
