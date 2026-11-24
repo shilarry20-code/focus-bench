@@ -188,15 +188,22 @@ function chFigure(look){
   const sleeve = L.ot === 'tank' ? skin : L.ot === 'coat' ? '#f1f1ec' : L.ot === 'blazer' ? '#2e3648' : top, sleeveEnd = ['tee', 'polo', 'jersey'].includes(L.ot) ? 120 : L.ot === 'tank' ? 96 : 144;
   let arms = '';
   const HL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
-  const hand = (hx, hy, s) => `<ellipse cx="${hx - s * 5.800}" cy="${hy - .500}" rx="2.600" ry="4.200" fill="${skin}" ${HL} transform="rotate(${s * 24} ${hx - s * 5.800} ${hy - .500})"/><path d="M${hx - 6.500} ${hy - 7}H${hx + 6.500}V${hy + 2}A6.500 6.500 0 0 1 ${hx - 6.500} ${hy + 2}Z" fill="${skin}" stroke="none"/><path d="M${hx - 6.500} ${hy - 4}V${hy + 2}A6.500 6.500 0 0 0 ${hx + 6.500} ${hy + 2}V${hy - 4}" fill="none" ${HL}/>`;
+  // a hand with four fingers and a thumb, drawn as one outlined shape for a right arm (thumb toward the body) and mirrored for the left.
+  // Hands are drawn in front of the clothes; wy is where the hand starts (just below a long sleeve's cuff)
+  const hand = (hx, wy, s) => { const D = wy => `M5.500 ${wy}L5.800 147C6.300 150 6.200 151.500 6.100 152.500L6.100 154.600A1.450 1.450 0 0 1 3.200 154.600L3.200 153L3.200 156.600A1.450 1.450 0 0 1 .300 156.600L.300 153L.300 157.400A1.450 1.450 0 0 1 -2.600 157.400L-2.600 153L-2.600 156.600A1.450 1.450 0 0 1 -5.500 156.600L-5.500 153.500C-6.500 154.500 -8.800 153.500 -8.600 151C-8.400 148.500 -7.500 146.500 -5.600 145.500L-5.500 ${wy}`;
+    return `<g transform="translate(${hx} 0) scale(${s} 1)"><path d="${D(wy)}Z" fill="${skin}" stroke="none"/><path d="${D(Math.max(wy, 145))}" fill="none" ${HL}/></g>`; };
+  let hands = '';
   for (const s of [-1, 1]){
     const a0 = arms.length;
     const x = s < 0 ? cx - M.sw : cx + M.sw - 15;
-    arms += `<rect x="${x}" y="94" width="15" height="54" rx="7.500" fill="${skin}"/>${hand(cx + s * (M.sw - 7.5), 148, s)}<rect x="${x}" y="94" width="15" height="${sleeveEnd - 94}" rx="7.500" fill="${sleeve}"/>`;
+    arms += `<path d="M${x} 101.500Q${x} 94 ${x + 7.500} 94Q${x + 15} 94 ${x + 15} 101.500L${x + 13.300} 146H${x + 1.700}Z" fill="${skin}"/><rect x="${x}" y="94" width="15" height="${sleeveEnd - 94}" rx="7.500" fill="${sleeve}"/>`;
     if (L.ot === 'hoodie' || L.ot === 'sweater') arms += `<rect x="${x}" y="${sleeveEnd - 7}" width="15" height="7" rx="3" fill="${dk}"/>`;
     if (L.ot === 'tank') arms = arms.slice(0, a0) + arms.slice(a0).replace(/<rect x="[^"]*" y="94" width="15" height="2"[^>]*\/>/, '');
     if (L.ot === 'coat') arms += `<rect x="${x}" y="${sleeveEnd - 5}" width="15" height="5" rx="2.500" fill="#c9cfda"/>`;
-    const rot = L.ap === 1 ? -s * 14 : L.ap === 2 && s > 0 ? -168 : 0; if (rot) arms = arms.slice(0, a0) + `<g transform="rotate(${rot} ${cx + s * (M.sw - 7.500)} 96)">` + arms.slice(a0) + '</g>';
+    // arms hang slightly outward so the hands clear the hips; the hand follows its arm and sits in front of the clothes
+    const rot = L.ap === 1 ? -s * 14 : L.ap === 2 && s > 0 ? -168 : -s * 5, rg = `<g transform="rotate(${rot} ${cx + s * (M.sw - 7.500)} 96)">`;
+    arms = arms.slice(0, a0) + rg + arms.slice(a0) + '</g>';
+    hands += rg + hand(cx + s * (M.sw - 7.500), Math.max(141, sleeveEnd - .500), s) + '</g>';
   }
   const band = `<rect x="${cx - M.hp - flare}" y="${hemY - 6}" width="${2 * (M.hp + flare)}" height="6" rx="2.500" fill="${dk}"/>`;
   const ring = (w, d, c, sw) => `<path d="M${cx - w} 84.500C${cx - w} ${d} ${cx + w} ${d} ${cx + w} 84.500" fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round"/>`;
@@ -297,7 +304,7 @@ function chFigure(look){
   const lashes = L.ls ? `<path d="M45.800 50.500L42.800 48.200M47.600 48.800L45.800 45.600M74.200 50.500L77.200 48.200M72.400 48.800L74.200 45.600" stroke="${ink}" stroke-width="1.400" stroke-linecap="round"/>` : '';
   const skinHex = skin.toLowerCase(), OL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
   const ol = str => str.replace(/<(path|rect|circle|ellipse)\b([^>]*?)(\/?)>/g, (m, t, a, c) => /fill="none"|stroke=|opacity=|fill="#000"/.test(a) || a.toLowerCase().includes('fill="' + skinHex + '"') ? m : `<${t}${a} ${OL}${c}>`);
-  return ol(back + legs + arms) + neck + ol(body) + head + blush + freck + fhs + nose + eyes + brows + lashes + mouth + ol(front + acc);
+  return ol(back + legs + arms) + neck + ol(body) + hands + head + blush + freck + fhs + nose + eyes + brows + lashes + mouth + ol(front + acc);
 }
 // a picture of the character with its background; the default view is the square portrait (head and shoulders)
 function chFull(look, view){
