@@ -30,7 +30,7 @@ const CH_NOSES = [['0', 'Line'], ['1', 'Button'], ['2', 'Hooked'], ['3', 'Wide']
 const CH_EARS = [['0', 'Round'], ['1', 'Pointed'], ['2', 'Big'], ['3', 'Small']];
 const CH_FACIAL = [['0', 'None'], ['1', 'Stubble'], ['2', 'Mustache'], ['3', 'Beard']];
 const CH_POSES = [['0', 'Relaxed'], ['1', 'Arms out'], ['2', 'Wave']];
-const CH_HATS = [['0', 'None'], ['1', 'Beanie'], ['2', 'Bucket'], ['3', 'Headband']];
+const CH_HATS = [['0', 'None'], ['1', 'Beanie'], ['2', 'Bucket hat'], ['3', 'Headband'], ['4', 'Cap']];
 const CH_EARRINGS = [['0', 'None'], ['1', 'Studs'], ['2', 'Hoops'], ['3', 'Dangles']];
 const CH_DEFAULT = {sk: 2, hc: 1, hs: 'short', ot: 'hoodie', oc: 0, gl: 0, hp: 0, ht: 0, ey: 0, mo: 0, bl: 0, bg: 0, bp: 1, gd: 2, bd: 1, bt: 'jeans', bc: 0, sn: 'sneakers', sc: 0, ls: 0, ec: 0, br: 0, eh: '', oh: '', bh: '', sh: '', fs: 0, nz: 0, ea: 0, fh: 0, fk: 0, ap: 0, ha: 0, eg: 0, sf: 0, nk: 0};
 
@@ -62,9 +62,9 @@ function chClean(l){
   o.gl = num(l.gl, CH_GLASSES.length, 0); o.ey = num(l.ey, CH_EYES.length, 0); o.ec = num(l.ec, CH_EYE_C.length, 0); o.br = num(l.br, CH_BROWS.length, 0); o.mo = num(l.mo, CH_MOUTHS.length, 0);
   const hex = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : ''; o.eh = hex(l.eh); o.oh = hex(l.oh); o.bh = hex(l.bh); o.sh = hex(l.sh);   // an eye color picked freely instead of from the list
   o.bp = num(l.bp, 3, d.bp);
-  o.fs = num(l.fs, CH_FACES.length, 0); o.nz = num(l.nz, CH_NOSES.length, 0); o.ea = num(l.ea, CH_EARS.length, 0); o.fh = num(l.fh, CH_FACIAL.length, 0); o.ap = num(l.ap, CH_POSES.length, 0); o.ha = num(l.ha, CH_HATS.length, 0); o.eg = num(l.eg, CH_EARRINGS.length, 0);
+  o.fs = num(l.fs, CH_FACES.length, 0); o.nz = num(l.nz, CH_NOSES.length, 0); o.ea = num(l.ea, CH_EARS.length, 0); o.fh = num(l.fh, CH_FACIAL.length, 0); o.ap = num(l.ap, CH_POSES.length, 0); o.ha = num(l.ha, CH_HATS.length, 0); if (!o.ha && l.ht) o.ha = 1; o.eg = num(l.eg, CH_EARRINGS.length, 0);   // the old hat toggle becomes the beanie
   o.fk = l.fk ? 1 : 0; o.sf = l.sf ? 1 : 0; o.nk = l.nk ? 1 : 0;
-  o.hp = l.hp ? 1 : 0; o.ht = l.ht ? 1 : 0; o.bl = l.bl ? 1 : 0; o.ls = l.ls ? 1 : 0;
+  o.hp = l.hp ? 1 : 0; o.ht = 0; o.bl = l.bl ? 1 : 0; o.ls = l.ls ? 1 : 0;
   o.gd = num(l.gd, 3, d.gd); o.bd = num(l.bd, 3, d.bd); o.bc = num(l.bc, CH_BOTTOM_C.length, d.bc); o.sc = num(l.sc, CH_SHOE_C.length, d.sc);
   o.bt = CH_BOTTOMS.some(x => x[0] === l.bt) ? l.bt : d.bt; o.sn = CH_SHOES.some(x => x[0] === l.sn) ? l.sn : d.sn;
   return o;
@@ -282,6 +282,7 @@ function chFigure(look){
     : L.fh === 3 ? `<path d="M38 54Q36 80 60 83Q84 80 82 54Q80 70 70 72Q60 67 50 72Q40 70 38 54Z" fill="${hair}"/><path d="M51 60Q55 56.500 60 58.500Q65 56.500 69 60Q65 62 60 60.500Q55 62 51 60Z" fill="${hair}"/>` : '';
   const freck = L.fk ? [[46, 58], [49, 60.500], [44, 61], [71, 58], [74, 60.500], [76, 61], [53, 59.500], [67, 59.500]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#a8643c" opacity=".55"/>`).join('') : '';
   // front hair
+  const frontBefore = front;
   const cap = (up, inner) => `<path d="M${l} 52C${l - 1} ${HT + 3} ${l + 9} ${HT - up} 60 ${HT - up}C${r - 9} ${HT - up} ${r + 1} ${HT + 3} ${r} 52C${r - 2} 43 ${r - 8} ${HT + inner - 1} 60 ${HT + inner}C${l + 8} ${HT + inner - 1} ${l + 2} 43 ${l} 52Z" fill="${hair}"/>`;
   const strip = (q, x, bottom) => { const m = 46 + (bottom - 46) * .55; return `<path d="M${x} 46C${x + q * 3} ${m} ${x + q * 2} ${bottom - 4} ${x + q} ${bottom}Q${x - q * 3} ${bottom + 1} ${x - q * 8} ${bottom - 3}C${x - q * 9} ${m} ${x - q * 8} 56 ${x - q * 7} 48Z" fill="${hair}"/>`; };
   if (hs === 'buzz') front += cap(2, 9).replace('fill="', 'opacity=".92" fill="');
@@ -301,23 +302,45 @@ function chFigure(look){
   else if (hs === 'slick') front += cap(8, 5) + `<path d="M${l + 8} ${HT - 2}C46 ${HT - 12} 74 ${HT - 12} ${r - 8} ${HT - 2}" fill="none" stroke="${chShade(hair, .6)}" stroke-width="1.200" stroke-linecap="round"/>`;
   else if (hs === 'afro') front += `<path d="M${l + 1} 50C${l - 1} ${HT} ${l + 10} ${HT - 4} 60 ${HT - 4}C${r - 10} ${HT - 4} ${r + 1} ${HT} ${r - 1} 50C${r - 6} 40 ${r - 12} ${HT + 8} 60 ${HT + 8}C${l + 12} ${HT + 8} ${l + 6} 40 ${l + 1} 50Z" fill="${hair}" stroke="none"/><path d="M${l + 1} 50C${l + 6} 40 ${l + 12} ${HT + 8} 60 ${HT + 8}C${r - 12} ${HT + 8} ${r - 6} 40 ${r - 1} 50" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="1.100" stroke-linejoin="round"/>`;
   else front += cap(5, 9);
+  // a hat squashes tall hair styles flat underneath it
+  const hatOn = [1, 2, 4].includes(L.ha);
+  if (hatOn && ['spiky', 'mohawk', 'afro', 'bun', 'curly', 'slick'].includes(hs)) front = frontBefore + cap(5, 9);
   // accessories
   let acc = '';
+  const AO = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"', gold = '#e3b04b';
+  const earsShown = !['bob', 'long', 'wavy', 'curly'].includes(L.hs);
   if (L.gl){
-    const fr = [null, '<circle cx="51" cy="52" r="7.5"/><circle cx="69" cy="52" r="7.5"/>', '<rect x="43" y="45.5" width="15" height="13" rx="3"/><rect x="62" y="45.5" width="15" height="13" rx="3"/>',
-      '<path d="M43 47H58V53Q58 60 50.500 60Q43 60 43 53Z"/><path d="M77 47H62V53Q62 60 69.500 60Q77 60 77 53Z"/>',
-      '<path d="M43 51Q43 46 47 46L58 48V55Q56 59 50 59Q43 59 43 51Z"/><path d="M77 51Q77 46 73 46L62 48V55Q64 59 70 59Q77 59 77 51Z"/>',
-      `<rect x="43" y="46" width="15" height="11" rx="4" fill="${ink}"/><rect x="62" y="46" width="15" height="11" rx="4" fill="${ink}"/>`][L.gl];
-    acc += `<g fill="none" stroke="${ink}" stroke-width="1.8">${fr}<path d="M58 51H62"/></g>`;
+    // q = 1 for the left lens (its inner side faces +x), -1 for the right
+    const lens = [null,
+      x => `<circle cx="${x}" cy="52" r="7"/>`,
+      x => `<rect x="${x - 7.500}" y="46" width="15" height="12" rx="3"/>`,
+      (x, q) => `<path d="M${x - q * 7} 47.500H${x + q * 6.500}Q${x + q * 7.500} 47.500 ${x + q * 7} 50.500Q${x + q * 5.500} 58.500 ${x - q * .500} 58.500Q${x - q * 7} 58.500 ${x - q * 7.500} 51Q${x - q * 7.500} 47.500 ${x - q * 7} 47.500Z"/>`,
+      (x, q) => `<path d="M${x + q * 7} 49Q${x + q * 7} 57.500 ${x} 57.500Q${x - q * 6} 57.500 ${x - q * 7} 52.500Q${x - q * 7.800} 48.500 ${x - q * 10} 45.500Q${x - q * 4} 46.500 ${x + q * 7} 49Z"/>`,
+      x => `<rect x="${x - 7.500}" y="46.500" width="15" height="10.500" rx="4.500"/>`][L.gl];
+    const shades = L.gl === 5, hinge = L.gl === 4 ? 9.500 : 7.500, reach = earsShown ? earX - 1 : hw - 4.500;
+    acc += `<g fill="${shades ? '#1a1f2b' : '#fff'}" fill-opacity="${shades ? 1 : .22}" stroke="${ink}" stroke-width="1.700" stroke-linejoin="round">${lens(51, 1)}${lens(69, -1)}</g>`
+      + `<path d="M57.800 50.500Q60 48.500 62.200 50.500${L.gl === 3 ? 'M57.500 47.500H62.500' : ''}M${51 - hinge} 49.500L${60 - reach} 51M${69 + hinge} 49.500L${60 + reach} 51" fill="none" stroke="${ink}" stroke-width="1.600" stroke-linecap="round"/>`;
   }
-  if (L.ha === 1) acc += `<path d="M35 44C34 14 86 14 85 44Z" fill="${top}"/><rect x="34" y="37" width="52" height="9" rx="4.500" fill="${dk}"/><circle cx="60" cy="14" r="5" fill="${dk}"/>`;
-  if (L.ha === 2) acc += `<path d="M38 40C38 18 82 18 82 40Z" fill="${top}"/><ellipse cx="60" cy="40" rx="31" ry="6.500" fill="${dk}"/>`;
-  if (L.ha === 3) acc += `<path d="M35 38Q60 26 85 38L85 45Q60 33 35 45Z" fill="${top}"/>`;
-  if (L.eg){ const gold = '#e3b04b'; acc += [-1, 1].map(q => { const x = 60 + q * earX; return L.eg === 1 ? `<circle cx="${x}" cy="57.500" r="1.800" fill="${gold}"/>` : L.eg === 2 ? `<circle cx="${x}" cy="61" r="3.600" fill="none" stroke="${gold}" stroke-width="1.400"/>` : `<path d="M${x} 57.500V63" stroke="${gold}" stroke-width="1.200"/><circle cx="${x}" cy="65" r="2.200" fill="${gold}"/>`; }).join(''); }
-  if (L.sf) acc += `<path d="M43 80Q60 94 77 80L79 91Q60 104 41 91Z" fill="${CH_OUTFIT_C[(L.oc + 5) % 12]}"/><path d="M66 94L75 116L67 118L61 98Z" fill="${CH_OUTFIT_C[(L.oc + 5) % 12]}"/>`;
-  if (L.nk) acc += `<path d="M47 86Q60 106 73 86" fill="none" stroke="#e3b04b" stroke-width="1.400"/><circle cx="60" cy="100" r="2.600" fill="#e3b04b" stroke="#8a6a1a" stroke-width=".8"/>`;
-  if (L.ht) acc += `<path d="M35 44C34 16 48 10 60 10C72 10 86 16 85 44Z" fill="${dk}"/><rect x="34" y="38" width="52" height="10" rx="4" fill="${top}"/>`;
-  if (L.hp) acc += `<path d="M35 52C34 14 86 14 85 52" fill="none" stroke="#c9cfda" stroke-width="4.5"/><rect x="29" y="44" width="11" height="22" rx="5.5" fill="#3a4252"/><rect x="80" y="44" width="11" height="22" rx="5.5" fill="#3a4252"/>`;
+  const dome = (y0, lift) => (2 * y0 + 6 * (T - lift)) / 8;   // the top of a dome drawn with C from y0 up to T - lift
+  if (L.ha === 1){   // beanie: knit dome, ribbed cuff and a pom
+    const bw = hw + 2.500, ribs = [-3, -2, -1, 0, 1, 2, 3].map(k => `M${60 + k * bw / 4} 35.800V40.600`).join('');
+    acc += `<circle cx="60" cy="${dome(37, 12) - 3}" r="4.800" fill="${dk}"/><path d="M${60 - bw + 1} 37C${60 - bw + 1} ${T - 12} ${60 + bw - 1} ${T - 12} ${60 + bw - 1} 37Z" fill="${top}"/><rect x="${60 - bw}" y="34" width="${2 * bw}" height="8.500" rx="4" fill="${dk}"/><path d="${ribs}" stroke="#000" stroke-opacity=".18" stroke-width="1"/>`;
+  }
+  if (L.ha === 2) acc += `<path d="M${l + 1.500} 40C${l + 1} ${T + 2} ${l + 8} ${T - 8} 60 ${T - 8}C${r - 8} ${T - 8} ${r - 1} ${T + 2} ${r - 1.500} 40Z" fill="${top}"/><path d="M${l + 1.300} 34.500H${r - 1.300}L${r - 1.500} 39.500H${l + 1.500}Z" fill="${chShade(top, .62)}"/><path d="M${l - 7} 46.500Q60 50 ${r + 7} 46.500Q${r + 3} 39 ${r - 1.500} 39H${l + 1.500}Q${l - 3} 39 ${l - 7} 46.500Z" fill="${dk}"/>`;
+  if (L.ha === 3) acc += `<path d="M${l + .500} 42Q60 ${HT - 2} ${r - .500} 42L${r - .300} 47Q60 ${HT + 4} ${l + .300} 47Z" fill="${top}"/>`;
+  if (L.ha === 4) acc += `<path d="M${l - .500} 41C${l - .500} ${T - 9} ${r + .500} ${T - 9} ${r + .500} 41Q60 37 ${l - .500} 41Z" fill="${top}"/><path d="M60 ${dome(41, 9) + 1}V38.500M${l + 9} ${dome(41, 9) + 6}Q${l + 6} 30 ${l + 5} 39.500M${r - 9} ${dome(41, 9) + 6}Q${r - 6} 30 ${r - 5} 39.500" fill="none" stroke="${dk}" stroke-width=".9"/><circle cx="60" cy="${dome(41, 9) + .500}" r="2" fill="${dk}"/><path d="M${l + 1} 39.500Q60 34 ${r - 1} 39.500Q${r - 3} 46 60 46.500Q${l + 3} 46 ${l + 1} 39.500Z" fill="${dk}"/>`;
+  if (L.hp) acc += `<path d="M${l - 2.500} 50C${l - 3} ${T - 13.500} ${r + 3} ${T - 13.500} ${r + 2.500} 50L${r - 1} 50C${r - .500} ${T - 9} ${l + .500} ${T - 9} ${l + 1} 50Z" fill="#3a4252"/>` + [-1, 1].map(q => { const x = 60 + q * (hw + 1.500); return `<rect x="${x - 4.500}" y="44" width="9" height="17" rx="4" fill="#2b3240"/><rect x="${q < 0 ? x + 1.500 : x - 4.500}" y="45.500" width="3" height="14" rx="1.500" fill="#566074"/>`; }).join('');
+  if (L.eg && earsShown) acc += [-1, 1].map(q => { const x = 60 + q * (earX + earR * .3), y = 53 + earR * .7;
+    return L.eg === 1 ? `<circle cx="${x}" cy="${y}" r="1.800" fill="${gold}" ${AO}/>`
+      : L.eg === 2 ? `<circle cx="${x + q * .600}" cy="${y + 3.200}" r="3.200" fill="none" stroke="${gold}" stroke-width="1.500"/>`
+      : `<path d="M${x} ${y}V${y + 3}" stroke="${gold}" stroke-width="1.200"/><path d="M${x} ${y + 3}Q${x + 2.600} ${y + 6.500} ${x} ${y + 8}Q${x - 2.600} ${y + 6.500} ${x} ${y + 3}Z" fill="${gold}" ${AO}/>`; }).join('');
+  if (L.nk) acc += `<path d="M52.500 80C52.500 90 56.500 94 60 94C63.500 94 67.500 90 67.500 80" fill="none" stroke="${gold}" stroke-width="1.300"/><path d="M60 94.500L62.300 97.300L60 100.200L57.700 97.300Z" fill="${gold}" ${AO}/>`;
+  if (L.sf){   // scarf: wrapped around the neck, with two ends hanging down the front
+    const sc = CH_OUTFIT_C[(L.oc + 5) % 12], scd = chShade(sc, .72);
+    acc += `<path d="M58 92L61.500 92L63 118H57Z" fill="${scd}"/><path d="M61 91L70 93L71.500 119H62.500Z" fill="${sc}"/><path d="M62.300 105H71M62.500 110H71.200" stroke="${scd}" stroke-width="1.500"/><path d="M64 119V122.500M67 119V122.500M70 119V122.500" stroke="${sc}" stroke-width="1.600" stroke-linecap="round"/>`
+      + `<path d="M42 84C43 77 51 74.500 53 78.500Q60 84.500 67 78.500C69 74.500 77 77 78 84C78 92 67 99 60 99C53 99 42 92 42 84Z" fill="${sc}"/><path d="M45.500 89Q60 97.500 74.500 89" fill="none" stroke="${scd}" stroke-width="1.100"/>`;
+  }
+
   const lashes = L.ls ? `<path d="M45.800 50.500L42.800 48.200M47.600 48.800L45.800 45.600M74.200 50.500L77.200 48.200M72.400 48.800L74.200 45.600" stroke="${ink}" stroke-width="1.400" stroke-linecap="round"/>` : '';
   const skinHex = skin.toLowerCase(), OL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
   const ol = str => str.replace(/<(path|rect|circle|ellipse)\b([^>]*?)(\/?)>/g, (m, t, a, c) => /fill="none"|stroke=|opacity=|fill="#000"/.test(a) ? m : `<${t}${a} ${OL}${c}>`);
@@ -401,13 +424,13 @@ const ccH = t => `<h4 class="ccr-h">${t}</h4>`;
 function ccPanel(){
   const d = ccLook;
   return [
-    ccH('Gender') + ccTiles('gd', CH_GENDER, d, 'full', true) + ccH('Body shape') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
+    ccH('Gender') + ccTiles('gd', CH_GENDER, d, 'full', true) + ccH('Body shape') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Pose') + ccTiles('ap', CH_POSES, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
     ccH('Style') + ccTiles('hs', CH_HAIRSTYLES, d, 'head') + ccH('Hair color') + ccSwatches('hc', CH_HAIR, d),
-    ccH('Face shape') + ccTiles('fs', CH_FACES, d, 'face', true) + ccH('Eye shape') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Eye color') + ccSwatches('ec', CH_EYE_C, d, 'eh') + ccH('Eyebrows') + ccTiles('br', CH_BROWS, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face']], d),
+    ccH('Face shape') + ccTiles('fs', CH_FACES, d, 'face', true) + ccH('Eye shape') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Eye color') + ccSwatches('ec', CH_EYE_C, d, 'eh') + ccH('Eyebrows') + ccTiles('br', CH_BROWS, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Nose') + ccTiles('nz', CH_NOSES, d, 'face', true) + ccH('Ears') + ccTiles('ea', CH_EARS, d, 'head', true) + ccH('Facial hair') + ccTiles('fh', CH_FACIAL, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face'], ['fk', 'Freckles', 'face']], d),
     ccH('Top') + ccTiles('ot', CH_OUTFITS, d, 'top') + ccH('Top color') + ccSwatches('oc', CH_OUTFIT_C, d, 'oh'),
     ccH('Bottoms') + ccTiles('bt', CH_BOTTOMS, d, 'bottoms') + ccH('Color') + ccSwatches('bc', CH_BOTTOM_C, d, 'bh'),
     ccH('Shoes') + ccTiles('sn', CH_SHOES, d, 'shoes') + ccH('Color') + ccSwatches('sc', CH_SHOE_C, d, 'sh'),
-    ccH('Glasses') + ccTiles('gl', CH_GLASSES, d, 'head', true) + ccH('Accessories') + ccToggles([['hp', 'Headphones', 'head'], ['ht', 'Beanie', 'head']], d),
+    ccH('Glasses') + ccTiles('gl', CH_GLASSES, d, 'head', true) + ccH('Hats') + ccTiles('ha', CH_HATS, d, 'head', true) + ccH('Earrings') + ccTiles('eg', CH_EARRINGS, d, 'head', true) + ccH('More') + ccToggles([['hp', 'Headphones', 'head'], ['sf', 'Scarf', 'top'], ['nk', 'Necklace', 'top']], d),
     ccH('Color') + ccSwatches('bg', CH_BG, d) + ccH('Pattern') + ccTiles('bp', CH_BGPAT, d, 'full', true)
   ][ccTab];
 }
