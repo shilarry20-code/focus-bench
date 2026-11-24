@@ -195,7 +195,7 @@ function chFigure(look, turned){   // turned: seen from behind
     const sides = `C${cx + M.ts} 126 ${cx + M.wa} 132 ${cx + M.wa} 140C${cx + M.wa} ${(140 + hemY) / 2} ${cx + M.hp + flare} ${hemY - 7} ${cx + M.hp + flare} ${hemY - 2.500}Q${cx + M.hp + flare} ${hemY} ${cx + M.hp + flare - 2.500} ${hemY}L${cx - M.hp - flare + 2.500} ${hemY}Q${cx - M.hp - flare} ${hemY} ${cx - M.hp - flare} ${hemY - 2.500}C${cx - M.hp - flare} ${hemY - 7} ${cx - M.wa} ${(140 + hemY) / 2} ${cx - M.wa} 140C${cx - M.wa} 132 ${cx - M.ts} 126 ${cx - M.ts} 112`;
     const d = `M${cx - M.ts} 112C${cx - M.ts - 1} 107 ${cx - so} 107 ${cx - so} 100${top}C${cx + so} 107 ${cx + M.ts + 1} 107 ${cx + M.ts} 112${sides}Z`;
     let out = `<path d="${d}" fill="${fill}" stroke="none"/>`;
-    if (lines !== 'none') out += `<path d="M${cx - so} 104.500L${cx - so} 100${top}L${cx + so} 104.500" fill="none" ${GL}/>`;
+    if (lines !== 'none') out += `<path d="M${cx - so} 104.500L${cx - so} 100${top}L${cx + so} ${L.ap === 2 ? 100 : 104.500}" fill="none" ${GL}/>`;
     if (lines === 'all') out += `<path d="M${cx + M.ts} 112${sides}" fill="none" ${GL}/>`;
     return out;
   };
@@ -209,9 +209,9 @@ function chFigure(look, turned){   // turned: seen from behind
     const c = 7.500 - rr, ys = 6 <= c ? wy : wy - rr + Math.sqrt(rr * rr - (6 - c) * (6 - c));
     const top = rr ? (6 <= c ? `H6` : `A${rr} ${rr} 0 0 0 ${-c} ${wy}H${c}A${rr} ${rr} 0 0 0 6 ${ys}`) : `H6`;
     const side = y => `M6 ${y}V151A6 6 0 0 1 -6 151C-6.800 153.600 -9.700 152.800 -9.400 149.600C-9.100 146.600 -7.600 145 -6 145V${y}`;
-    const fill = `${side(ys)}${top}Z`, line = side(rr ? ys : Math.max(wy, 145));
+    const fill = `${side(ys)}${top}Z`, line = side(ys);
     return `<g transform="translate(${hx} 0) scale(${s} 1)"><path d="${fill}" fill="${skin}" stroke="none"/><path d="${line}" fill="none" ${HL}/></g>`; };
-  let hands = '';
+  let hands = '', armsFront = '';
   for (const s of [-1, 1]){
     const a0 = arms.length;
     const x = s < 0 ? cx - M.sw : cx + M.sw - 15;
@@ -222,6 +222,7 @@ function chFigure(look, turned){   // turned: seen from behind
     // arms hang slightly outward so the hands clear the hips; the hand follows its arm and sits in front of the clothes
     const rot = L.ap === 1 ? -s * 14 : L.ap === 2 && s > 0 ? -168 : -s * 5, rg = `<g transform="rotate(${rot} ${cx + s * (M.sw - 7.500)} 96)">`;
     arms = arms.slice(0, a0) + rg + arms.slice(a0) + '</g>';
+    if (L.ap === 2 && s > 0){ armsFront = arms.slice(a0); arms = arms.slice(0, a0); }   // the waving arm is drawn over the shirt so it grows out of the shoulder
     const longS = sleeveEnd > 130, rr = !longS ? 0 : L.ot === 'hoodie' || L.ot === 'sweater' ? 3 : L.ot === 'coat' ? 2.500 : 7.500;
     hands += rg + hand(cx + s * (M.sw - 7.500), longS ? sleeveEnd + .400 : 141, L.ap === 2 && s > 0 ? -s : s, rr) + '</g>';   // a waving hand turns to show the palm, thumb toward the head
   }
@@ -418,9 +419,9 @@ function chFigure(look, turned){   // turned: seen from behind
     const pk = ['jeans', 'cargo'].includes(L.bt) ? [-1, 1].map(q => `<path d="M${cx + q * 4} ${Math.max(hemY, 150) + 2}H${cx + q * (M.hp - 3)}V${Math.max(hemY, 150) + 10}Q${cx + q * (M.hp / 2 + .500)} ${Math.max(hemY, 150) + 13} ${cx + q * 4} ${Math.max(hemY, 150) + 10}Z" fill="none" stroke="${pdk}" stroke-width="1.200"/>`).join('') : '';
     let accB = acc;
     if (L.sf){ const sc = CH_OUTFIT_C[(L.oc + 5) % 12]; accB += `<path d="M49 79.500Q60 90.500 71 79.500C73.500 78.800 76.800 80.500 77 84Q60 99 43 84C43.200 80.500 46.500 78.800 49 79.500Z" fill="${sc}"/><path d="M46.500 85.500Q60 95 73.500 85.500" fill="none" stroke="${chShade(sc, .72)}" stroke-width="1"/>`; }
-    return `<g transform="translate(120 0) scale(-1 1)">${ol(legs + arms) + pk + neck + ol(bodyB) + hands + ol(head) + ol(hb + accB)}</g>`;
+    return `<g transform="translate(120 0) scale(-1 1)">${ol(legs + arms) + pk + neck + ol(bodyB) + ol(armsFront) + hands + ol(head) + ol(hb + accB)}</g>`;
   }
-  return ol(back + legs + arms) + neck + ol(body) + hands + ol(head) + beard + blush + freck + nose + fhs + eyes + brows + lashes + mouth + ol(front + acc);
+  return ol(back + legs + arms) + neck + ol(body) + ol(armsFront) + hands + ol(head) + beard + blush + freck + nose + fhs + eyes + brows + lashes + mouth + ol(front + acc);
 }
 // a picture of the character with its background; the default view is the square portrait (head and shoulders)
 function chFull(look, view, turned){
