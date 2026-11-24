@@ -2901,5 +2901,5 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .ccr-custom[aria-pressed="true"]{box-shadow:0 0 0 3px var(--accent)}
 
 .ccr-seg{display:flex;gap:6px;background:var(--line,#e4e7ec);padding:4px;border-radius:12px}
-.ccr-segb{flex:1;border:0;background:transparent;padding:10px 8px;border-radius:9px;font:inherit;font-weight:600;color:var(--muted,#475467);cursor:pointer}
+.ccr-segb{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;padding:10px 8px;border-radius:9px;font:inherit;font-weight:600;color:var(--muted,#475467);cursor:pointer}
 .ccr-segb[aria-pressed="true"]{background:var(--surface,#fff);color:var(--ink,#1a1f2b);box-shadow:0 1px 3px rgba(16,24,40,.15)}
