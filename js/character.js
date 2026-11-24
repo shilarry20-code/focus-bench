@@ -190,8 +190,13 @@ function chFigure(look){
   const HL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
   // a mitten hand with a thumb toward the body, drawn as one outlined shape for a right arm and mirrored for the left.
   // Hands are drawn in front of the clothes; wy is where the hand starts (just below a long sleeve's cuff)
-  const hand = (hx, wy, s) => { const D = y => `M6 ${y}V151A6 6 0 0 1 -6 151C-6.800 153.600 -9.700 152.800 -9.400 149.600C-9.100 146.600 -7.600 145 -6 145V${y}`;
-    return `<g transform="translate(${hx} 0) scale(${s} 1)"><path d="${D(wy)}Z" fill="${skin}" stroke="none"/><path d="${D(Math.max(wy, 145))}" fill="none" ${HL}/></g>`; };
+  // the top of the hand follows the rounded end of a long sleeve or cuff (rr: how rounded it is), so no square corner pokes out
+  const hand = (hx, wy, s, rr) => {
+    const c = 7.500 - rr, ys = 6 <= c ? wy : wy - rr + Math.sqrt(rr * rr - (6 - c) * (6 - c));
+    const top = rr ? (6 <= c ? `H6` : `A${rr} ${rr} 0 0 0 ${-c} ${wy}H${c}A${rr} ${rr} 0 0 0 6 ${ys}`) : `H6`;
+    const side = y => `M6 ${y}V151A6 6 0 0 1 -6 151C-6.800 153.600 -9.700 152.800 -9.400 149.600C-9.100 146.600 -7.600 145 -6 145V${y}`;
+    const fill = `${side(ys)}${top}Z`, line = side(rr ? ys : Math.max(wy, 145));
+    return `<g transform="translate(${hx} 0) scale(${s} 1)"><path d="${fill}" fill="${skin}" stroke="none"/><path d="${line}" fill="none" ${HL}/></g>`; };
   let hands = '';
   for (const s of [-1, 1]){
     const a0 = arms.length;
@@ -203,7 +208,8 @@ function chFigure(look){
     // arms hang slightly outward so the hands clear the hips; the hand follows its arm and sits in front of the clothes
     const rot = L.ap === 1 ? -s * 14 : L.ap === 2 && s > 0 ? -168 : -s * 5, rg = `<g transform="rotate(${rot} ${cx + s * (M.sw - 7.500)} 96)">`;
     arms = arms.slice(0, a0) + rg + arms.slice(a0) + '</g>';
-    hands += rg + hand(cx + s * (M.sw - 7.500), Math.max(141, sleeveEnd - .500), s) + '</g>';
+    const longS = sleeveEnd > 130, rr = !longS ? 0 : L.ot === 'hoodie' || L.ot === 'sweater' ? 3 : L.ot === 'coat' ? 2.500 : 7.500;
+    hands += rg + hand(cx + s * (M.sw - 7.500), longS ? sleeveEnd + .400 : 141, s, rr) + '</g>';
   }
   const band = `<rect x="${cx - M.hp - flare}" y="${hemY - 6}" width="${2 * (M.hp + flare)}" height="6" rx="2.500" fill="${dk}"/>`;
   const ring = (w, d, c, sw) => `<path d="M${cx - w} 84.500C${cx - w} ${d} ${cx + w} ${d} ${cx + w} 84.500" fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round"/>`;
