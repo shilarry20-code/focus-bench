@@ -147,8 +147,10 @@ function chFigure(look){
 
   // legs, bottoms and shoes
   const pc = L.bh || CH_BOTTOM_C[L.bc], pdk = chShade(pc, .8), shc = L.sh || CH_SHOE_C[L.sc], legW = M.hp - 2, ankW = Math.round((1 + legW * .58) * 10) / 10;
-  const outerAt = y => 1 + (M.hp - 1 - 1) + (ankW - (M.hp - 1)) * (y - 156) / 68;
-  const leg = (s, y0, y1, fill) => `<path d="M${cx + s} ${y0}L${cx + s * outerAt(y0)} ${y0}L${cx + s * outerAt(y1)} ${y1}L${cx + s} ${y1}Z" fill="${fill}"/>`;
+  // the legs part a little toward the ankles, so the feet have a small gap between them
+  const innerAt = y => 1 + Math.max(0, Math.min(1, (y - 160) / 66)) * 2.600;
+  const outerAt = y => innerAt(y) + (M.hp - 1 - 1) + (ankW - (M.hp - 1)) * (y - 156) / 68;
+  const leg = (s, y0, y1, fill) => `<path d="M${cx + s * innerAt(y0)} ${y0}L${cx + s * outerAt(y0)} ${y0}L${cx + s * outerAt(y1)} ${y1}L${cx + s * innerAt(y1)} ${y1}Z" fill="${fill}"/>`;
   let legs = `<ellipse cx="60" cy="239" rx="${Math.round(M.hp + 10)}" ry="5" fill="#000" opacity=".16"/>`;
   const hemY = {hoodie: 160, tee: 154, sweater: 160, coat: 190, blazer: 162, tank: 154, polo: 156, jacket: 164, jersey: 158, turtle: 158}[L.ot], flare = L.ot === 'coat' ? 8 : 1;
   const yT = L.ot === 'coat' ? 172 : hemY - 4;   // bottoms start just under the top's hem
@@ -156,13 +158,13 @@ function chFigure(look){
   legs += leg(-1, Math.max(150, yT), 226, skin) + leg(1, Math.max(150, yT), 226, skin);
   if (long){
     legs += leg(-1, yT, 224, pc) + leg(1, yT, 224, pc) + `<path d="M${cx} ${yT}V${yT + 20}" stroke="${pdk}" stroke-width="1.6"/>`;
-    if (L.bt === 'joggers') legs += [-1, 1].map(s => `<path d="M${cx + s * outerAt(214)} 214L${cx + s * outerAt(224)} 224L${cx + s * 1} 224L${cx + s} 214Z" fill="${pdk}"/>`).join('');
+    if (L.bt === 'joggers') legs += [-1, 1].map(s => `<path d="M${cx + s * outerAt(214)} 214L${cx + s * outerAt(224)} 224L${cx + s * innerAt(224)} 224L${cx + s * innerAt(214)} 214Z" fill="${pdk}"/>`).join('');
     if (L.bt === 'cargo') legs += [-1, 1].map(q => `<rect x="${q < 0 ? cx - M.hp + 1 : cx + M.hp - 13}" y="168" width="12" height="13" rx="2" fill="${pdk}"/>`).join('');
     if (L.bt === 'leggings') legs += [-1, 1].map(q => `<path d="M${cx + q * 6} 160L${cx + q * (outerAt(200) - 2)} 205" stroke="#fff" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/>`).join('');
   } else if (L.bt === 'shorts' || L.bt === 'capris') { const e = L.bt === 'capris' ? 204 : 190; legs += leg(-1, yT, e, pc) + leg(1, yT, e, pc); }
   else legs += `<path d="M${cx - M.hp} ${yT}H${cx + M.hp}L${cx + M.hp + 12} 192Q${cx} 199 ${cx - M.hp - 12} 192Z" fill="${pc}"/><path d="M${cx - M.hp - 4} 186Q${cx} 193 ${cx + M.hp + 4} 186" fill="none" stroke="${pdk}" stroke-width="1.6" opacity=".6"/>`;
   for (const s of [-1, 1]){
-    const mid = cx + s * (1 + ankW / 2);
+    const mid = cx + s * (innerAt(226) + ankW / 2);
     // feet point outward (left foot left, right foot right), so each shoe is drawn from the side.
     // Everything below is drawn for a right foot around the ankle center and mirrored for the left one.
     const h = ankW / 2, t = h + 15, sole = chShade(shc, .6), lift = L.sn === 'heels' ? 5 : 0, OLs = 'stroke="rgba(20,16,12,.72)" stroke-width="1.100" stroke-linejoin="round"';
