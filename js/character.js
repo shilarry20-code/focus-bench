@@ -32,7 +32,7 @@ const CH_FACIAL = [['0', 'None'], ['1', 'Stubble'], ['2', 'Mustache'], ['3', 'Be
 const CH_POSES = [['0', 'Relaxed'], ['1', 'Arms out'], ['2', 'Wave']];
 const CH_HATS = [['0', 'None'], ['1', 'Beanie'], ['2', 'Bucket'], ['3', 'Headband']];
 const CH_EARRINGS = [['0', 'None'], ['1', 'Studs'], ['2', 'Hoops'], ['3', 'Dangles']];
-const CH_DEFAULT = {sk: 2, hc: 1, hs: 'short', ot: 'hoodie', oc: 0, gl: 0, hp: 0, ht: 0, ey: 0, mo: 0, bl: 0, bg: 0, bp: 1, gd: 2, bd: 1, bt: 'jeans', bc: 0, sn: 'sneakers', sc: 0, ls: 0, ec: 0, br: 0, eh: '', fs: 0, nz: 0, ea: 0, fh: 0, fk: 0, ap: 0, ha: 0, eg: 0, sf: 0, nk: 0};
+const CH_DEFAULT = {sk: 2, hc: 1, hs: 'short', ot: 'hoodie', oc: 0, gl: 0, hp: 0, ht: 0, ey: 0, mo: 0, bl: 0, bg: 0, bp: 1, gd: 2, bd: 1, bt: 'jeans', bc: 0, sn: 'sneakers', sc: 0, ls: 0, ec: 0, br: 0, eh: '', oh: '', bh: '', sh: '', fs: 0, nz: 0, ea: 0, fh: 0, fk: 0, ap: 0, ha: 0, eg: 0, sf: 0, nk: 0};
 
 // a simulated player's look, worked out from their number
 const CH_CACHE = new Map();
@@ -60,7 +60,7 @@ function chClean(l){
   o.sk = num(l.sk, CH_SKIN.length, d.sk); o.hc = num(l.hc, CH_HAIR.length, d.hc); o.oc = num(l.oc, CH_OUTFIT_C.length, d.oc); o.bg = num(l.bg, CH_BG.length, d.bg);
   o.hs = CH_HAIRSTYLES.some(x => x[0] === l.hs) ? l.hs : d.hs; o.ot = CH_OUTFITS.some(x => x[0] === l.ot) ? l.ot : d.ot;
   o.gl = num(l.gl, CH_GLASSES.length, 0); o.ey = num(l.ey, CH_EYES.length, 0); o.ec = num(l.ec, CH_EYE_C.length, 0); o.br = num(l.br, CH_BROWS.length, 0); o.mo = num(l.mo, CH_MOUTHS.length, 0);
-  const hex = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : ''; o.eh = hex(l.eh);   // an eye color picked freely instead of from the list
+  const hex = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : ''; o.eh = hex(l.eh); o.oh = hex(l.oh); o.bh = hex(l.bh); o.sh = hex(l.sh);   // an eye color picked freely instead of from the list
   o.bp = num(l.bp, 3, d.bp);
   o.fs = num(l.fs, CH_FACES.length, 0); o.nz = num(l.nz, CH_NOSES.length, 0); o.ea = num(l.ea, CH_EARS.length, 0); o.fh = num(l.fh, CH_FACIAL.length, 0); o.ap = num(l.ap, CH_POSES.length, 0); o.ha = num(l.ha, CH_HATS.length, 0); o.eg = num(l.eg, CH_EARRINGS.length, 0);
   o.fk = l.fk ? 1 : 0; o.sf = l.sf ? 1 : 0; o.nk = l.nk ? 1 : 0;
@@ -78,7 +78,7 @@ function chBuild(L){
 }
 // the whole character on a 120 x 240 canvas (no background). The head and shoulders sit at the top, so the top 120 is the portrait.
 function chFigure(look){
-  const L = chClean(look), skin = CH_SKIN[L.sk], hair = CH_HAIR[L.hc], top = CH_OUTFIT_C[L.oc], ink = '#1a1f2b', M = chBuild(L), cx = 60, dk = chShade(top, .78);
+  const L = chClean(look), skin = CH_SKIN[L.sk], hair = CH_HAIR[L.hc], top = L.oh || CH_OUTFIT_C[L.oc], ink = '#1a1f2b', M = chBuild(L), cx = 60, dk = chShade(top, .78);
   let back = '', body = '', front = '';
   // hair is drawn in two layers: one behind the head and shoulders, one in front. Every style is built from the head's own size, so it follows the face shape.
   const hw = [24, 22, 26, 24, 24, 21, 24, 22, 26][L.fs], HT = [25, 24, 27, 26, 27.5, 23, 25, 26, 25][L.fs], l = 59 - hw, r = 61 + hw, dy = HT - 25, tie = top, hs = L.hs, T = HT - 5;
@@ -146,7 +146,7 @@ function chFigure(look){
   else if (hs === 'afro') back += `<circle cx="60" cy="${39 + dy}" r="33" fill="${hair}"/>`;
 
   // legs, bottoms and shoes
-  const pc = CH_BOTTOM_C[L.bc], pdk = chShade(pc, .8), shc = CH_SHOE_C[L.sc], legW = M.hp - 2, ankW = Math.round((1 + legW * .58) * 10) / 10;
+  const pc = L.bh || CH_BOTTOM_C[L.bc], pdk = chShade(pc, .8), shc = L.sh || CH_SHOE_C[L.sc], legW = M.hp - 2, ankW = Math.round((1 + legW * .58) * 10) / 10;
   const outerAt = y => 1 + (M.hp - 1 - 1) + (ankW - (M.hp - 1)) * (y - 156) / 68;
   const leg = (s, y0, y1, fill) => `<path d="M${cx + s} ${y0}L${cx + s * outerAt(y0)} ${y0}L${cx + s * outerAt(y1)} ${y1}L${cx + s} ${y1}Z" fill="${fill}"/>`;
   let legs = `<ellipse cx="60" cy="239" rx="${Math.round(M.hp + 10)}" ry="5" fill="#000" opacity=".16"/>`;
@@ -366,9 +366,9 @@ function ccPanel(){
     ccH('Gender') + ccTiles('gd', CH_GENDER, d, 'full', true) + ccH('Body shape') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
     ccH('Style') + ccTiles('hs', CH_HAIRSTYLES, d, 'head') + ccH('Hair color') + ccSwatches('hc', CH_HAIR, d),
     ccH('Face shape') + ccTiles('fs', CH_FACES, d, 'face', true) + ccH('Eye shape') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Eye color') + ccSwatches('ec', CH_EYE_C, d, 'eh') + ccH('Eyebrows') + ccTiles('br', CH_BROWS, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face']], d),
-    ccH('Top') + ccTiles('ot', CH_OUTFITS, d, 'top') + ccH('Top color') + ccSwatches('oc', CH_OUTFIT_C, d),
-    ccH('Bottoms') + ccTiles('bt', CH_BOTTOMS, d, 'bottoms') + ccH('Color') + ccSwatches('bc', CH_BOTTOM_C, d),
-    ccH('Shoes') + ccTiles('sn', CH_SHOES, d, 'shoes') + ccH('Color') + ccSwatches('sc', CH_SHOE_C, d),
+    ccH('Top') + ccTiles('ot', CH_OUTFITS, d, 'top') + ccH('Top color') + ccSwatches('oc', CH_OUTFIT_C, d, 'oh'),
+    ccH('Bottoms') + ccTiles('bt', CH_BOTTOMS, d, 'bottoms') + ccH('Color') + ccSwatches('bc', CH_BOTTOM_C, d, 'bh'),
+    ccH('Shoes') + ccTiles('sn', CH_SHOES, d, 'shoes') + ccH('Color') + ccSwatches('sc', CH_SHOE_C, d, 'sh'),
     ccH('Glasses') + ccTiles('gl', CH_GLASSES, d, 'head', true) + ccH('Accessories') + ccToggles([['hp', 'Headphones', 'head'], ['ht', 'Beanie', 'head']], d),
     ccH('Color') + ccSwatches('bg', CH_BG, d) + ccH('Pattern') + ccTiles('bp', CH_BGPAT, d, 'full', true)
   ][ccTab];
@@ -423,7 +423,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-cc-tab]'), o = e.target.closest('[data-cc]'), g = e.target.closest('[data-cc-tg]');
   if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); ccCam(CC_TABS[ccTab][1]); }
   else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); }
-  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'ec') ccLook.eh = ''; ccLook = chClean(ccLook); ccDraw(false); }
+  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccLook = chClean(ccLook); ccDraw(false); }
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('cc')) ccClose(); });
 
