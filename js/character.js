@@ -188,9 +188,9 @@ function chFigure(look){
   const sleeve = L.ot === 'tank' ? skin : L.ot === 'coat' ? '#f1f1ec' : L.ot === 'blazer' ? '#2e3648' : top, sleeveEnd = ['tee', 'polo', 'jersey'].includes(L.ot) ? 120 : L.ot === 'tank' ? 96 : 144;
   let arms = '';
   const HL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
-  // a hand with four fingers and a thumb, drawn as one outlined shape for a right arm (thumb toward the body) and mirrored for the left.
+  // a mitten hand with a thumb toward the body, drawn as one outlined shape for a right arm and mirrored for the left.
   // Hands are drawn in front of the clothes; wy is where the hand starts (just below a long sleeve's cuff)
-  const hand = (hx, wy, s) => { const D = wy => `M5.500 ${wy}L5.800 147C6.300 150 6.200 151.500 6.100 152.500L6.100 154.600A1.450 1.450 0 0 1 3.200 154.600L3.200 153L3.200 156.600A1.450 1.450 0 0 1 .300 156.600L.300 153L.300 157.400A1.450 1.450 0 0 1 -2.600 157.400L-2.600 153L-2.600 156.600A1.450 1.450 0 0 1 -5.500 156.600L-5.500 153.500C-6.500 154.500 -8.800 153.500 -8.600 151C-8.400 148.500 -7.500 146.500 -5.600 145.500L-5.500 ${wy}`;
+  const hand = (hx, wy, s) => { const D = y => `M6 ${y}V151A6 6 0 0 1 -6 151C-6.800 153.600 -9.700 152.800 -9.400 149.600C-9.100 146.600 -7.600 145 -6 145V${y}`;
     return `<g transform="translate(${hx} 0) scale(${s} 1)"><path d="${D(wy)}Z" fill="${skin}" stroke="none"/><path d="${D(Math.max(wy, 145))}" fill="none" ${HL}/></g>`; };
   let hands = '';
   for (const s of [-1, 1]){
