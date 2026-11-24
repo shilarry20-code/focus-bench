@@ -28,7 +28,7 @@ function fxRow(html, p, view){
   return t.innerHTML;
 }
 {
-  const _ph = fdPostHtml; fdPostHtml = function(p){ return fxRow(_ph(p), p, false); };
+  const _ph = fdPostHtml; fdPostHtml = function(p, noMedia){ return fxRow(_ph(p, noMedia), p, false); };
   const _vh = fdViewHtml; fdViewHtml = function(p){ return fxRow(_vh(p), p, true); };
 }
 // keep the numbers right after a like (the feed only redraws the heart)
