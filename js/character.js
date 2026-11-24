@@ -19,9 +19,9 @@ const CH_EYE_C = ['#3b2a20', '#7a4a26', '#a8742a', '#4f8f4a', '#2f8f9a', '#4b86c
 const CH_BROWS = [['0', 'Soft'], ['1', 'Straight'], ['2', 'Arched'], ['3', 'Thick']];
 const CH_MOUTHS = [['0', 'Smile'], ['1', 'Grin'], ['2', 'Calm'], ['3', 'Oh'], ['4', 'Smirk'], ['5', 'Laugh'], ['6', 'Frown'], ['7', 'Tongue'], ['8', 'Cat'], ['9', 'Soft']];
 const CH_BGPAT = [['0', 'Plain'], ['1', 'Spotlight'], ['2', 'Stripe']];
-const CH_GENDER = [['0', 'Male'], ['1', 'Female'], ['2', 'Non-binary']];   // who the character is (gn)
-// symbols: male (circle with an arrow), female (circle with a cross), non-binary (circle with an asterisk above)
-const CH_GENDER_ICON = {0: 'M10 20a6 6 0 1 0 0-12a6 6 0 1 0 0 12M14.300 9.700L20 4M15 4h5v5', 1: 'M12 15a5.500 5.500 0 1 0 0-11a5.500 5.500 0 1 0 0 11M12 15v7M9 19h6', 2: 'M12 22a5 5 0 1 0 0-10a5 5 0 1 0 0 10M12 12V2M8.500 4L15.500 8M15.500 4L8.500 8'};
+const CH_GENDER = [['0', 'Male'], ['1', 'Female']];   // who the character is (gn)
+// symbols: male (circle with an arrow), female (circle with a cross)
+const CH_GENDER_ICON = {0: 'M10 20a6 6 0 1 0 0-12a6 6 0 1 0 0 12M14.300 9.700L20 4M15 4h5v5', 1: 'M12 15a5.500 5.500 0 1 0 0-11a5.500 5.500 0 1 0 0 11M12 15v7M9 19h6'};
 const CH_BODYTYPE = [['0', 'Broad shoulders'], ['1', 'Curvy'], ['2', 'Straight']];   // the body's proportions (gd)
 const CH_BUILD = [['0', 'Slim'], ['1', 'Average'], ['2', 'Broad']];
 const CH_BOTTOMS = [['jeans', 'Jeans'], ['joggers', 'Joggers'], ['shorts', 'Shorts'], ['skirt', 'Skirt'], ['cargo', 'Cargo'], ['leggings', 'Leggings'], ['capris', 'Capris']];
@@ -68,7 +68,7 @@ function chClean(l){
   o.fs = num(l.fs, CH_FACES.length, 0); o.nz = num(l.nz, CH_NOSES.length, 0); o.ea = num(l.ea, CH_EARS.length, 0); o.fh = num(l.fh, CH_FACIAL.length, 0); o.ap = num(l.ap, CH_POSES.length, 0); o.ha = num(l.ha, CH_HATS.length, 0); if (!o.ha && l.ht) o.ha = 1; o.eg = num(l.eg, CH_EARRINGS.length, 0);   // the old hat toggle becomes the beanie
   o.fk = l.fk ? 1 : 0; o.sf = l.sf ? 1 : 0; o.nk = l.nk ? 1 : 0;
   o.hp = l.hp ? 1 : 0; o.ht = 0; o.bl = l.bl ? 1 : 0; o.ls = l.ls ? 1 : 0;
-  o.gd = num(l.gd, 3, d.gd); o.gn = num(l.gn, 3, o.gd); o.bd = num(l.bd, 3, d.bd); o.bc = num(l.bc, CH_BOTTOM_C.length, d.bc); o.sc = num(l.sc, CH_SHOE_C.length, d.sc);
+  o.gd = num(l.gd, 3, d.gd); o.gn = num(l.gn, 2, o.gd === 1 ? 1 : 0); o.bd = num(l.bd, 3, d.bd); o.bc = num(l.bc, CH_BOTTOM_C.length, d.bc); o.sc = num(l.sc, CH_SHOE_C.length, d.sc);
   o.bt = CH_BOTTOMS.some(x => x[0] === l.bt) ? l.bt : d.bt; o.sn = CH_SHOES.some(x => x[0] === l.sn) ? l.sn : d.sn;
   return o;
 }
