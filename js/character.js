@@ -245,12 +245,16 @@ function chFigure(look){
     const ix = x + q * earR * .3, ir = earR * .5;
     const inner = L.ea === 1 ? `M${x + q * 5.400} 44.500C${x + q * 4.600} 49 ${x + q * 3.600} 52.500 ${x + q * 1.600} 55` : `M${ix} ${53 - ir}Q${ix + q * ir * .9} 53 ${ix} ${53 + ir}`;
     return shape + `<path d="${inner}" fill="none" stroke="${nc}" stroke-width="1.100" stroke-linecap="round"/>`; };
-  const faceShape = [`<ellipse cx="60" cy="50" rx="24" ry="25" fill="${skin}"/>`, `<ellipse cx="60" cy="51" rx="22" ry="27" fill="${skin}"/>`, `<ellipse cx="60" cy="50.500" rx="26" ry="23.500" fill="${skin}"/>`,
-    `<rect x="36" y="26" width="48" height="50" rx="17" fill="${skin}"/>`, `<path d="M36 44C36 30 48 25 60 28C72 25 84 30 84 44C84 60 70 77 60 77C50 77 36 60 36 44Z" fill="${skin}"/>`,
-    `<ellipse cx="60" cy="51" rx="21" ry="28" fill="${skin}"/>`,
-    `<path d="M60 25C69 25 76 31 80 41C84 50 84 56 80 63C74 72 66 77 60 77C54 77 46 72 40 63C36 56 36 50 40 41C44 31 51 25 60 25Z" fill="${skin}"/>`,
-    `<path d="M60 26C70 26 78 32 80 44C82 57 82 66 75 72C70 76 65 77 60 77C55 77 50 76 45 72C38 66 38 57 40 44C42 32 50 26 60 26Z" fill="${skin}"/>`,
-    `<path d="M60 25C74 25 85 33 86 47C87 65 76 77 60 77C44 77 33 65 34 47C35 33 46 25 60 25Z" fill="${skin}"/>`][L.fs];
+  // every face shape is a path that starts at the chin and runs around symmetrically, so details can trace the real outline
+  const faceD = ['M60 75A24 25 0 1 1 60 25A24 25 0 1 1 60 75Z', 'M60 78A22 27 0 1 1 60 24A22 27 0 1 1 60 78Z', 'M60 74A26 23.500 0 1 1 60 27A26 23.500 0 1 1 60 74Z',
+    'M60 76H53A17 17 0 0 1 36 59V43A17 17 0 0 1 53 26H67A17 17 0 0 1 84 43V59A17 17 0 0 1 67 76Z',
+    'M60 77C50 77 36 60 36 44C36 30 48 25 60 28C72 25 84 30 84 44C84 60 70 77 60 77Z',
+    'M60 79A21 28 0 1 1 60 23A21 28 0 1 1 60 79Z',
+    'M60 77C54 77 46 72 40 63C36 56 36 50 40 41C44 31 51 25 60 25C69 25 76 31 80 41C84 50 84 56 80 63C74 72 66 77 60 77Z',
+    'M60 77C55 77 50 76 45 72C38 66 38 57 40 44C42 32 50 26 60 26C70 26 78 32 80 44C82 57 82 66 75 72C70 76 65 77 60 77Z',
+    'M60 77C44 77 33 65 34 47C35 33 46 25 60 25C74 25 85 33 86 47C87 65 76 77 60 77Z'][L.fs], fcy = [50, 51, 50.500, 51, 50, 51, 51, 51.500, 51][L.fs];
+  const faceShape = `<path d="${faceD}" fill="${skin}"/>`, fid = chFigure.n = (chFigure.n || 0) + 1;
+  const scaled = k => `transform="translate(60 ${fcy}) scale(${k}) translate(-60 ${-fcy})"`;
   const head = (['bob', 'long', 'wavy', 'curly'].includes(L.hs) ? '' : earPath(-1) + earPath(1)) + faceShape;   // hair that covers the ears hides them
   // face
   const eyeY = 52, ec = L.eh || CH_EYE_C[L.ec], ecd = chShade(ec, .55), sk = skin, ey = L.ey;
@@ -289,14 +293,17 @@ function chFigure(look){
     `<path d="M59.300 52L61.700 58.200Q60.300 59 58.700 58.600" ${nst}/>`][L.nz] + '</g>';
   const fb = [75, 78, 74, 76, 77, 79, 77, 77, 77][L.fs], FO = 'stroke="rgba(20,16,12,.72)" stroke-width="1" stroke-linejoin="round"';
   const stache = `<path d="M60 57.300C57 55.900 52.500 56.300 50.600 59.600C51.800 60.300 53.200 60.200 54.200 59.500C56 58.900 58.200 59.200 60 59.100C61.800 59.200 64 58.900 65.800 59.500C66.800 60.200 68.200 60.300 69.400 59.600C67.500 56.300 63 55.900 60 57.300Z" fill="${hair}" ${FO}/>`;
-  let fhs = '';
-  if (L.fh === 1){   // stubble: rows of dots along the jaw, one half generated and mirrored so both sides match
-    const fx = hw - 1.500, fy = fb - 50, dots = [];
-    [.8, .88, .96].forEach((f, k) => { for (let a = 90 - (k % 2 ? 4.250 : 0); a >= 26; a -= 8.500){ const t = a * Math.PI / 180, dx = Math.cos(t) * fx * f, y = 50 + Math.sin(t) * fy * f;
-      if (y > 57 && !(Math.abs(dx) < 10 && y < 70)) { dots.push([60 + dx, y]); if (dx > .1) dots.push([60 - dx, y]); } } });
-    fhs = dots.map(([x, y]) => `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r=".550" fill="${hair}" opacity=".7"/>`).join(''); }
+  let fhs = '', beard = '';
+  if (L.fh === 1){   // stubble: rows of dots that trace the jaw just inside the face outline, evenly spaced from the chin so both sides match
+    fhs = `<clipPath id="chs${fid}"><rect x="0" y="57.500" width="120" height="60"/></clipPath><g clip-path="url(#chs${fid})">` + [.95, .89, .83].map((k, i) => `<path d="${faceD}" ${scaled(k)} pathLength="100" fill="none" stroke="${hair}" stroke-opacity=".75" stroke-width="${(1.100 / k).toFixed(2)}" stroke-dasharray="0 2.200" stroke-dashoffset="${i % 2 ? 1.100 : 0}" stroke-linecap="round"/>`).join('') + '</g>';
+  }
   else if (L.fh === 2) fhs = stache;
-  else if (L.fh === 3) fhs = `<path d="M${60 - hw + .300} 46Q${60 - hw + 4.500} 49 ${60 - hw + 4.500} 56C${60 - hw + 5} 61 52 63.500 51.800 65.500C53 72 67 72 68.200 65.500C68 63.500 ${60 + hw - 5} 61 ${60 + hw - 4.500} 56Q${60 + hw - 4.500} 49 ${60 + hw - .300} 46C${60 + hw + .500} 70 70 ${fb + 5} 60 ${fb + 5.500}C50 ${fb + 5} ${60 - hw - .500} 70 ${60 - hw + .300} 46Z" fill="${hair}" ${FO}/>` + stache;
+  else if (L.fh === 3){   // beard: the face outline grown a little and cut off above the cheeks, with an open area for the mouth and cheeks
+    const iw = hw - 4.500, open = `C${60 - iw + .500} 61 52 63.500 51.800 65.500C53 72 67 72 68.200 65.500C68 63.500 ${60 + iw - .500} 61 ${60 + iw} 56`;
+    beard = `<clipPath id="chb${fid}"><rect x="0" y="41" width="120" height="70"/></clipPath><g clip-path="url(#chb${fid})"><path d="${faceD}" ${scaled(1.070)} fill="${hair}" ${FO}/></g>`
+      + `<path d="M${60 - iw} 40V56${open}V40Z" fill="${skin}" stroke="none"/><path d="M${60 - iw} 41V56${open}V41" fill="none" ${FO}/>`;
+    fhs = stache;
+  }
   const freck = L.fk ? [[46, 58], [49, 60.500], [44, 61], [71, 58], [74, 60.500], [76, 61], [53, 59.500], [67, 59.500]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#a8643c" opacity=".55"/>`).join('') : '';
   // front hair
   const frontBefore = front;
@@ -368,7 +375,7 @@ function chFigure(look){
   const lashes = L.ls ? `<path d="M45.800 50.500L42.800 48.200M47.600 48.800L45.800 45.600M74.200 50.500L77.200 48.200M72.400 48.800L74.200 45.600" stroke="${ink}" stroke-width="1.400" stroke-linecap="round"/>` : '';
   const skinHex = skin.toLowerCase(), OL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
   const ol = str => str.replace(/<(path|rect|circle|ellipse)\b([^>]*?)(\/?)>/g, (m, t, a, c) => /fill="none"|stroke=|opacity=|fill="#000"/.test(a) ? m : `<${t}${a} ${OL}${c}>`);
-  return ol(back + legs + arms) + neck + ol(body) + hands + ol(head) + blush + freck + nose + fhs + eyes + brows + lashes + mouth + ol(front + acc);
+  return ol(back + legs + arms) + neck + ol(body) + hands + ol(head) + beard + blush + freck + nose + fhs + eyes + brows + lashes + mouth + ol(front + acc);
 }
 // a picture of the character with its background; the default view is the square portrait (head and shoulders)
 function chFull(look, view){
