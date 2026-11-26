@@ -3015,7 +3015,8 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .mk-quick{display:flex;gap:6px;flex-wrap:wrap}
 .mk-tsum{display:flex;flex-direction:column;gap:4px;background:var(--soft);border-radius:10px;padding:10px 12px}
 .mk-tsum > span{display:flex;justify-content:space-between}.mk-tsum > span > span{color:var(--muted)}
-.mk-go{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.mk-go{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-width:0;padding:10px 14px;font-size:15px;line-height:1.2;white-space:nowrap}.mk-go > span{overflow:hidden;text-overflow:ellipsis;min-width:0}.mk-go .mk-ico{flex:none}
+.mk-tt > span{min-width:0;overflow-wrap:anywhere}
 .mk-msg{color:#d64545;margin:0;font-weight:600}
 .mk-page .win{color:#1f9d55}.mk-page .lose{color:#d64545}
 .mk-pfs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
