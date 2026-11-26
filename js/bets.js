@@ -736,10 +736,10 @@ function mkOtherEvents(now){
   });
   return ev;
 }
-// the top-1,000 Elimination games running now (the ones you can watch)
+// the ranked top-1,000 Elimination games running now (the ones you can watch): the only Elimination games with markets
 function mkElTops(){
   if (typeof elTop !== 'function') return [];
-  try { return elTop(null, 999).map(x => x.L).filter(L => String(L.id)[0] === 'T'); } catch(_){ return []; }
+  try { return elTop(true, 999).map(x => x.L).filter(L => String(L.id)[0] === 'T' && L.rules.ranked); } catch(_){ return []; }
 }
 
 /* ---- the Markets page ---- */
@@ -838,8 +838,11 @@ function mkPortfolioHtml(now){
     if (b.st === 'open'){ const r = btPrice(b, now), worth = r.p != null && !r.closed ? mkQuoteR(r, b, b.side).sell(b.n) : null, each = worth != null ? worth / b.n : null; if (each != null) value += worth;
       right = `<span class="mk-pv">${each != null ? `<b>${worth.toLocaleString()}</b><small>if sold now</small>` : '<small>settling</small>'}</span>${each != null ? `<button class="small-btn" data-mk="sell" data-id="${b.id}">${mkIc('out')}Sell</button>` : ''}`; }
     else right = `<i class="mk-st ${b.st}">${mkIc(b.st === 'won' ? 'check' : b.st === 'lost' ? 'x' : b.st === 'sold' ? 'out' : 'undo')}${b.st === 'won' ? `Won ${b.pay.toLocaleString()}` : b.st === 'sold' ? `Sold ${b.pay.toLocaleString()}` : b.st === 'void' ? 'Refunded' : 'Lost'}</i>`;
-    const what = b.mk === 'combo' ? 'Combo' : btPickWhat(b, b.side), legs = b.mk === 'combo' ? `<small class="mk-legs">${b.legs.map(l => `${esc(btPickWhat(l.q, l.side))} · ${esc(btTitle(l.q))}`).join('<br>')}</small>` : '';
-    return `<li class="mk-pos"><span class="mk-cic">${mkIc(MK_KIND_IC[b.mk] || 'grid')}</span><span class="mk-pt"><b>${esc(what)}</b> · ${esc(btTitle(b))}${legs}<small>${b.n.toLocaleString()} at ${b.price}¢ · cost ${b.cost.toLocaleString()} · pays ${(b.n * 100).toLocaleString()}</small></span>${right}</li>`;
+    const what = b.mk === 'combo' ? 'Combo' : btPickWhat(b, b.side);
+    const legs = b.mk === 'combo' ? `<ul class="mk-legl">${b.legs.map((l, i) => { const r = btPrice(l.q, now), right = r.done != null ? r.done === (l.side === 'y') : null, p = r.p != null ? (l.side === 'y' ? r.p : 1 - r.p) : null;
+      return `<li><i class="mk-lst ${right === true ? 'won' : right === false ? 'lost' : ''}">${right === true ? mkIc('check') : right === false ? mkIc('x') : p != null ? mkPct(p) : '–'}</i><button class="mk-goto" data-mk="goto" data-id="${b.id}" data-leg="${i}"><b>${esc(btPickWhat(l.q, l.side))}</b> · ${esc(btTitle(l.q))}</button><button class="mk-gob" data-mk="goto" data-id="${b.id}" data-leg="${i}" aria-label="Go to this market">${mkIc('back', 'fl')}</button></li>`; }).join('')}</ul>` : '';
+    const head = b.mk === 'combo' ? `<b>Combo</b> · ${b.legs.length} picks, all have to be right` : `<button class="mk-goto" data-mk="goto" data-id="${b.id}"><b>${esc(what)}</b> · ${esc(btTitle(b))}${mkIc('back', 'fl')}</button>`;
+    return `<li class="mk-pos"><span class="mk-cic">${mkIc(MK_KIND_IC[b.mk] || 'grid')}</span><span class="mk-pt">${head}${legs}<small>${b.n.toLocaleString()} at ${b.price}¢ · cost ${b.cost.toLocaleString()} · pays ${(b.n * 100).toLocaleString()}</small></span>${right}</li>`;
   };
   const openH = open.map(row).join(''), doneH = done.map(row).join('');
   return `<div class="mk-pf"><div class="mk-pfs"><span>${mkIc('wallet')}<b>${coTotals().balance.toLocaleString()}</b><small>coins to spend</small></span><span>${mkIc('grid')}<b>${value.toLocaleString()}</b><small>open positions are worth</small></span><span>${mkIc('trend')}<b class="${net >= 0 ? 'win' : 'lose'}">${net >= 0 ? '+' : ''}${net.toLocaleString()}</b><small>won or lost on settled markets</small></span></div>
@@ -847,6 +850,18 @@ function mkPortfolioHtml(now){
     ${all.length ? '' : `<div class="mk-empty">${mkIc('wallet')}<p>No positions yet. Buy an answer on any market.</p></div>`}</div>`;
 }
 const MK_EMPTY = {lb: 'No leaderboard markets right now.', tour: 'No tournament markets right now. Rounds run Monday to Friday, and Monday’s opens on the weekend.', rank: 'No top ranked matches are live right now. They show up here (and under Top matches) when two top-1,000 players are mid-match.', elim: 'No top Elimination games are running right now. A new one starts every few minutes.'};
+// open the market a position is in, with that answer picked in the ticket (on the Sell tab when you still hold it)
+function mkGoto(q, side, holding){
+  const now = Date.now(), key = btKey(q);
+  if (q.wk != null && q.band != null && !MKX.has(q.mk)){ BT.band = q.band; BT.div = q.div || null; }
+  let ev = null, row = null;
+  try { for (const e of mkEvents(now)){ const rows = e.rows.concat(e.more || []), r = rows.find(x => btKey(x.q) === key && (!x.side || x.side === side)) || rows.find(x => btKey(x.q) === key); if (r){ ev = e; row = r; break; } } } catch(err){ console.error('markets', err); }
+  if (!ev){ toast('That market isn’t on the board anymore.'); return; }
+  const other = row.side ? ev.rows.find(x => x !== row && btKey(x.q) === key) : null;
+  MK.view = ev.id; MK.sel = mkRowKey(row); MK.more = !ev.rows.includes(row);
+  MK.pick = {key, side, q: row.q, ly: row.side ? (row.side === 'y' ? row.label : other && other.label) : row.label, ln: row.side ? (row.side === 'n' ? row.label : other && other.label) : row.label, t: ev.title};
+  MK.picked = true; MK.tab = holding ? 'sell' : 'buy'; MK.msg = ''; window.scrollTo(0, 0);
+}
 // the combo you're building: shown as a bar at the bottom, and in full with its own ticket
 function mkComboQ(){ return {mk: 'combo', legs: MK.combo.map(l => ({q: l.q, side: l.side}))}; }
 function mkComboBar(now){
@@ -1013,6 +1028,7 @@ document.addEventListener('click', ev => {
   else if (k === 'pick'){ const q = JSON.parse(a.dataset.q), key = btKey(q), side = a.dataset.side, two = q.mk === 'match' || q.mk === 'h2h';
     if (MK.view && MK.view !== 'combo') MK.sel = key + (two ? side : '');
     MK.pick = {key, side, q, ly: a.dataset.ly, ln: a.dataset.ln, t: a.dataset.t}; MK.picked = true; MK.sheet = true; MK.tab = 'buy'; MK.msg = ''; }
+  else if (k === 'goto'){ const b = btBets()[a.dataset.id]; if (b){ const leg = a.dataset.leg != null ? b.legs[+a.dataset.leg] : null; mkGoto(leg ? leg.q : b, leg ? leg.side : b.side, !leg && b.st === 'open'); } }
   else if (k === 'amt') MK.coins = a.dataset.v === 'max' ? Math.max(0, coTotals().balance) : +a.dataset.v;
   else if (k === 'cancel'){ MK.pick = null; MK.picked = true; MK.sheet = false; MK.msg = ''; }
   else if (k === 'addc' && MK.pick){ const key = btKey(MK.pick.q), i = MK.combo.findIndex(l => btKey(l.q) === key); if (i >= 0) MK.combo[i].side = MK.pick.side; else if (MK.combo.length < 6) MK.combo.push({q: MK.pick.q, side: MK.pick.side}); mkSaveCombo(); toast(`Combo · ${MK.combo.length} pick${MK.combo.length === 1 ? '' : 's'}`); }
