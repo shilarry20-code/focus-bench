@@ -338,7 +338,7 @@ function mkTourneyEvents(now){
   return ev;
 }
 const btAlive = B => { const gone = new Set(); B.rounds.forEach(ms => ms.forEach(m => { if (m.st === 'done' && m.win && m.a && m.b) gone.add((m.win === m.a ? m.b : m.a).w); })); return B.ps.filter(p => !gone.has(p.w)); };
-const MK_CATS = [['trend', 'Trending', 'trend'], ['soon', 'Ending soon', 'clock'], ['tour', 'Tournament', 'trophy'], ['rank', 'Ranked', 'shield'], ['elim', 'Elimination', 'elim'], ['lb', 'Leaderboards', 'bars'], ['you', 'You', 'user'], ['pos', 'Portfolio', 'wallet']];
+const MK_CATS = [['trend', 'Trending', 'trend'], ['soon', 'Ending soon', 'clock'], ['tour', 'Tournament', 'trophy'], ['rank', 'Ranked', 'shield'], ['elim', 'Elimination', 'elim'], ['lb', 'Leaderboards', 'bars'], ['pos', 'Portfolio', 'wallet']];
 function mkEvents(now){ let a = [], b = []; try { a = mkTourneyEvents(now); } catch(e){ console.error('markets', e); } try { b = mkOtherEvents(now); } catch(e){ console.error('markets', e); } return a.concat(b); }
 
 /* ---- more markets: Ranked, Elimination, Leaderboards, You, and combos ----
@@ -592,13 +592,6 @@ function mkOtherEvents(now){
     ev.push({id: 'lb|' + per + '|' + pk, cat: 'lb', ic: 'bars', title: `Who studies the most this ${word}?`, sub: `Leaderboards · Hours this ${word} · top ${set.length}`, closes: mkClose(days[days.length - 1]),
       rows: set.map(w => ({q: {mk: 'lbw', per, pk, w, set}, label: btName(w), av: av(w)}))});
   });
-  // you
-  const goal = +P.goalMin || 60, ts = [...new Set([STREAK_MIN, goal, 60, 120, 180, 240, 300, 360])].sort((a, b) => a - b);
-  ev.push({id: 'you|day|' + today, cat: 'you', ic: 'user', title: 'How much will you study today?', sub: 'You · Focus minutes today', closes: mkClose(today),
-    rows: ts.map(T => ({q: {mk: 'ymin', dk: today, T}, label: T === STREAK_MIN ? `${T}+ min (keeps your streak)` : T === goal ? `${mkHm(T)}+ (your daily goal)` : `${mkHm(T)}+`}))});
-  const wk = dayKey(startOfWeek(new Date(now)));
-  ev.push({id: 'you|wk|' + wk, cat: 'you', ic: 'user', title: 'How much will you study this week?', sub: 'You · Sunday to Saturday', closes: mkClose(mkPeriodDays('w', wk)[6]),
-    rows: [300, 600, 900, 1200, 1800, 2400].map(T => ({q: {mk: 'ywk', pk: wk, T}, label: `${mkHm(T)}+`}))});
   return ev;
 }
 
@@ -762,7 +755,7 @@ function mkRender(){
   let list = evs;
   if (MK.q){ const s = MK.q.toLowerCase(); list = list.filter(ev => (ev.title + ' ' + ev.rows.map(r => r.label).join(' ')).toLowerCase().includes(s)); }
   const score = ev => ev.rows.reduce((n, r) => { const i = mkRowPrice(r, now); return Math.max(n, i.yp != null ? Math.abs(mkMove(mkRowKey(r), i.yp)) + (i.yp > .15 && i.yp < .85 ? 3 : 0) + (ev.two ? 2 : 0) : 0); }, 0);
-  if (['tour', 'rank', 'elim', 'lb', 'you'].includes(MK.cat)) list = list.filter(ev => ev.cat === MK.cat);
+  if (['tour', 'rank', 'elim', 'lb'].includes(MK.cat)) list = list.filter(ev => ev.cat === MK.cat);
   if (MK.cat === 'soon') list = list.slice().sort((a, b) => a.closes - b.closes);
   else if (MK.cat === 'trend') list = list.map(ev => [ev, score(ev)]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
   const v = btView(now), own = tnEntry(v.wk);
