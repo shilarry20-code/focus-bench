@@ -503,7 +503,6 @@ function tnRender(){
       <p>You’re not in this week’s tournament (sign-up closed when Monday started). Sign-up for the next one opens Saturday, ${sat.toLocaleDateString([], {month: 'short', day: 'numeric'})}.</p></div></div>`;
   }
   if (!e) html += tnDivPickHtml(wk, tnViewBand(), null);
-  if (typeof btCardHtml === 'function') try { html += btCardHtml(now); } catch(err){ console.error('markets', err); }
   html += tnCalHtml(now);
   html += tnRulesHtml();
   const open = box.querySelector('.tn-rules') && box.querySelector('.tn-rules').open;
