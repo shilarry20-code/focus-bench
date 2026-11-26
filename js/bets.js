@@ -11,7 +11,7 @@
    trade on how the rest of it goes for the players who could meet you.
    Positions live in the coin store (CO.bets) and sync with it. */
 
-const BT_SPREAD = 2, BT_CLOSE = 23 * 60, BT_SIMS = 1200;
+const BT_CLOSE = 23 * 60, BT_SIMS = 1200;
 const BT_BAND_DAY = [110, 160, 220];
 const BT_W = [5, 3, 1, 1, 1, 1, 1, 2, 3, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 6, 5];
 const BT_WS = BT_W.reduce((a, b) => a + b, 0);
@@ -82,7 +82,7 @@ const btFindM = (B, k, f) => B.rounds[k] && B.rounds[k].find(m => m.a && m.b && 
 const btPlayer = (B, w) => B.ps.find(p => p.w === w);
 const btCurMin = (c, k, w) => tnDayKey(c.e.wk, k) > c.today ? 0 : tnMin(c.e, w, k, c.now);
 // {p} chance of Yes, or {done: true|false} when the answer is in, or {closed} when it can't be traded
-function btPrice(q, now){
+function btFair(q, now){
   if (MKX.has(q.mk)){
     let r = mkEvalX(q, now);
     if (r.done != null) return {...r, closed: 'Answer is in'};
@@ -144,8 +144,62 @@ function btEval(q, c){
 const btGone = (B, w) => B.rounds.some(ms => ms.some(m => m.st === 'done' && m.win && m.a && m.b && (m.a.w === w || m.b.w === w) && m.win.w !== w));
 function btUpsets(B, k){ let n = 0; B.rounds[k].forEach(m => { if (m.a && m.b && m.st === 'done' && m.win){ const l = m.win === m.a ? m.b : m.a; if (m.win.seed > l.seed) n++; } }); return n; }
 function btTopOf(B, k){ let best = null, bm = -1; B.rounds[k].forEach(m => { if (!m.a || !m.b || m.st === 'bye') return; [[m.a, m.ma], [m.b, m.mb]].forEach(([p, f]) => { if (f > bm || (f === bm && p.seed < best.seed)){ best = p; bm = f; } }); }); return best ? best.w : null; }
-const btBuy = p => Math.min(99, Math.max(1, Math.round(p * 100) + BT_SPREAD));
-const btSell = p => Math.min(99, Math.max(0, Math.round(p * 100) - BT_SPREAD));
+
+/* ---- the market: prices come from trading ----
+   btFair is what the crowd can see (ratings, minutes so far, time left). The price is where the crowd trades it to:
+   a crowd of players trades every market all day, from what they see plus their own mistakes (they overrate long shots,
+   chase moves, and drift), slower overnight but never stopping. Their trades come from the market and the time, so
+   every device sees the same prices and trades. Your own trades move the price too, through an automated market maker
+   (LMSR): buying pushes it up as you buy, so a big trade costs more per contract, and deep markets (today's matches,
+   the winner) move less than thin ones. The crowd trades your push back out over a few hours.
+   Each contract also has a 1-coin fee, on buying and on selling. */
+const BT_FEE = 1, MK_SLOT = 300000, MK_SLOTS = 288;
+const mkSp = x => x > 30 ? x : Math.log1p(Math.exp(x));
+const mkSig = L => 1 / (1 + Math.exp(-L)), mkLogit = p => Math.log(p / (1 - p));
+const MK_DEEP = new Set(['match', 'out', 'top', 'h2h', 'elw', 'lbw']), MK_THIN = new Set(['ff', 'margin', 'total', 'els', 'elsd', 'ymin', 'ywk', 'rkn', 'rkr']);
+const mkDepth = q => MK_DEEP.has(q.mk) ? {b: 500, rate: 2.2, vol: .05} : MK_THIN.has(q.mk) ? {b: 110, rate: .5, vol: .08} : {b: 250, rate: 1.1, vol: .06};
+const mkAct = t => Math.max(.35, BT_W[new Date(t).getHours()] / 7);       // how busy trading is at that hour (never below 35%)
+// the crowd's mood on one market over the last day, and its trades (no names), in 5-minute slots
+const MK_FLOW = new Map();
+function mkFlow(key, d, now){
+  const s1 = Math.floor(now / MK_SLOT), ck = key + '@' + s1; if (MK_FLOW.has(ck)) return MK_FLOW.get(ck);
+  if (MK_FLOW.size > 3000) MK_FLOW.clear();
+  const d0 = new Date(now); d0.setHours(0, 0, 0, 0); const day0 = d0.getTime();
+  let e = 0, vol = 0; const trades = [], es = [];
+  for (let s = s1 - MK_SLOTS + 1; s <= s1; s++){
+    const t0 = s * MK_SLOT, act = mkAct(t0), rnd = mulberry32(fdHash(key + '#' + s)), g = gaussOf(rnd);
+    e = .97 * e + d.vol * Math.sqrt(act) * g; es.push([t0, e]);
+    let k = 0; const L = Math.exp(-d.rate * act); let pr = 1; while ((pr *= rnd()) > L && k < 20) k++;
+    for (let j = 0; j < k; j++){
+      const t = t0 + rnd() * MK_SLOT, yes = rnd() < mkSig(g * 1.5), n = Math.max(1, Math.round(Math.exp(2.2 + .9 * gaussOf(rnd))));
+      if (t > now) continue;
+      if (t >= day0) vol += n;
+      trades.push({t, yes, n, e});
+    }
+  }
+  const res = {e, es, vol, trades: trades.slice(-40)}; MK_FLOW.set(ck, res); return res;
+}
+// your push on a price (in log-odds), fading as the crowd trades against it
+let MK_IMP = store.get('fb.mkimp', {});
+function mkImpact(key, now){ const x = MK_IMP[key]; if (!x) return 0; const v = x[0] * Math.exp(-(now - x[1]) / (3 * 3600e3)); if (Math.abs(v) < .002){ delete MK_IMP[key]; return 0; } return v; }
+function mkPush(key, dL, now){ MK_IMP[key] = [mkImpact(key, now) + dL, now]; store.set('fb.mkimp', MK_IMP); }
+const mkCrowdL = (fair, e) => Math.max(-4.6, Math.min(4.6, .85 * mkLogit(Math.min(.995, Math.max(.005, fair))) + e));
+function btPrice(q, now){
+  const r = btFair(q, now);
+  if (q.mk === 'combo' || r.p == null) return r;
+  const key = btKey(q), d = mkDepth(q), f = mkFlow(key, d, now), L = Math.max(-4.6, Math.min(4.6, mkCrowdL(r.p, f.e) + mkImpact(key, now)));
+  return {...r, p: mkSig(L), fair: r.p, L, b: d.b, flow: f};
+}
+// buying or selling n contracts of one side from a price: what it costs or pays, fee included
+function mkQuoteR(r, q, side){
+  if (r.p == null) return null;
+  const p = side === 'y' ? r.p : 1 - r.p;
+  if (q.mk === 'combo') return {p, combo: true, buy: n => n * (Math.min(99, Math.max(1, Math.ceil(p * 100))) + BT_FEE), sell: n => n * Math.max(0, Math.floor(p * 100) - BT_FEE), after: () => p};
+  const L = side === 'y' ? r.L : -r.L, b = r.b;
+  return {p, b, buy: n => Math.ceil(100 * b * (mkSp(L + n / b) - mkSp(L))) + BT_FEE * n, sell: n => Math.max(0, Math.floor(100 * b * (mkSp(L) - mkSp(L - n / b))) - BT_FEE * n), after: n => mkSig(L + n / b)};
+}
+const mkQuote = (q, side, now) => mkQuoteR(btPrice(q, now), q, side);
+function mkMaxN(Q, coins){ if (!Q || Q.buy(1) > coins) return 0; let lo = 1, hi = 2; while (Q.buy(hi) <= coins && hi < 1e7) hi *= 2; while (hi - lo > 1){ const m = (lo + hi) >> 1; if (Q.buy(m) <= coins) lo = m; else hi = m; } return lo; }
 
 /* ---- words ---- */
 const btName = w => w === ME ? 'You' : bot(w).name;
@@ -205,20 +259,22 @@ function btTrade(q, side, coins, seen){
   const now = Date.now(), r = btPrice(q, now);
   if (r.closed) return {err: `This market is closed (${r.closed.toLowerCase()}).`};
   const c = btCtx(q, now), why = btBlocked(q, side, c && c.B); if (why) return {err: why};
-  const price = side === 'y' ? btBuy(r.p) : btBuy(1 - r.p);
-  if (seen && seen !== price) return {moved: price};
+  const Q = mkQuoteR(r, q, side), unit = Q.buy(1);
+  if (seen && seen !== unit) return {moved: unit};
   coins = Math.floor(+coins || 0);
-  const n = Math.floor(coins / price); if (n < 1) return {err: `One contract costs ${price} coins.`};
-  const cost = n * price, bal = coTotals().balance; if (cost > bal) return {err: `You only have ${bal.toLocaleString()} coins.`};
+  const n = mkMaxN(Q, coins); if (n < 1) return {err: `One contract costs ${unit} coins.`};
+  const cost = Q.buy(n), bal = coTotals().balance; if (cost > bal) return {err: `You only have ${bal.toLocaleString()} coins.`};
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  btBets()[id] = {id, t: now, ...q, side, n, price, cost, st: 'open', pay: 0};
+  btBets()[id] = {id, t: now, ...q, side, n, price: Math.round(cost / n), cost, st: 'open', pay: 0};
+  if (!Q.combo) mkPush(btKey(q), (side === 'y' ? 1 : -1) * n / Q.b, now);
   saveCo(); if (typeof coRender === 'function') coRender();
   return {ok: id, n, cost};
 }
 function btSellPos(id){
   const b = btBets()[id]; if (!b || b.st !== 'open') return {err: 'That position is already settled.'};
   const r = btPrice(b, Date.now()); if (r.closed || r.p == null) return {err: 'This market can’t be sold right now.'};
-  b.st = 'sold'; b.pay = b.n * (b.side === 'y' ? btSell(r.p) : btSell(1 - r.p)); b.ts = Date.now();
+  const Q = mkQuoteR(r, b, b.side); b.st = 'sold'; b.pay = Q.sell(b.n); b.ts = Date.now();
+  if (!Q.combo) mkPush(btKey(b), (b.side === 'y' ? -1 : 1) * b.n / Q.b, b.ts);
   saveCo(); if (typeof coRender === 'function') coRender(); return {ok: b.pay};
 }
 function btSettle(now = Date.now()){
@@ -579,11 +635,11 @@ function mkBuyBtn(row, btnSide, info, evId){
   const why = btBlocked(q, s, info.B), cls = row.side ? 'yes' : btnSide === 'y' ? 'yes' : 'no', ic = row.side || btnSide === 'y' ? 'check' : 'x';
   const on = MK.pick && MK.pick.key === btKey(q) && MK.pick.side === s, label = row.side ? 'Buy' : btnSide === 'y' ? 'Yes' : 'No';
   if (info.r.closed || why || p == null) return `<button class="mk-buy ${cls}" disabled title="${esc(why || info.r.closed || '')}">${mkIc(ic)}${label}<b>–</b></button>`;
-  return `<button class="mk-buy ${cls}${on ? ' on' : ''}" data-mk="pick" data-ev="${esc(evId)}" data-q='${esc(JSON.stringify(q))}' data-side="${s}">${mkIc(ic)}${label}<b>${btBuy(p)}¢</b></button>`;
+  return `<button class="mk-buy ${cls}${on ? ' on' : ''}" data-mk="pick" data-ev="${esc(evId)}" data-q='${esc(JSON.stringify(q))}' data-side="${s}">${mkIc(ic)}${label}<b>${mkQuoteR(info.r, q, s).buy(1)}¢</b></button>`;
 }
 function mkLine(ev, row, now, big){
   const info = mkRowPrice(row, now), mv = info.yp != null ? mkMove(mkRowKey(row), info.yp) : 0;
-  if (info.r.p != null && MKX.has(row.q.mk)) mkRec(btKey(row.q), info.r.p, now);
+  if (info.r.fair != null && MKX.has(row.q.mk)) mkRec(btKey(row.q), info.r.fair, now);
   const pct = info.yp != null ? mkPct(info.yp) : info.r.done != null ? (info.r.done === (row.side !== 'n') ? 'Yes' : 'No') : '–';
   const lab = big ? `<button class="mk-rl" data-mk="sel" data-k="${esc(mkRowKey(row))}">${row.av || ''}<span>${esc(row.label)}</span></button>` : `<span class="mk-rl">${row.av || ''}<span>${esc(row.label)}</span></span>`;
   return `<li class="${big && mkRowKey(row) === MK.sel ? 'sel' : ''}">${lab}<span class="mk-pct">${pct}${mkMoveHtml(mv)}</span><span class="mk-bb">${mkBuyBtn(row, 'y', info, ev.id)}${row.side || mkSelfRow(row.q) ? '' : mkBuyBtn(row, 'n', info, ev.id)}</span></li>`;
@@ -593,14 +649,14 @@ function mkCardHtml(ev, now){
   const n = (ev.two ? 1 : ev.rows.length) + (ev.more ? ev.more.length : 0);
   return `<div class="mk-card" data-mk="open" data-ev="${esc(ev.id)}" role="button" tabindex="0"><div class="mk-ct"><span class="mk-cic">${mkIc(ev.ic)}</span><span class="mk-cat">${esc(ev.sub)}</span></div>
     <b class="mk-title">${esc(ev.title)}</b><ul class="mk-rows">${rows.map(row => mkLine(ev, row, now, false)).join('') || '<li class="hint">Nothing left to trade here.</li>'}</ul>
-    <div class="mk-cf"><span>${mkIc('clock')}Closes ${mkClock(ev.closes)}</span><span>${n} market${n === 1 ? '' : 's'}</span></div></div>`;
+    <div class="mk-cf"><span>${mkIc('clock')}Closes ${mkClock(ev.closes)}</span><span>${mkIc('bars')}${mkVol(mkEvVol(ev, now))} traded today</span></div></div>`;
 }
 function mkSpark(pts){
   if (pts.length < 2) return '<p class="hint mk-nochart">The chart fills in as the day goes on.</p>';
   const W = 600, H = 170, x = i => (i / (pts.length - 1) * W).toFixed(1), y = p => (H - 6 - p * (H - 12)).toFixed(1);
   const d = pts.map((p, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(p)).join(''), last = pts[pts.length - 1];
   return `<div class="mk-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="M0 ${y(.5)}H${W}" class="mid"/><path d="${d}L${W} ${H}L0 ${H}Z" class="area"/><path d="${d}" class="ln"/></svg>
-    <span class="mk-ax"><span>${pts.length > 1 ? 'earlier' : ''}</span><span>now · ${mkPct(last)}</span></span></div>`;
+    <span class="mk-ax"><span>24h ago</span><span>now · ${mkPct(last)}</span></span></div>`;
 }
 // the chance through today, one point an hour, from the same model fed the board as it stood then
 let MK_HIST = store.get('fb.mkhist', {});
@@ -610,37 +666,68 @@ function mkRec(key, p, now){
   const ks = Object.keys(MK_HIST); if (ks.length > 400) ks.sort((x, y) => MK_HIST[x][MK_HIST[x].length - 1][0] - MK_HIST[y][MK_HIST[y].length - 1][0]).slice(0, ks.length - 400).forEach(k => delete MK_HIST[k]);
   clearTimeout(mkRec.t); mkRec.t = setTimeout(() => store.set('fb.mkhist', MK_HIST), 1000);
 }
+// the price over the last 24 hours: what the crowd could see at each moment (hour by hour), plus how they traded it
 function mkHistory(q, side, now){
-  if (MKX.has(q.mk)){ const k = btKey(q), r = btPrice(q, now), d0 = new Date(now); d0.setHours(0, 0, 0, 0);
-    const pts = (MK_HIST[k] || []).filter(x => x[0] >= d0.getTime() - 864e5).map(x => side === 'n' ? 1 - x[1] : x[1]); if (r.p != null) pts.push(side === 'n' ? 1 - r.p : r.p); return pts; }
-  const d0 = new Date(now); d0.setHours(0, 0, 0, 0); const pts = [], nm = btNowMin(now);
-  for (let h = 0; h * 60 < nm; h++){ let r; try { r = btPrice(q, d0.getTime() + h * 3600000 + 60000); } catch(_){ continue; } if (r.p != null) pts.push(side === 'n' ? 1 - r.p : r.p); }
-  const r = btPrice(q, now); if (r.p != null) pts.push(side === 'n' ? 1 - r.p : r.p);
-  return pts;
+  const r = btPrice(q, now); if (r.p == null || !r.flow) return {pts: []};
+  const key = btKey(q), d0 = new Date(now); d0.setHours(0, 0, 0, 0);
+  let fairAt;
+  if (MKX.has(q.mk)){ const h = MK_HIST[key] || []; fairAt = t => { let v = null; for (const [tt, p] of h){ if (tt <= t) v = p; else break; } return v != null ? v : h.length ? h[0][1] : r.fair; }; }
+  else { const hr = []; for (let h = 0; h * 60 <= btNowMin(now); h++){ let f = null; try { f = btFair(q, d0.getTime() + h * 3600000 + 60000).p; } catch(_){} hr.push(f); }
+    const first = hr.find(x => x != null); fairAt = t => { if (t < d0.getTime()) return first != null ? first : r.fair; const v = hr[Math.floor((t - d0.getTime()) / 3600000)]; return v != null ? v : r.fair; }; }
+  const pts = []; r.flow.es.forEach(([t, e], i) => { if (i % 6) return; const p = mkSig(mkCrowdL(fairAt(t), e)); pts.push(side === 'n' ? 1 - p : p); });
+  pts.push(side === 'n' ? 1 - r.p : r.p);
+  return {pts};
+}
+// recent trades on these markets, without names: the crowd's, and yours marked as yours
+function mkTrades(rows, now, max = 14){
+  const seen = new Set(), out = [];
+  rows.forEach(row => {
+    const key = btKey(row.q); if (seen.has(key)) return; seen.add(key);
+    const r = btPrice(row.q, now); if (r.fair == null || !r.flow) return;
+    const two = row.q.mk === 'match' || row.q.mk === 'h2h', other = two ? rows.find(x => btKey(x.q) === key && x.side === 'n') : null;
+    r.flow.trades.forEach(tr => { const py = mkSig(mkCrowdL(r.fair, tr.e)), c = Math.max(1, Math.min(99, Math.round((tr.yes ? py : 1 - py) * 100)));
+      out.push({t: tr.t, n: tr.n, c, what: two ? (tr.yes ? row.label : other ? other.label : 'No') : tr.yes ? 'Yes' : 'No', on: two ? '' : row.label, yes: two || tr.yes}); });
+  });
+  Object.values(btBets()).forEach(b => { if (b.mk === 'combo' || now - b.t > 864e5 || !seen.has(btKey(b))) return; const row = rows.find(x => btKey(x.q) === btKey(b)), two = b.mk === 'match' || b.mk === 'h2h';
+    out.push({t: b.t, n: b.n, c: b.price, what: two ? btName(b.side === 'y' ? b.a : b.b) : b.side === 'y' ? 'Yes' : 'No', on: two || !row ? '' : row.label, yes: two || b.side === 'y', me: 1});
+    if (b.st === 'sold' && b.ts) out.push({t: b.ts, n: b.n, c: Math.round(b.pay / b.n), what: two ? btName(b.side === 'y' ? b.a : b.b) : b.side === 'y' ? 'Yes' : 'No', on: two || !row ? '' : row.label, yes: two || b.side === 'y', me: 1, sold: 1}); });
+  return out.sort((a, b) => b.t - a.t).slice(0, max);
+}
+const mkAgo = (t, now) => { const m = Math.max(0, Math.round((now - t) / 60000)); return m < 1 ? 'just now' : m < 60 ? `${m}m ago` : `${Math.floor(m / 60)}h ago`; };
+function mkTradesHtml(list, now, withMarket){
+  if (!list.length) return '<p class="hint">No trades yet.</p>';
+  return `<ul class="mk-feed">${list.map(x => `<li class="${x.me ? 'me' : ''}"><i class="mk-dot ${x.yes ? 'yes' : 'no'}"></i><span>${x.me ? `<b>You ${x.sold ? 'sold' : 'bought'}</b> ` : 'Bought '}${x.n.toLocaleString()} <b class="${x.yes ? 'yes' : 'no'}">${esc(x.what)}</b>${x.on ? ` · ${esc(x.on)}` : ''}${withMarket && x.ev ? `<small>${esc(x.ev)}</small>` : ''}</span><span class="mk-fc">${x.c}¢</span><span class="mk-ft">${mkAgo(x.t, now)}</span></li>`).join('')}</ul>`;
+}
+const mkVol = n => n < 1000 ? n.toLocaleString() : (n / 1000).toFixed(n < 1e4 ? 1 : 0) + 'K';
+function mkEvVol(ev, now){ const seen = new Set(); let v = 0; ev.rows.concat(ev.more || []).forEach(row => { const k = btKey(row.q); if (seen.has(k)) return; seen.add(k); try { const r = btPrice(row.q, now); if (r.flow) v += r.flow.vol; } catch(_){} }); return v; }
+function mkSumHtml(Q, n, cost){
+  const row = (k, l, v, cls = '') => `<span><span>${l}</span><b data-s="${k}" class="${cls}">${v}</b></span>`;
+  return `<div class="mk-tsum" data-mk-sum>${row('n', 'Contracts', n.toLocaleString())}${row('avg', 'Average price', n ? Math.round(cost / n) + '¢' : '–')}${row('cost', 'Cost', cost.toLocaleString())}${row('after', 'Price after you buy', n && !Q.combo ? mkPct(Q.after(n)) : '–')}${row('pay', 'Pays if right', (n * 100).toLocaleString(), 'win')}</div>`;
 }
 function mkTicketHtml(){
   const pk = MK.pick; if (!pk) return `<div class="mk-ticket empty">${mkIc('grid')}<p>Pick an answer to buy it here.</p></div>`;
   const r = btPrice(pk.q, Date.now()); if (r.closed || r.p == null) return `<div class="mk-ticket empty"><p>That market just closed.</p></div>`;
-  const price = pk.side === 'y' ? btBuy(r.p) : btBuy(1 - r.p), coins = Math.max(0, Math.floor(+MK.coins || 0)), n = Math.floor(coins / price);
+  const Q = mkQuoteR(r, pk.q, pk.side), price = Q.buy(1), coins = Math.max(0, Math.floor(+MK.coins || 0)), n = mkMaxN(Q, coins), cost = n ? Q.buy(n) : 0;
   const two = pk.q.mk === 'match' || pk.q.mk === 'h2h', combo = pk.q.mk === 'combo', what = combo ? 'combo' : btPickWhat(pk.q, pk.side);
   const inCombo = MK.combo.some(l => btKey(l.q) === btKey(pk.q)), canCombo = !combo && (inCombo || MK.combo.length < 6);
   return `<form class="mk-ticket"><div class="mk-tt">${mkIc(pk.side === 'y' || two ? 'check' : 'x', pk.side === 'y' || two ? 'yes' : 'no')}<span>Buy <b>${esc(what)}</b><small>${esc(btTitle(pk.q))}</small></span></div>
     <div class="mk-tp"><span>Price</span><b>${price}¢</b></div>
     <label class="mk-tc"><span>Coins</span><input type="number" min="${price}" step="1" value="${coins || ''}" inputmode="numeric" data-mk="coins"></label>
     <span class="mk-quick">${[100, 500, 1000, 5000].map(v => `<button type="button" class="small-btn" data-mk="amt" data-v="${v}">${v.toLocaleString()}</button>`).join('')}<button type="button" class="small-btn" data-mk="amt" data-v="max">Max</button></span>
-    <div class="mk-tsum" data-mk-sum><span><span>Contracts</span><b>${n.toLocaleString()}</b></span><span><span>Cost</span><b>${(n * price).toLocaleString()}</b></span><span><span>Pays if right</span><b class="win">${(n * 100).toLocaleString()}</b></span></div>
+    ${mkSumHtml(Q, n, cost)}
     <button class="btn primary mk-go" data-price="${price}" title="Buy ${esc(what)}">${mkIc('check')}<span>Buy ${esc(what)}</span></button>${canCombo ? `<button type="button" class="small-btn mk-addc" data-mk="addc">${mkIc(inCombo ? 'check' : 'layers')}${inCombo ? 'In your combo (update pick)' : 'Add to combo'}</button>` : ''}<button type="button" class="small-btn" data-mk="cancel">Cancel</button>
-    ${MK.msg ? `<p class="mk-msg">${esc(MK.msg)}</p>` : ''}<p class="hint">Spend as much of your balance as you like. Each contract pays 100 coins if you’re right.</p></form>`;
+    ${MK.msg ? `<p class="mk-msg">${esc(MK.msg)}</p>` : ''}<p class="hint">Each contract pays 100 coins if you’re right. Your trade moves the price, so bigger trades cost more per contract. 1 coin fee per contract.</p></form>`;
 }
 function mkDetailHtml(ev, now){
   const all = ev.rows.concat(MK.more && ev.more ? ev.more : []);
   const sel = all.find(r => mkRowKey(r) === MK.sel) || all[0]; MK.sel = mkRowKey(sel);
   return `<div class="mk-detail"><div class="mk-main"><button class="small-btn mk-back" data-mk="back">${mkIc('back')}All markets</button>
     <div class="mk-dh"><span class="mk-cic lg">${mkIc(ev.ic)}</span><div><small>${esc(ev.sub)}</small><h2>${esc(ev.title)}</h2><small class="mk-cl">${mkIc('clock')}Closes ${mkClock(ev.closes)}</small></div></div>
-    <div class="card mk-dchart"><div class="mk-sl">${sel.av || ''}<b>${esc(sel.label)}</b><small>chance today</small></div>${mkSpark(mkHistory(sel.q, sel.side || 'y', now))}</div>
+    <div class="card mk-dchart"><div class="mk-sl">${sel.av || ''}<b>${esc(sel.label)}</b><small>price · last 24 hours</small></div>${mkSpark(mkHistory(sel.q, sel.side || 'y', now).pts)}</div>
     <ul class="mk-rows big">${all.map(row => mkLine(ev, row, now, true)).join('')}</ul>
     ${ev.more && ev.more.length ? `<button class="small-btn mk-moreb" data-mk="more">${mkIc('grid')}${MK.more ? 'Fewer markets' : `${ev.moreLabel || 'More on this match: margins and totals'} (${ev.more.length})`}</button>` : ''}
-    <div class="card mk-rules"><b>Rules</b><p>${esc(btRules(sel.q))}</p><p class="hint">Chances use only ratings, what’s on the board now and how much time is left, never anyone’s study history.</p></div></div>
+    <div class="card mk-trades"><b>${mkIc('trend')}Recent trades</b>${mkTradesHtml(mkTrades(all, now), now)}</div>
+    <div class="card mk-rules"><b>Rules</b><p>${esc(btRules(sel.q))}</p><p class="hint">Prices are set by trading. Other players trade here all day (slower overnight), going on ratings, minutes so far and time left, never anyone’s study history, and they don’t always get it right. Your trades move the price too.</p></div></div>
     <aside class="mk-side">${mkTicketHtml()}</aside></div>`;
 }
 function mkPortfolioHtml(now){
@@ -649,8 +736,8 @@ function mkPortfolioHtml(now){
   let value = 0;
   const row = b => {
     let right;
-    if (b.st === 'open'){ const r = btPrice(b, now), each = r.p != null && !r.closed ? (b.side === 'y' ? btSell(r.p) : btSell(1 - r.p)) : null; if (each != null) value += b.n * each;
-      right = `<span class="mk-pv">${each != null ? `<b>${(b.n * each).toLocaleString()}</b><small>value now</small>` : '<small>settling</small>'}</span>${each != null ? `<button class="small-btn" data-mk="sell" data-id="${b.id}">${mkIc('out')}Sell</button>` : ''}`; }
+    if (b.st === 'open'){ const r = btPrice(b, now), worth = r.p != null && !r.closed ? mkQuoteR(r, b, b.side).sell(b.n) : null, each = worth != null ? worth / b.n : null; if (each != null) value += worth;
+      right = `<span class="mk-pv">${each != null ? `<b>${worth.toLocaleString()}</b><small>if sold now</small>` : '<small>settling</small>'}</span>${each != null ? `<button class="small-btn" data-mk="sell" data-id="${b.id}">${mkIc('out')}Sell</button>` : ''}`; }
     else right = `<i class="mk-st ${b.st}">${mkIc(b.st === 'won' ? 'check' : b.st === 'lost' ? 'x' : b.st === 'sold' ? 'out' : 'undo')}${b.st === 'won' ? `Won ${b.pay.toLocaleString()}` : b.st === 'sold' ? `Sold ${b.pay.toLocaleString()}` : b.st === 'void' ? 'Refunded' : 'Lost'}</i>`;
     const what = b.mk === 'combo' ? 'Combo' : btPickWhat(b, b.side), legs = b.mk === 'combo' ? `<small class="mk-legs">${b.legs.map(l => `${esc(btPickWhat(l.q, l.side))} · ${esc(btTitle(l.q))}`).join('<br>')}</small>` : '';
     return `<li class="mk-pos"><span class="mk-cic">${mkIc(MK_KIND_IC[b.mk] || 'grid')}</span><span class="mk-pt"><b>${esc(what)}</b> · ${esc(btTitle(b))}${legs}<small>${b.n.toLocaleString()} at ${b.price}¢ · cost ${b.cost.toLocaleString()} · pays ${(b.n * 100).toLocaleString()}</small></span>${right}</li>`;
@@ -682,8 +769,10 @@ function mkRender(){
   if (MK.cat === 'tour') html += `<div class="mk-where">${mkIc('trophy')}<span>Bracket</span>${TN_BANDS.map((b, i) => `<button class="chip${i === v.band ? ' on' : ''}" data-mk="band" data-v="${i}">${esc(b[2])}</button>`).join('')}
       <form class="mk-divf"><label>Division <input type="number" min="1" max="${tnDivCount(v.band, v.wk)}" value="${v.div || ''}" inputmode="numeric"></label><button class="small-btn">Go</button>${own ? '<button type="button" class="small-btn" data-mk="mine">Mine</button>' : ''}</form></div>`;
   const shown = MK.cat === 'trend' || MK.cat === 'soon' ? list.slice(0, 30) : list;
+  if (shown.length){ const tape = []; shown.slice(0, 12).forEach(ev => mkTrades(ev.rows, now, 3).forEach(x => tape.push({...x, ev: ev.title, on: x.on || ''})));
+    tape.sort((a, b) => b.t - a.t); if (tape.length) html += `<div class="card mk-tape"><b>${mkIc('trend')}Live trades</b>${mkTradesHtml(tape.slice(0, 6), now, true)}</div>`; }
   html += shown.length ? `<div class="mk-grid">${shown.map(ev => mkCardHtml(ev, now)).join('')}</div>` : `<div class="mk-empty">${mkIc('grid')}<p>${MK.q ? 'No markets match that.' : (MK_EMPTY[MK.cat] || 'No markets open right now.')}</p></div>`;
-  html += `<p class="hint mk-foot">Chances use only ratings, what’s on the board now and how much time is left, never anyone’s study history. Add picks from different markets to a combo for a bigger payout.</p>`;
+  html += `<p class="hint mk-foot">Prices are set by trading: other players trade every market all day (slower overnight), and your trades move prices too. Add picks from different markets to a combo for a bigger payout.</p>`;
   domMorph(box, html + mkComboBar(now));
 }
 const MK_EMPTY = {tour: 'No tournament markets right now. Rounds run Monday to Friday, and Monday’s opens on the weekend.', rank: 'Ranked markets open once you’ve played your placement games.', elim: 'No top Elimination games are running right now. A new one starts every few minutes.'};
@@ -735,9 +824,8 @@ document.addEventListener('keydown', ev => { if ((ev.key === 'Enter' || ev.key =
 document.addEventListener('input', ev => {
   const s = ev.target.closest && ev.target.closest('[data-mk="search"]'); if (s){ MK.q = s.value; clearTimeout(mkRender.t); mkRender.t = setTimeout(() => { mkRender(); const i = $('#mkBody [data-mk="search"]'); if (i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); return; }
   const i = ev.target.closest && ev.target.closest('[data-mk="coins"]'); if (!i || !MK.pick) return;
-  MK.coins = Math.floor(+i.value || 0); const r = btPrice(MK.pick.q, Date.now()); if (r.p == null) return;
-  const price = MK.pick.side === 'y' ? btBuy(r.p) : btBuy(1 - r.p), n = Math.floor(MK.coins / price), bs = document.querySelectorAll('[data-mk-sum] b');
-  if (bs.length === 3){ bs[0].textContent = n.toLocaleString(); bs[1].textContent = (n * price).toLocaleString(); bs[2].textContent = (n * 100).toLocaleString(); }
+  MK.coins = Math.floor(+i.value || 0); const Q = mkQuote(MK.pick.q, MK.pick.side, Date.now()); if (!Q) return;
+  const n = mkMaxN(Q, MK.coins), box = document.querySelector('[data-mk-sum]'); if (box) box.outerHTML = mkSumHtml(Q, n, n ? Q.buy(n) : 0);
 });
 document.addEventListener('submit', ev => {
   const f = ev.target.closest && ev.target.closest('#mkBody form'); if (!f) return;
