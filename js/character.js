@@ -437,7 +437,7 @@ function chFigure(look, turned){   // turned: seen from behind
   }
   return '<g class="ch-fig">' + ol(back + legs + arms) + neck + ol(body) + waveG() + hands + ol(head) + blush + freck + beard + nose + fhs + '<g class="ch-eyes">' + eyes + lashes + '</g>' + brows + mouth + ol(front + acc) + '</g>';
 }
-// the changing room behind the character in the creator: a little boutique with a wardrobe, a mirror, curtains and a
+// the changing room behind the character in the creator: a little boutique with a mirror, curtains and a
 // lit round platform. It's drawn in the character's own units (the feet stand at about y 240), so the camera moves both together.
 function chRoom(){
   const shirts = ['#d9534f', '#3f6fa0', '#f2c14e', '#5b8c5a', '#8e6bbf', '#f4f4f0', '#2f3540', '#e88aa6'];
@@ -456,25 +456,16 @@ function chRoom(){
   [196, 222, 258, 310, 390].forEach(y => { g += `<path d="M-900 ${y}H1000" stroke="#a37c55" stroke-width="1" opacity=".3"/>`; });
   g += `<path d="M20 -700L100 -700L190 246L-70 246Z" fill="url(#crBeam)"/>`;
   // wall lights
-  [[-40, 6], [160, 6]].forEach(([x, y]) => { g += `<circle cx="${x}" cy="${y + 6}" r="60" fill="url(#crGlow)"/><path d="M${x - 7} ${y + 18}h14l-3-14h-8z" fill="#c9a14a" stroke="#7a5a1f" stroke-width="1.5"/><rect x="${x - 2}" y="${y + 18}" width="4" height="8" fill="#7a5a1f"/><ellipse cx="${x}" cy="${y + 2}" rx="9" ry="6" fill="#fff4d4" stroke="#c9a14a" stroke-width="1.2"/>`; });
-  // the wardrobe on the left, open, with a rail of shirts and shoe boxes
-  g += `<rect x="-262" y="-78" width="196" height="306" rx="8" fill="#7a4f33" stroke="#3d2718" stroke-width="3"/><rect x="-248" y="-62" width="168" height="276" rx="4" fill="#4a2f1f"/>
-    <path d="M-244 -36H-84" stroke="#c9a14a" stroke-width="4" stroke-linecap="round"/>`;
-  shirts.forEach((c, i) => { const x = -232 + i * 20; g += `<path d="M${x + 6} -36q0-6 4-6t4 6" fill="none" stroke="#c9a14a" stroke-width="1.6"/><path d="M${x} -30l10-6 10 6 6 12-6 2v62h-20v-62l-6-2z" fill="${c}" stroke="#2a1b10" stroke-width="1.6" stroke-linejoin="round"/>`; });
-  g += `<rect x="-248" y="96" width="168" height="5" fill="#7a4f33"/>${['#e8d6b8', '#c9a9e0', '#a8d0e6', '#f0b6b0'].map((c, i) => `<rect x="${-240 + i * 40}" y="${150 + (i % 2) * 6}" width="34" height="${58 - (i % 2) * 6}" rx="2" fill="${c}" stroke="#2a1b10" stroke-width="1.5"/><path d="M${-240 + i * 40} ${164 + (i % 2) * 6}h34" stroke="#2a1b10" stroke-width="1.2"/>`).join('')}
-    <path d="M-112 104h22" stroke="#c9a14a" stroke-width="3" stroke-linecap="round"/><rect x="-266" y="226" width="204" height="10" rx="3" fill="#5c3a25" stroke="#3d2718" stroke-width="2"/>`;
+  [[-70, 6], [264, 6]].forEach(([x, y]) => { g += `<circle cx="${x}" cy="${y + 6}" r="60" fill="url(#crGlow)"/><path d="M${x - 7} ${y + 18}h14l-3-14h-8z" fill="#c9a14a" stroke="#7a5a1f" stroke-width="1.5"/><rect x="${x - 2}" y="${y + 18}" width="4" height="8" fill="#7a5a1f"/><ellipse cx="${x}" cy="${y + 2}" rx="9" ry="6" fill="#fff4d4" stroke="#c9a14a" stroke-width="1.2"/>`; });
   // the mirror on the right, on a stand
-  g += `<path d="M232 186L220 232M288 186L300 232" stroke="#7a5a1f" stroke-width="6" stroke-linecap="round"/><ellipse cx="254" cy="226" rx="0" ry="0"/>
-    <ellipse cx="254" cy="78" rx="50" ry="108" fill="url(#crGlass)" stroke="#c9a14a" stroke-width="9"/><ellipse cx="254" cy="78" rx="50" ry="108" fill="none" stroke="#7a5a1f" stroke-width="2"/>
-    <path d="M222 12l26-36M228 52l44-60M236 96l30-40" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".55"/>`;
-  // a plant by the mirror
-  g += `<path d="M186 214c-14-30-30-34-38-30 10 4 20 16 26 32M190 214c-2-34 8-50 18-52-4 10-8 26-10 52M196 216c14-24 30-26 36-22-10 4-20 12-28 26" fill="#5b8c5a" stroke="#2f4a2e" stroke-width="1.6" stroke-linejoin="round"/>
-    <path d="M176 210h34l-5 28h-24z" fill="#c4704f" stroke="#6b3420" stroke-width="2" stroke-linejoin="round"/>`;
+  g += `<path d="M172 168L162 214M212 168L222 214" stroke="#7a5a1f" stroke-width="5" stroke-linecap="round"/>
+    <ellipse cx="192" cy="76" rx="36" ry="92" fill="url(#crGlass)" stroke="#c9a14a" stroke-width="7"/><ellipse cx="192" cy="76" rx="36" ry="92" fill="none" stroke="#7a5a1f" stroke-width="1.6"/>
+    <path d="M170 20l20-30M174 56l32-44M180 96l22-30" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".55"/>`;
   // curtains at the far sides
   [[-420, 1], [340, -1]].forEach(([x, d]) => { const w = 110; let f = `<path d="M${x} -700h${w}v${930}c-${w * .3} 10-${w * .7} 10-${w} 0z" fill="#9b2f3f" stroke="#5e1824" stroke-width="3"/>`; for (let i = 1; i < 5; i++) f += `<path d="M${x + i * w / 5} -700v930" stroke="#7a2231" stroke-width="3" opacity=".7"/>`; g += f + `<rect x="${x - 10}" y="-704" width="${w + 20}" height="14" fill="#c9a14a"/>`; });
   // the lit round platform the character stands on
   g += `<ellipse cx="60" cy="244" rx="150" ry="40" fill="url(#crSpot)"/>
-    <ellipse cx="60" cy="250" rx="96" ry="21" fill="#5c3a5e"/><ellipse cx="60" cy="244" rx="96" ry="21" fill="#8a5a8c" stroke="#4a2c4b" stroke-width="2.5"/><ellipse cx="60" cy="243" rx="78" ry="15" fill="none" stroke="#c9a14a" stroke-width="2" opacity=".8"/>`;
+    <ellipse cx="60" cy="250" rx="96" ry="21" fill="#b9a27f"/><ellipse cx="60" cy="244" rx="96" ry="21" fill="#e2d3b6" stroke="#9c8562" stroke-width="2.5"/><ellipse cx="60" cy="243" rx="78" ry="15" fill="none" stroke="#c9a14a" stroke-width="2" opacity=".8"/>`;
   return g + `<rect x="-900" y="-700" width="1900" height="1600" fill="url(#crVig)"/>`;
 }
 // a picture of the character with its background; the default view is the square portrait (head and shoulders)

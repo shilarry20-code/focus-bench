@@ -54,7 +54,7 @@ function pageRestore(name){
 const navLocked = name => typeof focusing === 'function' && focusing() && name !== 'focus' && !(name === 'elim' && typeof elBusy === 'function' && elBusy());
 function navLockRender(){
   const on = n => !navLocked(n);
-  document.querySelectorAll('.nav-btn[data-page]').forEach(b => { const lock = !on(b.dataset.page); if (b.classList.contains('locked') !== lock){ b.classList.toggle('locked', lock); lock ? b.setAttribute('aria-disabled', 'true') : b.removeAttribute('aria-disabled'); } });
+  document.querySelectorAll('.nav-btn[data-page], .nav-btn[data-act]').forEach(b => { const lock = b.dataset.page ? !on(b.dataset.page) : !!(typeof focusing === 'function' && focusing()); if (b.classList.contains('locked') !== lock){ b.classList.toggle('locked', lock); lock ? b.setAttribute('aria-disabled', 'true') : b.removeAttribute('aria-disabled'); } });
   const mb = $('#moreBtn'); if (mb){ const lock = !!(typeof focusing === 'function' && focusing()); if (mb.classList.contains('locked') !== lock){ mb.classList.toggle('locked', lock); lock ? mb.setAttribute('aria-disabled', 'true') : mb.removeAttribute('aria-disabled'); if (lock) $('#nav').classList.remove('more-open'); } }
 }
 setInterval(navLockRender, 400);
