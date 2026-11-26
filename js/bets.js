@@ -342,7 +342,7 @@ function mkTicketHtml(){
     <label class="mk-tc"><span>Coins</span><input type="number" min="${price}" max="${BT_MAX}" step="1" value="${coins || ''}" inputmode="numeric" data-mk="coins"></label>
     <span class="mk-quick">${[100, 500, 1000, 5000].map(v => `<button type="button" class="small-btn" data-mk="amt" data-v="${v}">${v.toLocaleString()}</button>`).join('')}</span>
     <div class="mk-tsum" data-mk-sum><span><span>Contracts</span><b>${n.toLocaleString()}</b></span><span><span>Cost</span><b>${(n * price).toLocaleString()}</b></span><span><span>Pays if right</span><b class="win">${(n * 100).toLocaleString()}</b></span></div>
-    <button class="btn primary mk-go" data-price="${price}">${mkIc('check')}Buy ${esc(what)}</button><button type="button" class="small-btn" data-mk="cancel">Cancel</button>
+    <button class="btn primary mk-go" data-price="${price}" title="Buy ${esc(what)}">${mkIc('check')}<span>Buy ${esc(what)}</span></button><button type="button" class="small-btn" data-mk="cancel">Cancel</button>
     ${MK.msg ? `<p class="mk-msg">${esc(MK.msg)}</p>` : ''}<p class="hint">Up to ${BT_MAX.toLocaleString()} coins a trade. Each contract pays 100 coins if you’re right.</p></form>`;
 }
 function mkDetailHtml(ev, now){
