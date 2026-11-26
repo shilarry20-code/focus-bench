@@ -261,6 +261,9 @@ function chFigure(look, turned){   // turned: seen from behind
     'M60 77C55 77 50 76 45 72C38 66 38 57 40 44C42 32 50 26 60 26C70 26 78 32 80 44C82 57 82 66 75 72C70 76 65 77 60 77Z',
     'M60 77C44 77 33 65 34 47C35 33 46 25 60 25C74 25 85 33 86 47C87 65 76 77 60 77Z'][L.fs], fcy = [50, 51, 50.500, 51, 50, 51, 51, 51.500, 51][L.fs];
   const faceShape = `<path d="${faceD}" fill="${skin}"/>`, fid = chFigure.n = (chFigure.n || 0) + 1;
+  // buzz cut: the head's own outline, cut off at a hairline, so it hugs every head shape
+  const buzzCut = () => { const hl = `M0 0H120V55L${r + .500} 55C${r - 1.500} 44 ${r - 8} ${HT + 8.500} 60 ${HT + 8.500}C${l + 8} ${HT + 8.500} ${l + 1.500} 44 ${l - .500} 55L0 55Z`;
+    return `<clipPath id="bz${fid}"><path d="${hl}"/></clipPath><g clip-path="url(#bz${fid})"><path d="${faceD}" transform="translate(60 ${fcy}) scale(1.035) translate(-60 ${-fcy})" fill="${hair}" stroke="rgba(20,16,12,.72)" stroke-width="1.060"/></g><path d="M${r - .300} 52C${r - 1.500} 44 ${r - 8} ${HT + 8.500} 60 ${HT + 8.500}C${l + 8} ${HT + 8.500} ${l + 1.500} 44 ${l + .300} 52" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="1.060"/>`; };
   const scaled = k => `transform="translate(60 ${fcy}) scale(${k}) translate(-60 ${-fcy})"`;
   const head = (['bob', 'long', 'wavy', 'curly'].includes(L.hs) ? '' : earPath(-1) + earPath(1)) + faceShape;   // hair that covers the ears hides them
   // face
@@ -325,7 +328,7 @@ function chFigure(look, turned){   // turned: seen from behind
   const frontBefore = front;
   const cap = (up, inner) => `<path d="M${l} 52C${l - 1} ${HT + 3} ${l + 9} ${HT - up} 60 ${HT - up}C${r - 9} ${HT - up} ${r + 1} ${HT + 3} ${r} 52C${r - 2} 43 ${r - 8} ${HT + inner - 1} 60 ${HT + inner}C${l + 8} ${HT + inner - 1} ${l + 2} 43 ${l} 52Z" fill="${hair}"/>`;
   const strip = (q, x, bottom) => { const m = 46 + (bottom - 46) * .55; return `<path d="M${x} 46C${x + q * 3} ${m} ${x + q * 2} ${bottom - 4} ${x + q} ${bottom}Q${x - q * 3} ${bottom + 1} ${x - q * 8} ${bottom - 3}C${x - q * 9} ${m} ${x - q * 8} 56 ${x - q * 7} 48Z" fill="${hair}"/>`; };
-  if (hs === 'buzz') front += cap(2, 9).replace('fill="', 'opacity=".92" fill="');
+  if (hs === 'buzz') front += '%%BUZZ%%';   // drawn once the head's outline is known (below)
   else if (hs === 'side') front += `<path d="M${l} 52C${l - 2} ${HT + 2} ${l + 10} ${HT - 7} 62 ${HT - 6}C${r - 4} ${HT - 5} ${r + 1} ${HT + 4} ${r} 52C${r - 3} 45 ${r - 8} 40 66 ${HT + 8}C54 ${HT + 11} ${l + 8} 42 ${l} 52Z" fill="${hair}"/>`;
   else if (hs === 'curly') front += HAIR.curly();
   else if (hs === 'spiky') front += HAIR.spiky();
@@ -346,6 +349,7 @@ function chFigure(look, turned){   // turned: seen from behind
   // a hat squashes tall hair styles flat underneath it
   const hatOn = [1, 2, 4].includes(L.ha);
   if (hatOn && ['spiky', 'mohawk', 'afro', 'bun', 'curly', 'slick'].includes(hs)) front = frontBefore + cap(5, 9);
+  front = front.replace('%%BUZZ%%', buzzCut);
   // accessories
   let acc = '';
   const AO = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"', gold = '#e3b04b';
@@ -398,7 +402,7 @@ function chFigure(look, turned){   // turned: seen from behind
     if (hs === 'afro') hb = `<circle cx="60" cy="${39 + dy}" r="33" fill="${hair}"/>`;
     else if (hs !== 'bald'){
       const top0 = hatOn ? cap(5, 9) : ['ponytail', 'braid'].includes(hs) ? cap(5, 10) : front;   // the hair's outer shape over the top of the head
-      const op = hs === 'buzz' ? ' opacity=".92"' : hs === 'mohawk' ? ' opacity=".35"' : '';
+      const op = hs === 'mohawk' ? ' opacity=".35"' : '';
       hb = top0 + `<clipPath id="bk${fid}"><path d="M0 0H120V${nY - 4}Q60 ${nY + 4} 0 ${nY - 4}Z"/></clipPath><clipPath id="bs${fid}"><rect x="0" y="46" width="120" height="80"/></clipPath><clipPath id="bf${fid}"><path d="${faceD}" ${scaled(1.035)}/></clipPath>`
         + `<g clip-path="url(#bk${fid})"${op}><path d="${faceD}" ${scaled(1.035)} fill="${hair}" stroke="none"/><g clip-path="url(#bs${fid})"><path d="${faceD}" ${scaled(1.035)} fill="none" ${LN}/></g></g>`
         + `<g clip-path="url(#bf${fid})"><path d="M0 ${nY - 4}Q60 ${nY + 4} 120 ${nY - 4}" fill="none" ${LN}/></g>`;
