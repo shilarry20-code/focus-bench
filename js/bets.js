@@ -156,7 +156,7 @@ function btTopOf(B, k){ let best = null, bm = -1; B.rounds[k].forEach(m => { if 
 const BT_FEE = 1, MK_SLOT = 300000, MK_SLOTS = 288;
 const mkSp = x => x > 30 ? x : Math.log1p(Math.exp(x));
 const mkSig = L => 1 / (1 + Math.exp(-L)), mkLogit = p => Math.log(p / (1 - p));
-const MK_DEEP = new Set(['match', 'out', 'top', 'h2h', 'elw', 'lbw', 'spr', 'elko']), MK_THIN = new Set(['ff', 'margin', 'total', 'els', 'elsd', 'ymin', 'ywk', 'rkn', 'rkr']);
+const MK_DEEP = new Set(['match', 'out', 'top', 'h2h', 'elw', 'lbw', 'spr', 'elko', 'rtm']), MK_THIN = new Set(['ff', 'margin', 'total', 'els', 'elsd', 'ymin', 'ywk', 'rkn', 'rkr']);
 const mkDepth = q => MK_DEEP.has(q.mk) ? {b: 500, rate: 2.2, vol: .05} : MK_THIN.has(q.mk) ? {b: 110, rate: .5, vol: .08} : {b: 250, rate: 1.1, vol: .06};
 const mkAct = t => Math.max(.35, BT_W[new Date(t).getHours()] / 7);       // how busy trading is at that hour (never below 35%)
 // the crowd's mood on one market over the last day, and its trades (no names), in 5-minute slots
@@ -239,7 +239,9 @@ function btRules(q){
 }
 
 /* ---- you can't trade against yourself ---- */
+const btAboutMe = q => q.mk === 'combo' ? q.legs.some(l => btAboutMe(l.q)) : q.w === ME || q.a === ME || q.b === ME || q.c === ME || (Array.isArray(q.set) && q.set.includes(ME)) || MK_SELF.has(q.mk);
 function btBlocked(q, side, B){
+  if (btAboutMe(q)) return 'You can’t bet on yourself';
   if (MKX.has(q.mk)) return mkBlockedX(q, side);
   const yes = side === 'y';
   if (q.w === ME || q.a === ME || q.b === ME){
@@ -303,11 +305,11 @@ const MK_IC = {
   search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
   back: '<path d="M15 18l-6-6 6-6"/>', out: '<path d="M14 4h6v6M20 4l-9 9M10 6H5v13h13v-5"/>', undo: '<path d="M4 10h11a5 5 0 0 1 0 10h-3M4 10l4-4M4 10l4 4"/>',
   shield: '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/>', elim: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14 14l5 5M19 14l-5 5"/>',
-  bars: '<path d="M8 21V11H3v10zM15 21V4h-6v17zM21 21v-7h-6v7z"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+  bars: '<path d="M8 21V11H3v10zM15 21V4h-6v17zM21 21v-7h-6v7z"/>', eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>', plus: '<path d="M12 5v14M5 12h14"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'
 };
 const mkIc = (k, cls = '') => `<svg class="mk-ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MK_IC[k] || ''}</svg>`;
-const MK_KIND_IC = {match: 'vs', out: 'trophy', reach: 'flag', min: 'clock', margin: 'ruler', total: 'sum', ff: 'off', top: 'star', ups: 'bolt', h2h: 'swap', spr: 'clock', elko: 'bolt', elnx: 'elim', rkm: 'vs', rkn: 'star', rkr: 'flag', elw: 'elim', els: 'elim', elsd: 'bolt', lbw: 'bars', ymin: 'user', ywk: 'user', combo: 'layers'};
+const MK_KIND_IC = {match: 'vs', out: 'trophy', reach: 'flag', min: 'clock', margin: 'ruler', total: 'sum', ff: 'off', top: 'star', ups: 'bolt', h2h: 'swap', rtm: 'vs', lbt: 'clock', spr: 'clock', elko: 'bolt', elnx: 'elim', rkm: 'vs', rkn: 'star', rkr: 'flag', elw: 'elim', els: 'elim', elsd: 'bolt', lbw: 'bars', ymin: 'user', ywk: 'user', combo: 'layers'};
 
 /* ---- events: the questions on the board ---- */
 // each event: {id, cat, ic, title, sub, closes, two, rows: [{q, label, av, side}], more}; a 'two' event is one market shown as its two answers
@@ -339,7 +341,9 @@ function mkTourneyEvents(now){
 }
 const btAlive = B => { const gone = new Set(); B.rounds.forEach(ms => ms.forEach(m => { if (m.st === 'done' && m.win && m.a && m.b) gone.add((m.win === m.a ? m.b : m.a).w); })); return B.ps.filter(p => !gone.has(p.w)); };
 const MK_CATS = [['trend', 'Trending', 'trend'], ['soon', 'Ending soon', 'clock'], ['tour', 'Tournament', 'trophy'], ['rank', 'Ranked', 'shield'], ['elim', 'Elimination', 'elim'], ['lb', 'Leaderboards', 'bars'], ['pos', 'Portfolio', 'wallet']];
-function mkEvents(now){ let a = [], b = [], c = []; try { c = mkFastEvents(now); } catch(e){ console.error('markets', e); } try { a = mkTourneyEvents(now); } catch(e){ console.error('markets', e); } try { b = mkOtherEvents(now); } catch(e){ console.error('markets', e); } return c.concat(a, b); }
+function mkEvents(now){ let a = [], b = [], c = []; try { c = mkFastEvents(now); } catch(e){ console.error('markets', e); } try { a = mkTourneyEvents(now); } catch(e){ console.error('markets', e); } try { b = mkOtherEvents(now); } catch(e){ console.error('markets', e); } const all = c.concat(a, b), out = [];
+  all.forEach(ev => { if (ev.two && ev.rows.some(r => btAboutMe(r.q))) return; const rows = ev.rows.filter(r => !btAboutMe(r.q)); if (!rows.length) return; out.push({...ev, rows, more: ev.more && ev.more.filter(r => !btAboutMe(r.q))}); });
+  return out; }
 
 /* ---- more markets: Ranked, Elimination, Leaderboards, You, and combos ----
    Same rule as the tournament: chances come from ratings, what's on the board right now and how much time is left,
@@ -352,7 +356,7 @@ function mkEvents(now){ let a = [], b = [], c = []; try { c = mkFastEvents(now);
      lbw  w has the most minutes this week/month among the players listed (per, pk, w, set)
      ymin you study T+ minutes on day dk                    ywk  you study T+ minutes in the week starting pk
      combo every pick in legs is right */
-const MKX = new Set(['rkm', 'rkn', 'rkr', 'elw', 'els', 'elsd', 'lbw', 'ymin', 'ywk', 'combo', 'spr', 'elko', 'elnx']);
+const MKX = new Set(['rkm', 'rkn', 'rkr', 'elw', 'els', 'elsd', 'lbw', 'ymin', 'ywk', 'combo', 'spr', 'elko', 'elnx', 'rtm', 'lbt']);
 const MK_SELF = new Set(['rkm', 'rkn', 'rkr', 'ymin', 'ywk']);
 const mkDayR = r => Math.min(420, Math.max(40, 160 * Math.pow(2, ((+r || 1000) - 1650) / 800)));     // a typical day by rating
 const mkMyNow = () => tnLogMin(dayKey(Date.now()), btNowMin(Date.now())) + (typeof tnLiveMin === 'function' ? tnLiveMin() : 0);
@@ -396,7 +400,7 @@ function mkRkr(q, now){
 }
 
 /* Elimination: the top-1,000 games (the same games on every device) */
-const elOfId = g => { try { return elTopGame(parseInt(String(g).slice(1), 36)); } catch(_){ return null; } };
+const elOfId = g => { const L = (EL.live || []).find(x => x.id === g); if (L) return L; try { return elTopGame(parseInt(String(g).slice(1), 36)); } catch(_){ return null; } };
 const elHaz = a => a <= 0 ? .5 : a < 1 ? .35 : a < 2.5 ? .25 : a < 5 ? .15 : a < 10 ? .09 : .05;
 function elFacts(L, now){
   const RL = L.rules.round * 60000, A = elAllow(L.rules), outs = L.players.map(w => [w, elBotPlan(L, w).out]).sort((a, b) => a[1] - b[1]);
@@ -448,6 +452,7 @@ function mkEl(q, now){
 
 /* leaderboards: who studies the most this week or month, among the players at the top now */
 function mkPeriodDays(per, pk){
+  if (per === 'd') return [pk];
   const out = [], d = new Date(pk.length === 7 ? pk + '-01T12:00' : pk + 'T12:00'), m = d.getMonth();
   for (let i = 0; i < 31; i++){ if (per === 'm' && d.getMonth() !== m) break; if (per === 'w' && i >= 7) break; out.push(dayKey(d)); d.setDate(d.getDate() + 1); }
   return out;
@@ -582,16 +587,11 @@ function mkFastEvents(now){
     }
   } catch(err){ console.error('markets', err); }
   // Elimination knockouts in this window, and who goes out next
-  const games = [];
-  for (let k = Math.floor((now - 4 * 3600e3) / 240000); k <= Math.floor(now / 240000); k++){
-    let L; try { L = elTopGame(k); } catch(_){ continue; } if (L.t0 > now || L.players.length < 3) continue;
-    const f = elFacts(L, now); if (!f.over && f.alive.length >= 2) games.push([L, f]);
-  }
-  for (const [L, f] of games.slice(-6).reverse()){
-    ev.push({id: `f|elko|${L.id}|${w0}`, cat: 'fast', fast: 1, ic: 'bolt', title: `Anyone knocked out of ${L.name} by ${mkHM(end)}?`, sub: `Elimination · ${f.alive.length} left · round ${f.r + 1}`, closes: end, live: 1,
+  const games = mkElTops().map(L => [L, elFacts(L, now)]).filter(([, f]) => !f.over && f.alive.length >= 2);
+  for (const [L, f] of games){
+    ev.push({id: `f|elko|${L.id}|${w0}`, cat: 'fast', fast: 1, ic: 'bolt', watch: `data-mkwatch="${L.id}"`, title: `Anyone knocked out of ${L.name} by ${mkHM(end)}?`, sub: `Elimination · ${f.alive.length} left · round ${f.r + 1}`, closes: end, live: 1,
       rows: [{q: {mk: 'elko', g: L.id, w0}, label: 'Someone goes out'}]});
-    if (!f.outs.some(([, o]) => o > w0 && o <= now)) ev.push({id: `e|elnx|${L.id}|${w0}`, cat: 'elim', ic: 'elim', title: `Who goes out next in ${L.name}?`, sub: `Elimination · ${f.alive.length} left`, closes: f.end, live: 1,
-      rows: f.alive.map(w => ({q: {mk: 'elnx', g: L.id, w, aft: w0}, label: btName(w), av: av(w)}))});
+
   }
   return ev;
 }
@@ -602,6 +602,7 @@ function mkEvalX(q, now){
     case 'lbw': return mkLbw(q, now); case 'ymin': return mkYmin(q, now); case 'ywk': return mkYwk(q, now);
     case 'combo': return mkCombo(q, now);
     case 'spr': return mkSpr(q, now); case 'elko': case 'elnx': return mkElFast(q, now);
+    case 'rtm': return mkRtm(q, now); case 'lbt': return mkLbt(q, now);
   }
   return {closed: 'Unknown'};
 }
@@ -615,13 +616,15 @@ function mkTitleX(q){
     case 'elw': return `${btName(q.w)} wins ${elName(q.g)}`;
     case 'els': return `${btName(q.w)} survives round ${q.rd} of ${elName(q.g)}`;
     case 'elsd': return `${elName(q.g)} reaches sudden death`;
-    case 'lbw': return `${btName(q.w)} studies the most this ${q.per === 'w' ? 'week' : 'month'}`;
+    case 'lbw': return q.set.length === 2 ? `${btName(q.set[0])} ends ${q.per === 'w' ? 'the week' : 'the month'} ahead of ${btName(q.set[1])}` : `${btName(q.w)} studies the most ${q.per === 'd' ? 'today' : q.per === 'w' ? 'this week' : 'this month'}`;
     case 'ymin': return `You study ${mkHm(q.T)}+ ${q.dk === dayKey(Date.now()) ? 'today' : 'on ' + new Date(q.dk + 'T12:00').toLocaleDateString([], {weekday: 'long'})}`;
     case 'ywk': return `You study ${mkHm(q.T)}+ this week`;
     case 'combo': return `Combo: ${q.legs.length} picks`;
     case 'spr': return q.o === 't' ? `${btName(q.a)} and ${btName(q.b)} tie ${mkHM(q.w0)}–${mkHM(q.w0 + MK_WIN)}` : `${btName(q.o === 'a' ? q.a : q.b)} studies more ${mkHM(q.w0)}–${mkHM(q.w0 + MK_WIN)}`;
     case 'elko': return `Someone is knocked out of ${elName(q.g)} by ${mkHM(q.w0 + MK_WIN)}`;
     case 'elnx': return `${btName(q.w)} is the next one out of ${elName(q.g)}`;
+    case 'rtm': return `${btName(q.a)} beats ${btName(q.c)} in ranked`;
+    case 'lbt': return `${btName(q.w)} studies ${mkHm(q.T)}+ ${q.per === 'd' ? 'today' : q.per === 'w' ? 'this week' : 'this month'}`;
   }
   return '';
 }
@@ -633,12 +636,14 @@ function mkRulesX(q){
     case 'elw': return `Yes if ${btName(q.w)} is the last player studying in ${elName(q.g)}.`;
     case 'els': return `Yes if ${btName(q.w)} is still in ${elName(q.g)} when round ${q.rd} ends (or wins before then).`;
     case 'elsd': return `Yes if at least two players are still in ${elName(q.g)} when its sudden-death round starts.`;
-    case 'lbw': return `Yes if ${btName(q.w)} has the most Focus minutes this ${q.per === 'w' ? 'week (Sunday to Saturday)' : 'month'} of the ${q.set.length} players listed, who were the top ${q.set.length} when the market opened. Trading closes at 11 PM on the last day.`;
+    case 'lbw': return `Yes if ${btName(q.w)} has the most Focus minutes ${q.per === 'd' ? 'today' : q.per === 'w' ? 'this week (Sunday to Saturday)' : 'this month'} of the ${q.set.length} players listed, who were the top ${q.set.length} when the market opened. Trading closes at 11 PM on the last day.`;
     case 'ymin': return `Yes once you have ${mkHm(q.T)} of Focus minutes that day (midnight to midnight). Trading closes at 11 PM. Only Yes can be bought.`;
     case 'ywk': return `Yes once you have ${mkHm(q.T)} of Focus minutes this week (Sunday to Saturday). Trading closes at 11 PM Saturday. Only Yes can be bought.`;
     case 'spr': return `Compares ${btName(q.a)} and ${btName(q.b)}’s Focus minutes from ${mkHM(q.w0)} to ${mkHM(q.w0 + MK_WIN)} only, not their whole day. ${q.o === 't' ? 'Yes if they finish the window level, including when neither studies.' : `Yes if ${btName(q.o === 'a' ? q.a : q.b)} has more.`} Trading closes a minute before the window ends; it settles right after.`;
     case 'elko': return `Yes if anyone in ${elName(q.g)} is knocked out between ${mkHM(q.w0)} and ${mkHM(q.w0 + MK_WIN)}. Trading closes a minute before the window ends.`;
     case 'elnx': return `Yes if ${btName(q.w)} is the next player knocked out of ${elName(q.g)} after ${mkHM(q.aft)}.`;
+    case 'rtm': return `Yes if ${btName(q.a)} beats ${btName(q.c)} in their live ranked match: whoever studies longer wins. It settles as soon as the result can’t change, at the latest when both have stopped.`;
+    case 'lbt': return `Yes once ${btName(q.w)} has ${mkHm(q.T)} of Focus minutes ${q.per === 'd' ? 'today' : q.per === 'w' ? 'this week (Sunday to Saturday)' : 'this month'}. Trading closes at 11 PM on the last day.`;
     case 'combo': return `Pays 100 coins only if every pick is right: ${q.legs.map(l => `${btPickWhat(l.q, l.side)} on “${btTitle(l.q)}”`).join('; ')}. If any pick is wrong it settles No; if a pick is cancelled you get your coins back.`;
   }
   return '';
@@ -661,38 +666,81 @@ function mkTopBy(fi, n){
   const top = []; for (let i = 0; i < ROSTER_N; i++){ const v = BS[i * BF + fi]; if (top.length < n || v > top[top.length - 1][0]){ top.push([v, i]); top.sort((a, b) => b[0] - a[0]); if (top.length > n) top.pop(); } }
   LB_TOPC = {[key]: top.map(x => x[1])}; return LB_TOPC[key];
 }
+/* ranked top matches: the live 1v1s between top-1,000 players (the ones you can watch). Yes = a wins (more minutes).
+   The crowd sees each player's minutes so far and whether they're still going, never how long they planned to study. */
+function mkRkTopPairs(){
+  if (typeof wNowMin !== 'function' || !LF.pairs) return [];
+  const {m} = wNowMin(), cut = LF.top || 2400;
+  return LF.pairs.filter(p => Math.max(p.ea - p.ma, p.ec - p.mc) <= m && Math.max(p.ea, p.ec) > m && Math.min(p.ra, p.rc) >= cut);
+}
+const RTM_PW = new Map();
+function mkRtmPair(q){
+  const {dk, m} = wNowMin(); if (dk !== q.dk) return null;
+  let p = (LF.pairs || []).find(x => x.a === q.a && x.c === q.c && x.ea === q.ea && x.ec === q.ec);
+  if (!p && planDay === dk && LF.pairKey !== dk + '|' + q.w0){ const k = dk + '|' + q.w0; if (!RTM_PW.has(k)){ try { RTM_PW.set(k, pairWindow(q.w0, dk)); } catch(_){ RTM_PW.set(k, []); } } p = RTM_PW.get(k).find(x => x.a === q.a && x.c === q.c && x.ea === q.ea && x.ec === q.ec); }
+  return p ? {p, m} : null;
+}
+function mkRtm(q, now){
+  const x = mkRtmPair(q);
+  if (!x){ const {dk} = wNowMin(); return dk > q.dk ? {void: true} : {closed: 'Not available'}; }
+  const {p, m} = x, xa = wElapsed(p.ea - p.ma, p.ea, m), xc = wElapsed(p.ec - p.mc, p.ec, m), aOn = m < p.ea, cOn = m < p.ec;
+  if (!aOn && !cOn) return {done: p.ma > p.mc};
+  if (!aOn && xc > xa) return {done: false};
+  if (!cOn && xa > xc) return {done: true};
+  const rnd = mkSeed(`rtm${q.a}-${q.c}-${q.ea}-${Math.floor(now / 60000)}`); let w = 0; const n = 600;
+  // someone still going studies on for a while yet: typically what's left of a usual session, never nothing
+  const more = (x, r) => -Math.log(1 - rnd()) * Math.max(8, typical(r) * Math.exp(.35 * gaussOf(rnd)) - x);
+  for (let i = 0; i < n; i++){ const A = aOn ? xa + more(xa, p.ra) : xa, C = cOn ? xc + more(xc, p.rc) : xc; if (A > C) w++; }
+  return {p: btClamp(w / n)};
+}
+// a player's minutes over a day, week or month: Yes once they reach T
+function mkLbt(q, now){
+  const days = mkPeriodDays(q.per, q.pk), today = dayKey(now), last = days[days.length - 1], cur = mkPerMin(q.w, days, now);
+  if (cur >= q.T) return {done: true}; if (today > last) return {done: false};
+  const d = mkRest(mkDayR(botRating(q.w)), now, days.filter(x => x > today).length);
+  return {p: btClamp(1 - btPhi((q.T - cur - d.mu) / d.sd)), close: mkClose(last)};
+}
 function mkOtherEvents(now){
   const ev = [], today = dayKey(now), av = w => tnAv(w);
-  // ranked
-  if (R && R.on !== false && !rkUnplaced()){
-    const c = R.cur;
-    if (c && c.state === 'live' && !c.friendly) ev.push({id: 'rk|cur|' + c.t0, cat: 'rank', ic: 'vs', title: `Will you beat ${btName(c.b)}?`, sub: `Your ranked match · ${rankOf(c.br).full}`, closes: c.t0 + 12 * 3600e3,
-      rows: [{q: {mk: 'rkm', t0: c.t0, b: c.b, br: c.br}, label: 'You win', av: av(ME)}]});
-    const aft = (R.hist || []).reduce((m, x) => Math.max(m, x.t || 0), 0);
-    if (!(c && c.state === 'live')) ev.push({id: 'rk|streak|' + aft, cat: 'rank', ic: 'star', title: 'Win your next ranked matches?', sub: 'Ranked · counts matches you start after buying', closes: now + 7 * 864e5,
-      rows: [1, 3, 5].map(N => ({q: {mk: 'rkn', aft, N}, label: N === 1 ? 'Next match' : `Next ${N} in a row`}))});
-    const rk = rankOf(R.mmr), until = mkEndOfWeek(now), tg = [];
-    if (rk.hi) tg.push(rk.hi); if (RANKS[rk.i + 1] && isFinite(RANKS[rk.i + 1].lo) && !tg.includes(RANKS[rk.i + 1].lo)) tg.push(RANKS[rk.i + 1].lo);
-    if (tg.length) ev.push({id: 'rk|rise|' + dayKey(until), cat: 'rank', ic: 'flag', title: 'Will you rank up this week?', sub: `Ranked · you’re ${rk.full} at ${R.mmr.toLocaleString()}`, closes: until,
-      rows: tg.map(T => ({q: {mk: 'rkr', aft, T, until}, label: `${rankOf(T).full} (${T.toLocaleString()})`}))});
+  // ranked: every live top match
+  if (typeof wNowMin === 'function'){
+    const {dk, m} = wNowMin(), w0 = Math.floor(m / 120) * 120;
+    mkRkTopPairs().forEach(p => {
+      const q = {mk: 'rtm', dk, w0, a: p.a, c: p.c, ea: p.ea, ec: p.ec}, xa = Math.round(wElapsed(p.ea - p.ma, p.ea, m)), xc = Math.round(wElapsed(p.ec - p.mc, p.ec, m));
+      const st = (x, on) => `${x}m${on ? ' · studying' : ' · stopped'}`;
+      ev.push({id: `rk|${p.a}-${p.c}-${p.ea}`, cat: 'rank', ic: 'vs', two: true, live: 1, watch: `data-watch="${p.a}-${p.c}"`, title: `${btName(p.a)} vs ${btName(p.c)}`, sub: `Ranked · ${rankOf(p.ra).full} vs ${rankOf(p.rc).full}`, closes: (() => { const d = new Date(now); d.setHours(0, 0, 0, 0); return d.getTime() + Math.max(p.ea, p.ec) * 60000; })(),
+        rows: [{q, label: btName(p.a), av: av(p.a), side: 'y', stat: st(xa, m < p.ea)}, {q, label: btName(p.c), av: av(p.c), side: 'n', stat: st(xc, m < p.ec)}]});
+    });
   }
-  // Elimination: the top games running now
-  const games = []; for (let k = Math.floor((now - 4 * 3600e3) / 240000); k <= Math.floor(now / 240000); k++){ let L; try { L = elTopGame(k); } catch(_){ continue; } if (L.t0 > now || L.players.length < 3) continue; const f = elFacts(L, now); if (!f.over && f.alive.length >= 2) games.push([L, f]); }
-  games.slice(-6).reverse().forEach(([L, f]) => {
-    const alive = f.alive, rd = f.r + 1, more = alive.map(w => ({q: {mk: 'els', g: L.id, w, rd}, label: `${btName(w)} survives round ${rd}`, av: av(w)}));
+  // Elimination: every top game running
+  mkElTops().forEach(L => {
+    const f = elFacts(L, now); if (f.over || f.alive.length < 2) return;
+    const alive = f.alive, rd = f.r + 1, watch = `data-mkwatch="${L.id}"`;
+    const w0 = mkWin(now), nx = f.outs.some(([, o]) => o > w0 && o <= now) ? [] : alive.map(w => ({q: {mk: 'elnx', g: L.id, w, aft: w0}, label: `${btName(w)} goes out next`, av: av(w)}));
+    const more = nx.concat(alive.map(w => ({q: {mk: 'els', g: L.id, w, rd}, label: `${btName(w)} survives round ${rd}`, av: av(w)})));
     if (f.sdI >= 0 && f.r < f.sdI) more.push({q: {mk: 'elsd', g: L.id}, label: 'Reaches sudden death'});
-    ev.push({id: 'el|' + L.id, cat: 'elim', ic: 'elim', title: `Who wins ${L.name}?`, sub: `Elimination · ${L.players.length} players · round ${rd} · ${alive.length} left`, closes: f.end, rows: alive.map(w => ({q: {mk: 'elw', g: L.id, w}, label: btName(w), av: av(w)})), more, moreLabel: 'Survival and sudden death'});
+    ev.push({id: 'el|' + L.id, cat: 'elim', ic: 'elim', live: 1, watch, title: `Who wins ${L.name}?`, sub: `Elimination · ${L.players.length} players · round ${rd} · ${alive.length} left`, closes: f.end, rows: alive.map(w => ({q: {mk: 'elw', g: L.id, w}, label: btName(w), av: av(w)})), more, moreLabel: 'Who goes out next, survival and sudden death'});
   });
   // leaderboards
-  [['w', F.week, 'week'], ['m', F.month, 'month']].forEach(([per, fi, word]) => {
-    const pk = per === 'w' ? dayKey(startOfWeek(new Date(now))) : today.slice(0, 7), days = mkPeriodDays(per, pk), set = mkTopBy(fi, 5).slice();
-    if (mkMyNow() + mkPerMin(ME, days.filter(d => d < today), now) > Math.min(...set.map(w => BS[w * BF + fi]))) set[4] = ME;
-    ev.push({id: 'lb|' + per + '|' + pk, cat: 'lb', ic: 'bars', title: `Who studies the most this ${word}?`, sub: `Leaderboards · Hours this ${word} · top ${set.length}`, closes: mkClose(days[days.length - 1]),
-      rows: set.map(w => ({q: {mk: 'lbw', per, pk, w, set}, label: btName(w), av: av(w)}))});
+  const wk = dayKey(startOfWeek(new Date(now))), mo = today.slice(0, 7);
+  [['d', F.today, 'today', today], ['w', F.week, 'this week', wk], ['m', F.month, 'this month', mo]].forEach(([per, fi, word, pk]) => {
+    const days = mkPeriodDays(per, pk), set = mkTopBy(fi, 5).slice(), close = mkClose(days[days.length - 1]), lead = set[0];
+    ev.push({id: 'lb|' + per + '|' + pk, cat: 'lb', ic: 'bars', title: `Who studies the most ${word}?`, sub: `Leaderboards · top ${set.length} right now`, closes: close,
+      rows: set.map(w => ({q: {mk: 'lbw', per, pk, w, set}, label: btName(w), av: av(w), stat: mkHm(Math.round(mkPerMin(w, days, now)))}))});
+    if (per !== 'd'){ const two = [set[0], set[1]], q = {mk: 'lbw', per, pk, w: set[0], set: two};
+      ev.push({id: 'lb2|' + per + '|' + pk, cat: 'lb', ic: 'swap', two: true, title: `#1 vs #2 ${word}: who ends ahead?`, sub: `Leaderboards · Hours ${word}`, closes: close,
+        rows: [{q, label: btName(two[0]), av: av(two[0]), side: 'y', stat: mkHm(Math.round(mkPerMin(two[0], days, now)))}, {q, label: btName(two[1]), av: av(two[1]), side: 'n', stat: mkHm(Math.round(mkPerMin(two[1], days, now)))}]}); }
+    const cur = mkPerMin(lead, days, now), step = per === 'd' ? 60 : per === 'w' ? 300 : 1200, base = Math.ceil((cur + 1) / step) * step;
+    ev.push({id: 'lbt|' + per + '|' + pk + '|' + lead, cat: 'lb', ic: 'clock', title: `How much will ${btName(lead)} study ${word}?`, sub: `Leaderboards · #1 ${word} · ${mkHm(Math.round(cur))} so far`, closes: close,
+      rows: [0, 1, 2, 3, 4, 5].map(i => base + i * step).map(T => ({q: {mk: 'lbt', per, pk, w: lead, T}, label: `${mkHm(T)}+`}))});
   });
   return ev;
 }
-
+// the top-1,000 Elimination games running now (the ones you can watch)
+function mkElTops(){
+  if (typeof elTop !== 'function') return [];
+  try { return elTop(null, 999).map(x => x.L).filter(L => String(L.id)[0] === 'T'); } catch(_){ return []; }
+}
 
 /* ---- the Markets page ---- */
 const BT = {band: null, div: null};
@@ -798,7 +846,7 @@ function mkPortfolioHtml(now){
     ${open.length ? `<div class="mk-sh">Open · ${open.length}</div><ul class="mk-list">${openH}</ul>` : ''}${done.length ? `<div class="mk-sh">Settled</div><ul class="mk-list">${doneH}</ul>` : ''}
     ${all.length ? '' : `<div class="mk-empty">${mkIc('wallet')}<p>No positions yet. Buy an answer on any market.</p></div>`}</div>`;
 }
-const MK_EMPTY = {tour: 'No tournament markets right now. Rounds run Monday to Friday, and Monday’s opens on the weekend.', rank: 'Ranked markets open once you’ve played your placement games.', elim: 'No top Elimination games are running right now. A new one starts every few minutes.'};
+const MK_EMPTY = {lb: 'No leaderboard markets right now.', tour: 'No tournament markets right now. Rounds run Monday to Friday, and Monday’s opens on the weekend.', rank: 'No top ranked matches are live right now. They show up here (and under Top matches) when two top-1,000 players are mid-match.', elim: 'No top Elimination games are running right now. A new one starts every few minutes.'};
 // the combo you're building: shown as a bar at the bottom, and in full with its own ticket
 function mkComboQ(){ return {mk: 'combo', legs: MK.combo.map(l => ({q: l.q, side: l.side}))}; }
 function mkComboBar(now){
@@ -811,7 +859,7 @@ function mkComboBar(now){
    middle, and a trade ticket (with Combo) always open on the right ---- */
 const KX_CATS = [['all', 'All', 'grid'], ['fast', 'Fast · 15 min', 'bolt'], ['tour', 'Tournament', 'trophy'], ['rank', 'Ranked', 'shield'], ['elim', 'Elimination', 'elim'], ['lb', 'Leaderboards', 'bars']];
 const KX_KINDS = [['all', 'All'], ['games', 'Head to head'], ['futures', 'Futures'], ['props', 'Props']];
-const KX_GAMES = new Set(['match', 'h2h', 'spr', 'elw', 'rkm', 'elnx']), KX_FUT = new Set(['out', 'reach', 'lbw', 'rkr', 'rkn']);
+const KX_GAMES = new Set(['match', 'h2h', 'spr', 'elw', 'rkm', 'elnx', 'rtm']), KX_FUT = new Set(['out', 'reach', 'lbw', 'rkr', 'rkn']);
 const kxKind = ev => { const mk = ev.rows[0].q.mk; return KX_GAMES.has(mk) ? 'games' : KX_FUT.has(mk) ? 'futures' : 'props'; };
 const kxHue = w => w == null ? null : w === ME ? 'var(--accent)' : `hsl(${bot(w).hue} 62% 50%)`;
 const kxWho = q => q.mk === 'match' || q.mk === 'h2h' ? null : q.w != null ? q.w : q.mk === 'spr' && q.o !== 't' ? (q.o === 'a' ? q.a : q.b) : null;
@@ -839,7 +887,7 @@ function kxPickAttrs(ev, row, side){
 function kxCard(ev, now){
   const rows = ev.two || ev.fast ? ev.rows : ev.rows.map(row => ({row, info: mkRowPrice(row, now)})).filter(x => x.info.r.p != null).sort((a, b) => b.info.yp - a.info.yp).slice(0, 3).map(x => x.row);
   const n = ev.rows.length + (ev.more ? ev.more.length : 0) - (ev.two ? 1 : 0);
-  return `<article class="kx-card" data-mk="open" data-ev="${esc(ev.id)}" tabindex="0"><header><span class="kx-ic">${mkIc(ev.ic)}</span><div><b>${esc(ev.title)}</b><small>${ev.live ? '<em class="kx-live">LIVE</em>' : ''}${esc(ev.sub)}</small></div>${ev.fast ? kxCd(ev.closes) : ''}</header>
+  return `<article class="kx-card" data-mk="open" data-ev="${esc(ev.id)}" tabindex="0"><header><span class="kx-ic">${mkIc(ev.ic)}</span><div><b>${esc(ev.title)}</b><small>${ev.live ? '<em class="kx-live">LIVE</em>' : ''}${esc(ev.sub)}</small></div>${ev.fast ? kxCd(ev.closes) : ''}${ev.watch ? `<button class="kx-watch" ${ev.watch}>${mkIc('eye')}Watch</button>` : ''}</header>
     ${rows.map((row, i) => kxRow(ev, row, now, {i})).join('') || '<p class="hint">Nothing left to trade here.</p>'}
     <footer><span>${mkVol(mkEvVol(ev, now))} traded ${ev.fast ? 'this window' : 'today'}</span><span>${ev.fast ? '' : `${mkIc('clock')}Closes ${mkClock(ev.closes)}`}${n > rows.length ? ` · ${n} markets` : ''}</span></footer></article>`;
 }
@@ -891,7 +939,7 @@ function kxSide(now){
 function kxDetail(ev, now){
   const all = ev.rows.concat(MK.more && ev.more ? ev.more : []), sel = all.find(r => mkRowKey(r) === MK.sel) || all[0]; MK.sel = mkRowKey(sel);
   return `<button class="kx-back" data-mk="back">${mkIc('back')}All markets</button>
-    <div class="kx-dh"><span class="kx-ic lg">${mkIc(ev.ic)}</span><div><small>${ev.live ? '<em class="kx-live">LIVE</em>' : ''}${esc(ev.sub)}</small><h2>${esc(ev.title)}</h2><small>${ev.fast ? kxCd(ev.closes) : `${mkIc('clock')}Closes ${mkClock(ev.closes)}`} · ${mkVol(mkEvVol(ev, now))} traded today</small></div></div>
+    <div class="kx-dh"><span class="kx-ic lg">${mkIc(ev.ic)}</span><div><small>${ev.live ? '<em class="kx-live">LIVE</em>' : ''}${esc(ev.sub)}</small><h2>${esc(ev.title)}</h2>${ev.watch ? `<button class="kx-watch big" ${ev.watch}>${mkIc('eye')}Watch live</button>` : ''}<small>${ev.fast ? kxCd(ev.closes) : `${mkIc('clock')}Closes ${mkClock(ev.closes)}`} · ${mkVol(mkEvVol(ev, now))} traded today</small></div></div>
     <div class="kx-panel"><div class="mk-sl">${sel.av || ''}<b>${esc(sel.label)}</b><small>price · ${sel.q.w0 ? 'this window' : 'last 24 hours'}</small></div>${mkSpark(mkHistory(sel.q, sel.side || 'y', now).pts)}</div>
     <div class="kx-panel kx-list">${all.map(row => kxRow(ev, row, now, {big: 1})).join('')}</div>
     ${ev.more && ev.more.length ? `<button class="small-btn mk-moreb" data-mk="more">${mkIc('grid')}${MK.more ? 'Fewer markets' : `${ev.moreLabel || 'More on this match: margins and totals'} (${ev.more.length})`}</button>` : ''}
@@ -912,6 +960,7 @@ function mkRender(){
   mkRender.at = Date.now();
   const box = $('#mkBody'); if (!box || $('#page-markets').hidden) return;
   if (typeof RK_READY === 'undefined' || !RK_READY){ if (!box.firstChild) box.innerHTML = '<p class="hint">Loading markets…</p>'; return; }
+  if ((!LF.pairs || !LF.pairs.length) && typeof lfPrep === 'function' && Date.now() - (mkRender.prep || 0) > 4000){ mkRender.prep = Date.now(); lfPrep().then(ok => { if (ok !== false && typeof renderLive === 'function'){ try { renderLive(true); } catch(_){} } setTimeout(mkRender, 300); }); }
   const now = Date.now(); let evs = []; try { evs = mkEvents(now); } catch(err){ console.error('markets', err); }
   const nOpen = Object.values(btBets()).filter(b => b.st === 'open').length;
   let main = '';
@@ -946,6 +995,9 @@ setInterval(() => { const els = document.querySelectorAll('#mkBody [data-cd]'); 
 
 document.addEventListener('click', ev => {
   const go = ev.target.closest && ev.target.closest('[data-mk-go]'); if (go){ ev.preventDefault(); MK.cat = go.dataset.mkGo; MK.view = null; showPage('markets'); return; }
+  if (ev.target.closest && ev.target.closest('#mkBody [data-watch]')) return;      // ranked: the watch room opens it
+  const ew = ev.target.closest && ev.target.closest('#mkBody [data-mkwatch]');
+  if (ew){ ev.preventDefault(); const L = elOfId(ew.dataset.mkwatch); if (L){ EL.watch = {L, me: {ev: []}, chat: [], q: []}; EL.view = 'watch'; showPage('elim'); if (typeof elRender === 'function') elRender(); } return; }
   const a = ev.target.closest && ev.target.closest('[data-mk]'); if (!a || !a.closest('#mkBody')) return;
   const k = a.dataset.mk; if (k === 'coins' || k === 'search' || k === 'sort') return;
   ev.preventDefault();

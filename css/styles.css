@@ -3130,3 +3130,7 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
   .kx-side.open{transform:none;box-shadow:0 0 0 100vmax rgb(0 0 0 / .45)}.kx-close{display:grid;place-items:center;position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;border:0;background:var(--soft);color:var(--ink)}
   .kx-combo{margin-right:44px}}
 @media(max-width:600px){.kx-row{grid-template-columns:minmax(0,1fr) auto auto;gap:8px}.kx-x{display:none}.kx-h h2{font-size:24px}.kx-search input{width:90px}.kx-st{max-width:90px;overflow:hidden}}
+
+.kx-watch{display:inline-flex;align-items:center;gap:5px;flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 11px;font:inherit;font-weight:700;font-size:12px;cursor:pointer}
+.kx-watch:hover{border-color:#e5484d;color:#e5484d}.kx-watch .mk-ico{width:14px;height:14px}
+.kx-watch.big{margin:6px 0;padding:7px 14px;font-size:13px}
