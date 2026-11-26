@@ -105,7 +105,6 @@ function lvLevelUp(L, from){
     const x = _ph.apply(this, arguments);
     try {
       const nm = document.querySelector('#profBody #bmName'); if (nm && !nm.querySelector('.lvb')) nm.insertAdjacentHTML('beforeend', ' ' + lvBadge(lvLevelOf(profWho)));
-      if (profWho === ME){ const host = document.querySelector('#profBody'); const first = host && host.querySelector('.card'); if (first && !host.querySelector('.lv-card')) first.insertAdjacentHTML('afterend', lvCardHtml()); }
     } catch(e){ console.error(e); }
     return x;
   };

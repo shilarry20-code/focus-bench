@@ -136,7 +136,6 @@ function coRender(){
   renderProfilePage = function(){
     const x = _ph.apply(this, arguments);
     try {
-      if (profWho === ME){ const host = document.querySelector('#profBody'), lv = host && host.querySelector('.lv-card:not(.co-card)'); if (lv && !host.querySelector('.co-card')) lv.insertAdjacentHTML('afterend', coCardHtml()); }
     } catch(e){ console.error(e); }
     return x;
   };
