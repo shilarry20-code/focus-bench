@@ -156,7 +156,7 @@ function btTopOf(B, k){ let best = null, bm = -1; B.rounds[k].forEach(m => { if 
 const BT_FEE = 1, MK_SLOT = 300000, MK_SLOTS = 288;
 const mkSp = x => x > 30 ? x : Math.log1p(Math.exp(x));
 const mkSig = L => 1 / (1 + Math.exp(-L)), mkLogit = p => Math.log(p / (1 - p));
-const MK_DEEP = new Set(['match', 'out', 'top', 'h2h', 'elw', 'lbw']), MK_THIN = new Set(['ff', 'margin', 'total', 'els', 'elsd', 'ymin', 'ywk', 'rkn', 'rkr']);
+const MK_DEEP = new Set(['match', 'out', 'top', 'h2h', 'elw', 'lbw', 'spr', 'elko']), MK_THIN = new Set(['ff', 'margin', 'total', 'els', 'elsd', 'ymin', 'ywk', 'rkn', 'rkr']);
 const mkDepth = q => MK_DEEP.has(q.mk) ? {b: 500, rate: 2.2, vol: .05} : MK_THIN.has(q.mk) ? {b: 110, rate: .5, vol: .08} : {b: 250, rate: 1.1, vol: .06};
 const mkAct = t => Math.max(.35, BT_W[new Date(t).getHours()] / 7);       // how busy trading is at that hour (never below 35%)
 // the crowd's mood on one market over the last day, and its trades (no names), in 5-minute slots
@@ -307,7 +307,7 @@ const MK_IC = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'
 };
 const mkIc = (k, cls = '') => `<svg class="mk-ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MK_IC[k] || ''}</svg>`;
-const MK_KIND_IC = {match: 'vs', out: 'trophy', reach: 'flag', min: 'clock', margin: 'ruler', total: 'sum', ff: 'off', top: 'star', ups: 'bolt', h2h: 'swap', rkm: 'vs', rkn: 'star', rkr: 'flag', elw: 'elim', els: 'elim', elsd: 'bolt', lbw: 'bars', ymin: 'user', ywk: 'user', combo: 'layers'};
+const MK_KIND_IC = {match: 'vs', out: 'trophy', reach: 'flag', min: 'clock', margin: 'ruler', total: 'sum', ff: 'off', top: 'star', ups: 'bolt', h2h: 'swap', spr: 'clock', elko: 'bolt', elnx: 'elim', rkm: 'vs', rkn: 'star', rkr: 'flag', elw: 'elim', els: 'elim', elsd: 'bolt', lbw: 'bars', ymin: 'user', ywk: 'user', combo: 'layers'};
 
 /* ---- events: the questions on the board ---- */
 // each event: {id, cat, ic, title, sub, closes, two, rows: [{q, label, av, side}], more}; a 'two' event is one market shown as its two answers
@@ -339,7 +339,7 @@ function mkTourneyEvents(now){
 }
 const btAlive = B => { const gone = new Set(); B.rounds.forEach(ms => ms.forEach(m => { if (m.st === 'done' && m.win && m.a && m.b) gone.add((m.win === m.a ? m.b : m.a).w); })); return B.ps.filter(p => !gone.has(p.w)); };
 const MK_CATS = [['trend', 'Trending', 'trend'], ['soon', 'Ending soon', 'clock'], ['tour', 'Tournament', 'trophy'], ['rank', 'Ranked', 'shield'], ['elim', 'Elimination', 'elim'], ['lb', 'Leaderboards', 'bars'], ['pos', 'Portfolio', 'wallet']];
-function mkEvents(now){ let a = [], b = []; try { a = mkTourneyEvents(now); } catch(e){ console.error('markets', e); } try { b = mkOtherEvents(now); } catch(e){ console.error('markets', e); } return a.concat(b); }
+function mkEvents(now){ let a = [], b = [], c = []; try { c = mkFastEvents(now); } catch(e){ console.error('markets', e); } try { a = mkTourneyEvents(now); } catch(e){ console.error('markets', e); } try { b = mkOtherEvents(now); } catch(e){ console.error('markets', e); } return c.concat(a, b); }
 
 /* ---- more markets: Ranked, Elimination, Leaderboards, You, and combos ----
    Same rule as the tournament: chances come from ratings, what's on the board right now and how much time is left,
@@ -352,7 +352,7 @@ function mkEvents(now){ let a = [], b = []; try { a = mkTourneyEvents(now); } ca
      lbw  w has the most minutes this week/month among the players listed (per, pk, w, set)
      ymin you study T+ minutes on day dk                    ywk  you study T+ minutes in the week starting pk
      combo every pick in legs is right */
-const MKX = new Set(['rkm', 'rkn', 'rkr', 'elw', 'els', 'elsd', 'lbw', 'ymin', 'ywk', 'combo']);
+const MKX = new Set(['rkm', 'rkn', 'rkr', 'elw', 'els', 'elsd', 'lbw', 'ymin', 'ywk', 'combo', 'spr', 'elko', 'elnx']);
 const MK_SELF = new Set(['rkm', 'rkn', 'rkr', 'ymin', 'ywk']);
 const mkDayR = r => Math.min(420, Math.max(40, 160 * Math.pow(2, ((+r || 1000) - 1650) / 800)));     // a typical day by rating
 const mkMyNow = () => tnLogMin(dayKey(Date.now()), btNowMin(Date.now())) + (typeof tnLiveMin === 'function' ? tnLiveMin() : 0);
@@ -505,12 +505,103 @@ function mkCombo(q, now){
   return open === 'closed' ? {p: btClamp(p), closed: 'A pick has stopped trading'} : {p: btClamp(p)};
 }
 
+
+/* ---- fast markets: 15-minute windows that settle and roll over all day ----
+     spr   a tournament sprint: in the window starting w0, o = 'a' (a studies more), 'b' (b does) or 't' (a tie, including neither)
+     elko  someone is knocked out of Elimination game g in the window starting w0
+     elnx  w is the next player knocked out of game g after aft
+   Prices come from what's visible: who's studying right now, minutes so far in the window and the time of day. */
+const MK_WIN = 15 * 60000;
+const mkWin = t => Math.floor(t / MK_WIN) * MK_WIN;
+const mkHM = t => new Date(t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+const mkMinOf = t => { const d = new Date(t); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; };
+function mkOn(w, dk, m){ if (w === ME) return typeof focusing === 'function' && focusing(); return sitsOf(w, dk).some(([a, b]) => a <= m && b > m); }
+// minutes w studied between minute s and t of day dk (your unlogged block counts too)
+function mkWinMin(w, dk, s, t, now){
+  if (w !== ME) return Math.max(0, tnBotMin(w, dk, t) - tnBotMin(w, dk, s));
+  let m = tnLogMin(dk, t) - tnLogMin(dk, s);
+  const live = typeof tnLiveMin === 'function' ? tnLiveMin() : 0;
+  if (live && dk === dayKey(now)){ const b = mkMinOf(now), a = b - live; m += Math.max(0, Math.min(b, t) - Math.max(a, s)); }
+  return Math.round(m);
+}
+const SPR_C = new Map();
+function mkSpr(q, now){
+  const end = q.w0 + MK_WIN, dk = dayKey(q.w0), s0 = mkMinOf(q.w0), s1 = s0 + 15, pick = (x, y) => x > y ? 'a' : y > x ? 'b' : 't';
+  if (now >= end + 60000){
+    if (q.a === ME || q.b === ME){ const live = typeof tnLiveMin === 'function' ? tnLiveMin() : 0; if (live && now - live * 60000 < end) return {closed: 'Settling when you stop'}; }
+    return {done: pick(mkWinMin(q.a, dk, s0, s1, now), mkWinMin(q.b, dk, s0, s1, now)) === q.o};
+  }
+  const key = `${q.wk}|${q.band}|${q.div}|${q.a}|${q.b}|${q.w0}|${Math.floor(now / 60000)}`;
+  let S = SPR_C.get(key);
+  if (!S){
+    if (SPR_C.size > 200) SPR_C.clear();
+    const nm = Math.max(s0, mkMinOf(now)), ca = mkWinMin(q.a, dk, s0, nm, now), cb = mkWinMin(q.b, dk, s0, nm, now), rem = Math.max(0, Math.round(s1 - nm));
+    const pOn = .0016 * mkAct(now), pOff = 1 / 40, rnd = mkSeed(key), n = 600, c = {a: 0, b: 0, t: 0};
+    const onA = mkOn(q.a, dk, nm), onB = mkOn(q.b, dk, nm);
+    for (let i = 0; i < n; i++){
+      let xa = ca, xb = cb, oa = onA, ob = onB;
+      for (let m = 0; m < rem; m++){ oa = oa ? rnd() >= pOff : rnd() < pOn; ob = ob ? rnd() >= pOff : rnd() < pOn; if (oa) xa++; if (ob) xb++; }
+      c[pick(xa, xb)]++;
+    }
+    S = {c, n, ca, cb, onA, onB}; SPR_C.set(key, S);
+  }
+  return {p: btClamp(S.c[q.o] / S.n), close: end - 60000, sprint: S};
+}
+function mkElFast(q, now){
+  const L = elOfId(q.g); if (!L || L.t0 > now) return {closed: 'Not started'};
+  const f = elFacts(L, now);
+  if (q.mk === 'elko'){
+    const end = q.w0 + MK_WIN, hit = f.outs.some(([, o]) => o >= q.w0 && o < end && o <= now);
+    if (hit) return {done: true};
+    if (now >= end || f.over) return {done: false};
+    const a = f.A[Math.min(f.r, f.A.length - 1)], mean = f.alive.reduce((x, w) => x + botRating(w), 0) / Math.max(1, f.alive.length);
+    const lam = f.alive.reduce((x, w) => x + elHaz(a) * Math.pow(10, -(botRating(w) - mean) / 900), 0) / L.rules.round;
+    return {p: btClamp(1 - Math.exp(-lam * (end - now) / 60000)), close: end - 60000};
+  }
+  // elnx
+  if (!L.players.includes(q.w)) return {void: true};
+  const next = f.outs.filter(([, o]) => o > q.aft).sort((x, y) => x[1] - y[1])[0];
+  if (next && next[1] <= now) return {done: next[0] === q.w};
+  if (elBotPlan(L, q.w).out <= q.aft) return {void: true};
+  const mean = f.alive.reduce((x, w) => x + botRating(w), 0) / Math.max(1, f.alive.length), h = w => Math.pow(10, -(botRating(w) - mean) / 900);
+  if (!f.alive.includes(q.w) || f.alive.length < 2) return {closed: 'Waiting'};
+  return {p: btClamp(h(q.w) / f.alive.reduce((x, w) => x + h(w), 0))};
+}
+function mkFastEvents(now){
+  const ev = [], w0 = mkWin(now), end = w0 + MK_WIN, span = `${mkHM(w0)}–${mkHM(end)}`, av = w => tnAv(w);
+  // tournament sprints on the live round
+  try {
+    const v = btView(now), e = btEntry(v.wk, v.band, v.div), k = e ? btRound(e, now) : null;
+    if (e && k != null && tnDayKey(e.wk, k) === dayKey(now)){
+      const B = tnBracket(e, now), base = {wk: e.wk, band: e.band, div: e.div || v.div || 0}, dk = dayKey(now), s0 = mkMinOf(w0), nm = mkMinOf(now);
+      B.rounds[k].filter(m => m.a && m.b && m.st === 'live').forEach(m => {
+        const q = o => ({...base, mk: 'spr', k, a: m.a.w, b: m.b.w, w0, o}), on = w => mkOn(w, dk, nm) ? ' · studying' : '';
+        ev.push({id: `f|spr|${base.wk}|${base.band}|${base.div}|${m.a.w}|${w0}`, cat: 'fast', fast: 1, ic: 'clock', title: `${btName(m.a.w)} vs ${btName(m.b.w)}: who studies more ${span}?`, sub: `Tournament sprint · ${TN_ROUNDS[k]}`, closes: end, live: 1,
+          rows: [{q: q('a'), label: btName(m.a.w), av: av(m.a.w), stat: `${mkWinMin(m.a.w, dk, s0, nm, now)}m${on(m.a.w)}`}, {q: q('b'), label: btName(m.b.w), av: av(m.b.w), stat: `${mkWinMin(m.b.w, dk, s0, nm, now)}m${on(m.b.w)}`}, {q: q('t'), label: 'Tie or neither'}]});
+      });
+    }
+  } catch(err){ console.error('markets', err); }
+  // Elimination knockouts in this window, and who goes out next
+  const games = [];
+  for (let k = Math.floor((now - 4 * 3600e3) / 240000); k <= Math.floor(now / 240000); k++){
+    let L; try { L = elTopGame(k); } catch(_){ continue; } if (L.t0 > now || L.players.length < 3) continue;
+    const f = elFacts(L, now); if (!f.over && f.alive.length >= 2) games.push([L, f]);
+  }
+  for (const [L, f] of games.slice(-6).reverse()){
+    ev.push({id: `f|elko|${L.id}|${w0}`, cat: 'fast', fast: 1, ic: 'bolt', title: `Anyone knocked out of ${L.name} by ${mkHM(end)}?`, sub: `Elimination · ${f.alive.length} left · round ${f.r + 1}`, closes: end, live: 1,
+      rows: [{q: {mk: 'elko', g: L.id, w0}, label: 'Someone goes out'}]});
+    if (!f.outs.some(([, o]) => o > w0 && o <= now)) ev.push({id: `e|elnx|${L.id}|${w0}`, cat: 'elim', ic: 'elim', title: `Who goes out next in ${L.name}?`, sub: `Elimination · ${f.alive.length} left`, closes: f.end, live: 1,
+      rows: f.alive.map(w => ({q: {mk: 'elnx', g: L.id, w, aft: w0}, label: btName(w), av: av(w)}))});
+  }
+  return ev;
+}
 function mkEvalX(q, now){
   switch (q.mk){
     case 'rkm': return mkRkm(q, now); case 'rkn': return mkRkn(q, now); case 'rkr': return mkRkr(q, now);
     case 'elw': case 'els': case 'elsd': return mkEl(q, now);
     case 'lbw': return mkLbw(q, now); case 'ymin': return mkYmin(q, now); case 'ywk': return mkYwk(q, now);
     case 'combo': return mkCombo(q, now);
+    case 'spr': return mkSpr(q, now); case 'elko': case 'elnx': return mkElFast(q, now);
   }
   return {closed: 'Unknown'};
 }
@@ -528,6 +619,9 @@ function mkTitleX(q){
     case 'ymin': return `You study ${mkHm(q.T)}+ ${q.dk === dayKey(Date.now()) ? 'today' : 'on ' + new Date(q.dk + 'T12:00').toLocaleDateString([], {weekday: 'long'})}`;
     case 'ywk': return `You study ${mkHm(q.T)}+ this week`;
     case 'combo': return `Combo: ${q.legs.length} picks`;
+    case 'spr': return q.o === 't' ? `${btName(q.a)} and ${btName(q.b)} tie ${mkHM(q.w0)}–${mkHM(q.w0 + MK_WIN)}` : `${btName(q.o === 'a' ? q.a : q.b)} studies more ${mkHM(q.w0)}–${mkHM(q.w0 + MK_WIN)}`;
+    case 'elko': return `Someone is knocked out of ${elName(q.g)} by ${mkHM(q.w0 + MK_WIN)}`;
+    case 'elnx': return `${btName(q.w)} is the next one out of ${elName(q.g)}`;
   }
   return '';
 }
@@ -542,6 +636,9 @@ function mkRulesX(q){
     case 'lbw': return `Yes if ${btName(q.w)} has the most Focus minutes this ${q.per === 'w' ? 'week (Sunday to Saturday)' : 'month'} of the ${q.set.length} players listed, who were the top ${q.set.length} when the market opened. Trading closes at 11 PM on the last day.`;
     case 'ymin': return `Yes once you have ${mkHm(q.T)} of Focus minutes that day (midnight to midnight). Trading closes at 11 PM. Only Yes can be bought.`;
     case 'ywk': return `Yes once you have ${mkHm(q.T)} of Focus minutes this week (Sunday to Saturday). Trading closes at 11 PM Saturday. Only Yes can be bought.`;
+    case 'spr': return `Compares ${btName(q.a)} and ${btName(q.b)}’s Focus minutes from ${mkHM(q.w0)} to ${mkHM(q.w0 + MK_WIN)} only, not their whole day. ${q.o === 't' ? 'Yes if they finish the window level, including when neither studies.' : `Yes if ${btName(q.o === 'a' ? q.a : q.b)} has more.`} Trading closes a minute before the window ends; it settles right after.`;
+    case 'elko': return `Yes if anyone in ${elName(q.g)} is knocked out between ${mkHM(q.w0)} and ${mkHM(q.w0 + MK_WIN)}. Trading closes a minute before the window ends.`;
+    case 'elnx': return `Yes if ${btName(q.w)} is the next player knocked out of ${elName(q.g)} after ${mkHM(q.aft)}.`;
     case 'combo': return `Pays 100 coins only if every pick is right: ${q.legs.map(l => `${btPickWhat(l.q, l.side)} on “${btTitle(l.q)}”`).join('; ')}. If any pick is wrong it settles No; if a pick is cancelled you get your coins back.`;
   }
   return '';
@@ -549,6 +646,7 @@ function mkRulesX(q){
 function mkBlockedX(q, side){
   if (q.mk === 'combo'){ for (const l of q.legs){ const why = btBlocked(l.q, l.side, (btCtx(l.q, Date.now()) || {}).B); if (why) return why; } return side === 'y' ? null : 'Combos are bought on Yes'; }
   if (MK_SELF.has(q.mk)) return side === 'y' ? null : 'You can only back yourself';
+  if (q.mk === 'spr' && (q.a === ME || q.b === ME)){ const mine = q.o === (q.a === ME ? 'a' : 'b'); return mine && side === 'y' ? null : 'You can only back yourself'; }
   if (q.mk === 'lbw' && q.set.includes(ME) && q.w !== ME) return 'Not while you’re in this race';
   if (q.mk === 'lbw' && q.w === ME && side !== 'y') return 'You can only back yourself';
   return null;
@@ -598,7 +696,7 @@ function mkOtherEvents(now){
 
 /* ---- the Markets page ---- */
 const BT = {band: null, div: null};
-const MK = {cat: 'trend', view: null, sel: null, pick: null, coins: 100, msg: '', q: '', more: false, combo: store.get('fb.mkcombo', [])};
+const MK = {cat: 'all', sort: 'trend', kind: 'all', tab: 'buy', sheet: false, picked: false, view: null, sel: null, pick: null, coins: 100, msg: '', q: '', more: false, combo: store.get('fb.mkcombo', [])};
 const mkSaveCombo = () => store.set('fb.mkcombo', MK.combo);
 const mkSelfRow = q => MK_SELF.has(q.mk) || (q.mk === 'lbw' && q.w === ME);
 let MK_SNAP = store.get('fb.mksnap', {day: '', p: {}});
@@ -630,26 +728,12 @@ function mkBuyBtn(row, btnSide, info, evId){
   if (info.r.closed || why || p == null) return `<button class="mk-buy ${cls}" disabled title="${esc(why || info.r.closed || '')}">${mkIc(ic)}${label}<b>–</b></button>`;
   return `<button class="mk-buy ${cls}${on ? ' on' : ''}" data-mk="pick" data-ev="${esc(evId)}" data-q='${esc(JSON.stringify(q))}' data-side="${s}">${mkIc(ic)}${label}<b>${mkQuoteR(info.r, q, s).buy(1)}¢</b></button>`;
 }
-function mkLine(ev, row, now, big){
-  const info = mkRowPrice(row, now), mv = info.yp != null ? mkMove(mkRowKey(row), info.yp) : 0;
-  if (info.r.fair != null && MKX.has(row.q.mk)) mkRec(btKey(row.q), info.r.fair, now);
-  const pct = info.yp != null ? mkPct(info.yp) : info.r.done != null ? (info.r.done === (row.side !== 'n') ? 'Yes' : 'No') : '–';
-  const lab = big ? `<button class="mk-rl" data-mk="sel" data-k="${esc(mkRowKey(row))}">${row.av || ''}<span>${esc(row.label)}</span></button>` : `<span class="mk-rl">${row.av || ''}<span>${esc(row.label)}</span></span>`;
-  return `<li class="${big && mkRowKey(row) === MK.sel ? 'sel' : ''}">${lab}<span class="mk-pct">${pct}${mkMoveHtml(mv)}</span><span class="mk-bb">${mkBuyBtn(row, 'y', info, ev.id)}${row.side || mkSelfRow(row.q) ? '' : mkBuyBtn(row, 'n', info, ev.id)}</span></li>`;
-}
-function mkCardHtml(ev, now){
-  const rows = ev.two ? ev.rows : ev.rows.map(row => ({row, info: mkRowPrice(row, now)})).filter(x => x.info.r.p != null).sort((a, b) => b.info.yp - a.info.yp).slice(0, 3).map(x => x.row);
-  const n = (ev.two ? 1 : ev.rows.length) + (ev.more ? ev.more.length : 0);
-  return `<div class="mk-card" data-mk="open" data-ev="${esc(ev.id)}" role="button" tabindex="0"><div class="mk-ct"><span class="mk-cic">${mkIc(ev.ic)}</span><span class="mk-cat">${esc(ev.sub)}</span></div>
-    <b class="mk-title">${esc(ev.title)}</b><ul class="mk-rows">${rows.map(row => mkLine(ev, row, now, false)).join('') || '<li class="hint">Nothing left to trade here.</li>'}</ul>
-    <div class="mk-cf"><span>${mkIc('clock')}Closes ${mkClock(ev.closes)}</span><span>${mkIc('bars')}${mkVol(mkEvVol(ev, now))} traded today</span></div></div>`;
-}
 function mkSpark(pts){
   if (pts.length < 2) return '<p class="hint mk-nochart">The chart fills in as the day goes on.</p>';
   const W = 600, H = 170, x = i => (i / (pts.length - 1) * W).toFixed(1), y = p => (H - 6 - p * (H - 12)).toFixed(1);
   const d = pts.map((p, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(p)).join(''), last = pts[pts.length - 1];
   return `<div class="mk-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="M0 ${y(.5)}H${W}" class="mid"/><path d="${d}L${W} ${H}L0 ${H}Z" class="area"/><path d="${d}" class="ln"/></svg>
-    <span class="mk-ax"><span>24h ago</span><span>now · ${mkPct(last)}</span></span></div>`;
+    <span class="mk-ax"><span>earlier</span><span>now · ${mkPct(last)}</span></span></div>`;
 }
 // the chance through today, one point an hour, from the same model fed the board as it stood then
 let MK_HIST = store.get('fb.mkhist', {});
@@ -667,7 +751,7 @@ function mkHistory(q, side, now){
   if (MKX.has(q.mk)){ const h = MK_HIST[key] || []; fairAt = t => { let v = null; for (const [tt, p] of h){ if (tt <= t) v = p; else break; } return v != null ? v : h.length ? h[0][1] : r.fair; }; }
   else { const hr = []; for (let h = 0; h * 60 <= btNowMin(now); h++){ let f = null; try { f = btFair(q, d0.getTime() + h * 3600000 + 60000).p; } catch(_){} hr.push(f); }
     const first = hr.find(x => x != null); fairAt = t => { if (t < d0.getTime()) return first != null ? first : r.fair; const v = hr[Math.floor((t - d0.getTime()) / 3600000)]; return v != null ? v : r.fair; }; }
-  const pts = []; r.flow.es.forEach(([t, e], i) => { if (i % 6) return; const p = mkSig(mkCrowdL(fairAt(t), e)); pts.push(side === 'n' ? 1 - p : p); });
+  const pts = [], step = q.w0 ? 1 : 6, from = q.w0 ? q.w0 - MK_WIN : 0; r.flow.es.forEach(([t, e], i) => { if (i % step || t < from) return; const p = mkSig(mkCrowdL(fairAt(t), e)); pts.push(side === 'n' ? 1 - p : p); });
   pts.push(side === 'n' ? 1 - r.p : r.p);
   return {pts};
 }
@@ -678,7 +762,7 @@ function mkTrades(rows, now, max = 14){
     const key = btKey(row.q); if (seen.has(key)) return; seen.add(key);
     const r = btPrice(row.q, now); if (r.fair == null || !r.flow) return;
     const two = row.q.mk === 'match' || row.q.mk === 'h2h', other = two ? rows.find(x => btKey(x.q) === key && x.side === 'n') : null;
-    r.flow.trades.forEach(tr => { const py = mkSig(mkCrowdL(r.fair, tr.e)), c = Math.max(1, Math.min(99, Math.round((tr.yes ? py : 1 - py) * 100)));
+    r.flow.trades.forEach(tr => { if (row.q.w0 && tr.t < row.q.w0 - MK_WIN) return; const py = mkSig(mkCrowdL(r.fair, tr.e)), c = Math.max(1, Math.min(99, Math.round((tr.yes ? py : 1 - py) * 100)));
       out.push({t: tr.t, n: tr.n, c, what: two ? (tr.yes ? row.label : other ? other.label : 'No') : tr.yes ? 'Yes' : 'No', on: two ? '' : row.label, yes: two || tr.yes}); });
   });
   Object.values(btBets()).forEach(b => { if (b.mk === 'combo' || now - b.t > 864e5 || !seen.has(btKey(b))) return; const row = rows.find(x => btKey(x.q) === btKey(b)), two = b.mk === 'match' || b.mk === 'h2h';
@@ -692,36 +776,10 @@ function mkTradesHtml(list, now, withMarket){
   return `<ul class="mk-feed">${list.map(x => `<li class="${x.me ? 'me' : ''}"><i class="mk-dot ${x.yes ? 'yes' : 'no'}"></i><span>${x.me ? `<b>You ${x.sold ? 'sold' : 'bought'}</b> ` : 'Bought '}${x.n.toLocaleString()} <b class="${x.yes ? 'yes' : 'no'}">${esc(x.what)}</b>${x.on ? ` · ${esc(x.on)}` : ''}${withMarket && x.ev ? `<small>${esc(x.ev)}</small>` : ''}</span><span class="mk-fc">${x.c}¢</span><span class="mk-ft">${mkAgo(x.t, now)}</span></li>`).join('')}</ul>`;
 }
 const mkVol = n => n < 1000 ? n.toLocaleString() : (n / 1000).toFixed(n < 1e4 ? 1 : 0) + 'K';
-function mkEvVol(ev, now){ const seen = new Set(); let v = 0; ev.rows.concat(ev.more || []).forEach(row => { const k = btKey(row.q); if (seen.has(k)) return; seen.add(k); try { const r = btPrice(row.q, now); if (r.flow) v += r.flow.vol; } catch(_){} }); return v; }
+function mkEvVol(ev, now){ const seen = new Set(); let v = 0; ev.rows.concat(ev.more || []).forEach(row => { const k = btKey(row.q); if (seen.has(k)) return; seen.add(k); try { const r = btPrice(row.q, now); if (r.flow) v += row.q.w0 ? r.flow.trades.filter(t => t.t >= row.q.w0).reduce((x, t) => x + t.n, 0) : r.flow.vol; } catch(_){} }); return v; }
 function mkSumHtml(Q, n, cost){
   const row = (k, l, v, cls = '') => `<span><span>${l}</span><b data-s="${k}" class="${cls}">${v}</b></span>`;
-  return `<div class="mk-tsum" data-mk-sum>${row('n', 'Contracts', n.toLocaleString())}${row('avg', 'Average price', n ? Math.round(cost / n) + '¢' : '–')}${row('cost', 'Cost', cost.toLocaleString())}${row('after', 'Price after you buy', n && !Q.combo ? mkPct(Q.after(n)) : '–')}${row('pay', 'Pays if right', (n * 100).toLocaleString(), 'win')}</div>`;
-}
-function mkTicketHtml(){
-  const pk = MK.pick; if (!pk) return `<div class="mk-ticket empty">${mkIc('grid')}<p>Pick an answer to buy it here.</p></div>`;
-  const r = btPrice(pk.q, Date.now()); if (r.closed || r.p == null) return `<div class="mk-ticket empty"><p>That market just closed.</p></div>`;
-  const Q = mkQuoteR(r, pk.q, pk.side), price = Q.buy(1), coins = Math.max(0, Math.floor(+MK.coins || 0)), n = mkMaxN(Q, coins), cost = n ? Q.buy(n) : 0;
-  const two = pk.q.mk === 'match' || pk.q.mk === 'h2h', combo = pk.q.mk === 'combo', what = combo ? 'combo' : btPickWhat(pk.q, pk.side);
-  const inCombo = MK.combo.some(l => btKey(l.q) === btKey(pk.q)), canCombo = !combo && (inCombo || MK.combo.length < 6);
-  return `<form class="mk-ticket"><div class="mk-tt">${mkIc(pk.side === 'y' || two ? 'check' : 'x', pk.side === 'y' || two ? 'yes' : 'no')}<span>Buy <b>${esc(what)}</b><small>${esc(btTitle(pk.q))}</small></span></div>
-    <div class="mk-tp"><span>Price</span><b>${price}¢</b></div>
-    <label class="mk-tc"><span>Coins</span><input type="number" min="${price}" step="1" value="${coins || ''}" inputmode="numeric" data-mk="coins"></label>
-    <span class="mk-quick">${[100, 500, 1000, 5000].map(v => `<button type="button" class="small-btn" data-mk="amt" data-v="${v}">${v.toLocaleString()}</button>`).join('')}<button type="button" class="small-btn" data-mk="amt" data-v="max">Max</button></span>
-    ${mkSumHtml(Q, n, cost)}
-    <button class="btn primary mk-go" data-price="${price}" title="Buy ${esc(what)}">${mkIc('check')}<span>Buy ${esc(what)}</span></button>${canCombo ? `<button type="button" class="small-btn mk-addc" data-mk="addc">${mkIc(inCombo ? 'check' : 'layers')}${inCombo ? 'In your combo (update pick)' : 'Add to combo'}</button>` : ''}<button type="button" class="small-btn" data-mk="cancel">Cancel</button>
-    ${MK.msg ? `<p class="mk-msg">${esc(MK.msg)}</p>` : ''}<p class="hint">Each contract pays 100 coins if you’re right. Your trade moves the price, so bigger trades cost more per contract. 1 coin fee per contract.</p></form>`;
-}
-function mkDetailHtml(ev, now){
-  const all = ev.rows.concat(MK.more && ev.more ? ev.more : []);
-  const sel = all.find(r => mkRowKey(r) === MK.sel) || all[0]; MK.sel = mkRowKey(sel);
-  return `<div class="mk-detail"><div class="mk-main"><button class="small-btn mk-back" data-mk="back">${mkIc('back')}All markets</button>
-    <div class="mk-dh"><span class="mk-cic lg">${mkIc(ev.ic)}</span><div><small>${esc(ev.sub)}</small><h2>${esc(ev.title)}</h2><small class="mk-cl">${mkIc('clock')}Closes ${mkClock(ev.closes)}</small></div></div>
-    <div class="card mk-dchart"><div class="mk-sl">${sel.av || ''}<b>${esc(sel.label)}</b><small>price · last 24 hours</small></div>${mkSpark(mkHistory(sel.q, sel.side || 'y', now).pts)}</div>
-    <ul class="mk-rows big">${all.map(row => mkLine(ev, row, now, true)).join('')}</ul>
-    ${ev.more && ev.more.length ? `<button class="small-btn mk-moreb" data-mk="more">${mkIc('grid')}${MK.more ? 'Fewer markets' : `${ev.moreLabel || 'More on this match: margins and totals'} (${ev.more.length})`}</button>` : ''}
-    <div class="card mk-trades"><b>${mkIc('trend')}Recent trades</b>${mkTradesHtml(mkTrades(all, now), now)}</div>
-    <div class="card mk-rules"><b>Rules</b><p>${esc(btRules(sel.q))}</p><p class="hint">Prices are set by trading. Other players trade here all day (slower overnight), going on ratings, minutes so far and time left, never anyone’s study history, and they don’t always get it right. Your trades move the price too.</p></div></div>
-    <aside class="mk-side">${mkTicketHtml()}</aside></div>`;
+  return `<div class="mk-tsum" data-mk-sum>${row('n', 'Contracts', n.toLocaleString())}${row('avg', 'Average price', n ? Math.round(cost / n) + '¢' : '–')}${row('cost', 'Cost', cost.toLocaleString())}${Q.combo ? '' : row('after', 'Price after you buy', n ? mkPct(Q.after(n)) : '–')}${row('pay', 'Pays if right', (n * 100).toLocaleString(), 'win')}</div>`;
 }
 function mkPortfolioHtml(now){
   const all = Object.values(btBets()).sort((a, b) => b.t - a.t), open = all.filter(b => b.st === 'open'), done = all.filter(b => b.st !== 'open').slice(0, 40);
@@ -740,34 +798,6 @@ function mkPortfolioHtml(now){
     ${open.length ? `<div class="mk-sh">Open · ${open.length}</div><ul class="mk-list">${openH}</ul>` : ''}${done.length ? `<div class="mk-sh">Settled</div><ul class="mk-list">${doneH}</ul>` : ''}
     ${all.length ? '' : `<div class="mk-empty">${mkIc('wallet')}<p>No positions yet. Buy an answer on any market.</p></div>`}</div>`;
 }
-function mkRender(){
-  const box = $('#mkBody'); if (!box || $('#page-markets').hidden) return;
-  if (typeof RK_READY === 'undefined' || !RK_READY){ if (!box.firstChild) box.innerHTML = '<p class="hint">Loading markets…</p>'; return; }
-  const now = Date.now(); let evs = []; try { evs = mkEvents(now); } catch(err){ console.error('markets', err); }
-  const bal = coTotals().balance, nOpen = Object.values(btBets()).filter(b => b.st === 'open').length;
-  let html = `<div class="mk-top"><div class="mk-h1"><span class="mk-cic lg">${mkIc('trend')}</span><div><b>Trade Yes or No on what happens next</b><small>Each contract pays 100 coins if you’re right. Sell any time before it settles.</small></div></div>
-    <span class="mk-bal"><svg class="co-ic" viewBox="0 0 24 24" aria-hidden="true">${CO_IC}</svg>${bal.toLocaleString()}</span></div>
-    <div class="mk-bar"><div class="mk-cats" role="tablist">${MK_CATS.map(([k, l, ic]) => `<button data-mk="cat" data-v="${k}" aria-selected="${MK.cat === k && !MK.view}">${mkIc(ic)}${l}${k === 'pos' && nOpen ? ` <i class="mk-n">${nOpen}</i>` : ''}</button>`).join('')}</div>
-      <label class="mk-search">${mkIc('search')}<input type="search" placeholder="Search players or questions" value="${esc(MK.q)}" data-mk="search"></label></div>`;
-  if (MK.view === 'combo'){ domMorph(box, html + mkComboHtml(now)); return; }
-  if (MK.view){ const ev = evs.find(x => x.id === MK.view); if (ev){ domMorph(box, html + mkDetailHtml(ev, now) + mkComboBar(now)); return; } MK.view = null; }
-  if (MK.cat === 'pos'){ domMorph(box, html + mkPortfolioHtml(now)); return; }
-  let list = evs;
-  if (MK.q){ const s = MK.q.toLowerCase(); list = list.filter(ev => (ev.title + ' ' + ev.rows.map(r => r.label).join(' ')).toLowerCase().includes(s)); }
-  const score = ev => ev.rows.reduce((n, r) => { const i = mkRowPrice(r, now); return Math.max(n, i.yp != null ? Math.abs(mkMove(mkRowKey(r), i.yp)) + (i.yp > .15 && i.yp < .85 ? 3 : 0) + (ev.two ? 2 : 0) : 0); }, 0);
-  if (['tour', 'rank', 'elim', 'lb'].includes(MK.cat)) list = list.filter(ev => ev.cat === MK.cat);
-  if (MK.cat === 'soon') list = list.slice().sort((a, b) => a.closes - b.closes);
-  else if (MK.cat === 'trend') list = list.map(ev => [ev, score(ev)]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
-  const v = btView(now), own = tnEntry(v.wk);
-  if (MK.cat === 'tour') html += `<div class="mk-where">${mkIc('trophy')}<span>Bracket</span>${TN_BANDS.map((b, i) => `<button class="chip${i === v.band ? ' on' : ''}" data-mk="band" data-v="${i}">${esc(b[2])}</button>`).join('')}
-      <form class="mk-divf"><label>Division <input type="number" min="1" max="${tnDivCount(v.band, v.wk)}" value="${v.div || ''}" inputmode="numeric"></label><button class="small-btn">Go</button>${own ? '<button type="button" class="small-btn" data-mk="mine">Mine</button>' : ''}</form></div>`;
-  const shown = MK.cat === 'trend' || MK.cat === 'soon' ? list.slice(0, 30) : list;
-  if (shown.length){ const tape = []; shown.slice(0, 12).forEach(ev => mkTrades(ev.rows, now, 3).forEach(x => tape.push({...x, ev: ev.title, on: x.on || ''})));
-    tape.sort((a, b) => b.t - a.t); if (tape.length) html += `<div class="card mk-tape"><b>${mkIc('trend')}Live trades</b>${mkTradesHtml(tape.slice(0, 6), now, true)}</div>`; }
-  html += shown.length ? `<div class="mk-grid">${shown.map(ev => mkCardHtml(ev, now)).join('')}</div>` : `<div class="mk-empty">${mkIc('grid')}<p>${MK.q ? 'No markets match that.' : (MK_EMPTY[MK.cat] || 'No markets open right now.')}</p></div>`;
-  html += `<p class="hint mk-foot">Prices are set by trading: other players trade every market all day (slower overnight), and your trades move prices too. Add picks from different markets to a combo for a bigger payout.</p>`;
-  domMorph(box, html + mkComboBar(now));
-}
 const MK_EMPTY = {tour: 'No tournament markets right now. Rounds run Monday to Friday, and Monday’s opens on the weekend.', rank: 'Ranked markets open once you’ve played your placement games.', elim: 'No top Elimination games are running right now. A new one starts every few minutes.'};
 // the combo you're building: shown as a bar at the bottom, and in full with its own ticket
 function mkComboQ(){ return {mk: 'combo', legs: MK.combo.map(l => ({q: l.q, side: l.side}))}; }
@@ -776,36 +806,165 @@ function mkComboBar(now){
   let p = 1; MK.combo.forEach(l => { const r = btPrice(l.q, now); p *= r.p != null ? (l.side === 'y' ? r.p : 1 - r.p) : 0; });
   return `<div class="mk-cbar">${mkIc('layers')}<span><b>Combo · ${MK.combo.length} pick${MK.combo.length === 1 ? '' : 's'}</b><small>${MK.combo.length < 2 ? 'Add 1 more pick' : `${mkPct(p)} chance if every pick is right`}</small></span><button class="btn primary sm" data-mk="combo">Review</button><button class="small-btn" data-mk="clrc">Clear</button></div>`;
 }
-function mkComboHtml(now){
-  const legs = MK.combo;
-  const rows = legs.map((l, i) => { const r = btPrice(l.q, now), p = r.p != null ? (l.side === 'y' ? r.p : 1 - r.p) : null;
-    return `<li><span class="mk-cic">${mkIc(MK_KIND_IC[l.q.mk] || 'grid')}</span><span class="mk-pt"><b>${esc(btPickWhat(l.q, l.side))}</b> · ${esc(btTitle(l.q))}<small>${r.closed && r.done == null ? esc(r.closed) : r.done != null ? 'Already settled' : ''}</small></span><span class="mk-pct">${p != null ? mkPct(p) : '–'}</span><button class="small-btn" data-mk="rmc" data-i="${i}">${mkIc('x')}Remove</button></li>`; }).join('');
-  if (legs.length >= 2){ const q = mkComboQ(); MK.pick = {key: btKey(q), side: 'y', q}; }
-  else if (MK.pick && MK.pick.q.mk === 'combo') MK.pick = null;
-  return `<div class="mk-detail"><div class="mk-main"><button class="small-btn mk-back" data-mk="back">${mkIc('back')}All markets</button>
-    <div class="mk-dh"><span class="mk-cic lg">${mkIc('layers')}</span><div><small>Combo</small><h2>Your combo · ${legs.length} pick${legs.length === 1 ? '' : 's'}</h2><small>Every pick has to be right. Up to 6 picks from different markets.</small></div></div>
-    ${legs.length ? `<ul class="mk-list mk-clist">${rows}</ul>` : `<div class="mk-empty">${mkIc('layers')}<p>Your combo is empty. Pick an answer on any market, then press Add to combo.</p></div>`}
-    <div class="card mk-rules"><b>How combos work</b><p>A combo pays 100 coins a contract only if every pick is right. Its chance is the picks’ chances multiplied, so it pays far more than any one pick, and one wrong pick loses it all. It settles No the moment a pick is wrong, and if a pick is cancelled you get your coins back.</p></div></div>
-    <aside class="mk-side">${legs.length >= 2 ? mkTicketHtml() : `<div class="mk-ticket empty">${mkIc('layers')}<p>Add ${2 - legs.length} more pick${legs.length === 1 ? '' : 's'} to buy this combo.</p></div>`}</aside></div>`;
+
+/* ---- the Markets page, laid out like Kalshi: a live strip on top, categories on the left, the market list in the
+   middle, and a trade ticket (with Combo) always open on the right ---- */
+const KX_CATS = [['all', 'All', 'grid'], ['fast', 'Fast · 15 min', 'bolt'], ['tour', 'Tournament', 'trophy'], ['rank', 'Ranked', 'shield'], ['elim', 'Elimination', 'elim'], ['lb', 'Leaderboards', 'bars']];
+const KX_KINDS = [['all', 'All'], ['games', 'Head to head'], ['futures', 'Futures'], ['props', 'Props']];
+const KX_GAMES = new Set(['match', 'h2h', 'spr', 'elw', 'rkm', 'elnx']), KX_FUT = new Set(['out', 'reach', 'lbw', 'rkr', 'rkn']);
+const kxKind = ev => { const mk = ev.rows[0].q.mk; return KX_GAMES.has(mk) ? 'games' : KX_FUT.has(mk) ? 'futures' : 'props'; };
+const kxHue = w => w == null ? null : w === ME ? 'var(--accent)' : `hsl(${bot(w).hue} 62% 50%)`;
+const kxWho = q => q.mk === 'match' || q.mk === 'h2h' ? null : q.w != null ? q.w : q.mk === 'spr' && q.o !== 't' ? (q.o === 'a' ? q.a : q.b) : null;
+const kxMult = c => c > 0 ? (100 / c).toFixed(c >= 50 ? 2 : 1).replace(/\.?0+$/, '') + 'x' : '';
+const kxCd = t => `<span class="kx-cd" data-cd="${t}">${kxCdTxt(t)}</span>`;
+function kxCdTxt(t){ const s = Math.max(0, Math.round((t - Date.now()) / 1000)); if (s >= 3600) return mkClock(t); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} left`; }
+// one answer as a row: name with a bar as long as its chance, a stat, the payout and the chance to tap
+function kxRow(ev, row, now, opts = {}){
+  const info = mkRowPrice(row, now), yp = info.yp, side = row.side || 'y', Q = info.r.p != null ? mkQuoteR(info.r, row.q, side) : null, c = Q ? Q.buy(1) : 0;
+  const why = btBlocked(row.q, side, info.B), mv = yp != null ? mkMove(mkRowKey(row), yp) : 0;
+  if (info.r.fair != null && MKX.has(row.q.mk)) mkRec(btKey(row.q), info.r.fair, now);
+  const who = row.side ? (row.side === 'y' ? row.q.a : row.q.b) : kxWho(row.q), col = kxHue(who) || (opts.i ? 'var(--muted)' : '#1fbf75');
+  const pct = yp != null ? mkPct(yp) : info.r.done != null ? (info.r.done === (row.side !== 'n') ? 'Yes' : 'No') : '–';
+  const on = MK.pick && MK.pick.key === btKey(row.q) && MK.pick.side === side;
+  const btn = yp == null || info.r.closed || why ? `<span class="kx-pct off" title="${esc(why || info.r.closed || '')}">${pct}</span>`
+    : `<button class="kx-pct${on ? ' on' : ''}" data-mk="pick" ${kxPickAttrs(ev, row, side)}>${pct}</button>`;
+  return `<div class="kx-row${opts.big && mkRowKey(row) === MK.sel ? ' sel' : ''}"><span class="kx-nm">${row.av || ''}<span><span class="kx-lb">${esc(row.label)}</span><i class="kx-bar" style="width:${Math.round((yp || 0) * 100)}%;background:${col}"></i></span></span>
+    <span class="kx-st">${row.stat ? esc(row.stat) : ''}${mkMoveHtml(mv)}</span><span class="kx-x">${Q ? kxMult(c) : ''}</span>${opts.big ? `<span class="mk-bb">${mkBuyBtn(row, 'y', info, ev.id)}${row.side || mkSelfRow(row.q) ? '' : mkBuyBtn(row, 'n', info, ev.id)}</span>` : btn}</div>`;
 }
+function kxPickAttrs(ev, row, side){
+  const two = row.side != null, other = two ? ev.rows.find(r => r !== row && btKey(r.q) === btKey(row.q)) : null;
+  const ly = two ? (row.side === 'y' ? row.label : other && other.label) : row.label, ln = two ? (row.side === 'n' ? row.label : other && other.label) : row.label;
+  return `data-ev="${esc(ev.id)}" data-q='${esc(JSON.stringify(row.q))}' data-side="${side}" data-ly="${esc(ly || '')}" data-ln="${esc(ln || '')}" data-t="${esc(ev.title)}"`;
+}
+function kxCard(ev, now){
+  const rows = ev.two || ev.fast ? ev.rows : ev.rows.map(row => ({row, info: mkRowPrice(row, now)})).filter(x => x.info.r.p != null).sort((a, b) => b.info.yp - a.info.yp).slice(0, 3).map(x => x.row);
+  const n = ev.rows.length + (ev.more ? ev.more.length : 0) - (ev.two ? 1 : 0);
+  return `<article class="kx-card" data-mk="open" data-ev="${esc(ev.id)}" tabindex="0"><header><span class="kx-ic">${mkIc(ev.ic)}</span><div><b>${esc(ev.title)}</b><small>${ev.live ? '<em class="kx-live">LIVE</em>' : ''}${esc(ev.sub)}</small></div>${ev.fast ? kxCd(ev.closes) : ''}</header>
+    ${rows.map((row, i) => kxRow(ev, row, now, {i})).join('') || '<p class="hint">Nothing left to trade here.</p>'}
+    <footer><span>${mkVol(mkEvVol(ev, now))} traded ${ev.fast ? 'this window' : 'today'}</span><span>${ev.fast ? '' : `${mkIc('clock')}Closes ${mkClock(ev.closes)}`}${n > rows.length ? ` · ${n} markets` : ''}</span></footer></article>`;
+}
+// the live strip: two-answer markets happening now
+function kxStrip(evs, now){
+  const live = evs.filter(ev => ev.two || ev.cat === 'fast' && ev.rows.length > 1 || ev.rows[0].q.mk === 'elw').slice(0, 12);
+  if (!live.length) return '';
+  return `<div class="kx-strip">${live.map(ev => { const rs = ev.rows.map(r => ({r, i: mkRowPrice(r, now)})).filter(x => x.i.yp != null).sort((a, b) => ev.two ? 0 : b.i.yp - a.i.yp).slice(0, 2);
+    return `<button class="kx-sc" data-mk="open" data-ev="${esc(ev.id)}"><small>${ev.fast ? `<em class="kx-live">SPRINT</em>${kxCd(ev.closes)}` : ev.live || ev.closes - now < 864e5 ? `<em class="kx-live">LIVE</em>${esc(ev.sub.split(' · ')[0])}` : esc(mkClock(ev.closes))}</small>
+      ${rs.map(x => `<span>${x.r.av || ''}<b>${esc(x.r.label)}</b><i>${mkPct(x.i.yp)}</i></span>`).join('')}</button>`; }).join('')}</div>`;
+}
+function kxNav(evs, nOpen){
+  const cnt = c => c === 'all' ? evs.length : evs.filter(e => e.cat === c).length;
+  return `<nav class="kx-nav"><div class="kx-nl">Markets</div>${KX_CATS.map(([k, l, ic]) => `<button data-mk="cat" data-v="${k}" class="${MK.cat === k && !MK.view ? 'on' : ''}">${mkIc(ic)}<span>${l}</span><i>${cnt(k)}</i></button>`).join('')}
+    <div class="kx-nl">You</div><button data-mk="cat" data-v="pos" class="${MK.cat === 'pos' && !MK.view ? 'on' : ''}">${mkIc('wallet')}<span>Portfolio</span>${nOpen ? `<i>${nOpen}</i>` : ''}</button>
+    <div class="kx-bal"><svg class="co-ic" viewBox="0 0 24 24" aria-hidden="true">${CO_IC}</svg><b>${coTotals().balance.toLocaleString()}</b><small>coins</small></div></nav>`;
+}
+// the trade ticket: buy or sell, Yes or No, the coins, the chance and the payout
+function kxTicket(now){
+  const pk = MK.pick;
+  if (!pk) return `<div class="kx-tk empty">${mkIc('grid')}<p>Tap a chance on any market to trade it here.</p></div>`;
+  const combo = pk.q.mk === 'combo', r = btPrice(pk.q, now);
+  if (r.p == null || r.closed) return `<div class="kx-tk empty"><p>${r.done != null ? 'That market has settled.' : 'That market just closed.'}</p></div>`;
+  const two = pk.q.mk === 'match' || pk.q.mk === 'h2h', lab = s => two ? (s === 'y' ? pk.ly : pk.ln) || btPickWhat(pk.q, s) : s === 'y' ? 'Yes' : 'No';
+  const qy = mkQuoteR(r, pk.q, 'y'), qn = mkQuoteR(r, pk.q, 'n'), Q = pk.side === 'y' ? qy : qn, coins = Math.max(0, Math.floor(+MK.coins || 0)), n = mkMaxN(Q, coins), cost = n ? Q.buy(n) : 0;
+  const byY = btBlocked(pk.q, 'y', (btCtx(pk.q, now) || {}).B), byN = btBlocked(pk.q, 'n', (btCtx(pk.q, now) || {}).B);
+  const mine = combo ? [] : Object.values(btBets()).filter(b => b.st === 'open' && btKey(b) === pk.key);
+  const inCombo = MK.combo.some(l => btKey(l.q) === pk.key), canCombo = !combo && (inCombo || MK.combo.length < 6);
+  const tabs = `<div class="kx-tabs"><button type="button" data-mk="tab" data-v="buy" class="${MK.tab !== 'sell' ? 'on' : ''}">Buy</button><button type="button" data-mk="tab" data-v="sell" class="${MK.tab === 'sell' ? 'on' : ''}">Sell${mine.length ? ` · ${mine.length}` : ''}</button><span>Coins</span></div>`;
+  const head = `<div class="kx-th"><small>${esc(combo ? 'Your combo' : pk.t || btTitle(pk.q))}</small><b>${esc(combo ? `Combo · ${pk.q.legs.length} picks` : two ? lab(pk.side) : pk.ly || btTitle(pk.q))}</b></div>`;
+  if (MK.tab === 'sell' && !combo){
+    return `<div class="kx-tk">${tabs}${head}${mine.length ? `<ul class="kx-sell">${mine.map(b => { const v = mkQuoteR(r, b, b.side).sell(b.n); return `<li><span><b>${b.n.toLocaleString()} ${esc(btPickWhat(b, b.side))}</b><small>bought at ${b.price}¢ · cost ${b.cost.toLocaleString()}</small></span><button class="btn primary sm" data-mk="sell" data-id="${b.id}">Sell for ${v.toLocaleString()}</button></li>`; }).join('')}</ul>` : '<p class="hint">You don’t own any of this market yet.</p>'}</div>`;
+  }
+  const sideBtn = (s, q, why) => `<button type="button" class="kx-yn ${s === 'y' ? 'y' : 'n'}${pk.side === s ? ' on' : ''}" data-mk="tside" data-side="${s}" ${why ? `disabled title="${esc(why)}"` : ''}>${esc(lab(s))} ${why ? '–' : q.buy(1) + '¢'}</button>`;
+  return `<form class="kx-tk mk-ticket">${tabs}${head}
+    ${combo ? '' : `<div class="kx-yns">${sideBtn('y', qy, byY)}${sideBtn('n', qn, byN)}</div>`}
+    <label class="kx-amt"><span>Coins</span><input type="number" min="1" step="1" value="${coins || ''}" placeholder="0" inputmode="numeric" data-mk="coins"></label>
+    <span class="mk-quick">${[100, 500, 1000, 5000].map(v => `<button type="button" class="small-btn" data-mk="amt" data-v="${v}">${v.toLocaleString()}</button>`).join('')}<button type="button" class="small-btn" data-mk="amt" data-v="max">Max</button></span>
+    <div class="kx-odds"><span>Odds</span><b>${mkPct(Q.p)} chance</b></div>
+    ${mkSumHtml(Q, n, cost)}
+    <button class="kx-go mk-go" data-price="${Q.buy(1)}">${n ? `Buy ${n.toLocaleString()} for ${cost.toLocaleString()} coins` : 'Enter an amount'}</button>
+    ${canCombo ? `<button type="button" class="kx-addc" data-mk="addc">${mkIc(inCombo ? 'check' : 'layers')}${inCombo ? 'In your combo · update pick' : 'Add to combo'}</button>` : ''}
+    ${MK.msg ? `<p class="mk-msg">${esc(MK.msg)}</p>` : ''}<p class="hint">Pays 100 coins a contract if you’re right. Your trade moves the price, so bigger trades cost more per contract. 1 coin fee per contract.</p></form>`;
+}
+function kxSide(now){
+  return `<aside class="kx-side${MK.sheet ? ' open' : ''}"><button class="kx-combo${MK.view === 'combo' ? ' on' : ''}" data-mk="combo">${mkIc('layers')}Combo${MK.combo.length ? ` · ${MK.combo.length}` : ''}</button>
+    <button class="kx-close" data-mk="sheetx" aria-label="Close">${mkIc('x')}</button>${kxTicket(now)}</aside>`;
+}
+function kxDetail(ev, now){
+  const all = ev.rows.concat(MK.more && ev.more ? ev.more : []), sel = all.find(r => mkRowKey(r) === MK.sel) || all[0]; MK.sel = mkRowKey(sel);
+  return `<button class="kx-back" data-mk="back">${mkIc('back')}All markets</button>
+    <div class="kx-dh"><span class="kx-ic lg">${mkIc(ev.ic)}</span><div><small>${ev.live ? '<em class="kx-live">LIVE</em>' : ''}${esc(ev.sub)}</small><h2>${esc(ev.title)}</h2><small>${ev.fast ? kxCd(ev.closes) : `${mkIc('clock')}Closes ${mkClock(ev.closes)}`} · ${mkVol(mkEvVol(ev, now))} traded today</small></div></div>
+    <div class="kx-panel"><div class="mk-sl">${sel.av || ''}<b>${esc(sel.label)}</b><small>price · ${sel.q.w0 ? 'this window' : 'last 24 hours'}</small></div>${mkSpark(mkHistory(sel.q, sel.side || 'y', now).pts)}</div>
+    <div class="kx-panel kx-list">${all.map(row => kxRow(ev, row, now, {big: 1})).join('')}</div>
+    ${ev.more && ev.more.length ? `<button class="small-btn mk-moreb" data-mk="more">${mkIc('grid')}${MK.more ? 'Fewer markets' : `${ev.moreLabel || 'More on this match: margins and totals'} (${ev.more.length})`}</button>` : ''}
+    <div class="kx-panel"><b class="kx-ph">${mkIc('trend')}Recent trades</b>${mkTradesHtml(mkTrades(all, now), now)}</div>
+    <div class="kx-panel"><b class="kx-ph">Rules</b><p>${esc(btRules(sel.q))}</p><p class="hint">Prices are set by trading. Other players trade here all day (slower overnight), going on what they can see, and they don’t always get it right. Your trades move the price too.</p></div>`;
+}
+function kxComboMain(now){
+  const legs = MK.combo;
+  if (legs.length >= 2){ const q = mkComboQ(); MK.pick = {key: btKey(q), side: 'y', q}; } else if (MK.pick && MK.pick.q.mk === 'combo') MK.pick = null;
+  let p = 1; const rows = legs.map((l, i) => { const r = btPrice(l.q, now), x = r.p != null ? (l.side === 'y' ? r.p : 1 - r.p) : null; p *= x || 0;
+    return `<div class="kx-row"><span class="kx-nm"><span class="kx-ic">${mkIc(MK_KIND_IC[l.q.mk] || 'grid')}</span><span><span class="kx-lb"><b>${esc(btPickWhat(l.q, l.side))}</b> · ${esc(btTitle(l.q))}</span>${r.closed && r.done == null ? `<small class="hint">${esc(r.closed)}</small>` : ''}</span></span><span class="kx-st"></span><span class="kx-x"></span><button class="small-btn" data-mk="rmc" data-i="${i}">${mkIc('x')}Remove</button></div>`; }).join('');
+  return `<button class="kx-back" data-mk="back">${mkIc('back')}All markets</button>
+    <div class="kx-dh"><span class="kx-ic lg">${mkIc('layers')}</span><div><small>Combo</small><h2>Your combo · ${legs.length} pick${legs.length === 1 ? '' : 's'}</h2><small>${legs.length >= 2 ? `${mkPct(p)} chance every pick is right` : 'Add at least 2 picks from different markets'}</small></div></div>
+    ${legs.length ? `<div class="kx-panel kx-list">${rows}</div>` : `<div class="mk-empty">${mkIc('layers')}<p>Your combo is empty. Tap a chance on any market, then Add to combo.</p></div>`}
+    <div class="kx-panel"><b class="kx-ph">How combos work</b><p>A combo pays 100 coins a contract only if every pick is right. Its chance is the picks’ chances multiplied, so it pays far more than any one pick, and one wrong pick loses it all. It settles No the moment a pick is wrong, and if a pick is cancelled you get your coins back.</p></div>`;
+}
+function mkRender(){
+  mkRender.at = Date.now();
+  const box = $('#mkBody'); if (!box || $('#page-markets').hidden) return;
+  if (typeof RK_READY === 'undefined' || !RK_READY){ if (!box.firstChild) box.innerHTML = '<p class="hint">Loading markets…</p>'; return; }
+  const now = Date.now(); let evs = []; try { evs = mkEvents(now); } catch(err){ console.error('markets', err); }
+  const nOpen = Object.values(btBets()).filter(b => b.st === 'open').length;
+  let main = '';
+  if (MK.view === 'combo') main = kxComboMain(now);
+  else if (MK.view){ const ev = evs.find(x => x.id === MK.view); if (ev) main = kxDetail(ev, now); else MK.view = null; }
+  if (!main && MK.cat === 'pos') main = `<div class="kx-h"><h2>Portfolio</h2></div>${mkPortfolioHtml(now)}`;
+  if (!main){
+    let list = MK.cat === 'all' ? evs : evs.filter(ev => ev.cat === MK.cat);
+    if (MK.q){ const s = MK.q.toLowerCase(); list = list.filter(ev => (ev.title + ' ' + ev.rows.map(r => r.label).join(' ')).toLowerCase().includes(s)); }
+    const kinds = {all: list.length}; list.forEach(ev => { const k = kxKind(ev); kinds[k] = (kinds[k] || 0) + 1; });
+    if (MK.kind !== 'all') list = list.filter(ev => kxKind(ev) === MK.kind);
+    const score = ev => ev.rows.reduce((n, r) => { const i = mkRowPrice(r, now); return Math.max(n, i.yp != null ? Math.abs(mkMove(mkRowKey(r), i.yp)) + (i.yp > .15 && i.yp < .85 ? 3 : 0) + (ev.two || ev.fast ? 2 : 0) : 0); }, 0);
+    if (MK.sort === 'soon') list = list.slice().sort((a, b) => a.closes - b.closes);
+    else if (MK.sort === 'vol') list = list.map(ev => [ev, mkEvVol(ev, now)]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+    else list = list.map(ev => [ev, score(ev)]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+    if (!MK.pick && !MK.picked){ for (const ev of list){ const row = ev.rows.find(r => { const i = mkRowPrice(r, now); return i.yp != null && !i.r.closed && !btBlocked(r.q, r.side || 'y', i.B); }); if (row){ const other = ev.two ? ev.rows.find(r => r !== row && btKey(r.q) === btKey(row.q)) : null; MK.pick = {key: btKey(row.q), side: row.side || 'y', q: row.q, ly: row.side ? (row.side === 'y' ? row.label : other && other.label) : row.label, ln: row.side ? (other && other.label) : row.label, t: ev.title}; break; } } }
+    const name = (KX_CATS.find(c => c[0] === MK.cat) || KX_CATS[0])[1];
+    main = `<div class="kx-h"><h2>${MK.cat === 'all' ? 'Markets' : esc(name)}</h2><label class="kx-search">${mkIc('search')}<input type="search" placeholder="Search" value="${esc(MK.q)}" data-mk="search"></label>
+      <select class="kx-sort" data-mk="sort">${[['trend', 'Trending'], ['soon', 'Ending soon'], ['vol', 'Most traded']].map(([k, l]) => `<option value="${k}"${MK.sort === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="kx-pills">${KX_KINDS.filter(([k]) => k === 'all' || kinds[k]).map(([k, l]) => `<button data-mk="kind" data-v="${k}" class="${MK.kind === k ? 'on' : ''}">${l} (${kinds[k] || 0})</button>`).join('')}</div>`;
+    if (MK.cat === 'tour'){ const v = btView(now), own = tnEntry(v.wk); main += `<div class="mk-where">${mkIc('trophy')}<span>Bracket</span>${TN_BANDS.map((b, i) => `<button class="chip${i === v.band ? ' on' : ''}" data-mk="band" data-v="${i}">${esc(b[2])}</button>`).join('')}
+      <form class="mk-divf"><label>Division <input type="number" min="1" max="${tnDivCount(v.band, v.wk)}" value="${v.div || ''}" inputmode="numeric"></label><button class="small-btn">Go</button>${own ? '<button type="button" class="small-btn" data-mk="mine">Mine</button>' : ''}</form></div>`; }
+    main += list.length ? `<div class="kx-cards">${list.slice(0, MK.cat === 'all' ? 30 : 80).map(ev => kxCard(ev, now)).join('')}</div>` : `<div class="mk-empty">${mkIc('grid')}<p>${MK.q ? 'No markets match that.' : (MK_EMPTY[MK.cat] || 'No markets open right now.')}</p></div>`;
+    const tape = []; list.slice(0, 12).forEach(ev => mkTrades(ev.rows, now, 3).forEach(x => tape.push({...x, ev: ev.title})));
+    tape.sort((a, b) => b.t - a.t); if (tape.length) main += `<div class="kx-panel"><b class="kx-ph">${mkIc('trend')}Live trades</b>${mkTradesHtml(tape.slice(0, 8), now, true)}</div>`;
+    main += `<p class="hint mk-foot">Prices are set by trading: other players trade every market all day (slower overnight), and your trades move prices too.</p>`;
+  }
+  const cats = `<div class="kx-mcats">${KX_CATS.concat([['pos', 'Portfolio', 'wallet']]).map(([k, l, ic]) => `<button data-mk="cat" data-v="${k}" class="${MK.cat === k && !MK.view ? 'on' : ''}">${mkIc(ic)}${l}</button>`).join('')}</div>`;
+  domMorph(box, `<div class="kx">${kxStrip(evs, now)}${cats}<div class="kx-cols">${kxNav(evs, nOpen)}<div class="kx-main">${main}</div>${kxSide(now)}</div>${mkComboBar(now)}</div>`);
+}
+setInterval(() => { const els = document.querySelectorAll('#mkBody [data-cd]'); els.forEach(el => { el.textContent = kxCdTxt(+el.dataset.cd); }); const pg = $('#page-markets'); if (pg && !pg.hidden && Date.now() - (mkRender.at || 0) > 5000 && [...els].some(el => +el.dataset.cd <= Date.now()) && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#mkBody form, .kx-search'))) mkRender(); }, 1000);
 
 document.addEventListener('click', ev => {
   const go = ev.target.closest && ev.target.closest('[data-mk-go]'); if (go){ ev.preventDefault(); MK.cat = go.dataset.mkGo; MK.view = null; showPage('markets'); return; }
   const a = ev.target.closest && ev.target.closest('[data-mk]'); if (!a || !a.closest('#mkBody')) return;
-  const k = a.dataset.mk; if (k === 'coins' || k === 'search') return;
+  const k = a.dataset.mk; if (k === 'coins' || k === 'search' || k === 'sort') return;
   ev.preventDefault();
-  if (k === 'cat'){ MK.cat = a.dataset.v; MK.view = null; MK.pick = null; }
-  else if (k === 'open'){ MK.view = a.dataset.ev; MK.sel = null; MK.more = false; MK.pick = null; window.scrollTo(0, 0); }
-  else if (k === 'back'){ MK.view = null; MK.pick = null; }
+  if (k === 'cat'){ MK.cat = a.dataset.v; MK.view = null; MK.kind = 'all'; if (MK.pick && MK.pick.q.mk === 'combo') MK.pick = null; }
+  else if (k === 'kind') MK.kind = a.dataset.v;
+  else if (k === 'tab') MK.tab = a.dataset.v;
+  else if (k === 'tside' && MK.pick){ MK.pick.side = a.dataset.side; MK.msg = ''; }
+  else if (k === 'sheetx') MK.sheet = false;
+  else if (k === 'open'){ MK.view = a.dataset.ev; MK.sel = null; MK.more = false; window.scrollTo(0, 0); }
+  else if (k === 'back'){ MK.view = null; if (MK.pick && MK.pick.q.mk === 'combo') MK.pick = null; }
   else if (k === 'sel') MK.sel = a.dataset.k;
   else if (k === 'more') MK.more = !MK.more;
   else if (k === 'pick'){ const q = JSON.parse(a.dataset.q), key = btKey(q), side = a.dataset.side, two = q.mk === 'match' || q.mk === 'h2h';
-    if (MK.view !== a.dataset.ev){ MK.view = a.dataset.ev; MK.more = false; window.scrollTo(0, 0); }
-    MK.sel = key + (two ? side : ''); MK.pick = MK.pick && MK.pick.key === key && MK.pick.side === side ? null : {key, side, q}; MK.msg = ''; }
+    if (MK.view && MK.view !== 'combo') MK.sel = key + (two ? side : '');
+    MK.pick = {key, side, q, ly: a.dataset.ly, ln: a.dataset.ln, t: a.dataset.t}; MK.picked = true; MK.sheet = true; MK.tab = 'buy'; MK.msg = ''; }
   else if (k === 'amt') MK.coins = a.dataset.v === 'max' ? Math.max(0, coTotals().balance) : +a.dataset.v;
-  else if (k === 'cancel'){ MK.pick = null; MK.msg = ''; }
-  else if (k === 'addc' && MK.pick){ const key = btKey(MK.pick.q), i = MK.combo.findIndex(l => btKey(l.q) === key); if (i >= 0) MK.combo[i].side = MK.pick.side; else if (MK.combo.length < 6) MK.combo.push({q: MK.pick.q, side: MK.pick.side}); mkSaveCombo(); toast(`Combo · ${MK.combo.length} pick${MK.combo.length === 1 ? '' : 's'}`); MK.pick = null; }
-  else if (k === 'combo'){ MK.view = 'combo'; MK.msg = ''; window.scrollTo(0, 0); }
+  else if (k === 'cancel'){ MK.pick = null; MK.picked = true; MK.sheet = false; MK.msg = ''; }
+  else if (k === 'addc' && MK.pick){ const key = btKey(MK.pick.q), i = MK.combo.findIndex(l => btKey(l.q) === key); if (i >= 0) MK.combo[i].side = MK.pick.side; else if (MK.combo.length < 6) MK.combo.push({q: MK.pick.q, side: MK.pick.side}); mkSaveCombo(); toast(`Combo · ${MK.combo.length} pick${MK.combo.length === 1 ? '' : 's'}`); }
+  else if (k === 'combo'){ MK.view = 'combo'; MK.msg = ''; MK.tab = 'buy'; window.scrollTo(0, 0); }
   else if (k === 'rmc'){ MK.combo.splice(+a.dataset.i, 1); mkSaveCombo(); }
   else if (k === 'clrc'){ MK.combo = []; mkSaveCombo(); if (MK.view === 'combo') MK.view = null; }
   else if (k === 'sell'){ const r = btSellPos(a.dataset.id); toast(r.err || `Sold for ${r.ok.toLocaleString()} coins`); }
@@ -818,8 +977,10 @@ document.addEventListener('input', ev => {
   const s = ev.target.closest && ev.target.closest('[data-mk="search"]'); if (s){ MK.q = s.value; clearTimeout(mkRender.t); mkRender.t = setTimeout(() => { mkRender(); const i = $('#mkBody [data-mk="search"]'); if (i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); return; }
   const i = ev.target.closest && ev.target.closest('[data-mk="coins"]'); if (!i || !MK.pick) return;
   MK.coins = Math.floor(+i.value || 0); const Q = mkQuote(MK.pick.q, MK.pick.side, Date.now()); if (!Q) return;
-  const n = mkMaxN(Q, MK.coins), box = document.querySelector('[data-mk-sum]'); if (box) box.outerHTML = mkSumHtml(Q, n, n ? Q.buy(n) : 0);
+  const n = mkMaxN(Q, MK.coins), cost = n ? Q.buy(n) : 0, box = document.querySelector('#mkBody [data-mk-sum]'); if (box) box.outerHTML = mkSumHtml(Q, n, cost);
+  const go = document.querySelector('#mkBody .kx-go'); if (go) go.textContent = n ? `Buy ${n.toLocaleString()} for ${cost.toLocaleString()} coins` : 'Enter an amount';
 });
+document.addEventListener('change', ev => { const s = ev.target.closest && ev.target.closest('#mkBody [data-mk="sort"]'); if (s){ MK.sort = s.value; mkRender(); } });
 document.addEventListener('submit', ev => {
   const f = ev.target.closest && ev.target.closest('#mkBody form'); if (!f) return;
   ev.preventDefault();
@@ -828,7 +989,7 @@ document.addEventListener('submit', ev => {
   const r = btTrade(MK.pick.q, MK.pick.side, MK.coins, +f.querySelector('[data-price]').dataset.price);
   if (r.moved) MK.msg = `The price moved to ${r.moved}¢. Press Buy again to take it.`;
   else if (r.err) MK.msg = r.err;
-  else { toast(`Bought ${r.n.toLocaleString()} contract${r.n === 1 ? '' : 's'} for ${r.cost.toLocaleString()} coins`); if (MK.pick.q.mk === 'combo'){ MK.combo = []; mkSaveCombo(); MK.view = null; MK.cat = 'pos'; } MK.pick = null; MK.msg = ''; }
+  else { toast(`Bought ${r.n.toLocaleString()} contract${r.n === 1 ? '' : 's'} for ${r.cost.toLocaleString()} coins`); if (MK.pick.q.mk === 'combo'){ MK.combo = []; mkSaveCombo(); MK.view = null; MK.cat = 'pos'; MK.pick = null; } MK.msg = ''; MK.sheet = false; }
   mkRender();
 });
 { const _s = onPageShown; onPageShown = function(name){ const x = _s.apply(this, arguments); if (name === 'markets'){ try { btSettle(); } catch(e){ console.error(e); } mkRender(); } return x; }; }
