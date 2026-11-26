@@ -23,9 +23,10 @@ const LB = [
   {id:'elw',   name:'Elimination wins',       desc:'Elimination lobbies won', u:'n', f:null, g:() => elArrs().w, me:t => (R.el && R.el.wins) || 0},
   {id:'el3',   name:'Elimination top 3',      desc:'Elimination lobbies finished in the top 3', u:'n', f:null, g:() => elArrs().t, me:t => (R.el && R.el.top3) || 0},
   {id:'lvl',   name:'Highest level',          desc:'Level from XP: studying, daily goals, ranked wins, challenges and achievements', u:'xp', f:null, g:() => lvArrs().xp, me:t => myXp()},
-  {id:'pts',   name:'Achievement points',     desc:'Points from unlocked achievements',     u:'pts', f:null,       me:t => t.pts}
+  {id:'pts',   name:'Achievement points',     desc:'Points from unlocked achievements',     u:'pts', f:null,       me:t => t.pts},
+  {id:'coins', name:'Most coins',             desc:'Coins on hand: earned from studying, goals, challenges, achievements, matches and markets, minus what was spent', u:'co', f:null, g:() => coArrs().c, me:t => Math.max(0, coTotals().balance)}
 ];
-const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : u === 'pct' ? (v ? (v / 10).toFixed(1) + '%' : '–') : u === 'xp' ? `Lv ${lvOf(v)} · ${v.toLocaleString()} XP` : v.toLocaleString();
+const lbFmt = (u, v) => u === 'min' ? (v >= 60 ? `${Math.floor(v / 60).toLocaleString()}h ${v % 60}m` : `${v}m`) : u === 'd' ? `${v.toLocaleString()} day${v === 1 ? '' : 's'}` : u === 'pts' ? `${v.toLocaleString()} pts` : u === 'pct' ? (v ? (v / 10).toFixed(1) + '%' : '–') : u === 'xp' ? `Lv ${lvOf(v)} · ${v.toLocaleString()} XP` : u === 'co' ? `${v.toLocaleString()} coins` : v.toLocaleString();
 const botVal = (c, i) => c.g ? c.g()[i] : c.f == null ? (lbPts ? lbPts[i] : 0) : BS[i * BF + c.f];
 const lbReady = c => c.f != null || !!c.g || !!lbPts;
 /* ranked wins and win rate for everyone, from each player's real win/loss record (RK_EW/RK_EL estimated, RK_LW/RK_LL counted live, in ranked.js) */
@@ -136,6 +137,24 @@ $('#lbJump').onclick = () => { lbJump = !lbJump; renderLeaders(); };
 $('#lbList').addEventListener('click', e => { const r = e.target.closest('[data-bot]'); if (r && !e.target.closest('.bdg')) openBot(+r.dataset.bot); });
 $('#lbList').addEventListener('keydown', e => { if (e.key === 'Enter'){ const r = e.target.closest('[data-bot]'); if (r) openBot(+r.dataset.bot); } });
 
+
+// everyone else's coins: the same coin rules as yours, worked out from their stats (study minutes with an average streak
+// bonus, daily goals on about half their study days, challenges, achievement points, ranked results at their rank's base,
+// and Elimination prizes). Simulated players don't spend.
+let COA = null;
+function coArrs(){
+  const key = `${botsVer}|${lbPts ? 1 : 0}|${typeof RK_EW !== 'undefined' && RK_EW ? 1 : 0}`;
+  if (COA && COA.key === key) return COA;
+  try { rkCounts(); } catch(e){}
+  const N = ROSTER_N, c = new Int32Array(N), E = elArrs(), rk = typeof RK_EW !== 'undefined' && RK_EW;
+  for (let i = 0; i < N; i++){
+    const o = i * BF, days = BS[o + F.days], base = coBaseOfRating(BS[o]) * .85;
+    const w = rk ? rkWins(i) : 0, l = rk ? rkGames(i) - w : 0, ew = E.w[i], et = E.t[i];
+    c[i] = Math.round(BS[o + F.total] * 1.15 + CO_GOAL * Math.round(days * .45) + 45 * days + (lbPts ? lbPts[i] * CO_ACH : 0)
+      + base * (CO_V1.W * w + CO_V1.L * l) + base * (5 * ew + 2 * Math.max(0, et - ew)));
+  }
+  return (COA = {key, c});
+}
 
 // everyone else's Elimination record: a share of their study days, more for players who sit longer than others near them
 let ELA = null;
