@@ -213,7 +213,7 @@ function chFigure(look, turned){   // turned: seen from behind
     const side = y => `M6 ${y}V151A6 6 0 0 1 -6 151C-6.800 153.600 -9.700 152.800 -9.400 149.600C-9.100 146.600 -7.600 145 -6 145V${y}`;
     const fill = `${side(ys)}${top}Z`, line = side(ys);
     return `<g transform="translate(${hx} 0) scale(${s} 1)"><path d="${fill}" fill="${skin}" stroke="none"/><path d="${line}" fill="none" ${HL}/></g>`; };
-  let hands = '', armsFront = '';
+  let hands = '', armsFront = '', handsFront = '';
   for (const s of [-1, 1]){
     const a0 = arms.length;
     const x = s < 0 ? cx - M.sw : cx + M.sw - 15;
@@ -226,7 +226,8 @@ function chFigure(look, turned){   // turned: seen from behind
     arms = arms.slice(0, a0) + rg + arms.slice(a0) + '</g>';
     if (L.ap === 2 && s > 0){ armsFront = arms.slice(a0); arms = arms.slice(0, a0); }   // the waving arm is drawn over the shirt so it grows out of the shoulder
     const longS = sleeveEnd > 130, rr = !longS ? 0 : L.ot === 'hoodie' || L.ot === 'sweater' ? 3 : L.ot === 'coat' ? 2.500 : 7.500;
-    hands += rg + hand(cx + s * (M.sw - 7.500), longS ? sleeveEnd + .400 : 141, L.ap === 2 && s > 0 ? -s : s, rr) + '</g>';   // a waving hand turns to show the palm, thumb toward the head
+    const hd = rg + hand(cx + s * (M.sw - 7.500), longS ? sleeveEnd + .400 : 141, L.ap === 2 && s > 0 ? -s : s, rr) + '</g>';
+    if (L.ap === 2 && s > 0) handsFront = hd; else hands += hd;   // a waving hand turns to show the palm, thumb toward the head
   }
   const band = `<rect x="${cx - M.hp - flare}" y="${hemY - 6}" width="${2 * (M.hp + flare)}" height="6" rx="2.500" fill="${dk}"/>`;
   const ring = (w, d, c, sw) => `<path d="M${cx - w} 84.500C${cx - w} ${d} ${cx + w} ${d} ${cx + w} 84.500" fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round"/>`;
@@ -268,11 +269,16 @@ function chFigure(look, turned){   // turned: seen from behind
     const rx = ey === 3 ? 2.6 : ey === 4 ? 4.2 : 3.4, ry = ey === 3 ? 4.4 : ey === 4 ? 4.6 : 3.7, y = eyeY + (ey === 2 ? .8 : 0);
     // a simple eye: a colored oval with a dark pupil and one highlight
     let g = `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${ec}"/><ellipse cx="${x}" cy="${y + .4}" rx="${(rx * .5).toFixed(2)}" ry="${(ry * .5).toFixed(2)}" fill="${ink}"/><circle cx="${x - 1}" cy="${y - 1.3}" r="${(rx * .3).toFixed(2)}" fill="#fff"/>`;
-    if (ey === 1) g += `<path d="M${x - 6} ${y + 7} L${x - 6} ${y + 1.6} Q${x} ${y - 1.6} ${x + 6} ${y + 1.6} L${x + 6} ${y + 7} Z" fill="${sk}"/><path d="M${x - 4.6} ${y + 1.4} Q${x} ${y - 1.2} ${x + 4.6} ${y + 1.4}" fill="none" stroke="${ink}" stroke-width="1.3" stroke-linecap="round"/>`;
-    if (ey === 2) g += `<path d="M${x - 6} ${y - 7} H${x + 6} V${y - .6} H${x - 6} Z" fill="${sk}"/><path d="M${x - 4.8} ${y - .6} H${x + 4.8}" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`;
+    // happy and sleepy eyes are cut to shape (nothing is painted over the face, so blush, freckles and facial hair stay whole)
+    if (ey === 1 || ey === 2){
+      const cid = `che${fid}_${x}`, clip = ey === 1 ? `M${x - 8} ${y - 8}H${x + 8}V${y + 1.600}Q${x} ${y - 1.600} ${x - 8} ${y + 1.600}Z` : `M${x - 8} ${y - .600}H${x + 8}V${y + 8}H${x - 8}Z`;
+      g = `<clipPath id="${cid}"><path d="${clip}"/></clipPath><g clip-path="url(#${cid})">${g}</g>`
+        + (ey === 1 ? `<path d="M${x - 4.600} ${y + 1.400}Q${x} ${y - 1.200} ${x + 4.600} ${y + 1.400}" fill="none" stroke="${ink}" stroke-width="1.300" stroke-linecap="round"/>` : `<path d="M${x - 4.800} ${y - .600}H${x + 4.800}" stroke="${ink}" stroke-width="1.600" stroke-linecap="round"/>`);
+    }
     return g;
   };
   const eyes = eye(51, -1) + eye(69, 1);
+  const waveG = () => armsFront ? `<g class="ch-wave" style="transform-origin:${(cx + M.sw - 7.500).toFixed(1)}px 96px">${ol(armsFront)}${handsFront}</g>` : '';
   const bc = chShade(hair, .72), bw = L.br === 3 ? 2.6 : 1.7, by = L.br === 2 ? 41.5 : 42.5;
   const bro = [`M${43} ${by + 1.6}Q${49} ${by - 1.2} ${57} ${by + .8}M${77} ${by + 1.6}Q${71} ${by - 1.2} ${63} ${by + .8}`, `M43 ${by + 1}L57 ${by}M77 ${by + 1}L63 ${by}`, `M43 ${by + 2}Q50 ${by - 3.4} 57 ${by + 1}M77 ${by + 2}Q70 ${by - 3.4} 63 ${by + 1}`, `M43 ${by + 1.4}Q49 ${by - .6} 57 ${by + .4}M77 ${by + 1.4}Q71 ${by - .6} 63 ${by + .4}`][L.br];
   const brows = `<path d="${bro}" fill="none" stroke="${bc}" stroke-width="${bw}" stroke-linecap="round"/>`;
@@ -421,9 +427,9 @@ function chFigure(look, turned){   // turned: seen from behind
     const pk = ['jeans', 'cargo'].includes(L.bt) ? [-1, 1].map(q => `<path d="M${cx + q * 4} ${Math.max(hemY, 150) + 2}H${cx + q * (M.hp - 3)}V${Math.max(hemY, 150) + 10}Q${cx + q * (M.hp / 2 + .500)} ${Math.max(hemY, 150) + 13} ${cx + q * 4} ${Math.max(hemY, 150) + 10}Z" fill="none" stroke="${pdk}" stroke-width="1.200"/>`).join('') : '';
     let accB = acc;
     if (L.sf){ const sc = CH_OUTFIT_C[(L.oc + 5) % 12]; accB += `<path d="M49 79.500Q60 90.500 71 79.500C73.500 78.800 76.800 80.500 77 84Q60 99 43 84C43.200 80.500 46.500 78.800 49 79.500Z" fill="${sc}"/><path d="M46.500 85.500Q60 95 73.500 85.500" fill="none" stroke="${chShade(sc, .72)}" stroke-width="1"/>`; }
-    return `<g transform="translate(120 0) scale(-1 1)">${ol(legs + arms) + pk + neck + ol(bodyB) + ol(armsFront) + hands + ol(head) + ol(hb + accB)}</g>`;
+    return `<g class="ch-fig"><g transform="translate(120 0) scale(-1 1)">${ol(legs + arms) + pk + neck + ol(bodyB) + waveG() + hands + ol(head) + ol(hb + accB)}</g></g>`;
   }
-  return ol(back + legs + arms) + neck + ol(body) + ol(armsFront) + hands + ol(head) + beard + blush + freck + nose + fhs + eyes + brows + lashes + mouth + ol(front + acc);
+  return '<g class="ch-fig">' + ol(back + legs + arms) + neck + ol(body) + waveG() + hands + ol(head) + blush + freck + beard + nose + fhs + '<g class="ch-eyes">' + eyes + lashes + '</g>' + brows + mouth + ol(front + acc) + '</g>';
 }
 // a picture of the character with its background; the default view is the square portrait (head and shoulders)
 function chFull(look, view, turned){
@@ -479,7 +485,7 @@ function chStartEdit(){ chDraft = chMyLook(); }
 let ccLook = null, ccTab = 0, ccAnim = 0, ccBack = false;
 // camera views [x, y, width, height] on the 120 x 240 canvas; the stage is 4:5, so every view is too
 const CC_VIEWS = {full: [-40, -5, 200, 250], head: [24, -4, 72, 90], face: [28, 20, 64, 80], top: [2, 62, 116, 145], bottoms: [6, 118, 108, 135], shoes: [20, 168, 80, 100]};
-let ccView = CC_VIEWS.full;
+let ccView = CC_VIEWS.full, ccWhole = false;   // ccWhole: keep showing the whole body whatever tab is open
 const CC_THUMB = {head: '24 0 72 72', face: '34 28 52 52', top: '10 62 100 100', bottoms: '10 132 100 100', shoes: '20 182 80 80', full: '-65 -5 250 250'};
 const CC_TABS = [
   ['Body', 'full', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6'],
@@ -541,7 +547,7 @@ function ccOpen(){
   ccLook = chMyLook(); ccTab = 0; ccView = CC_VIEWS.full.slice();
   document.body.insertAdjacentHTML('beforeend', `<div id="cc" class="ccr" role="dialog" aria-modal="true" aria-label="Character creator">
     <div class="ccr-bar"><button type="button" class="small-btn" data-cc-act="cancel">Cancel</button><b>Your character</b><button type="button" class="btn primary" data-cc-act="save">Done</button></div>
-    <div class="ccr-main"><div class="ccr-left"><div class="ccr-stage" id="ccStage"></div><div class="ccr-btns"><div class="ccr-turn" role="radiogroup" aria-label="Side shown" title="Or drag the character sideways to turn it"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.500-6.200L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.500 6.200L3 16M3 21v-5h5"/></svg><button type="button" role="radio" data-cc-side="front" aria-checked="true">Front</button><button type="button" role="radio" data-cc-side="back" aria-checked="false">Back</button></div><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
+    <div class="ccr-main"><div class="ccr-left"><div class="ccr-stage" id="ccStage"></div><button type="button" class="ccr-whole" data-cc-act="whole" aria-pressed="false" title="Show the whole character while editing any part"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg><span>Full body</span></button><div class="ccr-btns"><div class="ccr-turn" role="radiogroup" aria-label="Side shown" title="Or drag the character sideways to turn it"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.500-6.200L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.500 6.200L3 16M3 21v-5h5"/></svg><button type="button" role="radio" data-cc-side="front" aria-checked="true">Front</button><button type="button" role="radio" data-cc-side="back" aria-checked="false">Back</button></div><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
     <div class="ccr-right"><div class="ccr-tabs" id="ccTabs" role="tablist"></div><div class="ccr-body" id="ccBody"></div></div></div></div>`);
   document.body.classList.add('ccr-lock'); ccDraw(true);
   const first = document.querySelector('#cc [data-cc-act="save"]'); if (first) first.focus();
@@ -559,13 +565,13 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-cc-act]');
   if (a){
     const k = a.dataset.ccAct; e.preventDefault();
-    if (k === 'open'){ ccBack = false; ccOpen(); } else if (k === 'cancel') ccClose(); else if (k === 'save') ccSave(); else if (k === 'turn'){ ccBack = !ccBack; ccDraw(false); }
+    if (k === 'open'){ ccBack = false; ccOpen(); } else if (k === 'cancel') ccClose(); else if (k === 'save') ccSave(); else if (k === 'turn'){ ccBack = !ccBack; ccDraw(false); } else if (k === 'whole'){ ccWhole = !ccWhole; a.setAttribute('aria-pressed', String(ccWhole)); a.querySelector('span').textContent = ccWhole ? 'Zoom to part' : 'Full body'; ccCam(ccWhole ? 'full' : CC_TABS[ccTab][1]); }
     else if (ccLook){ ccLook = k === 'reset' ? chClean(CH_DEFAULT) : chClean(chLookOf(Math.floor(Math.random() * 1e9))); ccDraw(false); }
     return;
   }
   if (!ccLook || !e.target.closest('#cc')) return;
   const t = e.target.closest('[data-cc-tab]'), o = e.target.closest('[data-cc]'), g = e.target.closest('[data-cc-tg]');
-  if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); ccCam(CC_TABS[ccTab][1]); }
+  if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); ccCam(ccWhole ? 'full' : CC_TABS[ccTab][1]); }
   else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); }
   else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccLook = chClean(ccLook); ccDraw(false); }
 }, true);
