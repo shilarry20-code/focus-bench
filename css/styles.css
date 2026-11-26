@@ -3155,3 +3155,8 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .ch-lid{opacity:0;transition:opacity .06s}
 .ch-blink .ch-eye,.ch-wink .ch-eye.r{transform:scaleY(.08)}
 .ch-blink .ch-lid,.ch-wink .ch-eye.r + .ch-lid{opacity:1}
+
+/* the desk at the top of a profile */
+.pf-desk{padding:0;overflow:hidden}
+.dk-scene{aspect-ratio:460/250;width:100%;background:#2a2420}
+.dk-scene svg{display:block;width:100%;height:100%}
