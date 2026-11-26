@@ -1746,6 +1746,7 @@ function renderProfilePage(){
   };
   $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button></div>
     <div class="pf-wrap">
+    ${typeof dkSceneHtml === 'function' ? `<div class="card pf-desk">${dkSceneHtml(w)}</div>` : ''}
     <div class="card pf-head">
       <div class="pf-h1"><span class="pf-pic">${chFlip(w, 'xl')}${live ? '<i class="pf-livedot" title="Studying now"></i>' : ''}</span>
         <div class="pf-cnts">${cnt(posts.length, posts.length === 1 ? 'post' : 'posts')}${cnt(nf, nf === 1 ? 'follower' : 'followers', 'followers')}${cnt(ng, 'following', 'following')}</div></div>
