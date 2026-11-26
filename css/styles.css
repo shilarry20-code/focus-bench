@@ -2939,3 +2939,44 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .ccr-whole{position:absolute;top:14px;right:14px;z-index:1;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:8px 13px;font:inherit;font-weight:700;font-size:13px;background:var(--surface,#fff);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.18);cursor:pointer}
 .ccr-whole[aria-pressed="true"]{background:var(--accent,#2d5bd8);color:#fff}
 @media (max-width:760px){.ccr-left{position:relative}.ccr-whole{top:6px;right:6px;padding:6px 9px;font-size:12px}}
+
+/* ---- tournament markets ---- */
+.bt-card .bt-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.bt-sub{color:var(--muted)}
+.bt-bal{display:inline-flex;align-items:center;gap:6px;font-weight:800;padding:6px 12px;border-radius:999px;background:var(--soft)}
+.bt-bal .co-ic{width:16px;height:16px}
+.bt-where{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0}
+.bt-divf{display:inline-flex;gap:6px;align-items:center;margin-left:auto}
+.bt-divf input{width:84px}
+.bt-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:6px 0 4px}
+.bt-tabs button{border:0;background:none;padding:10px 14px;font:inherit;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
+.bt-tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.bt-ev{margin:14px 0 6px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.bt-grp{display:flex;align-items:center;gap:8px;margin:14px 0 4px}.bt-grp small{color:var(--muted)}
+.bt-list{list-style:none;margin:0;padding:0}
+.bt-mk{display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.bt-q{display:flex;align-items:center;justify-content:space-between;gap:10px;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;min-width:0}
+.bt-q > span:first-child{display:flex;flex-direction:column;min-width:0}
+.bt-q b{display:inline-flex;align-items:center;gap:6px}.bt-q small{color:var(--muted)}
+.bt-ch{font-size:20px;font-weight:800;text-align:right;line-height:1}.bt-ch small{display:block;font-size:11px;font-weight:600;color:var(--muted)}
+.bt-btns{display:flex;gap:6px}
+.bt-buy{display:flex;flex-direction:column;align-items:center;min-width:76px;padding:7px 10px;border-radius:10px;border:1px solid transparent;font:inherit;cursor:pointer;line-height:1.15}
+.bt-buy span{font-size:11px;font-weight:700;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bt-buy b{font-size:15px}
+.bt-buy.yes{background:rgba(34,160,107,.14);color:#1c8a5c}
+.bt-buy.no{background:rgba(214,69,80,.13);color:#c03a47}
+.bt-buy.on{border-color:currentColor;box-shadow:0 0 0 2px currentColor inset}
+.bt-buy:disabled{opacity:.4;cursor:not-allowed}
+.bt-more,.bt-ticket{grid-column:1 / -1}
+.bt-spark{width:100%;height:54px;display:block}.bt-spark .ln{fill:none;stroke:var(--accent);stroke-width:2}.bt-spark .mid{stroke:var(--line);stroke-dasharray:4 4}
+.bt-rules{font-size:12px;color:var(--muted);margin:6px 0 0}
+.bt-ticket{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;border-radius:12px;background:var(--soft);margin-top:4px}
+.bt-tt{width:100%}.bt-ticket input{width:96px}
+.bt-quick{display:inline-flex;gap:4px}.bt-sum{color:var(--muted)}.bt-sum b{color:var(--ink)}
+.bt-msg{width:100%;margin:4px 0 0;color:#c03a47;font-size:13px}
+.bt-pos{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.bt-pos > span:first-child{flex:1;min-width:0}.bt-pos small{display:block;color:var(--muted)}
+.bt-pv{text-align:right}.bt-pv small{display:block;color:var(--muted)}
+.bt-st{font-style:normal;font-weight:700;font-size:13px}.bt-st.won{color:#1c8a5c}.bt-st.lost{color:#c03a47}.bt-st.sold,.bt-st.void{color:var(--muted)}
+.bt-foot{margin-top:12px}
+@media (max-width:600px){.bt-mk{grid-template-columns:1fr}.bt-btns{justify-content:stretch}.bt-buy{flex:1}.bt-divf{margin-left:0}}
