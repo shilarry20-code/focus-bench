@@ -2916,3 +2916,21 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
   .ccr-stage{position:absolute;inset:0;width:auto;height:auto;max-width:none;aspect-ratio:auto;border-radius:0;box-shadow:none;padding:12px 12px 70px;box-sizing:border-box}
   .ccr-btns{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:1}
 }
+
+/* section titles that fold their section */
+.ccr-h{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;padding:6px 2px;cursor:pointer;font-family:inherit;text-align:left}
+.ccr-h svg{transition:transform .18s;flex:none}
+.ccr-h[aria-expanded="false"] svg{transform:rotate(-90deg)}
+.ccr-h:hover{color:var(--ink)}
+/* front / back switch under the preview */
+.ccr-turn{display:inline-flex;align-items:center;gap:4px;padding:4px 4px 4px 10px;border-radius:999px;background:var(--surface,#fff);box-shadow:0 2px 8px rgba(0,0,0,.18);color:var(--ink)}
+.ccr-turn svg{margin-right:4px;color:var(--muted)}
+.ccr-turn button{border:0;background:transparent;font:inherit;font-weight:700;font-size:13px;padding:7px 14px;border-radius:999px;color:var(--muted);cursor:pointer}
+.ccr-turn button[aria-checked="true"]{background:var(--accent,#2d5bd8);color:#fff}
+.ccr-btns{align-items:center}
+#ccStage{cursor:grab;touch-action:pan-y}
+#ccStage:active{cursor:grabbing}
+#ccStage svg{transform-origin:50% 50%}
+
+#ccStage{overflow:hidden}
+#ccStage svg{overflow:visible}

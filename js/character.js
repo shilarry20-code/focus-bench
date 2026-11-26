@@ -499,7 +499,10 @@ function ccSwatches(key, list, d, hexKey){
 }
 function ccTiles(key, list, d, crop, num){ return `<div class="ccr-grid">${list.map(([v, l]) => `<button type="button" class="ccr-tile" data-cc="${key}" data-v="${v}" aria-pressed="${String(d[key]) === String(v)}"><span class="ccr-th">${chThumb(d, {[key]: num ? +v : v}, crop)}</span><span>${l}</span></button>`).join('')}</div>`; }
 function ccToggles(items, d){ return `<div class="ccr-grid">${items.map(([k, l, crop]) => `<button type="button" class="ccr-tile" data-cc-tg="${k}" aria-pressed="${!!d[k]}"><span class="ccr-th">${chThumb(d, {[k]: d[k] ? 0 : 1}, crop)}</span><span>${d[k] ? 'Remove ' : ''}${l}</span></button>`).join('')}</div>`; }
-const ccH = t => `<h4 class="ccr-h">${t}</h4>`;
+// each section title folds its section away; which ones are folded is remembered while the creator is open
+const ccClosed = new Set();
+const ccH = t => `<button type="button" class="ccr-h" data-cc-sec="${t}" aria-expanded="${!ccClosed.has(t)}"><span>${t}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`;
+const ccFold = root => root.querySelectorAll('[data-cc-sec]').forEach(h => { const c = h.nextElementSibling; if (c && !c.matches('[data-cc-sec]')) c.hidden = ccClosed.has(h.dataset.ccSec); });
 function ccPanel(){
   const d = ccLook;
   return [
@@ -527,17 +530,18 @@ function ccCam(name){
 }
 function ccDraw(full){
   const el = document.getElementById('cc'); if (!el) return;
-  el.querySelector('#ccStage').innerHTML = chFull(ccLook, ccView.join(' '), ccBack).replace('xMidYMid slice', 'xMidYMid meet'); el.querySelector('#ccStage').style.background = CH_BG[chClean(ccLook).bg];   // the preview fills the whole left side, so the character is fitted rather than cropped const tb = el.querySelector('[data-cc-act="turn"]'); if (tb) tb.textContent = ccBack ? 'Face front' : 'Turn around';
+  el.querySelector('#ccStage').innerHTML = chFull(ccLook, ccView.join(' '), ccBack).replace('xMidYMid slice', 'xMidYMid meet'); el.querySelector('#ccStage').style.background = CH_BG[chClean(ccLook).bg];   
+  el.querySelectorAll('[data-cc-side]').forEach(b => b.setAttribute('aria-checked', String((b.dataset.ccSide === 'back') === ccBack)));   // the preview fills the whole left side, so the character is fitted rather than cropped
   if (full) el.querySelector('#ccTabs').innerHTML = CC_TABS.map((t, k) => `<button type="button" role="tab" class="ccr-tab" data-cc-tab="${k}" aria-selected="${k === ccTab}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${t[2]}"/></svg><span>${t[0]}</span></button>`).join('');
   const body = el.querySelector('#ccBody'), top = body.scrollTop;
-  body.innerHTML = ccPanel(); body.scrollTop = full ? 0 : top;
+  body.innerHTML = ccPanel(); ccFold(body); body.scrollTop = full ? 0 : top;
 }
 function ccOpen(){
   if (document.getElementById('cc')) return;
   ccLook = chMyLook(); ccTab = 0; ccView = CC_VIEWS.full.slice();
   document.body.insertAdjacentHTML('beforeend', `<div id="cc" class="ccr" role="dialog" aria-modal="true" aria-label="Character creator">
     <div class="ccr-bar"><button type="button" class="small-btn" data-cc-act="cancel">Cancel</button><b>Your character</b><button type="button" class="btn primary" data-cc-act="save">Done</button></div>
-    <div class="ccr-main"><div class="ccr-left"><div class="ccr-stage" id="ccStage"></div><div class="ccr-btns"><button type="button" class="small-btn" data-cc-act="turn">Turn around</button><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
+    <div class="ccr-main"><div class="ccr-left"><div class="ccr-stage" id="ccStage"></div><div class="ccr-btns"><div class="ccr-turn" role="radiogroup" aria-label="Side shown" title="Or drag the character sideways to turn it"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.500-6.200L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.500 6.200L3 16M3 21v-5h5"/></svg><button type="button" role="radio" data-cc-side="front" aria-checked="true">Front</button><button type="button" role="radio" data-cc-side="back" aria-checked="false">Back</button></div><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
     <div class="ccr-right"><div class="ccr-tabs" id="ccTabs" role="tablist"></div><div class="ccr-body" id="ccBody"></div></div></div></div>`);
   document.body.classList.add('ccr-lock'); ccDraw(true);
   const first = document.querySelector('#cc [data-cc-act="save"]'); if (first) first.focus();
@@ -570,3 +574,30 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.g
 // the free color picker: the preview follows the color while you drag, the panel redraws when you let go
 document.addEventListener('input', e => { const i = e.target.closest && e.target.closest('[data-cc-hex]'); if (!i || !ccLook) return; ccLook[i.dataset.ccHex] = i.value; ccLook = chClean(ccLook); const st = document.querySelector('#ccStage'); if (st) st.innerHTML = chFull(ccLook, ccView.join(' '), ccBack).replace('xMidYMid slice', 'xMidYMid meet'); });
 document.addEventListener('change', e => { const i = e.target.closest && e.target.closest('[data-cc-hex]'); if (i && ccLook) ccDraw(false); });
+
+// turning the character: a quick squeeze to the side and back, swapping front and back at the middle
+function ccTurn(toBack){
+  if (!ccLook || toBack === ccBack) return;
+  const svg = document.querySelector('#ccStage svg'), reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const swap = () => { ccBack = toBack; ccDraw(false); const n = document.querySelector('#ccStage svg'); if (n && !reduce && n.animate) n.animate([{transform: 'scaleX(0)'}, {transform: 'scaleX(1)'}], {duration: 170, easing: 'ease-out'}); };
+  if (!svg || reduce || !svg.animate) return swap();
+  const cur = getComputedStyle(svg).transform; svg.animate([{transform: cur === 'none' ? 'scaleX(1)' : cur}, {transform: 'scaleX(0)'}], {duration: 150, easing: 'ease-in'}).onfinish = swap;
+}
+document.addEventListener('click', e => {
+  const sd = e.target.closest && e.target.closest('[data-cc-side]'); if (sd){ ccTurn(sd.dataset.ccSide === 'back'); return; }
+  const h = e.target.closest && e.target.closest('[data-cc-sec]'); if (!h) return;
+  const t = h.dataset.ccSec, open = ccClosed.has(t); open ? ccClosed.delete(t) : ccClosed.add(t);
+  h.setAttribute('aria-expanded', String(open)); const c = h.nextElementSibling; if (c && !c.matches('[data-cc-sec]')) c.hidden = !open;
+});
+// drag the preview sideways to turn the character
+let ccSpin = null;
+document.addEventListener('pointerdown', e => { const st = e.target.closest && e.target.closest('#ccStage'); if (!st || e.button) return; ccSpin = {x: e.clientX, id: e.pointerId, moved: false}; });
+document.addEventListener('pointermove', e => {
+  if (!ccSpin || e.pointerId !== ccSpin.id) return; const dx = e.clientX - ccSpin.x; if (Math.abs(dx) < 6 && !ccSpin.moved) return;
+  ccSpin.moved = true; const svg = document.querySelector('#ccStage svg'); if (svg) svg.style.transform = `scaleX(${Math.max(.05, Math.cos(Math.min(Math.abs(dx) / 90, 1) * Math.PI / 2)).toFixed(3)})`;
+});
+document.addEventListener('pointerup', e => {
+  if (!ccSpin || e.pointerId !== ccSpin.id) return; const dx = e.clientX - ccSpin.x, moved = ccSpin.moved; ccSpin = null;
+  const svg = document.querySelector('#ccStage svg'); if (!moved || !svg) return;
+  if (Math.abs(dx) > 45) ccTurn(!ccBack); else { svg.style.transition = 'transform .15s'; svg.style.transform = ''; setTimeout(() => { svg.style.transition = ''; }, 160); }
+});
