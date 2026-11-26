@@ -280,7 +280,9 @@ function chFigure(look, turned){   // turned: seen from behind
     }
     return g;
   };
-  const eyes = eye(51, -1) + eye(69, 1);
+  // each eye can close (a blink or a wink): it squeezes shut and a lid line shows
+  const lid = x => `<path class="ch-lid" d="M${x - 4.2} ${eyeY + .6}Q${x} ${eyeY + 2.6} ${x + 4.2} ${eyeY + .6}" fill="none" stroke="${ink}" stroke-width="1.5" stroke-linecap="round"/>`;
+  const eyes = `<g class="ch-eye l" style="transform-origin:51px ${eyeY}px">${eye(51, -1)}</g>${lid(51)}<g class="ch-eye r" style="transform-origin:69px ${eyeY}px">${eye(69, 1)}</g>${lid(69)}`;
   const waveG = () => armsFront ? `<g class="ch-wave" style="transform-origin:${(cx + M.sw - 7.500).toFixed(1)}px 96px">${ol(armsFront)}${handsFront}</g>` : '';
   const bc = chShade(hair, .72), bw = L.br === 3 ? 2.6 : 1.7, by = L.br === 2 ? 41.5 : 42.5;
   const bro = [`M${43} ${by + 1.6}Q${49} ${by - 1.2} ${57} ${by + .8}M${77} ${by + 1.6}Q${71} ${by - 1.2} ${63} ${by + .8}`, `M43 ${by + 1}L57 ${by}M77 ${by + 1}L63 ${by}`, `M43 ${by + 2}Q50 ${by - 3.4} 57 ${by + 1}M77 ${by + 2}Q70 ${by - 3.4} 63 ${by + 1}`, `M43 ${by + 1.4}Q49 ${by - .6} 57 ${by + .4}M77 ${by + 1.4}Q71 ${by - .6} 63 ${by + .4}`][L.br];
@@ -435,6 +437,46 @@ function chFigure(look, turned){   // turned: seen from behind
   }
   return '<g class="ch-fig">' + ol(back + legs + arms) + neck + ol(body) + waveG() + hands + ol(head) + blush + freck + beard + nose + fhs + '<g class="ch-eyes">' + eyes + lashes + '</g>' + brows + mouth + ol(front + acc) + '</g>';
 }
+// the changing room behind the character in the creator: a little boutique with a wardrobe, a mirror, curtains and a
+// lit round platform. It's drawn in the character's own units (the feet stand at about y 240), so the camera moves both together.
+function chRoom(){
+  const shirts = ['#d9534f', '#3f6fa0', '#f2c14e', '#5b8c5a', '#8e6bbf', '#f4f4f0', '#2f3540', '#e88aa6'];
+  let g = `<defs><radialGradient id="crSpot" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff8e0" stop-opacity=".75"/><stop offset="1" stop-color="#fff8e0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="crGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe2a6" stop-opacity=".8"/><stop offset="1" stop-color="#ffe2a6" stop-opacity="0"/></radialGradient>
+    <linearGradient id="crBeam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6da" stop-opacity="0"/><stop offset="1" stop-color="#fff6da" stop-opacity=".35"/></linearGradient>
+    <linearGradient id="crGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eaf4f8"/><stop offset=".55" stop-color="#c9dde6"/><stop offset="1" stop-color="#aac6d3"/></linearGradient>
+    <linearGradient id="crFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b88d63"/><stop offset="1" stop-color="#d6ae82"/></linearGradient>
+    <radialGradient id="crVig" cx="50%" cy="45%" r="70%"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#1b1208" stop-opacity=".45"/></radialGradient>
+    <pattern id="crPaper" width="26" height="26" patternUnits="userSpaceOnUse"><rect width="26" height="26" fill="#efe3d0"/><rect width="6" height="26" fill="#e9dcc6"/><circle cx="16" cy="13" r="1.4" fill="#e2d2b8"/></pattern></defs>`;
+  // wall, panelling and floor
+  g += `<rect x="-900" y="-700" width="1900" height="878" fill="url(#crPaper)"/><rect x="-900" y="112" width="1900" height="64" fill="#e3d2b8"/>
+    <path d="M-900 112H1000" stroke="#c9b08c" stroke-width="3"/>${[...Array(30)].map((_, i) => `<rect x="${-890 + i * 64}" y="122" width="52" height="44" rx="3" fill="none" stroke="#cfba98" stroke-width="1.5"/>`).join('')}
+    <rect x="-900" y="168" width="1900" height="10" fill="#b99b74"/><rect x="-900" y="176" width="1900" height="700" fill="url(#crFloor)"/>`;
+  for (let x = -1500; x <= 1620; x += 64) g += `<path d="M${(60 + (x - 60) * .22).toFixed(1)} 176L${x} 880" stroke="#a37c55" stroke-width="1.4" opacity=".55"/>`;
+  [196, 222, 258, 310, 390].forEach(y => { g += `<path d="M-900 ${y}H1000" stroke="#a37c55" stroke-width="1" opacity=".3"/>`; });
+  g += `<path d="M20 -700L100 -700L190 246L-70 246Z" fill="url(#crBeam)"/>`;
+  // wall lights
+  [[-40, 6], [160, 6]].forEach(([x, y]) => { g += `<circle cx="${x}" cy="${y + 6}" r="60" fill="url(#crGlow)"/><path d="M${x - 7} ${y + 18}h14l-3-14h-8z" fill="#c9a14a" stroke="#7a5a1f" stroke-width="1.5"/><rect x="${x - 2}" y="${y + 18}" width="4" height="8" fill="#7a5a1f"/><ellipse cx="${x}" cy="${y + 2}" rx="9" ry="6" fill="#fff4d4" stroke="#c9a14a" stroke-width="1.2"/>`; });
+  // the wardrobe on the left, open, with a rail of shirts and shoe boxes
+  g += `<rect x="-262" y="-78" width="196" height="306" rx="8" fill="#7a4f33" stroke="#3d2718" stroke-width="3"/><rect x="-248" y="-62" width="168" height="276" rx="4" fill="#4a2f1f"/>
+    <path d="M-244 -36H-84" stroke="#c9a14a" stroke-width="4" stroke-linecap="round"/>`;
+  shirts.forEach((c, i) => { const x = -232 + i * 20; g += `<path d="M${x + 6} -36q0-6 4-6t4 6" fill="none" stroke="#c9a14a" stroke-width="1.6"/><path d="M${x} -30l10-6 10 6 6 12-6 2v62h-20v-62l-6-2z" fill="${c}" stroke="#2a1b10" stroke-width="1.6" stroke-linejoin="round"/>`; });
+  g += `<rect x="-248" y="96" width="168" height="5" fill="#7a4f33"/>${['#e8d6b8', '#c9a9e0', '#a8d0e6', '#f0b6b0'].map((c, i) => `<rect x="${-240 + i * 40}" y="${150 + (i % 2) * 6}" width="34" height="${58 - (i % 2) * 6}" rx="2" fill="${c}" stroke="#2a1b10" stroke-width="1.5"/><path d="M${-240 + i * 40} ${164 + (i % 2) * 6}h34" stroke="#2a1b10" stroke-width="1.2"/>`).join('')}
+    <path d="M-112 104h22" stroke="#c9a14a" stroke-width="3" stroke-linecap="round"/><rect x="-266" y="226" width="204" height="10" rx="3" fill="#5c3a25" stroke="#3d2718" stroke-width="2"/>`;
+  // the mirror on the right, on a stand
+  g += `<path d="M232 186L220 232M288 186L300 232" stroke="#7a5a1f" stroke-width="6" stroke-linecap="round"/><ellipse cx="254" cy="226" rx="0" ry="0"/>
+    <ellipse cx="254" cy="78" rx="50" ry="108" fill="url(#crGlass)" stroke="#c9a14a" stroke-width="9"/><ellipse cx="254" cy="78" rx="50" ry="108" fill="none" stroke="#7a5a1f" stroke-width="2"/>
+    <path d="M222 12l26-36M228 52l44-60M236 96l30-40" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".55"/>`;
+  // a plant by the mirror
+  g += `<path d="M186 214c-14-30-30-34-38-30 10 4 20 16 26 32M190 214c-2-34 8-50 18-52-4 10-8 26-10 52M196 216c14-24 30-26 36-22-10 4-20 12-28 26" fill="#5b8c5a" stroke="#2f4a2e" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M176 210h34l-5 28h-24z" fill="#c4704f" stroke="#6b3420" stroke-width="2" stroke-linejoin="round"/>`;
+  // curtains at the far sides
+  [[-420, 1], [340, -1]].forEach(([x, d]) => { const w = 110; let f = `<path d="M${x} -700h${w}v${930}c-${w * .3} 10-${w * .7} 10-${w} 0z" fill="#9b2f3f" stroke="#5e1824" stroke-width="3"/>`; for (let i = 1; i < 5; i++) f += `<path d="M${x + i * w / 5} -700v930" stroke="#7a2231" stroke-width="3" opacity=".7"/>`; g += f + `<rect x="${x - 10}" y="-704" width="${w + 20}" height="14" fill="#c9a14a"/>`; });
+  // the lit round platform the character stands on
+  g += `<ellipse cx="60" cy="244" rx="150" ry="40" fill="url(#crSpot)"/>
+    <ellipse cx="60" cy="250" rx="96" ry="21" fill="#5c3a5e"/><ellipse cx="60" cy="244" rx="96" ry="21" fill="#8a5a8c" stroke="#4a2c4b" stroke-width="2.5"/><ellipse cx="60" cy="243" rx="78" ry="15" fill="none" stroke="#c9a14a" stroke-width="2" opacity=".8"/>`;
+  return g + `<rect x="-900" y="-700" width="1900" height="1600" fill="url(#crVig)"/>`;
+}
 // a picture of the character with its background; the default view is the square portrait (head and shoulders)
 function chFull(look, view, turned){
   const L = chClean(look), bg = CH_BG[L.bg], deco = L.bp === 1 ? `<circle cx="60" cy="52" r="46" fill="#fff" opacity=".28"/>` : L.bp === 2 ? `<path d="M0 90L120 30V70L0 124Z" fill="#fff" opacity=".2"/>` : '';
@@ -448,7 +490,7 @@ const chFlipped = new Set();         // profiles flipped to the character during
 function chFlip(w, cls){
   const svg = w === ME ? chBust(chMyLook()) : chBotSvg(BOTS[w] && BOTS[w].i != null ? BOTS[w].i : w);
   return `<button type="button" class="av-flip${chFlipped.has(w) ? ' flipped' : ''}" data-flip="${w}" aria-label="Profile picture. Drag sideways to flip to the character" title="Drag to flip">
-    <span class="af-in"><span class="af-f">${pAvatar(w, cls)}</span><span class="af-b"><span class="av pic ${cls || ''}" aria-hidden="true">${svg}</span></span></span></button>`;
+    <span class="af-in"><span class="af-f">${pAvatar(w, cls)}</span><span class="af-b"><span class="av pic ch-live ${cls || ''}" aria-hidden="true">${svg}</span></span></span></button>`;
 }
 // hold and drag the picture sideways: it turns with the mouse (or finger) and settles on whichever side is nearer
 let chDrag = null;
@@ -488,7 +530,7 @@ let chDraft = null;                  // the look being edited in Edit profile (k
 function chStartEdit(){ chDraft = chMyLook(); }
 let ccLook = null, ccTab = 0, ccAnim = 0, ccBack = false;
 // camera views [x, y, width, height] on the 120 x 240 canvas; the stage is 4:5, so every view is too
-const CC_VIEWS = {full: [-40, -5, 200, 250], head: [24, -4, 72, 90], face: [28, 20, 64, 80], top: [2, 62, 116, 145], bottoms: [6, 118, 108, 135], shoes: [20, 168, 80, 100]};
+const CC_VIEWS = {full: [-170, -85, 460, 420], head: [-70, -45, 260, 230], face: [-40, -15, 200, 175], top: [-110, 0, 340, 300], bottoms: [-110, 70, 340, 300], shoes: [-90, 120, 300, 250], portrait: [-14, -8, 148, 140]};
 let ccView = CC_VIEWS.full, ccWhole = false;   // ccWhole: keep showing the whole body whatever tab is open
 const CC_THUMB = {head: '24 0 72 72', face: '34 28 52 52', top: '10 62 100 100', bottoms: '10 132 100 100', shoes: '20 182 80 80', full: '-65 -5 250 250'};
 const CC_TABS = [
@@ -499,7 +541,7 @@ const CC_TABS = [
   ['Bottoms', 'bottoms', 'M7 3h10l1 18h-5l-1-9-1 9H6z'],
   ['Shoes', 'shoes', 'M3 16c4 0 5-3 6-6l3 1c1 2 3 3 9 3v4H3z'],
   ['Extras', 'head', 'M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v5H4zM17 14h3v5h-3z'],
-  ['Backdrop', 'full', 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6']
+  ['Backdrop', 'portrait', 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6']
 ];
 // a small picture of the character with one thing changed
 const chThumb = (look, over, crop) => chFull(Object.assign({}, look, over), CC_THUMB[crop]);
@@ -526,7 +568,25 @@ function ccPanel(){
     ccH('Color') + ccSwatches('bg', CH_BG, d) + ccH('Pattern') + ccTiles('bp', CH_BGPAT, d, 'full', true)
   ][ccTab];
 }
-function ccStageView(){ const s = document.querySelector('#ccStage svg'); if (s) s.setAttribute('viewBox', ccView.map(v => +v.toFixed(2)).join(' ')); }
+function ccStageView(){ const v = ccView.map(x => +x.toFixed(2)).join(' '); document.querySelectorAll('#ccStage svg').forEach(s => s.setAttribute('viewBox', v)); }
+// the stage is two layers: the room (or, on the Backdrop tab, the profile picture's background) and the character on top
+let ccExpr = null, ccExprT = 0, ccReactAt = 0;
+function ccStageDraw(){
+  const st = document.querySelector('#ccStage'); if (!st || !ccLook) return;
+  const L = chClean(ccLook), v = ccView.join(' '), bd = CC_TABS[ccTab] && CC_TABS[ccTab][0] === 'Backdrop';
+  const back = bd ? `<rect x="-900" y="-700" width="1900" height="1600" fill="${CH_BG[L.bg]}"/>${L.bp === 1 ? `<circle cx="60" cy="52" r="46" fill="#fff" opacity=".28"/>` : L.bp === 2 ? `<path d="M-900 540L1000 -410V-200L-900 700Z" fill="#fff" opacity=".2"/>` : ''}` : chRoom();
+  st.innerHTML = `<svg class="ccr-room" viewBox="${v}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${back}</svg><svg class="ccr-fig ch-live" viewBox="${v}" preserveAspectRatio="xMidYMid slice">${chFigure(ccExpr ? Object.assign({}, L, ccExpr) : L, ccBack)}</svg>`;
+  st.style.background = '';
+}
+// the character reacts to what you pick: a grin, a laugh, a wink; something surprising gets a wide-eyed "oh"
+const CC_REACT = {pick: [{mo: 1}, {ey: 1, mo: 5}, {mo: 8}, {wink: 1}, {ey: 1, mo: 0}], wow: [{ey: 4, mo: 3}]};
+function ccReact(kind){
+  if (!ccLook || ccBack || Date.now() - ccReactAt < 1400 || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  ccReactAt = Date.now(); const opts = CC_REACT[kind] || CC_REACT.pick, r = opts[Math.floor(Math.random() * opts.length)];
+  clearTimeout(ccExprT);
+  if (r.wink){ const f = document.querySelector('#ccStage .ccr-fig'); if (f){ f.classList.add('ch-wink'); ccExprT = setTimeout(() => f.classList.remove('ch-wink'), 450); } return; }
+  ccExpr = r; ccStageDraw(); ccExprT = setTimeout(() => { ccExpr = null; ccStageDraw(); }, 1200);
+}
 // the camera glides to the part you are working on
 function ccCam(name){
   const to = CC_VIEWS[name], from = ccView.slice(), t0 = performance.now();
@@ -540,7 +600,7 @@ function ccCam(name){
 }
 function ccDraw(full){
   const el = document.getElementById('cc'); if (!el) return;
-  el.querySelector('#ccStage').innerHTML = chFull(ccLook, ccView.join(' '), ccBack).replace('xMidYMid slice', 'xMidYMid meet'); el.querySelector('#ccStage').style.background = CH_BG[chClean(ccLook).bg];   
+  ccStageDraw();   
   el.querySelectorAll('[data-cc-side]').forEach(b => b.setAttribute('aria-checked', String((b.dataset.ccSide === 'back') === ccBack)));   // the preview fills the whole left side, so the character is fitted rather than cropped
   if (full) el.querySelector('#ccTabs').innerHTML = CC_TABS.map((t, k) => `<button type="button" role="tab" class="ccr-tab" data-cc-tab="${k}" aria-selected="${k === ccTab}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${t[2]}"/></svg><span>${t[0]}</span></button>`).join('');
   const body = el.querySelector('#ccBody'), top = body.scrollTop;
@@ -570,26 +630,26 @@ document.addEventListener('click', e => {
   if (a){
     const k = a.dataset.ccAct; e.preventDefault();
     if (k === 'open'){ ccBack = false; ccOpen(); } else if (k === 'cancel') ccClose(); else if (k === 'save') ccSave(); else if (k === 'turn'){ ccBack = !ccBack; ccDraw(false); } else if (k === 'whole'){ ccWhole = !ccWhole; a.setAttribute('aria-pressed', String(ccWhole)); a.querySelector('span').textContent = ccWhole ? 'Zoom to part' : 'Full body'; ccCam(ccWhole ? 'full' : CC_TABS[ccTab][1]); }
-    else if (ccLook){ ccLook = k === 'reset' ? chClean(CH_DEFAULT) : chClean(chLookOf(Math.floor(Math.random() * 1e9))); ccDraw(false); }
+    else if (ccLook){ ccLook = k === 'reset' ? chClean(CH_DEFAULT) : chClean(chLookOf(Math.floor(Math.random() * 1e9))); ccDraw(false); if (k !== 'reset'){ ccReactAt = 0; ccReact('wow'); } }
     return;
   }
   if (!ccLook || !e.target.closest('#cc')) return;
   const t = e.target.closest('[data-cc-tab]'), o = e.target.closest('[data-cc]'), g = e.target.closest('[data-cc-tg]');
   if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); ccCam(ccWhole ? 'full' : CC_TABS[ccTab][1]); }
-  else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); }
-  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccLook = chClean(ccLook); ccDraw(false); }
+  else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); if (CC_TABS[ccTab][0] !== 'Face') ccReact('pick'); }
+  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccLook = chClean(ccLook); ccDraw(false); if (!['Face', 'Backdrop'].includes(CC_TABS[ccTab][0]) && Math.random() < .7) ccReact('pick'); }
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('cc')) ccClose(); });
 
 // the free color picker: the preview follows the color while you drag, the panel redraws when you let go
-document.addEventListener('input', e => { const i = e.target.closest && e.target.closest('[data-cc-hex]'); if (!i || !ccLook) return; ccLook[i.dataset.ccHex] = i.value; ccLook = chClean(ccLook); const st = document.querySelector('#ccStage'); if (st) st.innerHTML = chFull(ccLook, ccView.join(' '), ccBack).replace('xMidYMid slice', 'xMidYMid meet'); });
+document.addEventListener('input', e => { const i = e.target.closest && e.target.closest('[data-cc-hex]'); if (!i || !ccLook) return; ccLook[i.dataset.ccHex] = i.value; ccLook = chClean(ccLook); ccStageDraw(); });
 document.addEventListener('change', e => { const i = e.target.closest && e.target.closest('[data-cc-hex]'); if (i && ccLook) ccDraw(false); });
 
 // turning the character: a quick squeeze to the side and back, swapping front and back at the middle
 function ccTurn(toBack){
   if (!ccLook || toBack === ccBack) return;
-  const svg = document.querySelector('#ccStage svg'), reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const swap = () => { ccBack = toBack; ccDraw(false); const n = document.querySelector('#ccStage svg'); if (n && !reduce && n.animate) n.animate([{transform: 'scaleX(0)'}, {transform: 'scaleX(1)'}], {duration: 170, easing: 'ease-out'}); };
+  const svg = document.querySelector('#ccStage .ccr-fig'), reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const swap = () => { ccBack = toBack; ccDraw(false); const n = document.querySelector('#ccStage .ccr-fig'); if (n && !reduce && n.animate) n.animate([{transform: 'scaleX(0)'}, {transform: 'scaleX(1)'}], {duration: 170, easing: 'ease-out'}); };
   if (!svg || reduce || !svg.animate) return swap();
   const cur = getComputedStyle(svg).transform; svg.animate([{transform: cur === 'none' ? 'scaleX(1)' : cur}, {transform: 'scaleX(0)'}], {duration: 150, easing: 'ease-in'}).onfinish = swap;
 }
@@ -604,10 +664,24 @@ let ccSpin = null;
 document.addEventListener('pointerdown', e => { const st = e.target.closest && e.target.closest('#ccStage'); if (!st || e.button) return; ccSpin = {x: e.clientX, id: e.pointerId, moved: false}; });
 document.addEventListener('pointermove', e => {
   if (!ccSpin || e.pointerId !== ccSpin.id) return; const dx = e.clientX - ccSpin.x; if (Math.abs(dx) < 6 && !ccSpin.moved) return;
-  ccSpin.moved = true; const svg = document.querySelector('#ccStage svg'); if (svg) svg.style.transform = `scaleX(${Math.max(.05, Math.cos(Math.min(Math.abs(dx) / 90, 1) * Math.PI / 2)).toFixed(3)})`;
+  ccSpin.moved = true; const svg = document.querySelector('#ccStage .ccr-fig'); if (svg) svg.style.transform = `scaleX(${Math.max(.05, Math.cos(Math.min(Math.abs(dx) / 90, 1) * Math.PI / 2)).toFixed(3)})`;
 });
 document.addEventListener('pointerup', e => {
   if (!ccSpin || e.pointerId !== ccSpin.id) return; const dx = e.clientX - ccSpin.x, moved = ccSpin.moved; ccSpin = null;
-  const svg = document.querySelector('#ccStage svg'); if (!moved || !svg) return;
+  const svg = document.querySelector('#ccStage .ccr-fig'); if (!moved || !svg) return;
   if (Math.abs(dx) > 45) ccTurn(!ccBack); else { svg.style.transition = 'transform .15s'; svg.style.transform = ''; setTimeout(() => { svg.style.transition = ''; }, 160); }
 });
+
+// blinking: every character drawn with the ch-live class blinks now and then (sometimes twice), like a person would
+setInterval(() => {
+  if (document.hidden || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  const now = Date.now();
+  document.querySelectorAll('.ch-live').forEach(el => {
+    if (!el.isConnected || !el.getClientRects().length) return;
+    if (!el._nb){ el._nb = now + 800 + Math.random() * 3000; return; }
+    if (now < el._nb) return;
+    const twice = Math.random() < .18; el._nb = now + 2200 + Math.random() * 4200;
+    const blink = () => { el.classList.add('ch-blink'); setTimeout(() => el.classList.remove('ch-blink'), 140); };
+    blink(); if (twice) setTimeout(blink, 300);
+  });
+}, 250);
