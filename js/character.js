@@ -12,6 +12,10 @@ const CH_HAIR = ['#1d1a1a', '#3b2a20', '#5d3b25', '#8a5a33', '#c9a26a', '#e8d29a
 const CH_OUTFIT_C = ['#c9805a', '#4b86c6', '#5e9a6b', '#7a63b5', '#3a4252', '#d8473f', '#e3b04b', '#6fa38a', '#b9c2cf', '#e87ca0', '#2f3e5c', '#f1f1ec'];
 const CH_BG = ['#f2d675', '#9cc5e8', '#b7dcc2', '#d9c2f0', '#f4b9a8', '#e8b44a', '#8fb3a8', '#c9cfda', '#f0a8c0', '#5b7f9e', '#3a4252', '#c9805a'];
 const CH_HAIRSTYLES = [['short', 'Short'], ['buzz', 'Buzz'], ['side', 'Side part'], ['curly', 'Curly'], ['spiky', 'Spiky'], ['bob', 'Bob'], ['long', 'Long'], ['bun', 'Bun'], ['afro', 'Afro'], ['bald', 'Bald'], ['mohawk', 'Mohawk'], ['pigtails', 'Pigtails'], ['ponytail', 'Ponytail'], ['braid', 'Braid'], ['curtains', 'Curtains'], ['wavy', 'Wavy'], ['slick', 'Slick']];
+// each garment comes in its own few colors (indexes into its color list), like clothes in the Sims
+const CH_TOP_PAL = {hoodie: [0, 1, 2, 3, 4, 5, 8, 11], tee: [11, 4, 5, 1, 6, 9, 2, 10], sweater: [0, 6, 7, 10, 3, 8], coat: [11, 8], blazer: [10, 4, 3, 5, 8], tank: [11, 4, 5, 6, 1, 9], polo: [1, 4, 11, 5, 7, 10], jacket: [4, 10, 0, 2, 5], jersey: [5, 1, 6, 2, 3, 10], turtle: [4, 11, 8, 0, 3, 2]};
+const CH_BOTTOM_PAL = {jeans: [0, 1, 2, 4], joggers: [3, 2, 1, 6, 7], shorts: [5, 0, 8, 6, 1], skirt: [2, 7, 9, 1, 8], cargo: [5, 6, 2, 3], leggings: [2, 1, 9, 3], capris: [8, 4, 5, 0]};
+const CH_SHOE_PAL = {sneakers: [0, 1, 2, 3], boots: [6, 1], slides: [0, 1, 7, 4], hightops: [2, 0, 1, 5], loafers: [6, 1], heels: [1, 2, 7], sandals: [6, 1, 0]};
 const CH_OUTFITS = [['hoodie', 'Hoodie'], ['tee', 'T-shirt'], ['sweater', 'Sweater'], ['coat', 'Lab coat'], ['blazer', 'Blazer'], ['tank', 'Tank'], ['polo', 'Polo'], ['jacket', 'Jacket'], ['jersey', 'Jersey'], ['turtle', 'Turtleneck']];
 const CH_GLASSES = [['0', 'None'], ['1', 'Round'], ['2', 'Square'], ['3', 'Aviator'], ['4', 'Cat-eye'], ['5', 'Shades']];
 const CH_EYES = [['0', 'Round'], ['1', 'Happy'], ['2', 'Sleepy'], ['3', 'Tall'], ['4', 'Big']];
@@ -454,11 +458,10 @@ function chRoom(){
     <rect x="-900" y="168" width="1900" height="10" fill="#b99b74"/><rect x="-900" y="176" width="1900" height="700" fill="url(#crFloor)"/>`;
   for (let x = -1500; x <= 1620; x += 64) g += `<path d="M${(60 + (x - 60) * .22).toFixed(1)} 176L${x} 880" stroke="#a37c55" stroke-width="1.4" opacity=".55"/>`;
   [196, 222, 258, 310, 390].forEach(y => { g += `<path d="M-900 ${y}H1000" stroke="#a37c55" stroke-width="1" opacity=".3"/>`; });
-  g += `<path d="M20 -700L100 -700L190 246L-70 246Z" fill="url(#crBeam)"/>`;
   // wall lights
   [[-70, 6], [264, 6]].forEach(([x, y]) => { g += `<circle cx="${x}" cy="${y + 6}" r="60" fill="url(#crGlow)"/><path d="M${x - 7} ${y + 18}h14l-3-14h-8z" fill="#c9a14a" stroke="#7a5a1f" stroke-width="1.5"/><rect x="${x - 2}" y="${y + 18}" width="4" height="8" fill="#7a5a1f"/><ellipse cx="${x}" cy="${y + 2}" rx="9" ry="6" fill="#fff4d4" stroke="#c9a14a" stroke-width="1.2"/>`; });
   // the mirror on the right, on a stand
-  g += `<path d="M172 168L162 214M212 168L222 214" stroke="#7a5a1f" stroke-width="5" stroke-linecap="round"/>
+  g += `<path d="M178 150L164 214M206 150L220 214M171 182H213" stroke="#7a5a1f" stroke-width="5" stroke-linecap="round"/>
     <ellipse cx="192" cy="76" rx="36" ry="92" fill="url(#crGlass)" stroke="#c9a14a" stroke-width="7"/><ellipse cx="192" cy="76" rx="36" ry="92" fill="none" stroke="#7a5a1f" stroke-width="1.6"/>
     <path d="M170 20l20-30M174 56l32-44M180 96l22-30" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".55"/>`;
   // curtains at the far sides
@@ -540,24 +543,53 @@ function ccSwatches(key, list, d, hexKey){
   const free = hexKey && d[hexKey];
   return `<div class="ccr-sw">${list.map((c, k) => `<button type="button" class="ccr-dot" data-cc="${key}" data-v="${k}" aria-pressed="${d[key] === k && !free}" aria-label="${key} ${k + 1}" style="background:${c}"></button>`).join('')}${hexKey ? `<label class="ccr-dot ccr-custom" aria-pressed="${!!free}" title="Pick any color" style="background:${free || 'conic-gradient(#e53935,#fdd835,#43a047,#00acc1,#3949ab,#d81b60,#e53935)'}"><input type="color" data-cc-hex="${hexKey}" value="${free || list[d[key]] || '#888888'}" aria-label="Custom color"></label>` : ''}</div>`;
 }
-function ccTiles(key, list, d, crop, num){ return `<div class="ccr-grid">${list.map(([v, l]) => `<button type="button" class="ccr-tile" data-cc="${key}" data-v="${v}" aria-pressed="${String(d[key]) === String(v)}"><span class="ccr-th">${chThumb(d, {[key]: num ? +v : v}, crop)}</span><span>${l}</span></button>`).join('')}</div>`; }
+function ccPal(key, list, pal, d){
+  const ks = pal || list.map((_, k) => k);
+  return `<div class="ccr-sw">${ks.map(k => `<button type="button" class="ccr-dot" data-cc="${key}" data-v="${k}" aria-pressed="${d[key] === k}" aria-label="Color ${k + 1}" style="background:${list[k]}"></button>`).join('')}</div>`;
+}
+// a garment's thumbnail shows it in your color if it comes in that color, otherwise in its own first color
+const CC_PALS = {ot: ['oc', 'oh', () => CH_TOP_PAL], bt: ['bc', 'bh', () => CH_BOTTOM_PAL], sn: ['sc', 'sh', () => CH_SHOE_PAL]};
+function ccOver(key, v, d){ const o = {[key]: v}, f = CC_PALS[key]; if (f){ const pal = f[2]()[v]; if (pal && !pal.includes(d[f[0]])){ o[f[0]] = pal[0]; o[f[1]] = ''; } } return o; }
+function ccTiles(key, list, d, crop, num){ return `<div class="ccr-grid">${list.map(([v, l]) => `<button type="button" class="ccr-tile" data-cc="${key}" data-v="${v}" aria-pressed="${String(d[key]) === String(v)}"><span class="ccr-th">${chThumb(d, ccOver(key, num ? +v : v, d), crop)}</span><span>${l}</span></button>`).join('')}</div>`; }
 function ccToggles(items, d){ return `<div class="ccr-grid">${items.map(([k, l, crop]) => `<button type="button" class="ccr-tile" data-cc-tg="${k}" aria-pressed="${!!d[k]}"><span class="ccr-th">${chThumb(d, {[k]: d[k] ? 0 : 1}, crop)}</span><span>${d[k] ? 'Remove ' : ''}${l}</span></button>`).join('')}</div>`; }
 // each section title folds its section away; which ones are folded is remembered while the creator is open
 const ccClosed = new Set();
 const ccH = t => `<button type="button" class="ccr-h" data-cc-sec="${t}" aria-expanded="${!ccClosed.has(t)}"><span>${t}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`;
 const ccFold = root => root.querySelectorAll('[data-cc-sec]').forEach(h => { const c = h.nextElementSibling; if (c && !c.matches('[data-cc-sec]')) c.hidden = ccClosed.has(h.dataset.ccSec); });
-function ccPanel(){
+// every tab is a list of sections; the strip under the tabs picks one (or All), like the sub-menus in Roblox's editor
+const CH_TOP_GROUPS = [['Tees & tanks', ['tee', 'tank', 'jersey']], ['Shirts', ['polo']], ['Sweaters & hoodies', ['hoodie', 'sweater', 'turtle']], ['Outerwear', ['jacket', 'blazer', 'coat']]];
+const CH_BOTTOM_GROUPS = [['Pants', ['jeans', 'joggers', 'cargo', 'capris', 'leggings']], ['Shorts & skirts', ['shorts', 'skirt']]];
+const CH_SHOE_GROUPS = [['Sneakers', ['sneakers', 'hightops']], ['Boots & dress shoes', ['boots', 'loafers', 'heels']], ['Sandals', ['slides', 'sandals']]];
+const ccOf = (list, ids) => list.filter(([v]) => ids.includes(v));
+function ccSections(tab){
   const d = ccLook;
   return [
-    ccH('Gender') + `<div class="ccr-seg" role="radiogroup" aria-label="Gender">${CH_GENDER.map(([v, n]) => `<button type="button" role="radio" class="ccr-segb" data-cc="gn" data-v="${v}" aria-checked="${String(d.gn) === v}" aria-pressed="${String(d.gn) === v}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${CH_GENDER_ICON[v]}"/></svg>${n}</button>`).join('')}</div>` + ccH('Body type') + ccTiles('gd', CH_BODYTYPE, d, 'full', true) + ccH('Build') + ccTiles('bd', CH_BUILD, d, 'full', true) + ccH('Pose') + ccTiles('ap', CH_POSES, d, 'full', true) + ccH('Skin tone') + ccSwatches('sk', CH_SKIN, d),
-    ccH('Style') + ccTiles('hs', CH_HAIRSTYLES, d, 'head') + ccH('Hair color') + ccSwatches('hc', CH_HAIR, d),
-    ccH('Face shape') + ccTiles('fs', CH_FACES, d, 'face', true) + ccH('Eye shape') + ccTiles('ey', CH_EYES, d, 'face', true) + ccH('Eye color') + ccSwatches('ec', CH_EYE_C, d, 'eh') + ccH('Eyebrows') + ccTiles('br', CH_BROWS, d, 'face', true) + ccH('Mouth') + ccTiles('mo', CH_MOUTHS, d, 'face', true) + ccH('Nose') + ccTiles('nz', CH_NOSES, d, 'face', true) + ccH('Ears') + ccTiles('ea', CH_EARS, d, 'head', true) + ccH('Facial hair') + ccTiles('fh', CH_FACIAL, d, 'face', true) + ccH('Details') + ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face'], ['fk', 'Freckles', 'face']], d),
-    ccH('Top') + ccTiles('ot', CH_OUTFITS, d, 'top') + ccH('Top color') + ccSwatches('oc', CH_OUTFIT_C, d, 'oh'),
-    ccH('Bottoms') + ccTiles('bt', CH_BOTTOMS, d, 'bottoms') + ccH('Color') + ccSwatches('bc', CH_BOTTOM_C, d, 'bh'),
-    ccH('Shoes') + ccTiles('sn', CH_SHOES, d, 'shoes') + ccH('Color') + ccSwatches('sc', CH_SHOE_C, d, 'sh'),
-    ccH('Glasses') + ccTiles('gl', CH_GLASSES, d, 'head', true) + ccH('Hats') + ccTiles('ha', CH_HATS, d, 'head', true) + ccH('Earrings') + ccTiles('eg', CH_EARRINGS, d, 'head', true) + ccH('More') + ccToggles([['hp', 'Headphones', 'head'], ['sf', 'Scarf', 'top'], ['nk', 'Necklace', 'top']], d),
-    ccH('Color') + ccSwatches('bg', CH_BG, d) + ccH('Pattern') + ccTiles('bp', CH_BGPAT, d, 'full', true)
-  ][ccTab];
+    [['Gender', `<div class="ccr-seg" role="radiogroup" aria-label="Gender">${CH_GENDER.map(([v, n]) => `<button type="button" role="radio" class="ccr-segb" data-cc="gn" data-v="${v}" aria-checked="${String(d.gn) === v}" aria-pressed="${String(d.gn) === v}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${CH_GENDER_ICON[v]}"/></svg>${n}</button>`).join('')}</div>`], ['Body type', ccTiles('gd', CH_BODYTYPE, d, 'full', true)], ['Build', ccTiles('bd', CH_BUILD, d, 'full', true)], ['Pose', ccTiles('ap', CH_POSES, d, 'full', true)], ['Skin tone', ccSwatches('sk', CH_SKIN, d)]],
+    [['Style', ccTiles('hs', CH_HAIRSTYLES, d, 'head')], ['Hair color', ccSwatches('hc', CH_HAIR, d)]],
+    [['Face shape', ccTiles('fs', CH_FACES, d, 'face', true)],
+      ['Eye shape', ccTiles('ey', CH_EYES, d, 'face', true)],
+      ['Eye color', ccSwatches('ec', CH_EYE_C, d, 'eh')],
+      ['Eyebrows', ccTiles('br', CH_BROWS, d, 'face', true)],
+      ['Mouth', ccTiles('mo', CH_MOUTHS, d, 'face', true)],
+      ['Nose', ccTiles('nz', CH_NOSES, d, 'face', true)],
+      ['Ears', ccTiles('ea', CH_EARS, d, 'head', true)],
+      ['Facial hair', ccTiles('fh', CH_FACIAL, d, 'face', true)],
+      ['Details', ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face'], ['fk', 'Freckles', 'face']], d)]],
+    [...CH_TOP_GROUPS.map(([t, ids]) => [t, ccTiles('ot', ccOf(CH_OUTFITS, ids), d, 'top')]), ['Color', ccPal('oc', CH_OUTFIT_C, CH_TOP_PAL[d.ot], d)]],
+    [...CH_BOTTOM_GROUPS.map(([t, ids]) => [t, ccTiles('bt', ccOf(CH_BOTTOMS, ids), d, 'bottoms')]), ['Color', ccPal('bc', CH_BOTTOM_C, CH_BOTTOM_PAL[d.bt], d)]],
+    [...CH_SHOE_GROUPS.map(([t, ids]) => [t, ccTiles('sn', ccOf(CH_SHOES, ids), d, 'shoes')]), ['Color', ccPal('sc', CH_SHOE_C, CH_SHOE_PAL[d.sn], d)]],
+    [['Glasses', ccTiles('gl', CH_GLASSES, d, 'head', true)], ['Hats', ccTiles('ha', CH_HATS, d, 'head', true)], ['Earrings', ccTiles('eg', CH_EARRINGS, d, 'head', true)], ['More', ccToggles([['hp', 'Headphones', 'head'], ['sf', 'Scarf', 'top'], ['nk', 'Necklace', 'top']], d)]],
+    [['Color', ccSwatches('bg', CH_BG, d)], ['Pattern', ccTiles('bp', CH_BGPAT, d, 'full', true)]]
+  ][tab];
+}
+const ccSub = {};
+function ccFitColor(){
+  [['ot', 'oc', 'oh', CH_TOP_PAL], ['bt', 'bc', 'bh', CH_BOTTOM_PAL], ['sn', 'sc', 'sh', CH_SHOE_PAL]].forEach(([g, c, h, P]) => { const pal = P[ccLook[g]]; ccLook[h] = ''; if (pal && !pal.includes(ccLook[c])) ccLook[c] = pal[0]; });
+}      // which section each tab is showing ('' = all of them)
+function ccPanel(){
+  const secs = ccSections(ccTab), pick = ccSub[ccTab] || '';
+  const sub = `<div class="ccr-sub" role="tablist">${[['', 'All'], ...secs.map(([t]) => [t, t])].map(([k, l]) => `<button type="button" data-cc-sub="${esc(k)}" aria-selected="${pick === k}">${esc(l)}</button>`).join('')}</div>`;
+  return sub + secs.filter(([t]) => !pick || t === pick).map(([t, h]) => ccH(t) + h).join('');
 }
 function ccStageView(){ const v = ccView.map(x => +x.toFixed(2)).join(' '); document.querySelectorAll('#ccStage svg').forEach(s => s.setAttribute('viewBox', v)); }
 // the stage is two layers: the room (or, on the Backdrop tab, the profile picture's background) and the character on top
@@ -593,13 +625,13 @@ function ccDraw(full){
   const el = document.getElementById('cc'); if (!el) return;
   ccStageDraw();   
   el.querySelectorAll('[data-cc-side]').forEach(b => b.setAttribute('aria-checked', String((b.dataset.ccSide === 'back') === ccBack)));   // the preview fills the whole left side, so the character is fitted rather than cropped
-  if (full) el.querySelector('#ccTabs').innerHTML = CC_TABS.map((t, k) => `<button type="button" role="tab" class="ccr-tab" data-cc-tab="${k}" aria-selected="${k === ccTab}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${t[2]}"/></svg><span>${t[0]}</span></button>`).join('');
+  if (full) el.querySelector('#ccTabs').innerHTML = CC_TABS.map((t, k) => `<button type="button" role="tab" class="ccr-tab" data-cc-tab="${k}" aria-selected="${k === ccTab}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${t[2]}"/></svg><span>${t[0]}<svg class="ccr-chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>`).join('');
   const body = el.querySelector('#ccBody'), top = body.scrollTop;
   body.innerHTML = ccPanel(); ccFold(body); body.scrollTop = full ? 0 : top;
 }
 function ccOpen(){
   if (document.getElementById('cc')) return;
-  ccLook = chMyLook(); ccTab = 0; ccView = CC_VIEWS.full.slice();
+  ccLook = chMyLook(); ccTab = 0; ccView = CC_VIEWS.full.slice(); ccFitColor();
   document.body.insertAdjacentHTML('beforeend', `<div id="cc" class="ccr" role="dialog" aria-modal="true" aria-label="Character creator">
     <div class="ccr-bar"><button type="button" class="small-btn" data-cc-act="cancel">Cancel</button><b>Your character</b><button type="button" class="btn primary" data-cc-act="save">Done</button></div>
     <div class="ccr-main"><div class="ccr-left"><div class="ccr-stage" id="ccStage"></div><button type="button" class="ccr-whole" data-cc-act="whole" aria-pressed="false" title="Show the whole character while editing any part"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg><span>Full body</span></button><div class="ccr-btns"><div class="ccr-turn" role="radiogroup" aria-label="Side shown" title="Or drag the character sideways to turn it"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.500-6.200L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.500 6.200L3 16M3 21v-5h5"/></svg><button type="button" role="radio" data-cc-side="front" aria-checked="true">Front</button><button type="button" role="radio" data-cc-side="back" aria-checked="false">Back</button></div><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
@@ -626,9 +658,10 @@ document.addEventListener('click', e => {
   }
   if (!ccLook || !e.target.closest('#cc')) return;
   const t = e.target.closest('[data-cc-tab]'), o = e.target.closest('[data-cc]'), g = e.target.closest('[data-cc-tg]');
+  const sb = e.target.closest('[data-cc-sub]'); if (sb){ ccSub[ccTab] = sb.dataset.ccSub; const body = document.querySelector('#ccBody'); if (body){ body.innerHTML = ccPanel(); ccFold(body); body.scrollTop = 0; } return; }
   if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); ccCam(ccWhole ? 'full' : CC_TABS[ccTab][1]); }
   else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); if (CC_TABS[ccTab][0] !== 'Face') ccReact('pick'); }
-  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccLook = chClean(ccLook); ccDraw(false); if (!['Face', 'Backdrop'].includes(CC_TABS[ccTab][0]) && Math.random() < .7) ccReact('pick'); }
+  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (!['Face', 'Backdrop'].includes(CC_TABS[ccTab][0]) && Math.random() < .7) ccReact('pick'); }
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('cc')) ccClose(); });
 
