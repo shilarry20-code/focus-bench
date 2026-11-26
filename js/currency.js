@@ -83,7 +83,8 @@ function coTotals(){
   let r1 = 0, el = 0; Object.values(CO.led).forEach(([c, , kind]) => { if (kind === 'e') el += c; else r1 += c; });
   parts.v1 = r1; parts.el = el;
   const earned = parts.study + parts.goal + parts.chal + parts.ach + r1 + el, spent = Object.values(CO.sp).reduce((n, v) => n + (+v || 0), 0);
-  return {parts, earned, spent, balance: earned - spent, days: d.days};
+  const bet = typeof btNet === 'function' ? btNet() : 0; parts.bet = bet;    // tournament markets: payouts minus what positions cost
+  return {parts, earned, spent, balance: earned - spent + bet, days: d.days};
 }
 // today's coins, by source
 function coToday(T){
@@ -99,7 +100,7 @@ const CO_IC = '<polygon points="21,12 16.5,19.8 7.5,19.8 3,12 7.5,4.2 16.5,4.2"/
 const coFmt = n => n < 1e4 ? n.toLocaleString() : n < 1e6 ? (n / 1e3).toFixed(n < 1e5 ? 1 : 0).replace(/\.0$/, '') + 'K' : (n / 1e6).toFixed(n < 1e7 ? 2 : 1).replace(/\.?0+$/, '') + 'M';
 function coCardHtml(cls = 'card lv-card co-card'){
   const T = coTotals(), today = coToday(T), tot = today.reduce((n, r) => n + r[1], 0), p = T.parts, rk = myRk();
-  const src = [['Studying', p.study, 'clock'], ['Daily goals', p.goal, 'target'], ['Challenges', p.chal, 'check'], ['Achievements', p.ach, 'award'], ['Ranked 1v1', p.v1, 'trophy'], ['Elimination', p.el, 'trophy']];
+  const src = [['Studying', p.study, 'clock'], ['Daily goals', p.goal, 'target'], ['Challenges', p.chal, 'check'], ['Achievements', p.ach, 'award'], ['Ranked 1v1', p.v1, 'trophy'], ['Elimination', p.el, 'trophy'], ...(p.bet ? [['Tournament markets', p.bet, 'trophy']] : [])];
   const row = ([t, v, ic]) => `<li><span><svg viewBox="0 0 24 24">${LV_IC[ic] || ''}</svg>${esc(t)}</span><b>${v >= 0 ? '+' : ''}${v.toLocaleString()}</b></li>`;
   return `<div class="${cls}"><div class="lv-top"><span class="co-big"><svg viewBox="0 0 24 24" aria-hidden="true">${CO_IC}</svg></span><div><b>${T.balance.toLocaleString()} coins</b><small>${T.earned.toLocaleString()} earned in all${T.spent ? ` · ${T.spent.toLocaleString()} spent` : ''}</small></div></div>
     <div class="lv-sub">Today's coins <b>+${tot.toLocaleString()}</b></div>

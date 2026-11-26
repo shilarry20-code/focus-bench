@@ -16,7 +16,7 @@
 
 const SYNC_FILE = 'focus-bench-sync.json', SYNC_DESC = 'Focus Desk sync', SYNC_API = 'https://api.github.com';
 const SYNC_TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=' + encodeURIComponent('Focus Desk sync');
-const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 26 · 273';
+const SYNC_DELAY = 30000, DEAD_DAYS = 180, SYNC_VER = 'Nov 26 · 274';
 let syncRemoteSum = null;
 const RANKED_LOCAL = new Set(['cur', 'lastSim', 'lastSlice', 'simV', 'rar', 'rv', 'para', 'v', 'bots', 'prev', 'last']);
 let SYNC = store.get('fb.sync', {});                     // {token, gist, login, last, err}
@@ -87,10 +87,10 @@ const SECTIONS = {
   },
   coins: {         // coins: the match ledger (each match once), the highest totals reached, and what's been spent
     items: () => { const o = {}; if (typeof CO === 'undefined') return o;
-      Object.entries(CO.led).forEach(([k, x]) => { o['l:' + k] = x; }); Object.entries(CO.hw).forEach(([k, v]) => { o['h:' + k] = v; }); Object.entries(CO.sp).forEach(([k, v]) => { o['s:' + k] = v; }); return o; },
-    put: o => { if (typeof CO === 'undefined') return; const led = {}, hw = {}, sp = {};
-      Object.entries(o).forEach(([k, v]) => { const n = k.slice(2); if (k[0] === 'l') led[n] = v; else if (k[0] === 'h') hw[n] = Math.max(+v || 0, CO.hw[n] || 0); else if (k[0] === 's') sp[n] = v; });
-      CO.led = led; CO.hw = hw; CO.sp = sp; saveCo(); }
+      Object.entries(CO.led).forEach(([k, x]) => { o['l:' + k] = x; }); Object.entries(CO.hw).forEach(([k, v]) => { o['h:' + k] = v; }); Object.entries(CO.sp).forEach(([k, v]) => { o['s:' + k] = v; }); Object.entries(CO.bets || {}).forEach(([k, v]) => { o['b:' + k] = v; }); return o; },
+    put: o => { if (typeof CO === 'undefined') return; const led = {}, hw = {}, sp = {}, bets = {};
+      Object.entries(o).forEach(([k, v]) => { const n = k.slice(2); if (k[0] === 'l') led[n] = v; else if (k[0] === 'h') hw[n] = Math.max(+v || 0, CO.hw[n] || 0); else if (k[0] === 's') sp[n] = v; else if (k[0] === 'b') bets[n] = v; });
+      CO.led = led; CO.hw = hw; CO.sp = sp; CO.bets = bets; saveCo(); }
   },
   chal: {          // challenges: this period's sets (the same on every device), the daily reroll, and finished ones
     items: () => { const o = {}; if (typeof CHL === 'undefined') return o;
