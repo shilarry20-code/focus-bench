@@ -8,21 +8,24 @@ const LB_GROUPS = [
   ['Time', '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', [['hours', 'All time'], ['week', 'This week'], ['month', 'This month']]],
   ['Streaks', '<path d="M12 21c-4 0-6.5-2.7-6.5-6.2 0-3.6 2.7-5.5 3.6-9.3 1.9 1.2 3 3 3 5 1-.6 1.6-1.8 1.7-3.2 2.4 1.8 4.7 4.5 4.7 7.6C18.5 18.4 16 21 12 21z"/>', [['cur', 'Current'], ['best', 'Best']]],
   ['Records', '<circle cx="12" cy="14" r="5.5"/><path d="M9 3h6l-1.5 5.5h-3zM12 11.5v2.5l1.5 1"/>', [['sess', 'Longest session'], ['day', 'Biggest day'], ['days', 'Most days'], ['count', 'Sessions']]],
-  ['Achievements', '<path d="M7 4h10v4.5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4M12 13.5V17M8.5 20h7M10 17h4"/>', [['pts', 'Points'], ['lvl', 'Level']]], ['Elimination', '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14 14l5 5M19 14l-5 5"/>', [['elw', 'Wins'], ['el3', 'Top 3']]]];
+  ['Achievements', '<path d="M7 4h10v4.5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4M12 13.5V17M8.5 20h7M10 17h4"/>', [['pts', 'Points'], ['lvl', 'Level']]], ['Elimination', '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14 14l5 5M19 14l-5 5"/>', [['elw', 'Wins'], ['el3', 'Top 3']]],
+  ['Coins', '<polygon points="21,12 16.5,19.8 7.5,19.8 3,12 7.5,4.2 16.5,4.2"/><polygon points="16.6,12 14.3,15.9 9.7,15.9 7.4,12 9.7,8.1 14.3,8.1"/>', [['coins', 'Most coins']]]];
 const LB_FILTERS = [['all', 'Everyone'], ['following', 'Following'], ['major', 'Your major'], ['rivals', 'Rivals']];
 const lbIcon = d => `<svg class="lb2-ic" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
 
 /* ---- the full order for a category ---- */
 const LBO = {};
 function lbOrder(c){
-  const key = `${botsVer}|${c.f == null ? (lbPts ? 1 : 0) : ''}`;
+  const key = `${botsVer}|${c.f == null ? (lbPts ? 1 : 0) : ''}|${c.id === 'coins' ? coArrs().key : ''}`;
   if (LBO[c.id] && LBO[c.id].key === key) return LBO[c.id].ord;
   let ord;
   if (c.id === 'elo') ord = sortedBots();
   else {
     // pack (value, Elo, bot) into one number and sort those natively: fast for 682,925 players
     const N = ROSTER_N, S = 1048576, keys = new Float64Array(N);
-    for (let i = 0; i < N; i++){ const v = Math.min(850000, Math.max(0, botVal(c, i))), e = Math.max(0, Math.min(9999, BS[i * BF])); keys[i] = -((v * 1e4 + e) * S + (S - 1 - i)); }
+    // coins run into the tens of millions, too big to pack with Elo, so they tie-break on the bot number alone
+    if (c.u === 'co') for (let i = 0; i < N; i++) keys[i] = -(Math.max(0, botVal(c, i)) * S + (S - 1 - i));
+    else for (let i = 0; i < N; i++){ const v = Math.min(850000, Math.max(0, botVal(c, i))), e = Math.max(0, Math.min(9999, BS[i * BF])); keys[i] = -((v * 1e4 + e) * S + (S - 1 - i)); }
     keys.sort(); ord = new Int32Array(N);
     for (let k = 0; k < N; k++){ const x = -keys[k]; ord[k] = S - 1 - (x % S); }
   }
@@ -103,7 +106,7 @@ function lbSub(w){
   const rk = w === ME ? myRk() : rkOf(w);
   return `${emblem(rk, 'xs')} ${esc(rk.full)}${w === ME ? '' : ` · ${esc(bot(w).style)}`}`;
 }
-const lbGapTxt = (u, d) => u === 'elo' ? `+${d.toLocaleString()} Elo` : u === 'min' ? `${lbFmt('min', d)} more` : u === 'd' ? `${d} more day${d === 1 ? '' : 's'}` : u === 'pts' ? `+${d.toLocaleString()} pts` : u === 'pct' ? `+${(d / 10).toFixed(1)} points of win rate` : u === 'xp' ? `+${d.toLocaleString()} XP` : `${d.toLocaleString()} more`;
+const lbGapTxt = (u, d) => u === 'elo' ? `+${d.toLocaleString()} Elo` : u === 'min' ? `${lbFmt('min', d)} more` : u === 'd' ? `${d} more day${d === 1 ? '' : 's'}` : u === 'pts' ? `+${d.toLocaleString()} pts` : u === 'pct' ? `+${(d / 10).toFixed(1)} points of win rate` : u === 'xp' ? `+${d.toLocaleString()} XP` : u === 'co' ? `${d.toLocaleString()} more coins` : `${d.toLocaleString()} more`;
 
 /* ---- drawing ---- */
 const LBV = {from: 3, to: 53, cat: null, filt: null};
