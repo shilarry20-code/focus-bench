@@ -2903,3 +2903,9 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .ccr-seg{display:flex;gap:6px;background:var(--line,#e4e7ec);padding:4px;border-radius:12px}
 .ccr-segb{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;padding:10px 8px;border-radius:9px;font:inherit;font-weight:600;color:var(--muted,#475467);cursor:pointer}
 .ccr-segb[aria-pressed="true"]{background:var(--surface,#fff);color:var(--ink,#1a1f2b);box-shadow:0 1px 3px rgba(16,24,40,.15)}
+
+/* bigger character preview: the left side takes more room and the preview fills its height */
+.ccr-main{grid-template-columns:minmax(340px,44%) 1fr}
+.ccr-stage{width:min(100%,calc((100dvh - 170px) * .8),640px)}
+@media (max-width:760px){.ccr-main{grid-template-columns:1fr}.ccr-stage{width:min(100%,calc(36dvh * .8),240px)}}
+.ccr-seg{max-width:100%;box-sizing:border-box}
