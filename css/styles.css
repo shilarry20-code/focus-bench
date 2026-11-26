@@ -2934,3 +2934,16 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 
 #ccStage{overflow:hidden}
 #ccStage svg{overflow:visible}
+
+/* full body button in the corner of the preview */
+.ccr-whole{position:absolute;top:14px;right:14px;z-index:1;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:8px 13px;font:inherit;font-weight:700;font-size:13px;background:var(--surface,#fff);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.18);cursor:pointer}
+.ccr-whole[aria-pressed="true"]{background:var(--accent,#2d5bd8);color:#fff}
+@media (max-width:760px){.ccr-left{position:relative}.ccr-whole{top:6px;right:6px;padding:6px 9px;font-size:12px}}
+/* idle animation in the creator: breathing, blinking, and a waving hand */
+.ccr-stage .ch-fig{transform-box:view-box;transform-origin:60px 238px;animation:chBreathe 3.8s ease-in-out infinite}
+@keyframes chBreathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.006,1.013)}}
+.ccr-stage .ch-eyes{transform-box:view-box;transform-origin:60px 52px;animation:chBlink 5.2s infinite}
+@keyframes chBlink{0%,93%,100%{transform:scaleY(1)}95.5%{transform:scaleY(.08)}}
+.ccr-stage .ch-wave{transform-box:view-box;animation:chWave 1.3s ease-in-out infinite alternate}
+@keyframes chWave{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+@media (prefers-reduced-motion:reduce){.ccr-stage .ch-fig,.ccr-stage .ch-eyes,.ccr-stage .ch-wave{animation:none}}
