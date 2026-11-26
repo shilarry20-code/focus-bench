@@ -527,7 +527,7 @@ function ccCam(name){
 }
 function ccDraw(full){
   const el = document.getElementById('cc'); if (!el) return;
-  el.querySelector('#ccStage').innerHTML = chFull(ccLook, ccView.join(' '), ccBack); const tb = el.querySelector('[data-cc-act="turn"]'); if (tb) tb.textContent = ccBack ? 'Face front' : 'Turn around';
+  el.querySelector('#ccStage').innerHTML = chFull(ccLook, ccView.join(' '), ccBack).replace('xMidYMid slice', 'xMidYMid meet'); el.querySelector('#ccStage').style.background = CH_BG[chClean(ccLook).bg];   // the preview fills the whole left side, so the character is fitted rather than cropped const tb = el.querySelector('[data-cc-act="turn"]'); if (tb) tb.textContent = ccBack ? 'Face front' : 'Turn around';
   if (full) el.querySelector('#ccTabs').innerHTML = CC_TABS.map((t, k) => `<button type="button" role="tab" class="ccr-tab" data-cc-tab="${k}" aria-selected="${k === ccTab}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${t[2]}"/></svg><span>${t[0]}</span></button>`).join('');
   const body = el.querySelector('#ccBody'), top = body.scrollTop;
   body.innerHTML = ccPanel(); body.scrollTop = full ? 0 : top;
@@ -568,5 +568,5 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('cc')) ccClose(); });
 
 // the free color picker: the preview follows the color while you drag, the panel redraws when you let go
-document.addEventListener('input', e => { const i = e.target.closest && e.target.closest('[data-cc-hex]'); if (!i || !ccLook) return; ccLook[i.dataset.ccHex] = i.value; ccLook = chClean(ccLook); const st = document.querySelector('#ccStage'); if (st) st.innerHTML = chFull(ccLook, ccView.join(' '), ccBack); });
+document.addEventListener('input', e => { const i = e.target.closest && e.target.closest('[data-cc-hex]'); if (!i || !ccLook) return; ccLook[i.dataset.ccHex] = i.value; ccLook = chClean(ccLook); const st = document.querySelector('#ccStage'); if (st) st.innerHTML = chFull(ccLook, ccView.join(' '), ccBack).replace('xMidYMid slice', 'xMidYMid meet'); });
 document.addEventListener('change', e => { const i = e.target.closest && e.target.closest('[data-cc-hex]'); if (i && ccLook) ccDraw(false); });

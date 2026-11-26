@@ -2909,3 +2909,10 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .ccr-stage{width:min(100%,calc((100dvh - 170px) * .8),640px)}
 @media (max-width:760px){.ccr-main{grid-template-columns:1fr}.ccr-stage{width:min(100%,calc(36dvh * .8),240px)}}
 .ccr-seg{max-width:100%;box-sizing:border-box}
+
+/* the preview fills the whole left side; its buttons float at the bottom */
+@media (min-width:761px){
+  .ccr-left{position:relative;padding:0;display:block}
+  .ccr-stage{position:absolute;inset:0;width:auto;height:auto;max-width:none;aspect-ratio:auto;border-radius:0;box-shadow:none;padding:12px 12px 70px;box-sizing:border-box}
+  .ccr-btns{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:1}
+}
