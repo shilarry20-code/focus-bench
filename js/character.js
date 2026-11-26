@@ -190,12 +190,14 @@ function chFigure(look, turned){   // turned: seen from behind
   // the top is filled as one shape, but its outline leaves out the armhole curve, so sleeves and bare arms flow into the shoulder.
   // The shoulders reach just past the arm so the arm's rounded top never pokes out. lines: 'all', 'top' (shoulders and neckline only) or 'none'
   const garment = (fill, w = 10, cut = crew(10, 92), lines = 'all') => {
-    const so = M.sw + .500, GL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
-    const top = `C${cx - so} 91 ${cx - w - 7} 84 ${cx - w} 84${cut}C${cx + w + 7} 84 ${cx + so} 91 ${cx + so} 100`;
+    const so = M.sw + .500, GL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"', wave = L.ap === 2;
+    // on the waving side the shoulder ends under the raised sleeve and the edge runs straight down to the side, like an armpit
+    const rx = cx + M.sw - 9, top = `C${cx - so} 91 ${cx - w - 7} 84 ${cx - w} 84${cut}` + (wave ? `C${cx + w + 7} 84 ${rx - 3} 88 ${rx} 94` : `C${cx + w + 7} 84 ${cx + so} 91 ${cx + so} 100`);
+    const rightDown = wave ? `L${cx + M.ts} 112` : `C${cx + so} 107 ${cx + M.ts + 1} 107 ${cx + M.ts} 112`;
     const sides = `C${cx + M.ts} 126 ${cx + M.wa} 132 ${cx + M.wa} 140C${cx + M.wa} ${(140 + hemY) / 2} ${cx + M.hp + flare} ${hemY - 7} ${cx + M.hp + flare} ${hemY - 2.500}Q${cx + M.hp + flare} ${hemY} ${cx + M.hp + flare - 2.500} ${hemY}L${cx - M.hp - flare + 2.500} ${hemY}Q${cx - M.hp - flare} ${hemY} ${cx - M.hp - flare} ${hemY - 2.500}C${cx - M.hp - flare} ${hemY - 7} ${cx - M.wa} ${(140 + hemY) / 2} ${cx - M.wa} 140C${cx - M.wa} 132 ${cx - M.ts} 126 ${cx - M.ts} 112`;
-    const d = `M${cx - M.ts} 112C${cx - M.ts - 1} 107 ${cx - so} 107 ${cx - so} 100${top}C${cx + so} 107 ${cx + M.ts + 1} 107 ${cx + M.ts} 112${sides}Z`;
+    const d = `M${cx - M.ts} 112C${cx - M.ts - 1} 107 ${cx - so} 107 ${cx - so} 100${top}${rightDown}${sides}Z`;
     let out = `<path d="${d}" fill="${fill}" stroke="none"/>`;
-    if (lines !== 'none') out += `<path d="M${cx - so} 104.500L${cx - so} 100${top}L${cx + so} ${L.ap === 2 ? 100 : 104.500}" fill="none" ${GL}/>`;
+    if (lines !== 'none') out += `<path d="M${cx - so} 104.500L${cx - so} 100${top}${wave ? `L${cx + M.ts} 112` : `L${cx + so} 104.500`}" fill="none" ${GL}/>`;
     if (lines === 'all') out += `<path d="M${cx + M.ts} 112${sides}" fill="none" ${GL}/>`;
     return out;
   };
