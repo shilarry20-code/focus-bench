@@ -436,7 +436,7 @@ function tnCalHtml(now){
     rows.push(started ? `<button class="tn-cw${own ? ' mine' : ''}" data-tn="view" data-wk="${wk}" data-band="${own ? own.band : band}" data-div="${own ? own.div || 0 : tnDefDiv(wk, band)}" title="${tnRange(wk)}${champ ? ' · champion ' + tnName(champ.w) : ''}">${cells}${tag}</button>`
       : `<div class="tn-cw future">${cells}${own ? tag : ''}</div>`);
   }
-  return `<div class="card tn-cal"><div class="tn-ch"><div class="h first">Tournament calendar</div>${tnBandChips(band)}<div class="tn-cnav"><button class="small-btn" data-tn="cal" data-d="-1"${atMin ? ' disabled' : ''} aria-label="Previous month">‹</button><b>${first.toLocaleDateString([], {month: 'long', year: 'numeric'})}</b><button class="small-btn" data-tn="cal" data-d="1"${atMax ? ' disabled' : ''} aria-label="Next month">›</button></div></div>
+  return `<div class="card tn-cal"><div class="tn-ch"><div class="h first">Tournament calendar</div><div class="tn-cnav"><button class="small-btn" data-tn="cal" data-d="-1"${atMin ? ' disabled' : ''} aria-label="Previous month">‹</button><b>${first.toLocaleDateString([], {month: 'long', year: 'numeric'})}</b><button class="small-btn" data-tn="cal" data-d="1"${atMax ? ' disabled' : ''} aria-label="Next month">›</button></div></div>
     <div class="tn-cgrid"><div class="tn-cw head">${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(x => `<span>${x}</span>`).join('')}</div>${rows.join('')}</div>
     <p class="hint">Each week is a tournament. Tap a week to open it: your own division if you played, otherwise one of ${band === tnMyBand() ? 'your band’s' : 'this band’s'}. The picture on Friday is that division’s champion.</p></div>`;
 }
