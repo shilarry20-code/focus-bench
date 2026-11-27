@@ -17,7 +17,7 @@ const DK_SLOTS = [
   ['left', 'Desk, left'], ['center', 'Desk, middle'], ['right', 'Desk, right']
 ];
 // where each spot is (x of the item's bottom center; wall spots give the center)
-const DK_AT = {wall1: [-118, 10], wall2: [-36, -2], left: [-92, DK_TOP], center: [60, DK_TOP + 2], right: [196, DK_TOP]};
+const DK_AT = {wall1: [-196, 12], wall2: [-74, -4], left: [-128, DK_TOP], center: [60, DK_TOP + 2], right: [300, DK_TOP]};
 
 /* ---- the time of day: 0 night, 1 dawn/dusk, 2 day ---- */
 function dkSky(now = Date.now()){
@@ -40,13 +40,14 @@ function dkWindow(sky, x = 148, y = -36, w = 116, h = 124){
     <path d="M${x + w / 2} ${y}v${h}M${x} ${y + h / 2}h${w}" stroke="#f2ece0" stroke-width="4"/><path d="M${x - 8} ${y + h + 4}h${w + 16}" stroke="#e6dccb" stroke-width="7"/><path d="M${x - 8} ${y + h + 4}h${w + 16}" ${dkSw(1.6)} fill="none"/>`;
 }
 const dkWall = (fill, extra = '') => `<rect x="-600" y="-400" width="1200" height="700" fill="${fill}"/>${extra}`;
+const dkRarity = id => (DK_ITEMS[id] && DK_ITEMS[id].rare) || 'Common';
 const DK_ITEMS = {
   /* rooms */
   dorm: {slot: 'room', name: 'Dorm room', draw: (c, s) => dkWall('#c9d9e6', [...Array(14)].map((_, r) => `<path d="M-600 ${-60 + r * 22}H600" stroke="#b6c7d6" stroke-width="1.4"/>` + [...Array(30)].map((_, k) => `<path d="M${-590 + k * 44 + (r % 2) * 22} ${-60 + r * 22}v22" stroke="#b6c7d6" stroke-width="1.4"/>`).join('')).join('')) + dkWindow(s)},
   library: {slot: 'room', name: 'Library', draw: (c, s) => {
     let g = dkWall('#6b4a33'); const books = ['#9b2f3f', '#3f6fa0', '#5b8c5a', '#c9a14a', '#7a4f8a', '#d98a3a', '#2f3540'];
     for (let r = 0; r < 4; r++){ const y = -52 + r * 52; g += `<rect x="-600" y="${y + 44}" width="1200" height="8" fill="#4a3022"/>`;
-      for (let x = -260, k = r * 3; x < 340; k++){ const w = 7 + (k * 7) % 6, h = 30 + (k * 5) % 12; g += `<rect x="${x}" y="${y + 44 - h}" width="${w}" height="${h}" fill="${books[k % books.length]}" stroke="#2a1b10" stroke-width="1"/>`; x += w + 1 + (k % 9 === 0 ? 14 : 0); } }
+      for (let x = -440, k = r * 3; x < 560; k++){ const w = 7 + (k * 7) % 6, h = 30 + (k * 5) % 12; g += `<rect x="${x}" y="${y + 44 - h}" width="${w}" height="${h}" fill="${books[k % books.length]}" stroke="#2a1b10" stroke-width="1"/>`; x += w + 1 + (k % 9 === 0 ? 14 : 0); } }
     return g + `<rect x="-600" y="-400" width="1200" height="700" fill="#000" opacity=".12"/>`; }},
   cafe: {slot: 'room', name: 'Café', draw: (c, s) => {
     let g = dkWall('#b5644a'); for (let r = 0; r < 14; r++) for (let k = 0; k < 30; k++) g += `<rect x="${-600 + k * 40 + (r % 2) * 20}" y="${-60 + r * 16}" width="38" height="14" fill="${['#b5644a', '#a85a42', '#bd6e52'][(r * 7 + k) % 3]}"/>`;
@@ -88,10 +89,10 @@ const DK_ITEMS = {
 // the desk itself: a top with a lip and a front panel (style 0 plain, 1 with a drawer, 2 with metal edges)
 function dkDesk(c, style){
   const top = dkShade(c, 1.12), side = dkShade(c, .82);
-  let g = `<path d="M-200 ${DK_TOP - 6}H320L330 ${DK_TOP + 4}H-210Z" fill="${top}" ${dkSw()}/><rect x="-210" y="${DK_TOP + 4}" width="540" height="10" fill="${side}" ${dkSw()}/>
-    <rect x="-196" y="${DK_TOP + 14}" width="512" height="140" fill="${c}" ${dkSw()}/>`;
-  if (style === 1) g += `<rect x="-176" y="${DK_TOP + 24}" width="120" height="34" rx="3" fill="${dkShade(c, 1.05)}" ${dkSw(1.6)}/><rect x="-128" y="${DK_TOP + 38}" width="24" height="5" rx="2.5" fill="#c9a14a" ${dkSw(1)}/>`;
-  if (style === 2) g += `<path d="M-196 ${DK_TOP + 20}H316" stroke="#9aa0a8" stroke-width="3"/>`;
+  let g = `<path d="M-420 ${DK_TOP - 6}H540L550 ${DK_TOP + 4}H-430Z" fill="${top}" ${dkSw()}/><rect x="-430" y="${DK_TOP + 4}" width="980" height="10" fill="${side}" ${dkSw()}/>
+    <rect x="-416" y="${DK_TOP + 14}" width="952" height="140" fill="${c}" ${dkSw()}/>`;
+  if (style === 1) g += `<rect x="-236" y="${DK_TOP + 24}" width="120" height="34" rx="3" fill="${dkShade(c, 1.05)}" ${dkSw(1.6)}/><rect x="-188" y="${DK_TOP + 38}" width="24" height="5" rx="2.5" fill="#c9a14a" ${dkSw(1)}/><rect x="236" y="${DK_TOP + 24}" width="120" height="34" rx="3" fill="${dkShade(c, 1.05)}" ${dkSw(1.6)}/><rect x="284" y="${DK_TOP + 38}" width="24" height="5" rx="2.5" fill="#c9a14a" ${dkSw(1)}/>`;
+  if (style === 2) g += `<path d="M-416 ${DK_TOP + 20}H536" stroke="#9aa0a8" stroke-width="3"/>`;
   return g;
 }
 
@@ -128,7 +129,7 @@ function dkScene(w, opt = {}){
   if (sky.dark) g += `<rect x="-600" y="-400" width="1200" height="700" fill="#0c1030" opacity="${lit ? sky.dark * .75 : sky.dark}"/>`;
   if (lit && sky.k !== 2){ const s = ['left', 'center', 'right'].find(k => DK_ITEMS[d[k]] && DK_ITEMS[d[k]].light), [x, y] = DK_AT[s];
     g += `<defs><radialGradient id="dkLamp"><stop offset="0" stop-color="#ffd98a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient></defs><ellipse cx="${x - 10}" cy="${y - 20}" rx="120" ry="80" fill="url(#dkLamp)"/>`; }
-  return `<svg class="dk-svg${opt.cls ? ' ' + opt.cls : ''}" viewBox="${opt.view || '-170 -46 460 250'}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${esc(w === ME ? 'Your desk' : pName(w) + '’s desk')}">${g}</svg>`;
+  return `<svg class="dk-svg${opt.cls ? ' ' + opt.cls : ''}" viewBox="${opt.view || '-290 -48 700 271'}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${esc(w === ME ? 'Your desk' : pName(w) + '’s desk')}">${g}</svg>`;
 }
 function dkSceneHtml(w){ return `<div class="dk-scene">${dkScene(w, {cls: 'ch-live'})}</div>`; }
 // the wall clock keeps time: redraw open desks once a minute
