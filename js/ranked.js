@@ -1557,6 +1557,18 @@ const MODE_NAMES = {pomodoro:'Pomodoro', fifty:'52/17', custom:'Custom', timebox
 /* ---------- profiles: a popup for anyone, which opens into a full page ---------- */
 let profTab = 'posts', profTabWho = null;
 const fmtCount = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M' : n >= 1e4 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'K' : n.toLocaleString();
+// small line icons for the profile tabs (falls back to the Markets set)
+const PF_IC = {flame: '<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1-3.6 2.2-4.8.3 1.7 1.2 2.6 2.3 2.8C11 8.5 11 5.5 12 3z"/>',
+  cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  calok: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15l2 2 4-4"/>',
+  layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>', sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  timer: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V10M10 2.5h4M18.5 6.5l1.5-1.5"/>', chair: '<path d="M7 3h10v9H7zM5 12h14M7 12l-1 9M17 12l1 9M8 17h8"/>',
+  pct: '<path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/>', coin: '<circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.5c-.5-1-1.4-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.2 0-2.1-.5-2.6-1.5M12 6.5V8M12 16v1.5"/>',
+  medal: '<circle cx="12" cy="15" r="5.5"/><path d="M8.5 10.5L6 3h4l2 5 2-5h4l-2.5 7.5"/>', up: '<path d="M12 19V5M5 12l7-7 7 7"/>', group: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.2c2 .8 3.5 2.8 3.5 5.8"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>', list: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>'};
+const pfIc = (k, cls = '') => PF_IC[k] ? `<svg class="mk-ico pf-ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PF_IC[k]}</svg>` : typeof mkIc === 'function' ? mkIc(k, 'pf-ic ' + cls) : '';
+const PF_LB_IC = {elo: 'shield', rkw: 'trophy', rkp: 'pct', hours: 'clock', week: 'cal', month: 'cal', cur: 'flame', best: 'flame', days: 'calok', sess: 'timer', day: 'sun', count: 'layers', elw: 'elim', el3: 'medal', lvl: 'up', pts: 'star', coins: 'coin'};
+let profRk = 'solo';
 let profPrev = 'ranked', profWho = null, profFilter = 'all', profEditing = false, profMatchN = 15;
 const PROFILE_HUES = [null, 0, 22, 42, 95, 150, 180, 205, 228, 262, 292, 330];
 const isBotW = w => w !== ME;
@@ -1682,13 +1694,13 @@ function profileMatches(w){
 function renderProfilePage(){
   const w = profWho; if (w == null || !RK_READY) return;
   const st = pStats(w), t = myTotals(), B = w === ME ? null : BOTS[w];
-  const stats = [[fmtMin(st.total), 'Studied in total'], [st.sessions.toLocaleString(), 'Sessions'], [st.days.toLocaleString(), 'Days studied'], [`${st.cur} day${st.cur === 1 ? '' : 's'}`, 'Current streak'],
-    [`${st.best} day${st.best === 1 ? '' : 's'}`, 'Best streak'], [fmtMin(st.maxSess), 'Longest session'], [fmtMin(st.maxDay), 'Biggest day'], [fmtMin(st.week), 'This week'],
-    [fmtMin(st.month), 'This month'], [fmtMin(st.maxWeek), 'Best week'], [fmtMin(st.maxMonth), 'Best month'], ...(B ? [[`~${fmtMin(st.sit)}`, 'Typical sitting']] : []), [`${st.ach}/${ACHS.length}`, `Achievements · ${st.pts.toLocaleString()} pts`]];
+  const stats = [[fmtMin(st.total), 'Studied in total', 'clock'], [st.sessions.toLocaleString(), 'Sessions', 'layers'], [st.days.toLocaleString(), 'Days studied', 'calok'], [`${st.cur} day${st.cur === 1 ? '' : 's'}`, 'Current streak', 'flame'],
+    [`${st.best} day${st.best === 1 ? '' : 's'}`, 'Best streak', 'flame'], [fmtMin(st.maxSess), 'Longest session', 'timer'], [fmtMin(st.maxDay), 'Biggest day', 'sun'], [fmtMin(st.week), 'This week', 'cal'],
+    [fmtMin(st.month), 'This month', 'cal'], [fmtMin(st.maxWeek), 'Best week', 'star'], [fmtMin(st.maxMonth), 'Best month', 'star'], ...(B ? [[`~${fmtMin(st.sit)}`, 'Typical sitting', 'chair']] : [])];
   // leaderboard places
   const ptsReady = !!lbPts;
   const lbs = LB.map(c => { const ready = c.f != null || ptsReady, pl = ready ? pPlace(c, w, t) : null, v = w === ME ? c.me(t) : botVal(c, w);
-    return `<li><button data-lb="${c.id}"><span class="nm">${c.name}</span><span class="mv2">${ready || c.f != null ? lbFmt(c.u, v) : '…'}</span><span class="pl2">${pl ? `#${pl.toLocaleString()} · ${topPct(pl)}` : '…'}</span></button></li>`; }).join('');
+    return `<li><button data-lb="${c.id}">${pfIc(PF_LB_IC[c.id] || 'trophy', 'lbi')}<span class="nm">${c.name}</span><span class="mv2">${ready || c.f != null ? lbFmt(c.u, v) : '…'}</span><span class="pl2">${pl ? `#${pl.toLocaleString()} · ${topPct(pl)}` : '…'}</span></button></li>`; }).join('');
   if (!ptsReady) ensureBotPoints(() => { if (!$('#page-profile').hidden && profWho === w) renderProfilePage(); });
   // 6-month activity
   const f = pDayFn(w), weeks = 26, d0 = startOfWeek(new Date()); d0.setDate(d0.getDate() - 7 * (weeks - 1));
@@ -1713,6 +1725,14 @@ function renderProfilePage(){
       <ul class="rk-hist pf-h2h">${hs.map(h => `<li class="hr-${h.r}"><span class="res">${h.r}</span><span class="who">${new Date(h.t).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span><span class="tm">${matchTimes(h)}</span>${dlCell(h)}</li>`).join('')}</ul>`
       : `<p class="hint">You haven't played ${esc(B.name)} yet. Matches pair you with players near your rating.</p>`;
   }
+  const kv = a => `<div class="pf-kv">${a.map(([v, l, i]) => `<span>${pfIc(i, 'sti')}<b>${v}</b><small>${l}</small></span>`).join('')}</div>`;
+  let soloSum = '', groupSum;
+  if (w !== ME){ let g = 0, wn = 0; try { rkCounts(); g = rkGames(w); wn = rkWins(w); } catch(_){}
+    soloSum = kv([[`${wn.toLocaleString()}–${(g - wn).toLocaleString()}`, 'wins–losses', 'trophy'], [`${g ? Math.round(wn / g * 100) : 0}%`, 'win rate', 'pct'], [botRating(w).toLocaleString(), 'Elo now', 'shield'], [rkOf(w).full, 'rank', 'up']]); }
+  if (w === ME){ const e = R.el || {played: 0, wins: 0, top3: 0, best: 99};
+    groupSum = kv([[e.played.toLocaleString(), 'played', 'group'], [e.wins.toLocaleString(), '1st places', 'trophy'], [e.top3.toLocaleString(), 'top 3', 'medal'], [e.best < 99 ? elOrd(e.best) : '–', 'best finish', 'star']]);
+  } else { let pl = 0, wn = 0; try { const A = elArrs(); pl = A.t[w]; wn = A.w[w]; } catch(_){}
+    groupSum = kv([[pl.toLocaleString(), 'played', 'group'], [wn.toLocaleString(), '1st places', 'trophy'], [`${pl ? Math.round(wn / pl * 100) : 0}%`, 'win rate', 'pct'], [pl ? '1st' : '–', 'best finish', 'star']]); }
   // achievements by tier
   const mine = new Set(ACHS.filter(a => ACH.u[a.id]).map(a => a.id));
   let got = w === ME ? [...mine] : botBadges(w);
@@ -1746,13 +1766,17 @@ function renderProfilePage(){
         <small>${fmtMin(wkDays.reduce((a, d) => a + d.m, 0))} so far · best week ${fmtMin(st.maxWeek)}</small></div></div>`,
     posts: () => posts.length ? `<div class="fd-grid pf-posts">${posts.map(p => `<button class="fd-thumb" data-goto-post="${p.id}" aria-label="Open post">${fdMedia(p)}</button>`).join('')}</div>`
       : `<p class="hint pf-empty">${w === ME ? 'No posts yet. Make one from the Feed.' : 'No posts yet.'}</p>`,
-    stats: () => `<div class="card"><div class="h first">Study stats</div><div class="pf-stats">${stats.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div></div>
-      <div class="card"><div class="h first">Activity · last 6 months</div>
+    stats: () => `<div class="pf-cols pf-stcols"><div class="card"><div class="h first pf-hi">${pfIc('bars')}Study stats</div><div class="pf-stats">${stats.map(([v, l, i]) => `<span>${pfIc(i, 'sti')}<b>${v}</b><small>${l}</small></span>`).join('')}</div></div>
+      <div class="card"><div class="h first pf-hi">${pfIc('grid')}Activity · last 6 months</div>
         <div class="hm-cal"><div class="hm-months">${months}</div><div class="hm-days"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div><div class="hm-grid">${cells}</div></div>
         <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
       <div class="card" id="pfCal"></div>
-      <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of ${(ROSTER_N + 1).toLocaleString()} players. Click one to open that leaderboard.</p></div>`,
-    ranked: () => `<div class="pf-cols"><div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>${typeof profileElim === 'function' ? `<div class="card"><div class="h first">Group matches</div>${profileElim(w)}</div>` : ''}${typeof tnProfileHtml === 'function' ? `<div class="card"><div class="h first">Weekly Tournaments</div>${tnProfileHtml(w)}</div>` : ''}</div>`,
+      <div class="card"><div class="h first pf-hi">${pfIc('trophy')}Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of ${(ROSTER_N + 1).toLocaleString()} players. Click one to open that leaderboard.</p></div></div>`,
+    ranked: () => `<div class="card pf-rk"><div class="pf-rkh"><div class="h first pf-hi">${pfIc('shield')}Ranked</div><span class="seg sm" id="pfRkMode"><button data-v="solo" aria-pressed="${profRk === 'solo'}">${pfIc('user')}Solo</button><button data-v="group" aria-pressed="${profRk === 'group'}">${pfIc('group')}Group</button></span></div>
+      <div class="pf-cols">${profRk === 'group'
+        ? `<div><b class="pf-ct">${pfIc('medal')}Record</b>${groupSum}</div><div><b class="pf-ct">${pfIc('list')}Recent group matches</b>${typeof profileElim === 'function' ? profileElim(w) : ''}</div>`
+        : `<div><b class="pf-ct">${pfIc('trophy')}Record</b>${soloSum}${ranked}</div><div><b class="pf-ct">${pfIc('list')}${w === ME ? 'Your ranked matches' : 'Recent ranked matches'}</b>${profileMatches(w)}</div>`}</div></div>
+      ${typeof tnProfileHtml === 'function' ? `<div class="card"><div class="h first pf-hi">${pfIc('trophy')}Weekly Tournaments</div>${tnProfileHtml(w)}</div>` : ''}`,
     awards: () => `<div class="card"><div class="h first">Featured</div><div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('') || '<span class="hint">Nothing featured yet.</span>'}</div></div>
       <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>`
   };
@@ -1850,7 +1874,7 @@ function renderProfileCal(){
       <div class="tagbars">${rows.map(([t, mm]) => `<div class="tagbar" style="--c:${col(t)}"><span class="name"><i></i><b>${esc(t)}</b></span><span class="track2"><i style="width:${mm / top * 100}%"></i></span><span class="m">${fmtMin(mm)}</span></div>`).join('')}</div>
       <ul class="sessions pc-sess">${pcSessRows(r.sessions, me, col)}</ul>`;
   } else dayH += `<p class="hint">${pc.day > today ? "This day hasn't happened yet." : !me && pc.day < botJoinKey(w) ? `${esc(pName(w))} hadn't started studying here yet.` : 'No study on this day.'}</p>`;
-  el.innerHTML = `<div class="pc-top"><div class="h first">Calendar</div><div class="seg" role="group" aria-label="Calendar view"><button data-pc="week" aria-pressed="${week}">Week</button><button data-pc="month" aria-pressed="${!week}">Month</button></div></div>
+  el.innerHTML = `<div class="pc-top"><div class="h first pf-hi">${typeof pfIc === 'function' ? pfIc('cal') : ''}Calendar</div><div class="seg" role="group" aria-label="Calendar view"><button data-pc="week" aria-pressed="${week}">Week</button><button data-pc="month" aria-pressed="${!week}">Month</button></div></div>
     <div class="cal-head pc-head"><button class="small-btn" data-pc="prev" aria-label="Previous ${pc.view}">‹</button><b>${title}</b><button class="small-btn" data-pc="next" aria-label="Next ${pc.view}">›</button><button class="small-btn" data-pc="today">Today</button></div>
     ${body}<p class="cal-month">${sum}</p>${dayH}`;
 }
@@ -1895,6 +1919,7 @@ $('#page-profile').addEventListener('click', e => {
   const pcb = e.target.closest('[data-pc]'); if (pcb){ pcAct(pcb.dataset.pc); return; }
   const pk = e.target.closest('[data-pk]'); if (pk){ pcAct(null, pk.dataset.pk); if (pk.classList.contains('hm')) $('#pfCal').scrollIntoView({behavior: motion() === 'off' ? 'auto' : 'smooth', block: 'start'}); return; }
   const lb = e.target.closest('[data-lb]'); if (lb){ P.lbCat = lb.dataset.lb; saveP(); lbShown = 10; lbJump = profWho === ME; showPage('leaders'); return; }
+  const rm = e.target.closest('#pfRkMode [data-v]'); if (rm){ profRk = rm.dataset.v; renderProfilePage(); return; }
   const fl = e.target.closest('#pfFilter [data-v]'); if (fl){ profFilter = fl.dataset.v; renderProfilePage(); }
 });
 $('#page-profile').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pfName'){ saveProfileEdit(); renderProfilePage(); } });
