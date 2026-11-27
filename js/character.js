@@ -549,13 +549,16 @@ function ccPal(key, list, pal, d){
 }
 // a garment's thumbnail shows it in your color if it comes in that color, otherwise in its own first color
 const CC_PALS = {ot: ['oc', 'oh', () => CH_TOP_PAL, () => CH_OUTFIT_C], bt: ['bc', 'bh', () => CH_BOTTOM_PAL, () => CH_BOTTOM_C], sn: ['sc', 'sh', () => CH_SHOE_PAL, () => CH_SHOE_C]};
-function ccOver(key, v, d){ const o = {[key]: v}, f = CC_PALS[key]; if (f){ const pal = f[2]()[v]; if (pal && !pal.includes(d[f[0]])){ o[f[0]] = pal[0]; o[f[1]] = ''; } } return o; }
+// each garment remembers its own color while the creator is open, so picking one never recolors the others
+let ccCols = {};
+const ccColOf = (key, v, d) => { const f = CC_PALS[key], pal = f[2]()[v] || [0]; if (String(d[key]) === String(v)) return d[f[0]]; const c = ccCols[key] && ccCols[key][v]; return c != null && pal.includes(c) ? c : pal[0]; };
+function ccOver(key, v, d){ const o = {[key]: v}, f = CC_PALS[key]; if (f){ o[f[0]] = ccColOf(key, v, d); o[f[1]] = ''; } return o; }
 function ccTiles(key, list, d, crop, num){
   const f = CC_PALS[key];
   return `<div class="ccr-grid">${list.map(([v, l]) => {
     const on = String(d[key]) === String(v), o = ccOver(key, num ? +v : v, d);
     // clothes, like in the Sims 4: a strip of the item's colors along the bottom of its tile; tap one to wear it in that color
-    const sw = f ? `<span class="ccr-tsw">${(f[2]()[v] || []).map(k => `<button type="button" class="ccr-tdot" data-cc="${f[0]}" data-g="${key}" data-gv="${v}" data-v="${k}" aria-pressed="${on && d[f[0]] === k}" aria-label="${l} in color ${k + 1}" style="background:${f[3]()[k]}"></button>`).join('')}</span>` : '';
+    const sw = f && on ? `<span class="ccr-tsw">${(f[2]()[v] || []).map(k => `<button type="button" class="ccr-tdot" data-cc="${f[0]}" data-g="${key}" data-gv="${v}" data-v="${k}" aria-pressed="${on && d[f[0]] === k}" aria-label="${l} in color ${k + 1}" style="background:${f[3]()[k]}"></button>`).join('')}</span>` : '';
     return `<div class="ccr-tile${f ? ' ccr-cl' : ''}" aria-pressed="${on}"><button type="button" class="ccr-tb" data-cc="${key}" data-v="${v}" aria-pressed="${on}"><span class="ccr-th">${chThumb(d, o, crop)}</span><span>${l}</span></button>${sw}</div>`;
   }).join('')}</div>`;
 }
@@ -639,7 +642,7 @@ function ccDraw(full){
 }
 function ccOpen(){
   if (document.getElementById('cc')) return;
-  ccLook = chMyLook(); ccTab = 0; ccView = CC_VIEWS.full.slice(); ccFitColor();
+  ccLook = chMyLook(); ccTab = 0; ccView = CC_VIEWS.full.slice(); ccFitColor(); ccCols = {ot: {[ccLook.ot]: ccLook.oc}, bt: {[ccLook.bt]: ccLook.bc}, sn: {[ccLook.sn]: ccLook.sc}};
   document.body.insertAdjacentHTML('beforeend', `<div id="cc" class="ccr" role="dialog" aria-modal="true" aria-label="Character creator">
     <div class="ccr-bar"><button type="button" class="small-btn" data-cc-act="cancel">Cancel</button><b>Your character</b><button type="button" class="btn primary" data-cc-act="save">Done</button></div>
     <div class="ccr-main"><div class="ccr-left"><div class="ccr-stage" id="ccStage"></div><button type="button" class="ccr-whole" data-cc-act="whole" aria-pressed="false" title="Show the whole character while editing any part"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg><span>Full body</span></button><div class="ccr-btns"><div class="ccr-turn" role="radiogroup" aria-label="Side shown" title="Or drag the character sideways to turn it"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.500-6.200L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.500 6.200L3 16M3 21v-5h5"/></svg><button type="button" role="radio" data-cc-side="front" aria-checked="true">Front</button><button type="button" role="radio" data-cc-side="back" aria-checked="false">Back</button></div><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
@@ -669,7 +672,10 @@ document.addEventListener('click', e => {
   const sb = e.target.closest('[data-cc-sub]'); if (sb){ ccSub[ccTab] = sb.dataset.ccSub; const body = document.querySelector('#ccBody'); if (body){ body.innerHTML = ccPanel(); ccFold(body); body.scrollTop = 0; } return; }
   if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); ccCam(ccWhole ? 'full' : CC_TABS[ccTab][1]); }
   else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); if (CC_TABS[ccTab][0] !== 'Face') ccReact('pick'); }
-  else if (o){ if (o.dataset.g) ccLook[o.dataset.g] = o.dataset.gv; const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (!['Face', 'Backdrop'].includes(CC_TABS[ccTab][0]) && Math.random() < .7) ccReact('pick'); }
+  else if (o){
+    if (o.dataset.g){ ccLook[o.dataset.g] = o.dataset.gv; (ccCols[o.dataset.g] = ccCols[o.dataset.g] || {})[o.dataset.gv] = +o.dataset.v; }
+    else if (CC_PALS[o.dataset.cc] && String(ccLook[o.dataset.cc]) !== o.dataset.v){ const f = CC_PALS[o.dataset.cc], c = ccColOf(o.dataset.cc, o.dataset.v, ccLook); ccLook[o.dataset.cc] = o.dataset.v; ccLook[f[0]] = c; ccLook[f[1]] = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (Math.random() < .7) ccReact('pick'); return; }
+    const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (!['Face', 'Backdrop'].includes(CC_TABS[ccTab][0]) && Math.random() < .7) ccReact('pick'); }
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('cc')) ccClose(); });
 
