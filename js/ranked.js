@@ -1719,7 +1719,7 @@ function renderProfilePage(){
   if (w !== ME && profFilter === 'missing') got = got.filter(id => !mine.has(id));
   const tiers = ['legendary', 'platinum', 'gold', 'silver', 'bronze'].map(tr => { const ids = got.filter(id => achById(id).tier === tr); return ids.length ? `<div class="pf-tier"><span style="color:${TIERS[tr].c}">${TIERS[tr].name} · ${ids.length}</span><div class="bdgs wrap">${rareSort(ids).map(id => badgeHtml(id)).join('')}</div></div>` : ''; }).join('');
   // header like a social app: picture and counts, who they are, buttons, a few numbers, then tabs
-  if (profTabWho !== w){ profTabWho = w; profTab = 'posts'; }
+  if (profTabWho !== w){ profTabWho = w; profTab = 'desk'; }
   const soc = typeof socFollowers === 'function', nf = soc ? socFollowers(w) : 0, ng = soc ? socFollowing(w) : 0, posts = typeof fdUserPosts === 'function' ? fdUserPosts(w) : [];
   const rk = rkOf(w), elo = w === ME ? R.mmr : botRating(w), live = B && botLiveNow(w), place = placeOf(w);
   const fy = w !== ME && typeof FD !== 'undefined' && FD.followers.includes(w);
@@ -1730,8 +1730,20 @@ function renderProfilePage(){
   const chips = [[st.total >= 60 ? Math.floor(st.total / 60).toLocaleString() + 'h' : st.total + 'm', 'studied'], [`${st.cur}d`, 'streak'], [wr, 'win rate'], ['#' + place.toLocaleString(), 'overall']];
   const bio = w === ME ? (P.myBio || '') : B.bio;
   const cnt = (n, l, kind) => kind ? `<button class="pf-cnt" data-soc="${kind}" data-soc-w="${w === ME ? 'me' : w}"><b>${fmtCount(n)}</b><small>${l}</small></button>` : `<span class="pf-cnt"><b>${n.toLocaleString()}</b><small>${l}</small></span>`;
-  const TABS = [['posts', 'Posts'], ['stats', 'Stats'], ['ranked', 'Ranked'], ['awards', 'Achievements']];
+  const TABS = [['desk', 'Desk'], ['posts', 'Posts'], ['stats', 'Stats'], ['ranked', 'Ranked'], ['awards', 'Achievements']];
+  // the Desk tab: today at the desk, and this week day by day
+  const liveMin = w === ME ? (typeof tnLiveMin === 'function' ? tnLiveMin() : 0) : 0, todayMin = f(today) + liveMin;
+  const todaySubs = w === ME ? [...new Set(LOG.filter(x => dayKey(x.t) === today).map(x => (x.task || '').trim() || x.tag || '').filter(Boolean))].slice(0, 3)
+    : [...new Set(((botDay(w, today) || {}).sessions || []).map(x => x.subj).filter(Boolean))].slice(0, 3);
+  const wk0 = startOfWeek(new Date()), wkDays = [...Array(7)].map((_, i) => { const d = new Date(wk0); d.setDate(d.getDate() + i); const dk = dayKey(d); return {dk, l: d.toLocaleDateString(undefined, {weekday: 'narrow'}), m: dk > today ? 0 : f(dk) + (dk === today ? liveMin : 0), fut: dk > today}; });
+  const wkMax = Math.max(60, ...wkDays.map(x => x.m)), avgSit = st.sessions ? Math.round(st.total / st.sessions) : 0;
+  const liveSess = B && live ? ((botDay(w, today) || {}).sessions || []).find(x => x.live) : null;
   const tabBody = {
+    desk: () => `<div class="pf-cols"><div class="card pf-today"><b class="pf-ct">At the desk today</b><div class="pf-big">${todayMin ? fmtMin(todayMin) : '0m'}</div>
+        <div class="pf-tags">${todaySubs.length ? todaySubs.map(x => `<span>${esc(x)}</span>`).join('') : `<span class="none">${w === ME ? 'Nothing yet today' : 'Hasn’t studied yet today'}</span>`}</div>
+        <small>${B ? `Typical sitting about ${fmtMin(st.sit)} · studies in the ${esc(B.peak.toLowerCase())}` : avgSit ? `Your average sitting is ${fmtMin(avgSit)}` : 'Start a session and it shows up here'}</small></div>
+      <div class="card pf-week"><b class="pf-ct">This week</b><div class="pf-bars">${wkDays.map(x => `<span class="${x.dk === today ? 'today' : ''}${x.fut ? ' fut' : ''}" title="${x.m ? fmtMin(x.m) : 'no study'}"><i style="height:${x.m ? Math.max(4, Math.round(x.m / wkMax * 100)) : 3}%"></i><small>${x.l}</small></span>`).join('')}</div>
+        <small>${fmtMin(st.week + liveMin)} so far · best week ${fmtMin(st.maxWeek)}</small></div></div>`,
     posts: () => posts.length ? `<div class="fd-grid pf-posts">${posts.map(p => `<button class="fd-thumb" data-goto-post="${p.id}" aria-label="Open post">${fdMedia(p)}</button>`).join('')}</div>`
       : `<p class="hint pf-empty">${w === ME ? 'No posts yet. Make one from the Feed.' : 'No posts yet.'}</p>`,
     stats: () => `<div class="card"><div class="h first">Study stats</div><div class="pf-stats">${stats.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div></div>
@@ -1740,23 +1752,29 @@ function renderProfilePage(){
         <div class="hm-foot"><span class="hm-legend">${LEVELS.map((l, k) => `<i class="hm l${k}"></i>${l}`).join('')}</span><span>Active ${activeMonth} of ${daysMonth} days this month · ${activeAll} active days in 6 months · busiest on ${busiest}</span></div></div>
       <div class="card" id="pfCal"></div>
       <div class="card"><div class="h first">Leaderboard places</div><ul class="lb-mine pf-lb">${lbs}</ul><p class="hint">Out of ${(ROSTER_N + 1).toLocaleString()} players. Click one to open that leaderboard.</p></div>`,
-    ranked: () => `<div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>${typeof profileElim === 'function' ? `<div class="card"><div class="h first">Group matches</div>${profileElim(w)}</div>` : ''}${typeof tnProfileHtml === 'function' ? `<div class="card"><div class="h first">Weekly Tournaments</div>${tnProfileHtml(w)}</div>` : ''}`,
+    ranked: () => `<div class="pf-cols"><div class="card"><div class="h first">Ranked</div>${ranked}</div><div class="card"><div class="h first">${w === ME ? 'Ranked matches' : 'Recent ranked matches'}</div>${profileMatches(w)}</div>${typeof profileElim === 'function' ? `<div class="card"><div class="h first">Group matches</div>${profileElim(w)}</div>` : ''}${typeof tnProfileHtml === 'function' ? `<div class="card"><div class="h first">Weekly Tournaments</div>${tnProfileHtml(w)}</div>` : ''}</div>`,
     awards: () => `<div class="card"><div class="h first">Featured</div><div class="bdgs lg">${(w === ME ? myFeatured() : botFeatured(w)).map(id => badgeHtml(id, 'lg') + `<span class="bdg-name">${esc(achById(id).name)}</span>`).join('') || '<span class="hint">Nothing featured yet.</span>'}</div></div>
       <div class="card"><div class="h first pf-ach-h"><span>Achievements · ${(w === ME ? mine.size : botBadges(w).length)}/${ACHS.length}</span>${w === ME ? '' : `<span class="seg sm" id="pfFilter"><button data-v="all" aria-pressed="${profFilter === 'all'}">All</button><button data-v="missing" aria-pressed="${profFilter === 'missing'}">They have, you don't</button></span>`}</div>${tiers || '<p class="hint">Nothing here.</p>'}</div>`
   };
+  const dk = typeof dkOf === 'function' ? dkOf(w) : null;
+  const liveTag = live || (w === ME && typeof focusing === 'function' && focusing()) ? `<span class="pf-dtag l"><i></i>Studying now${liveSess ? ` · ${fmtMin(liveSess.min)}${liveSess.subj ? ` · ${esc(liveSess.subj)}` : ''}` : w === ME && liveMin ? ` · ${fmtMin(liveMin)}${P.task ? ` · ${esc(P.task)}` : ''}` : ''}</span>` : '';
   $('#profBody').innerHTML = `<div class="pf-bar"><button class="small-btn" data-pf="back">← Back</button></div>
     <div class="pf-wrap">
-    ${typeof dkSceneHtml === 'function' ? `<div class="card pf-desk">${dkSceneHtml(w)}</div>` : ''}
+    ${dk ? `<div class="pf-desk">${dkSceneHtml(w)}${liveTag}<span class="pf-dtag r">${esc(DK_ITEMS[dk.room].name)} · ${dkRarity(dk.room)}</span></div>` : ''}
     <div class="card pf-head">
-      <div class="pf-h1"><span class="pf-pic">${chFlip(w, 'xl')}${live ? '<i class="pf-livedot" title="Studying now"></i>' : ''}</span>
-        <div class="pf-cnts">${cnt(posts.length, posts.length === 1 ? 'post' : 'posts')}${cnt(nf, nf === 1 ? 'follower' : 'followers', 'followers')}${cnt(ng, 'following', 'following')}</div></div>
-      <div class="pf-id"><b id="bmName">${esc(pName(w))}</b>${fy ? '<i class="soc-fy">Follows you</i>' : ''}</div>
-      <div class="pf-meta">${emblem(rk, 'xs')} ${esc(rk.full)} · ${elo.toLocaleString()} Elo${B && B.subject ? ` · ${esc(B.subject)}` : ''}</div>
-      ${bio && !(w === ME && profEditing) ? `<p class="pf-bio">${esc(bio)}</p>` : ''}
-      ${B ? `<small class="pf-cls">${esc(B.style)} · studies in the ${esc(B.peak.toLowerCase())} · this semester: ${botClasses(w).map(esc).join(', ')}</small>` : ''}
-      ${live ? `<span class="pf-live">● ${R.cur && R.cur.b === w && R.cur.state === 'live' && !R.cur.tapped ? 'Studying now · in a ranked match with you' : 'Studying now'}</span>` : ''}
-      ${paraLine(w)}${fbTxt ? `<small class="pf-fb">${fbTxt}</small>` : ''}
-      ${w === ME ? (profEditing ? editForm() : '<div class="pf-btns"><button class="small-btn" data-pf="edit">Edit profile</button></div>') : `<div class="pf-btns">${typeof dmButtons === 'function' ? dmButtons(w) : ''}</div>`}
+      <div class="pf-top">
+        <span class="pf-pic">${chFlip(w, 'xl')}${live ? '<i class="pf-livedot" title="Studying now"></i>' : ''}</span>
+        <div class="pf-who">
+          <div class="pf-id"><b id="bmName">${esc(pName(w))}</b>${fy ? '<i class="soc-fy">Follows you</i>' : ''}</div>
+          <div class="pf-meta">${emblem(rk, 'xs')} ${esc(rk.full)} · ${elo.toLocaleString()} Elo${B && B.subject ? ` · ${esc(B.subject)}` : ''}</div>
+          ${bio && !(w === ME && profEditing) ? `<p class="pf-bio">${esc(bio)}</p>` : ''}
+          ${B ? `<small class="pf-cls">${esc(B.style)} · this semester: ${botClasses(w).map(esc).join(', ')}</small>` : ''}
+          ${paraLine(w)}${fbTxt ? `<small class="pf-fb">${fbTxt}</small>` : ''}
+        </div>
+        <div class="pf-cnts">${cnt(posts.length, posts.length === 1 ? 'post' : 'posts')}${cnt(nf, nf === 1 ? 'follower' : 'followers', 'followers')}${cnt(ng, 'following', 'following')}</div>
+        ${w === ME ? (profEditing ? '' : '<div class="pf-btns"><button class="small-btn" data-pf="edit">Edit profile</button></div>') : `<div class="pf-btns">${typeof dmButtons === 'function' ? dmButtons(w) : ''}</div>`}
+      </div>
+      ${w === ME && profEditing ? editForm() : ''}
       <div class="pf-chips">${chips.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div>
     </div>
     <div class="pf-tabs" role="tablist">${TABS.map(([k, l]) => `<button data-pft="${k}" role="tab" aria-selected="${profTab === k}">${l}</button>`).join('')}</div>
