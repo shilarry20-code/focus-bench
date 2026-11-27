@@ -1743,7 +1743,7 @@ function renderProfilePage(){
         <div class="pf-tags">${todaySubs.length ? todaySubs.map(x => `<span>${esc(x)}</span>`).join('') : `<span class="none">${w === ME ? 'Nothing yet today' : 'Hasn’t studied yet today'}</span>`}</div>
         <small>${B ? `Typical sitting about ${fmtMin(st.sit)} · studies in the ${esc(B.peak.toLowerCase())}` : avgSit ? `Your average sitting is ${fmtMin(avgSit)}` : 'Start a session and it shows up here'}</small></div>
       <div class="card pf-week"><b class="pf-ct">This week</b><div class="pf-bars">${wkDays.map(x => `<span class="${x.dk === today ? 'today' : ''}${x.fut ? ' fut' : ''}" title="${x.m ? fmtMin(x.m) : 'no study'}"><i style="height:${x.m ? Math.max(4, Math.round(x.m / wkMax * 100)) : 3}%"></i><small>${x.l}</small></span>`).join('')}</div>
-        <small>${fmtMin(st.week + liveMin)} so far · best week ${fmtMin(st.maxWeek)}</small></div></div>`,
+        <small>${fmtMin(wkDays.reduce((a, d) => a + d.m, 0))} so far · best week ${fmtMin(st.maxWeek)}</small></div></div>`,
     posts: () => posts.length ? `<div class="fd-grid pf-posts">${posts.map(p => `<button class="fd-thumb" data-goto-post="${p.id}" aria-label="Open post">${fdMedia(p)}</button>`).join('')}</div>`
       : `<p class="hint pf-empty">${w === ME ? 'No posts yet. Make one from the Feed.' : 'No posts yet.'}</p>`,
     stats: () => `<div class="card"><div class="h first">Study stats</div><div class="pf-stats">${stats.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div></div>
