@@ -3177,3 +3177,5 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 .ccr-tdot[aria-pressed="true"]{outline:2px solid var(--accent,#2d5bd8);outline-offset:1px}
 .ccr-sw + .ccr-grid{margin-top:14px}
 #ccBody > .ccr-sw:first-child{margin-top:10px}
+.ccr-empty{color:var(--muted);font-size:14px;padding:18px 4px}
+.ccr-grid + .ccr-grid{margin-top:12px}

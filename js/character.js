@@ -550,7 +550,7 @@ const CC_TABS = [
   ['Tops', 'top', 'M8 4l-5 3 2 4 3-1v10h8V10l3 1 2-4-5-3c-.5 1.5-2 2.5-4 2.500S8.500 5.500 8 4z'],
   ['Bottoms', 'bottoms', 'M7 3h10l1 18h-5l-1-9-1 9H6z'],
   ['Shoes', 'shoes', 'M3 16c4 0 5-3 6-6l3 1c1 2 3 3 9 3v4H3z'],
-  ['Extras', 'head', 'M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v5H4zM17 14h3v5h-3z'],
+  ['Accessories', 'head', 'M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v5H4zM17 14h3v5h-3z'],
   ['Backdrop', 'portrait', 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6']
 ];
 // a small picture of the character with one thing changed
@@ -604,11 +604,14 @@ function ccSections(tab){
     [...CH_TOP_GROUPS.map(([t, ids]) => [t, ccTiles('ot', ccOf(CH_OUTFITS, ids), d, 'top')]), ['Outerwear', ccTiles('ow', CH_OUTERWEAR, d, 'top')]],
     [...CH_BOTTOM_GROUPS.map(([t, ids]) => [t, ccTiles('bt', ccOf(CH_BOTTOMS, ids), d, 'bottoms')])],
     [...CH_SHOE_GROUPS.map(([t, ids]) => [t, ccTiles('sn', ccOf(CH_SHOES, ids), d, 'shoes')])],
-    [['Glasses', ccTiles('gl', CH_GLASSES, d, 'head', true)], ['Hats', ccTiles('ha', CH_HATS, d, 'head', true)], ['Earrings', ccTiles('eg', CH_EARRINGS, d, 'head', true)], ['More', ccToggles([['hp', 'Headphones', 'head'], ['sf', 'Scarf', 'top'], ['nk', 'Necklace', 'top']], d)]],
+    // accessories go by where they sit on the body, like Roblox's slots; spots with nothing yet say so
+    [['Head', ccTiles('ha', CH_HATS, d, 'head', true) + ccToggles([['hp', 'Headphones', 'head']], d), 'head'], ['Face', ccTiles('gl', CH_GLASSES, d, 'head', true), 'face'], ['Ears', ccTiles('eg', CH_EARRINGS, d, 'head', true), 'head'],
+      ['Neck', ccToggles([['sf', 'Scarf', 'top'], ['nk', 'Necklace', 'top']], d), 'head'], ['Shoulders', ccNone('your shoulders'), 'top'], ['Front', ccNone('the front of your body'), 'top'], ['Back', ccNone('your back'), 'top'], ['Waist', ccNone('your waist'), 'bottoms']],
     [['Backdrop', ccSwatches('bg', CH_BG, d) + ccTiles('bp', CH_BGPAT, d, 'full', true)]]
   ][tab];
 }
 const ccSub = {};
+const ccNone = where => `<p class="ccr-empty">Nothing for ${where} yet. Items for this spot will show up here.</p>`;
 function ccFitColor(){
   [['ot', 'oc', 'oh', CH_TOP_PAL], ['bt', 'bc', 'bh', CH_BOTTOM_PAL], ['sn', 'sc', 'sh', CH_SHOE_PAL], ['ow', 'wc', '', CH_OW_PAL]].forEach(([g, c, h, P]) => { const pal = P[ccLook[g]]; if (h) ccLook[h] = ''; if (pal && !pal.includes(ccLook[c])) ccLook[c] = pal[0]; });
 }      // which section each tab is showing ('' = all of them)
@@ -685,7 +688,7 @@ document.addEventListener('click', e => {
   }
   if (!ccLook || !e.target.closest('#cc')) return;
   const t = e.target.closest('[data-cc-tab]'), o = e.target.closest('[data-cc]'), g = e.target.closest('[data-cc-tg]');
-  const sb = e.target.closest('[data-cc-sub]'); if (sb){ ccSub[ccTab] = sb.dataset.ccSub; const body = document.querySelector('#ccBody'); if (body){ body.innerHTML = ccPanel(); ccFold(body); body.scrollTop = 0; } return; }
+  const sb = e.target.closest('[data-cc-sub]'); if (sb){ ccSub[ccTab] = sb.dataset.ccSub; const sec = ccSections(ccTab).find(x => x[0] === sb.dataset.ccSub); if (sec && sec[2] && !ccWhole) ccCam(sec[2]); const body = document.querySelector('#ccBody'); if (body){ body.innerHTML = ccPanel(); ccFold(body); body.scrollTop = 0; } return; }
   if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); ccCam(ccWhole ? 'full' : CC_TABS[ccTab][1]); }
   else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); if (CC_TABS[ccTab][0] !== 'Face') ccReact('pick'); }
   else if (o){
