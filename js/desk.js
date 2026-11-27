@@ -140,27 +140,49 @@ function dkStateOf(w){
 // the kit: a notebook (writing) or a laptop (typing) in the middle, and a mug they sip from
 function dkKit(d, look, st, sky){
   if (st === 'idle') return '';
-  const A = sky.anim, L = chClean(look), skin = CH_SKIN[L.sk] || '#e0ac85', sleeve = L.ow ? CH_OUTFIT_C[L.wc] : (L.oh || CH_OUTFIT_C[L.oc]);
-  const arm = (x1, y1, x2, y2) => `<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${DK_INK}" stroke-width="15" stroke-linecap="round"/><path d="M${x1} ${y1}L${x2} ${y2}" stroke="${sleeve}" stroke-width="12" stroke-linecap="round"/>`;
+  const A = sky.anim, L = chClean(look), M = chBuild(L), skin = CH_SKIN[L.sk] || '#e0ac85', sleeve = L.ow ? CH_OUTFIT_C[L.wc] : (L.oh || CH_OUTFIT_C[L.oc]);
+  // the figure's own arms hang straight down to the desk; each forearm starts at that elbow and rests on the desk
+  const eL = [60 - M.sw + 7.5, 146], eR = [60 + M.sw - 7.5, 146];
+  const seg = (a, b) => `M${a[0]} ${a[1]}L${b[0]} ${b[1]}`;
+  // a forearm whose hand end can move: path follows the hand through the same offsets as the hand
+  const fore = (e, h, offs, dur) => { const ds = offs ? offs.map(([dx, dy]) => seg(e, [h[0] + dx, h[1] + dy])).join(';') : '';
+    const an = offs && A ? `<animate attributeName="d" values="${ds}" dur="${dur}s" repeatCount="indefinite"/>` : '';
+    return `<path d="${seg(e, h)}" stroke="${DK_INK}" stroke-width="16.5" stroke-linecap="round">${an}</path><path d="${seg(e, h)}" stroke="${sleeve}" stroke-width="13.5" stroke-linecap="round">${an}</path>`; };
   const hand = (x, y, rx = 6, ry = 5) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${skin}" ${dkSw(1.6)}/>`;
-  const [cx, cy] = DK_AT.center; let g = '';
+  const [cx, cy] = DK_AT.center, [mx, my] = DK_AT.mug, dur = st === 'break' ? 9 : 16, kt = '0;.78;.85;.93;1';
+  // while the right hand is up with the mug, its desk pose is hidden
+  const away = A ? `${dkA('opacity', '1;0;1', dur, ' keyTimes="0;.775;.965" calcMode="discrete"')}` : '';
+  let g = '';
   if (st === 'study' && d.kit === 'laptop'){
-    // seen from behind the lid: forearms go round it to the keys, tapping; the screen lights the face
-    const tap = (k) => A ? dkAT('translate', k ? '0 0;0 -2;0 0;0 0;0 -1.5;0 0' : '0 0;0 0;0 -2;0 0;0 -1;0 0', .9) : '';
+    // seen from behind the lid: forearms reach in to the keys, tapping; the screen lights the face
+    const tapL = [[0, 0], [0, 0], [0, -2], [0, 0], [0, -1], [0, 0]], tapR = [[0, 0], [0, -2], [0, 0], [0, 0], [0, -1.5], [0, 0]];
+    const hL = [eL[0] + 16, 143], hR = [eR[0] - 16, 143];
+    const tap = o => A ? dkAT('translate', o.map(p => p.join(' ')).join(';'), .9) : '';
     g += `<ellipse class="dk-glow" cx="60" cy="56" rx="26" ry="26" fill="#a9d6ff" opacity=".14">${A ? dkA('opacity', '.1;.2;.12;.18;.1', 3.1) : ''}</ellipse>`;
-    g += `<g>${tap(0)}${arm(14, 158, 22, 146)}${hand(25, 144)}</g><g>${tap(1)}${arm(106, 158, 98, 146)}${hand(95, 144)}</g>`;
+    g += `<g>${fore(eL, hL, tapL, .9)}<g>${tap(tapL)}${hand(hL[0] + 3, hL[1])}</g></g><g>${away}${fore(eR, hR, tapR, .9)}<g>${tap(tapR)}${hand(hR[0] - 3, hR[1])}</g></g>`;
     g += DK_ITEMS.laptop.draw((d.col && d.col.kit) || DK_ITEMS.laptop.col, sky, [cx, cy]);
   } else if (st === 'study'){
-    // the notebook, a hand writing across the right page, the other holding the left page, and a page turning now and then
+    // the notebook, the right hand writing across the page, the left holding the page, and a page turning now and then
     g += DK_ITEMS.notebook.draw((d.col && d.col.kit) || DK_ITEMS.notebook.col, {...sky, hold: 1}, [cx, cy]);
     if (A) g += `<g transform="translate(${cx} 0)"><g opacity="0">${dkA('opacity', '0;0;1;1;0', 11, ' keyTimes="0;.9;.905;.985;1"')}${dkAT('scale', '1 1;1 1;-1 1;-1 1', 11, ' keyTimes="0;.9;.98;1"')}<path d="M0 ${cy - 2}V${cy - 11}h35l5 9z" fill="#fffdf6" ${dkSw(1.4)}/></g></g>`;
-    g += arm(12, 158, 22, 147) + hand(26, 145, 6, 4.5);
-    g += `<g>${A ? dkAT('translate', '0 0;-3 1;-6 0;-9 1;-12 0;-14 1;-8 0;-3 1;0 0', 2.6) : ''}${arm(110, 158, 100, 147)}<path d="M${cx + 22} ${cy - 3}l14-12" stroke="#f2c14e" stroke-width="3" stroke-linecap="round"/><path d="M${cx + 22} ${cy - 3}l14-12" ${dkSw(1)}/>${hand(96, 143)}</g>`;
+    const hL = [Math.max(eL[0] + 14, cx - 34), 145], hR = [Math.min(eR[0] - 6, cx + 36), 143];
+    const wr = [[0, 0], [-3, 1], [-6, 0], [-9, 1], [-12, 0], [-14, 1], [-8, 0], [-3, 1], [0, 0]];
+    g += fore(eL, hL) + hand(hL[0] + 3, hL[1], 6, 4.5);
+    g += `<g>${away}${fore(eR, hR, wr, 2.6)}<g>${A ? dkAT('translate', wr.map(p => p.join(' ')).join(';'), 2.6) : ''}<path d="M${hR[0] - 14} ${cy - 3}l14-12" stroke="#f2c14e" stroke-width="3" stroke-linecap="round"/><path d="M${hR[0] - 14} ${cy - 3}l14-12" ${dkSw(1)}/>${hand(hR[0] - 4, hR[1])}</g></g>`;
   }
-  // the mug: lifted to the mouth for a sip every so often (more often on a break)
-  const [mx, my] = DK_AT.mug, dur = st === 'break' ? 9 : 16, kt = '0;.78;.85;.93;1';
-  g += `<g>${A ? dkAT('translate', `0 0;0 0;-74 -58;-74 -58;0 0`, dur, ` keyTimes="${kt}"`) + dkAT('rotate', `0 ${mx} ${my - 14};0 ${mx} ${my - 14};-28 ${mx} ${my - 14};-28 ${mx} ${my - 14};0 ${mx} ${my - 14}`, dur, ` keyTimes="${kt}" additive="sum"`) : ''}
-    ${DK_ITEMS.mug.draw((d.col && d.col.mug) || DK_ITEMS.mug.col, sky, [mx, my])}${A ? `<g opacity="0">${dkA('opacity', '0;0;1;1;0', dur, ` keyTimes="0;.77;.8;.95;1"`)}${hand(mx + 21, my - 11, 6.5, 5.5)}</g>` : ''}</g>`;
+  // the mug: the right forearm lifts it from the desk to the mouth for a sip every so often (more often on a break);
+  // the elbow stays on the desk, so the arm stays joined to the body
+  const tr = A ? dkAT('translate', `0 0;0 0;-74 -58;-74 -58;0 0`, dur, ` keyTimes="${kt}"`) + dkAT('rotate', `0 ${mx} ${my - 14};0 ${mx} ${my - 14};-28 ${mx} ${my - 14};-28 ${mx} ${my - 14};0 ${mx} ${my - 14}`, dur, ` keyTimes="${kt}" additive="sum"`) : '';
+  if (A){
+    // where the hand on the handle is: at rest, and lifted (the mug's translate and rotate applied to the handle point)
+    const rest = [mx + 21, my - 11], r0 = [mx, my - 14], t = -28 * Math.PI / 180, q = [rest[0] - r0[0], rest[1] - r0[1]];
+    const up = [r0[0] + q[0] * Math.cos(t) - q[1] * Math.sin(t) - 74, r0[1] + q[0] * Math.sin(t) + q[1] * Math.cos(t) - 58].map(v => +v.toFixed(1));
+    const ds = [rest, rest, up, up, rest].map(h => seg(eR, h)).join(';');
+    const an = `<animate attributeName="d" values="${ds}" dur="${dur}s" repeatCount="indefinite" keyTimes="${kt}"/>`;
+    const show = dkA('opacity', '0;1;0', dur, ' keyTimes="0;.775;.965" calcMode="discrete"');
+    g += `<g opacity="0">${show}<path d="${seg(eR, rest)}" stroke="${DK_INK}" stroke-width="16.5" stroke-linecap="round">${an}</path><path d="${seg(eR, rest)}" stroke="${sleeve}" stroke-width="13.5" stroke-linecap="round">${an}</path></g>`;
+  }
+  g += `<g>${tr}${DK_ITEMS.mug.draw((d.col && d.col.mug) || DK_ITEMS.mug.col, sky, [mx, my])}${A ? `<g opacity="0">${dkA('opacity', '0;1;0', dur, ' keyTimes="0;.775;.965" calcMode="discrete"')}${hand(mx + 21, my - 11, 6.5, 5.5)}</g>` : ''}</g>`;
   return `<g class="dk-kit">${g}</g>`;
 }
 
