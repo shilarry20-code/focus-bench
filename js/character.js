@@ -575,7 +575,7 @@ function ccTiles(key, list, d, crop, num){
     const on = String(d[key]) === String(v), o = ccOver(key, num ? +v : v, d);
     // clothes, like in the Sims 4: a strip of the item's colors along the bottom of its tile; tap one to wear it in that color
     const sw = f && on ? `<span class="ccr-tsw">${(f[2]()[v] || []).map(k => `<button type="button" class="ccr-tdot" data-cc="${f[0]}" data-g="${key}" data-gv="${v}" data-v="${k}" aria-pressed="${on && d[f[0]] === k}" aria-label="${l} in color ${k + 1}" style="background:${f[3]()[k]}"></button>`).join('')}</span>` : '';
-    return `<div class="ccr-tile${f ? ' ccr-cl' : ''}" aria-pressed="${on}"><button type="button" class="ccr-tb" data-cc="${key}" data-v="${v}" aria-pressed="${on}"><span class="ccr-th">${chThumb(d, o, crop)}</span><span>${l}</span></button>${sw}</div>`;
+    return `<div class="ccr-tile${f ? ' ccr-cl' : ''}" aria-pressed="${on}"><button type="button" class="ccr-tb" data-cc="${key}" data-v="${v}" aria-pressed="${on}"><span class="ccr-th${l === 'None' ? ' ccr-none' : ''}">${l === 'None' ? CC_X : chThumb(d, o, crop)}</span><span>${l}</span></button>${sw}</div>`;
   }).join('')}</div>`;
 }
 function ccToggles(items, d){ return `<div class="ccr-grid">${items.map(([k, l, crop]) => `<button type="button" class="ccr-tile" data-cc-tg="${k}" aria-pressed="${!!d[k]}"><span class="ccr-th">${chThumb(d, {[k]: d[k] ? 0 : 1}, crop)}</span><span>${d[k] ? 'Remove ' : ''}${l}</span></button>`).join('')}</div>`; }
@@ -611,6 +611,8 @@ function ccSections(tab){
   ][tab];
 }
 const ccSub = {};
+// a "None" choice shows a plain X instead of a picture
+const CC_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>';
 const ccNone = where => `<p class="ccr-empty">Nothing for ${where} yet. Items for this spot will show up here.</p>`;
 function ccFitColor(){
   [['ot', 'oc', 'oh', CH_TOP_PAL], ['bt', 'bc', 'bh', CH_BOTTOM_PAL], ['sn', 'sc', 'sh', CH_SHOE_PAL], ['ow', 'wc', '', CH_OW_PAL]].forEach(([g, c, h, P]) => { const pal = P[ccLook[g]]; if (h) ccLook[h] = ''; if (pal && !pal.includes(ccLook[c])) ccLook[c] = pal[0]; });
