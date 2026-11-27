@@ -3179,3 +3179,5 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 #ccBody > .ccr-sw:first-child{margin-top:10px}
 .ccr-empty{color:var(--muted);font-size:14px;padding:18px 4px}
 .ccr-grid + .ccr-grid{margin-top:12px}
+.ccr-th.ccr-none{display:grid;place-items:center;background:var(--soft);color:var(--muted)}
+.ccr-th.ccr-none svg{width:46%;height:46%}
