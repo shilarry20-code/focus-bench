@@ -3254,3 +3254,14 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 @media(max-width:800px){.pf-stcols .pf-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.pf-lb .pl2{min-width:0}}
 .pf-rk .pf-cols{grid-template-columns:minmax(0,5fr) minmax(0,8fr)}
 @media(max-width:800px){.pf-rk .pf-cols{grid-template-columns:minmax(0,1fr)}}
+/* desk: the character moves with what they're doing (only with motion on) */
+.dk-anim.dk-s-idle .dk-me{animation:dkSway 9s ease-in-out infinite}
+.dk-anim.dk-s-idle .dk-me2{animation:dkStretch 17s ease-in-out infinite}
+.dk-anim.dk-s-idle .ch-eyes{animation:dkLook 7s ease-in-out infinite}
+.dk-anim.dk-s-study .dk-me{animation:dkNod 4.5s ease-in-out infinite}
+.dk-anim.dk-k-notebook .ch-eyes{transform:translate(1px,1.6px)}
+.dk-anim.dk-s-break .dk-me{animation:dkSway 11s ease-in-out infinite}
+@keyframes dkSway{0%,100%{transform:translate(0,0)}30%{transform:translate(-3px,.6px)}65%{transform:translate(3px,.3px)}}
+@keyframes dkStretch{0%,78%,100%{transform:translate(0,0)}84%,90%{transform:translate(0,-7px)}}
+@keyframes dkLook{0%,20%,100%{transform:translate(0,0)}28%,45%{transform:translate(-2.2px,0)}55%,72%{transform:translate(2.2px,-.4px)}80%{transform:translate(0,0)}}
+@keyframes dkNod{0%,100%{transform:translate(0,0)}50%{transform:translate(0,1.4px)}}
