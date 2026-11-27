@@ -3265,3 +3265,9 @@ button.tn-cw{cursor:pointer}button.tn-cw:hover{background:var(--soft)}
 @keyframes dkStretch{0%,78%,100%{transform:translate(0,0)}84%,90%{transform:translate(0,-7px)}}
 @keyframes dkLook{0%,20%,100%{transform:translate(0,0)}28%,45%{transform:translate(-2.2px,0)}55%,72%{transform:translate(2.2px,-.4px)}80%{transform:translate(0,0)}}
 @keyframes dkNod{0%,100%{transform:translate(0,0)}50%{transform:translate(0,1.4px)}}
+/* smoother desk motion: no tiny nod (it made outlines shimmer), slower gentler sway */
+.dk-anim.dk-s-study .dk-me{animation:none}
+.dk-anim.dk-s-idle .dk-me,.dk-anim.dk-s-break .dk-me{animation:dkSway2 12s cubic-bezier(.45,0,.55,1) infinite}
+@keyframes dkSway2{0%,100%{transform:translate(0,0)}50%{transform:translate(4px,0)}}
+.dk-anim.dk-s-idle .ch-eyes{animation-timing-function:cubic-bezier(.45,0,.55,1)}
+.dk-anim.dk-s-idle .dk-me2{animation-timing-function:cubic-bezier(.45,0,.55,1)}
