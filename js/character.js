@@ -16,6 +16,9 @@ const CH_HAIRSTYLES = [['short', 'Short'], ['buzz', 'Buzz'], ['side', 'Side part
 const CH_TOP_PAL = {hoodie: [0, 1, 2, 3, 4, 5, 8, 11], tee: [11, 4, 5, 1, 6, 9, 2, 10], sweater: [0, 6, 7, 10, 3, 8], coat: [11, 8], blazer: [10, 4, 3, 5, 8], tank: [11, 4, 5, 6, 1, 9], polo: [1, 4, 11, 5, 7, 10], jacket: [4, 10, 0, 2, 5], jersey: [5, 1, 6, 2, 3, 10], turtle: [4, 11, 8, 0, 3, 2]};
 const CH_BOTTOM_PAL = {jeans: [0, 1, 2, 4], joggers: [3, 2, 1, 6, 7], shorts: [5, 0, 8, 6, 1], skirt: [2, 7, 9, 1, 8], cargo: [5, 6, 2, 3], leggings: [2, 1, 9, 3], capris: [8, 4, 5, 0]};
 const CH_SHOE_PAL = {sneakers: [0, 1, 2, 3], boots: [6, 1], slides: [0, 1, 7, 4], hightops: [2, 0, 1, 5], loafers: [6, 1], heels: [1, 2, 7], sandals: [6, 1, 0]};
+// outerwear is its own layer, worn open over the top; old looks wearing one as their top are moved to it
+const CH_OUTERWEAR = [['', 'None'], ['jacket', 'Jacket'], ['blazer', 'Blazer'], ['coat', 'Lab coat']], CH_OW_IDS = ['jacket', 'blazer', 'coat'];
+const CH_OW_PAL = {jacket: [4, 10, 0, 2, 5], blazer: [10, 4, 3, 5, 8], coat: [11, 8]};
 const CH_OUTFITS = [['hoodie', 'Hoodie'], ['tee', 'T-shirt'], ['sweater', 'Sweater'], ['coat', 'Lab coat'], ['blazer', 'Blazer'], ['tank', 'Tank'], ['polo', 'Polo'], ['jacket', 'Jacket'], ['jersey', 'Jersey'], ['turtle', 'Turtleneck']];
 const CH_GLASSES = [['0', 'None'], ['1', 'Round'], ['2', 'Square'], ['3', 'Aviator'], ['4', 'Cat-eye'], ['5', 'Shades']];
 const CH_EYES = [['0', 'Round'], ['1', 'Happy'], ['2', 'Sleepy'], ['3', 'Tall'], ['4', 'Big']];
@@ -66,6 +69,8 @@ function chClean(l){
   l = l || {};
   o.sk = num(l.sk, CH_SKIN.length, d.sk); o.hc = num(l.hc, CH_HAIR.length, d.hc); o.oc = num(l.oc, CH_OUTFIT_C.length, d.oc); o.bg = num(l.bg, CH_BG.length, d.bg);
   o.hs = CH_HAIRSTYLES.some(x => x[0] === l.hs) ? l.hs : d.hs; o.ot = CH_OUTFITS.some(x => x[0] === l.ot) ? l.ot : d.ot;
+  o.ow = CH_OW_IDS.includes(l.ow) ? l.ow : ''; o.wc = num(l.wc, CH_OUTFIT_C.length, 4);
+  if (CH_OW_IDS.includes(o.ot)){ if (!o.ow){ o.ow = o.ot; o.wc = o.oc; } o.ot = 'tee'; o.oc = 11; o.oh = ''; }
   o.gl = num(l.gl, CH_GLASSES.length, 0); o.ey = num(l.ey, CH_EYES.length, 0); o.ec = num(l.ec, CH_EYE_C.length, 0); o.br = num(l.br, CH_BROWS.length, 0); o.mo = num(l.mo, CH_MOUTHS.length, 0);
   const hex = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : ''; o.eh = hex(l.eh); o.oh = hex(l.oh); o.bh = hex(l.bh); o.sh = hex(l.sh);   // an eye color picked freely instead of from the list
   o.bp = num(l.bp, 3, d.bp);
@@ -159,8 +164,9 @@ function chFigure(look, turned){   // turned: seen from behind
   const outerAt = y => innerAt(y) + (M.hp - 1 - 1) + (ankW - (M.hp - 1)) * (y - 156) / 68;
   const leg = (s, y0, y1, fill) => `<path d="M${cx + s * innerAt(y0)} ${y0}L${cx + s * outerAt(y0)} ${y0}L${cx + s * outerAt(y1)} ${y1}L${cx + s * innerAt(y1)} ${y1}Z" fill="${fill}"/>`;
   let legs = `<ellipse cx="60" cy="239" rx="${Math.round(M.hp + 10)}" ry="5" fill="#000" opacity=".16"/>`;
-  const hemY = {hoodie: 160, tee: 154, sweater: 160, coat: 190, blazer: 162, tank: 154, polo: 156, jacket: 164, jersey: 158, turtle: 158}[L.ot], flare = L.ot === 'coat' ? 8 : 1;
-  const yT = L.ot === 'coat' ? 172 : hemY - 4;   // bottoms start just under the top's hem
+  const OW = L.ow || '', owc = CH_OUTFIT_C[L.wc], odk = chShade(owc, .72), owHem = {jacket: 164, blazer: 162, coat: 190}[OW] || 0;
+  let hemY = {hoodie: 160, tee: 154, sweater: 160, coat: 190, blazer: 162, tank: 154, polo: 156, jacket: 164, jersey: 158, turtle: 158}[L.ot], flare = 1;
+  const yT = OW === 'coat' ? 172 : Math.max(hemY, owHem) - 4;   // bottoms start just under the lowest hem
   const long = ['jeans', 'joggers', 'cargo', 'leggings'].includes(L.bt);
   legs += leg(-1, Math.max(150, yT), 226, skin) + leg(1, Math.max(150, yT), 226, skin);
   if (long){
@@ -205,7 +211,7 @@ function chFigure(look, turned){   // turned: seen from behind
     if (lines === 'all') out += `<path d="M${cx + M.ts} 112${sides}" fill="none" ${GL}/>`;
     return out;
   };
-  const sleeve = L.ot === 'tank' ? skin : L.ot === 'coat' ? '#f1f1ec' : L.ot === 'blazer' ? '#2e3648' : top, sleeveEnd = ['tee', 'polo', 'jersey'].includes(L.ot) ? 120 : L.ot === 'tank' ? 96 : 144;
+  const sleeve = OW ? owc : L.ot === 'tank' ? skin : top, sleeveEnd = OW ? 144 : ['tee', 'polo', 'jersey'].includes(L.ot) ? 120 : L.ot === 'tank' ? 96 : 144;
   let arms = '';
   const HL = 'stroke="rgba(20,16,12,.72)" stroke-width="1.1" stroke-linejoin="round"';
   // a mitten hand with a thumb toward the body, drawn as one outlined shape for a right arm and mirrored for the left.
@@ -222,14 +228,14 @@ function chFigure(look, turned){   // turned: seen from behind
     const a0 = arms.length;
     const x = s < 0 ? cx - M.sw : cx + M.sw - 15;
     arms += `<path d="M${x} 101.500Q${x} 94 ${x + 7.500} 94Q${x + 15} 94 ${x + 15} 101.500L${x + 13.300} 146H${x + 1.700}Z" fill="${skin}"/><rect x="${x}" y="94" width="15" height="${sleeveEnd - 94}" rx="7.500" fill="${sleeve}"/>`;
-    if (L.ot === 'hoodie' || L.ot === 'sweater') arms += `<rect x="${x}" y="${sleeveEnd - 7}" width="15" height="7" rx="3" fill="${dk}"/>`;
-    if (L.ot === 'tank') arms = arms.slice(0, a0) + arms.slice(a0).replace(/<rect x="[^"]*" y="94" width="15" height="2"[^>]*\/>/, '');
-    if (L.ot === 'coat') arms += `<rect x="${x}" y="${sleeveEnd - 5}" width="15" height="5" rx="2.500" fill="#c9cfda"/>`;
+    if (!OW && (L.ot === 'hoodie' || L.ot === 'sweater')) arms += `<rect x="${x}" y="${sleeveEnd - 7}" width="15" height="7" rx="3" fill="${dk}"/>`;
+    if (!OW && L.ot === 'tank') arms = arms.slice(0, a0) + arms.slice(a0).replace(/<rect x="[^"]*" y="94" width="15" height="2"[^>]*\/>/, '');
+    if (OW === 'coat') arms += `<rect x="${x}" y="${sleeveEnd - 5}" width="15" height="5" rx="2.500" fill="${chShade(owc, .85)}"/>`;
     // arms hang slightly outward so the hands clear the hips; the hand follows its arm and sits in front of the clothes
     const rot = L.ap === 1 ? -s * 14 : L.ap === 2 && s > 0 ? -168 : -s * 5, rg = `<g transform="rotate(${rot} ${cx + s * (M.sw - 7.500)} 96)">`;
     arms = arms.slice(0, a0) + rg + arms.slice(a0) + '</g>';
     if (L.ap === 2 && s > 0){ armsFront = arms.slice(a0); arms = arms.slice(0, a0); }   // the waving arm is drawn over the shirt so it grows out of the shoulder
-    const longS = sleeveEnd > 130, rr = !longS ? 0 : L.ot === 'hoodie' || L.ot === 'sweater' ? 3 : L.ot === 'coat' ? 2.500 : 7.500;
+    const longS = sleeveEnd > 130, rr = !longS ? 0 : OW === 'coat' ? 2.500 : OW ? 7.500 : L.ot === 'hoodie' || L.ot === 'sweater' ? 3 : 7.500;
     const hd = rg + hand(cx + s * (M.sw - 7.500), longS ? sleeveEnd + .400 : 141, L.ap === 2 && s > 0 ? -s : s, rr) + '</g>';
     if (L.ap === 2 && s > 0) handsFront = hd; else hands += hd;   // a waving hand turns to show the palm, thumb toward the head
   }
@@ -239,13 +245,22 @@ function chFigure(look, turned){   // turned: seen from behind
   if (L.ot === 'hoodie') body = garment(top) + ring(10, 92, dk, 2.400) + `<path d="M56 91L55 110M64 91L65 110" stroke="${dk}" stroke-width="1.800" stroke-linecap="round"/><circle cx="55" cy="111" r="1.300" fill="${dk}"/><circle cx="65" cy="111" r="1.300" fill="${dk}"/><path d="M${cx - 18} 128H${cx + 18}L${cx + 22} 150H${cx - 22}Z" fill="${dk}" opacity=".5"/>` + band;
   else if (L.ot === 'tee') body = garment(top) + ring(10, 92, dk, 1.600);
   else if (L.ot === 'sweater') body = garment(top) + ring(10, 92, dk, 3.200) + `<path d="M${cx - M.ts + 3} 118H${cx + M.ts - 3}M${cx - M.ts + 3} 126H${cx + M.ts - 3}" stroke="${dk}" stroke-width="1.5" opacity=".55"/>` + band;
-  else if (L.ot === 'coat') body = under(top) + garment('#f1f1ec', 12, `L${cx - 3} 126L${cx} 128L${cx + 3} 126L${cx + 12} 84`) + `<path d="M${cx - 12} 84.500L${cx - 18} 104L${cx - 4} 122M${cx + 12} 84.500L${cx + 18} 104L${cx + 4} 122" stroke="#c9cfda" stroke-width="1.800" fill="none" stroke-linejoin="round"/><path d="M60 128V188" stroke="#c9cfda" stroke-width="2"/><path d="M${cx - M.hp + 2} 156H${cx - M.hp + 16}M${cx + M.hp - 16} 156H${cx + M.hp - 2}" stroke="#c9cfda" stroke-width="2.500" stroke-linecap="round"/>`;
   else if (L.ot === 'tank') body = garment(skin, 13, `Q${cx} 106 ${cx + 13} 84`) + `<path d="M${cx - 22} 84H${cx - 13}Q${cx} 106 ${cx + 13} 84H${cx + 22}Q${cx + M.ts - 4} 110 ${cx + M.wa} 142L${cx + M.hp + 1} 151.500Q${cx + M.hp + 1} 154 ${cx + M.hp - 1.500} 154L${cx - M.hp + 1.500} 154Q${cx - M.hp - 1} 154 ${cx - M.hp - 1} 151.500L${cx - M.wa} 142Q${cx - M.ts + 4} 110 ${cx - 22} 84Z" fill="${top}"/>`;
   else if (L.ot === 'polo') body = garment(top, 9, `C${cx - 9} 88 ${cx - 3} 95 ${cx} 97C${cx + 3} 95 ${cx + 9} 88 ${cx + 9} 84`) + `<path d="M${cx - 10} 83L${cx - 1} 97L${cx - 9} 100L${cx - 17} 88Z" fill="${top}"/><path d="M${cx + 10} 83L${cx + 1} 97L${cx + 9} 100L${cx + 17} 88Z" fill="${top}"/><path d="M60 98V118" stroke="${dk}" stroke-width="1.600"/><circle cx="60" cy="105" r="1.200" fill="#fff"/><circle cx="60" cy="112" r="1.200" fill="#fff"/>`;
-  else if (L.ot === 'jacket') body = garment(top) + ring(10, 92, dk, 3) + `<path d="M60 92V164" stroke="${dk}" stroke-width="2.200"/><rect x="58.200" y="93" width="3.600" height="6" rx="1" fill="#d8dce4"/><path d="M${cx - M.hp + 4} 140H${cx - 8}M${cx + 8} 140H${cx + M.hp - 4}" stroke="${dk}" stroke-width="2" stroke-linecap="round"/>`;
   else if (L.ot === 'jersey') body = garment(top, 12, vee(12, 102)) + `<path d="M${cx - 10.500} 85L60 99.500L${cx + 10.500} 85" fill="none" stroke="#fff" stroke-width="2.400" stroke-linejoin="round"/><text x="60" y="136" font-size="22" font-weight="800" text-anchor="middle" fill="#fff" font-family="Inter,Arial,sans-serif">7</text><rect x="${cx - M.hp}" y="${hemY - 11}" width="${2 * M.hp}" height="3" fill="#fff"/>`;
   else if (L.ot === 'turtle') body = garment(top, 9.500, `L${cx - 9} 73Q${cx} 70.500 ${cx + 9} 73L${cx + 9.500} 84`) + `<path d="M${cx - 9} 79Q${cx} 81.500 ${cx + 9} 79" fill="none" stroke="${dk}" stroke-width="1.400"/><path d="M${cx - M.ts + 3} 120H${cx + M.ts - 3}" stroke="${dk}" stroke-width="1.600"/>`;
-  else body = under('#f4f1e8') + garment('#2e3648', 12, `L${cx} 116L${cx + 12} 84`) + `<path d="M${cx - 12} 84.500L${cx - 16} 100L${cx - 2} 113M${cx + 12} 84.500L${cx + 16} 100L${cx + 2} 113" stroke="#1d2433" stroke-width="1.800" fill="none" stroke-linejoin="round"/><circle cx="60" cy="128" r="2" fill="#1d2433"/><circle cx="60" cy="140" r="2" fill="#1d2433"/>`;
+  else body = garment(top) + ring(10, 92, dk, 1.600);
+  // outerwear goes on over the top, open at the front so the top shows through
+  if (OW){
+    hemY = owHem; flare = OW === 'coat' ? 8 : 1;
+    const ln = chShade(owc, OW === 'coat' ? .85 : .7);
+    if (OW === 'jacket'){
+      const sid = `chow${chFigure.n = (chFigure.n || 0) + 1}`;
+      body += garment(owc) + `<clipPath id="${sid}"><path d="M${cx - 7} 80H${cx + 7}V${hemY + 2}H${cx - 7}Z"/></clipPath><g clip-path="url(#${sid})">${body}</g>`
+        + `<path d="M${cx - 7} 88V${hemY - 1}M${cx + 7} 88V${hemY - 1}" stroke="${odk}" stroke-width="2.200" stroke-linecap="round"/><path d="M${cx - 13} 84.500Q${cx - 11} 92 ${cx - 7} 92M${cx + 13} 84.500Q${cx + 11} 92 ${cx + 7} 92" fill="none" stroke="${odk}" stroke-width="2.600" stroke-linecap="round"/><path d="M${cx - M.hp + 4} 140H${cx - 12}M${cx + 12} 140H${cx + M.hp - 4}" stroke="${odk}" stroke-width="2" stroke-linecap="round"/>`;
+    } else if (OW === 'blazer') body += garment(owc, 12, `L${cx} 116L${cx + 12} 84`) + `<path d="M${cx - 12} 84.500L${cx - 16} 100L${cx - 2} 113M${cx + 12} 84.500L${cx + 16} 100L${cx + 2} 113" stroke="${odk}" stroke-width="1.800" fill="none" stroke-linejoin="round"/><circle cx="60" cy="128" r="2" fill="${odk}"/><circle cx="60" cy="140" r="2" fill="${odk}"/>`;
+    else body += garment(owc, 12, `L${cx - 3} 126L${cx} 128L${cx + 3} 126L${cx + 12} 84`) + `<path d="M${cx - 12} 84.500L${cx - 18} 104L${cx - 4} 122M${cx + 12} 84.500L${cx + 18} 104L${cx + 4} 122" stroke="${ln}" stroke-width="1.800" fill="none" stroke-linejoin="round"/><path d="M60 128V188" stroke="${ln}" stroke-width="2"/><path d="M${cx - M.hp + 2} 156H${cx - M.hp + 16}M${cx + M.hp - 16} 156H${cx + M.hp - 2}" stroke="${ln}" stroke-width="1.800" stroke-linecap="round"/>`;
+  }
   // neck, ears, head
   const neck = `<rect x="52" y="64" width="16" height="24" fill="${skin}" stroke="none"/><path d="M50 84H70L74 90V106H46V90Z" fill="${skin}" stroke="none"/><path d="M52 64V87M68 64V87" fill="none" stroke="rgba(20,16,12,.72)" stroke-width="1.1"/>`;
   const earX = hw - .5, earR = [4.2, 3.6, 5.8, 3][L.ea];
@@ -423,8 +438,9 @@ function chFigure(look, turned){   // turned: seen from behind
     // tops from behind: a higher neckline and no front details
     const nb = crew(10, 88.500);
     let bodyB = body;
-    if (L.ot === 'coat') bodyB = garment('#f1f1ec', 10, nb) + ring(10, 88.500, '#c9cfda', 2) + `<path d="M60 150V190" stroke="#c9cfda" stroke-width="2"/><rect x="${cx - 14}" y="146" width="28" height="5" rx="2" fill="#f1f1ec"/>`;
-    else if (L.ot === 'blazer') bodyB = garment('#2e3648', 10, nb) + ring(10, 88.500, '#1d2433', 2.200) + `<path d="M60 94V162" stroke="#1d2433" stroke-width="1.400"/>`;
+    if (OW === 'coat') bodyB = garment(owc, 10, nb) + ring(10, 88.500, chShade(owc, .85), 2) + `<path d="M60 150V190" stroke="${chShade(owc, .85)}" stroke-width="2"/><rect x="${cx - 14}" y="146" width="28" height="5" rx="2" fill="${owc}" stroke="${chShade(owc, .85)}" stroke-width="1"/>`;
+    else if (OW === 'blazer') bodyB = garment(owc, 10, nb) + ring(10, 88.500, odk, 2.200) + `<path d="M60 94V162" stroke="${odk}" stroke-width="1.400"/>`;
+    else if (OW === 'jacket') bodyB = garment(owc, 10, nb) + ring(10, 88.500, odk, 3) + `<path d="M${cx - M.ts + 2} 102Q60 106 ${cx + M.ts - 2} 102" fill="none" stroke="${odk}" stroke-width="1.300"/>`;
     else if (!['tank', 'turtle'].includes(L.ot)){
       bodyB = garment(top, 10, nb);
       if (L.ot === 'hoodie') bodyB += `<path d="M42.500 87C43 80.500 51.500 79 60 81C68.500 79 77 80.500 77.500 87C77 99 68.500 106 60 106C51.500 106 43 99 42.500 87Z" fill="${dk}"/><path d="M48 89Q60 99 72 89" fill="none" stroke="${chShade(dk, .78)}" stroke-width="1.300"/>` + band;
@@ -548,11 +564,11 @@ function ccPal(key, list, pal, d){
   return `<div class="ccr-sw">${ks.map(k => `<button type="button" class="ccr-dot" data-cc="${key}" data-v="${k}" aria-pressed="${d[key] === k}" aria-label="Color ${k + 1}" style="background:${list[k]}"></button>`).join('')}</div>`;
 }
 // a garment's thumbnail shows it in your color if it comes in that color, otherwise in its own first color
-const CC_PALS = {ot: ['oc', 'oh', () => CH_TOP_PAL, () => CH_OUTFIT_C], bt: ['bc', 'bh', () => CH_BOTTOM_PAL, () => CH_BOTTOM_C], sn: ['sc', 'sh', () => CH_SHOE_PAL, () => CH_SHOE_C]};
+const CC_PALS = {ow: ['wc', '', () => CH_OW_PAL, () => CH_OUTFIT_C], ot: ['oc', 'oh', () => CH_TOP_PAL, () => CH_OUTFIT_C], bt: ['bc', 'bh', () => CH_BOTTOM_PAL, () => CH_BOTTOM_C], sn: ['sc', 'sh', () => CH_SHOE_PAL, () => CH_SHOE_C]};
 // each garment remembers its own color while the creator is open, so picking one never recolors the others
 let ccCols = {};
-const ccColOf = (key, v, d) => { const f = CC_PALS[key], pal = f[2]()[v] || [0]; if (String(d[key]) === String(v)) return d[f[0]]; const c = ccCols[key] && ccCols[key][v]; return c != null && pal.includes(c) ? c : pal[0]; };
-function ccOver(key, v, d){ const o = {[key]: v}, f = CC_PALS[key]; if (f){ o[f[0]] = ccColOf(key, v, d); o[f[1]] = ''; } return o; }
+const ccColOf = (key, v, d) => { const f = CC_PALS[key], pal = f[2]()[v] || [d[f[0]]]; if (String(d[key]) === String(v)) return d[f[0]]; const c = ccCols[key] && ccCols[key][v]; return c != null && pal.includes(c) ? c : pal[0]; };
+function ccOver(key, v, d){ const o = {[key]: v}, f = CC_PALS[key]; if (f && v !== ''){ o[f[0]] = ccColOf(key, v, d); if (f[1]) o[f[1]] = ''; } return o; }
 function ccTiles(key, list, d, crop, num){
   const f = CC_PALS[key];
   return `<div class="ccr-grid">${list.map(([v, l]) => {
@@ -568,7 +584,7 @@ const ccClosed = new Set();
 const ccH = t => `<button type="button" class="ccr-h" data-cc-sec="${t}" aria-expanded="${!ccClosed.has(t)}"><span>${t}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`;
 const ccFold = root => root.querySelectorAll('[data-cc-sec]').forEach(h => { const c = h.nextElementSibling; if (c && !c.matches('[data-cc-sec]')) c.hidden = ccClosed.has(h.dataset.ccSec); });
 // every tab is a list of sections; the strip under the tabs picks one (or All), like the sub-menus in Roblox's editor
-const CH_TOP_GROUPS = [['Tees & tanks', ['tee', 'tank', 'jersey']], ['Shirts', ['polo']], ['Sweaters & hoodies', ['hoodie', 'sweater', 'turtle']], ['Outerwear', ['jacket', 'blazer', 'coat']]];
+const CH_TOP_GROUPS = [['Tees & tanks', ['tee', 'tank', 'jersey']], ['Shirts', ['polo']], ['Sweaters & hoodies', ['hoodie', 'sweater', 'turtle']]];
 const CH_BOTTOM_GROUPS = [['Pants', ['jeans', 'joggers', 'cargo', 'capris', 'leggings']], ['Shorts & skirts', ['shorts', 'skirt']]];
 const CH_SHOE_GROUPS = [['Sneakers', ['sneakers', 'hightops']], ['Boots & dress shoes', ['boots', 'loafers', 'heels']], ['Sandals', ['slides', 'sandals']]];
 const ccOf = (list, ids) => list.filter(([v]) => ids.includes(v));
@@ -586,7 +602,7 @@ function ccSections(tab){
       ['Ears', ccTiles('ea', CH_EARS, d, 'head', true)],
       ['Facial hair', ccTiles('fh', CH_FACIAL, d, 'face', true)],
       ['Details', ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face'], ['fk', 'Freckles', 'face']], d)]],
-    [...CH_TOP_GROUPS.map(([t, ids]) => [t, ccTiles('ot', ccOf(CH_OUTFITS, ids), d, 'top')])],
+    [...CH_TOP_GROUPS.map(([t, ids]) => [t, ccTiles('ot', ccOf(CH_OUTFITS, ids), d, 'top')]), ['Outerwear', ccTiles('ow', CH_OUTERWEAR, d, 'top')]],
     [...CH_BOTTOM_GROUPS.map(([t, ids]) => [t, ccTiles('bt', ccOf(CH_BOTTOMS, ids), d, 'bottoms')])],
     [...CH_SHOE_GROUPS.map(([t, ids]) => [t, ccTiles('sn', ccOf(CH_SHOES, ids), d, 'shoes')])],
     [['Glasses', ccTiles('gl', CH_GLASSES, d, 'head', true)], ['Hats', ccTiles('ha', CH_HATS, d, 'head', true)], ['Earrings', ccTiles('eg', CH_EARRINGS, d, 'head', true)], ['More', ccToggles([['hp', 'Headphones', 'head'], ['sf', 'Scarf', 'top'], ['nk', 'Necklace', 'top']], d)]],
@@ -595,7 +611,7 @@ function ccSections(tab){
 }
 const ccSub = {};
 function ccFitColor(){
-  [['ot', 'oc', 'oh', CH_TOP_PAL], ['bt', 'bc', 'bh', CH_BOTTOM_PAL], ['sn', 'sc', 'sh', CH_SHOE_PAL]].forEach(([g, c, h, P]) => { const pal = P[ccLook[g]]; ccLook[h] = ''; if (pal && !pal.includes(ccLook[c])) ccLook[c] = pal[0]; });
+  [['ot', 'oc', 'oh', CH_TOP_PAL], ['bt', 'bc', 'bh', CH_BOTTOM_PAL], ['sn', 'sc', 'sh', CH_SHOE_PAL], ['ow', 'wc', '', CH_OW_PAL]].forEach(([g, c, h, P]) => { const pal = P[ccLook[g]]; if (h) ccLook[h] = ''; if (pal && !pal.includes(ccLook[c])) ccLook[c] = pal[0]; });
 }      // which section each tab is showing ('' = all of them)
 function ccPanel(){
   const secs = ccSections(ccTab), pick = ccSub[ccTab] || '';
@@ -642,7 +658,7 @@ function ccDraw(full){
 }
 function ccOpen(){
   if (document.getElementById('cc')) return;
-  ccLook = chMyLook(); ccTab = 0; ccView = CC_VIEWS.full.slice(); ccFitColor(); ccCols = {ot: {[ccLook.ot]: ccLook.oc}, bt: {[ccLook.bt]: ccLook.bc}, sn: {[ccLook.sn]: ccLook.sc}};
+  ccLook = chMyLook(); ccTab = 0; ccView = CC_VIEWS.full.slice(); ccFitColor(); ccCols = {ot: {[ccLook.ot]: ccLook.oc}, bt: {[ccLook.bt]: ccLook.bc}, sn: {[ccLook.sn]: ccLook.sc}, ow: {[ccLook.ow]: ccLook.wc}};
   document.body.insertAdjacentHTML('beforeend', `<div id="cc" class="ccr" role="dialog" aria-modal="true" aria-label="Character creator">
     <div class="ccr-bar"><button type="button" class="small-btn" data-cc-act="cancel">Cancel</button><b>Your character</b><button type="button" class="btn primary" data-cc-act="save">Done</button></div>
     <div class="ccr-main"><div class="ccr-left"><div class="ccr-stage" id="ccStage"></div><button type="button" class="ccr-whole" data-cc-act="whole" aria-pressed="false" title="Show the whole character while editing any part"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg><span>Full body</span></button><div class="ccr-btns"><div class="ccr-turn" role="radiogroup" aria-label="Side shown" title="Or drag the character sideways to turn it"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.500-6.200L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.500 6.200L3 16M3 21v-5h5"/></svg><button type="button" role="radio" data-cc-side="front" aria-checked="true">Front</button><button type="button" role="radio" data-cc-side="back" aria-checked="false">Back</button></div><button type="button" class="small-btn" data-cc-act="random">Randomize</button><button type="button" class="small-btn" data-cc-act="reset">Reset</button></div></div>
@@ -674,8 +690,8 @@ document.addEventListener('click', e => {
   else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); if (CC_TABS[ccTab][0] !== 'Face') ccReact('pick'); }
   else if (o){
     if (o.dataset.g){ ccLook[o.dataset.g] = o.dataset.gv; (ccCols[o.dataset.g] = ccCols[o.dataset.g] || {})[o.dataset.gv] = +o.dataset.v; }
-    else if (CC_PALS[o.dataset.cc] && String(ccLook[o.dataset.cc]) !== o.dataset.v){ const f = CC_PALS[o.dataset.cc], c = ccColOf(o.dataset.cc, o.dataset.v, ccLook); ccLook[o.dataset.cc] = o.dataset.v; ccLook[f[0]] = c; ccLook[f[1]] = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (Math.random() < .7) ccReact('pick'); return; }
-    const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (!['Face', 'Backdrop'].includes(CC_TABS[ccTab][0]) && Math.random() < .7) ccReact('pick'); }
+    else if (CC_PALS[o.dataset.cc] && String(ccLook[o.dataset.cc]) !== o.dataset.v){ const f = CC_PALS[o.dataset.cc], c = ccColOf(o.dataset.cc, o.dataset.v, ccLook); ccLook[o.dataset.cc] = o.dataset.v; ccLook[f[0]] = c; if (f[1]) ccLook[f[1]] = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (Math.random() < .7) ccReact('pick'); return; }
+    const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn', 'ow'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (!['Face', 'Backdrop'].includes(CC_TABS[ccTab][0]) && Math.random() < .7) ccReact('pick'); }
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('cc')) ccClose(); });
 
