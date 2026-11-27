@@ -548,9 +548,17 @@ function ccPal(key, list, pal, d){
   return `<div class="ccr-sw">${ks.map(k => `<button type="button" class="ccr-dot" data-cc="${key}" data-v="${k}" aria-pressed="${d[key] === k}" aria-label="Color ${k + 1}" style="background:${list[k]}"></button>`).join('')}</div>`;
 }
 // a garment's thumbnail shows it in your color if it comes in that color, otherwise in its own first color
-const CC_PALS = {ot: ['oc', 'oh', () => CH_TOP_PAL], bt: ['bc', 'bh', () => CH_BOTTOM_PAL], sn: ['sc', 'sh', () => CH_SHOE_PAL]};
+const CC_PALS = {ot: ['oc', 'oh', () => CH_TOP_PAL, () => CH_OUTFIT_C], bt: ['bc', 'bh', () => CH_BOTTOM_PAL, () => CH_BOTTOM_C], sn: ['sc', 'sh', () => CH_SHOE_PAL, () => CH_SHOE_C]};
 function ccOver(key, v, d){ const o = {[key]: v}, f = CC_PALS[key]; if (f){ const pal = f[2]()[v]; if (pal && !pal.includes(d[f[0]])){ o[f[0]] = pal[0]; o[f[1]] = ''; } } return o; }
-function ccTiles(key, list, d, crop, num){ return `<div class="ccr-grid">${list.map(([v, l]) => `<button type="button" class="ccr-tile" data-cc="${key}" data-v="${v}" aria-pressed="${String(d[key]) === String(v)}"><span class="ccr-th">${chThumb(d, ccOver(key, num ? +v : v, d), crop)}</span><span>${l}</span></button>`).join('')}</div>`; }
+function ccTiles(key, list, d, crop, num){
+  const f = CC_PALS[key];
+  return `<div class="ccr-grid">${list.map(([v, l]) => {
+    const on = String(d[key]) === String(v), o = ccOver(key, num ? +v : v, d);
+    // clothes, like in the Sims 4: a strip of the item's colors along the bottom of its tile; tap one to wear it in that color
+    const sw = f ? `<span class="ccr-tsw">${(f[2]()[v] || []).map(k => `<button type="button" class="ccr-tdot" data-cc="${f[0]}" data-g="${key}" data-gv="${v}" data-v="${k}" aria-pressed="${on && d[f[0]] === k}" aria-label="${l} in color ${k + 1}" style="background:${f[3]()[k]}"></button>`).join('')}</span>` : '';
+    return `<div class="ccr-tile${f ? ' ccr-cl' : ''}" aria-pressed="${on}"><button type="button" class="ccr-tb" data-cc="${key}" data-v="${v}" aria-pressed="${on}"><span class="ccr-th">${chThumb(d, o, crop)}</span><span>${l}</span></button>${sw}</div>`;
+  }).join('')}</div>`;
+}
 function ccToggles(items, d){ return `<div class="ccr-grid">${items.map(([k, l, crop]) => `<button type="button" class="ccr-tile" data-cc-tg="${k}" aria-pressed="${!!d[k]}"><span class="ccr-th">${chThumb(d, {[k]: d[k] ? 0 : 1}, crop)}</span><span>${d[k] ? 'Remove ' : ''}${l}</span></button>`).join('')}</div>`; }
 // each section title folds its section away; which ones are folded is remembered while the creator is open
 const ccClosed = new Set();
@@ -575,9 +583,9 @@ function ccSections(tab){
       ['Ears', ccTiles('ea', CH_EARS, d, 'head', true)],
       ['Facial hair', ccTiles('fh', CH_FACIAL, d, 'face', true)],
       ['Details', ccToggles([['ls', 'Lashes', 'face'], ['bl', 'Blush', 'face'], ['fk', 'Freckles', 'face']], d)]],
-    [...CH_TOP_GROUPS.map(([t, ids]) => [t, ccTiles('ot', ccOf(CH_OUTFITS, ids), d, 'top')]), ['Color', ccPal('oc', CH_OUTFIT_C, CH_TOP_PAL[d.ot], d)]],
-    [...CH_BOTTOM_GROUPS.map(([t, ids]) => [t, ccTiles('bt', ccOf(CH_BOTTOMS, ids), d, 'bottoms')]), ['Color', ccPal('bc', CH_BOTTOM_C, CH_BOTTOM_PAL[d.bt], d)]],
-    [...CH_SHOE_GROUPS.map(([t, ids]) => [t, ccTiles('sn', ccOf(CH_SHOES, ids), d, 'shoes')]), ['Color', ccPal('sc', CH_SHOE_C, CH_SHOE_PAL[d.sn], d)]],
+    [...CH_TOP_GROUPS.map(([t, ids]) => [t, ccTiles('ot', ccOf(CH_OUTFITS, ids), d, 'top')])],
+    [...CH_BOTTOM_GROUPS.map(([t, ids]) => [t, ccTiles('bt', ccOf(CH_BOTTOMS, ids), d, 'bottoms')])],
+    [...CH_SHOE_GROUPS.map(([t, ids]) => [t, ccTiles('sn', ccOf(CH_SHOES, ids), d, 'shoes')])],
     [['Glasses', ccTiles('gl', CH_GLASSES, d, 'head', true)], ['Hats', ccTiles('ha', CH_HATS, d, 'head', true)], ['Earrings', ccTiles('eg', CH_EARRINGS, d, 'head', true)], ['More', ccToggles([['hp', 'Headphones', 'head'], ['sf', 'Scarf', 'top'], ['nk', 'Necklace', 'top']], d)]],
     [['Color', ccSwatches('bg', CH_BG, d)], ['Pattern', ccTiles('bp', CH_BGPAT, d, 'full', true)]]
   ][tab];
@@ -601,8 +609,8 @@ function ccStageDraw(){
   st.innerHTML = `<svg class="ccr-room" viewBox="${v}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${back}</svg><svg class="ccr-fig ch-live" viewBox="${v}" preserveAspectRatio="xMidYMid slice">${chFigure(ccExpr ? Object.assign({}, L, ccExpr) : L, ccBack)}</svg>`;
   st.style.background = '';
 }
-// the character reacts to what you pick: a grin, a laugh, a wink; something surprising gets a wide-eyed "oh"
-const CC_REACT = {pick: [{mo: 1}, {ey: 1, mo: 5}, {mo: 8}, {wink: 1}, {ey: 1, mo: 0}], wow: [{ey: 4, mo: 3}]};
+// the character reacts to what you pick: a grin, a laugh, a cat smile; something surprising gets a wide-eyed "oh"
+const CC_REACT = {pick: [{mo: 1}, {ey: 1, mo: 5}, {mo: 8}, {ey: 1, mo: 0}], wow: [{ey: 4, mo: 3}]};
 function ccReact(kind){
   if (!ccLook || ccBack || Date.now() - ccReactAt < 1400 || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
   ccReactAt = Date.now(); const opts = CC_REACT[kind] || CC_REACT.pick, r = opts[Math.floor(Math.random() * opts.length)];
@@ -661,7 +669,7 @@ document.addEventListener('click', e => {
   const sb = e.target.closest('[data-cc-sub]'); if (sb){ ccSub[ccTab] = sb.dataset.ccSub; const body = document.querySelector('#ccBody'); if (body){ body.innerHTML = ccPanel(); ccFold(body); body.scrollTop = 0; } return; }
   if (t){ ccTab = +t.dataset.ccTab; ccDraw(true); ccCam(ccWhole ? 'full' : CC_TABS[ccTab][1]); }
   else if (g){ const k = g.dataset.ccTg; ccLook[k] = ccLook[k] ? 0 : 1; ccLook = chClean(ccLook); ccDraw(false); if (CC_TABS[ccTab][0] !== 'Face') ccReact('pick'); }
-  else if (o){ const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (!['Face', 'Backdrop'].includes(CC_TABS[ccTab][0]) && Math.random() < .7) ccReact('pick'); }
+  else if (o){ if (o.dataset.g) ccLook[o.dataset.g] = o.dataset.gv; const k = o.dataset.cc; ccLook[k] = ['hs', 'ot', 'bt', 'sn'].includes(k) ? o.dataset.v : +o.dataset.v; if (k === 'gn') ccLook.gd = ccLook.gn; if (k === 'ec') ccLook.eh = ''; if (k === 'oc') ccLook.oh = ''; if (k === 'bc') ccLook.bh = ''; if (k === 'sc') ccLook.sh = ''; ccFitColor(); ccLook = chClean(ccLook); ccDraw(false); if (!['Face', 'Backdrop'].includes(CC_TABS[ccTab][0]) && Math.random() < .7) ccReact('pick'); }
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('cc')) ccClose(); });
 
