@@ -594,8 +594,7 @@ function ccSections(tab){
     [['Gender', `<div class="ccr-seg" role="radiogroup" aria-label="Gender">${CH_GENDER.map(([v, n]) => `<button type="button" role="radio" class="ccr-segb" data-cc="gn" data-v="${v}" aria-checked="${String(d.gn) === v}" aria-pressed="${String(d.gn) === v}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${CH_GENDER_ICON[v]}"/></svg>${n}</button>`).join('')}</div>`], ['Body type', ccTiles('gd', CH_BODYTYPE, d, 'full', true)], ['Build', ccTiles('bd', CH_BUILD, d, 'full', true)], ['Pose', ccTiles('ap', CH_POSES, d, 'full', true)], ['Skin tone', ccSwatches('sk', CH_SKIN, d)]],
     [['Style', ccTiles('hs', CH_HAIRSTYLES, d, 'head')], ['Hair color', ccSwatches('hc', CH_HAIR, d)]],
     [['Face shape', ccTiles('fs', CH_FACES, d, 'face', true)],
-      ['Eye shape', ccTiles('ey', CH_EYES, d, 'face', true)],
-      ['Eye color', ccSwatches('ec', CH_EYE_C, d, 'eh')],
+      ['Eyes', ccSwatches('ec', CH_EYE_C, d, 'eh') + ccTiles('ey', CH_EYES, d, 'face', true)],
       ['Eyebrows', ccTiles('br', CH_BROWS, d, 'face', true)],
       ['Mouth', ccTiles('mo', CH_MOUTHS, d, 'face', true)],
       ['Nose', ccTiles('nz', CH_NOSES, d, 'face', true)],
@@ -606,7 +605,7 @@ function ccSections(tab){
     [...CH_BOTTOM_GROUPS.map(([t, ids]) => [t, ccTiles('bt', ccOf(CH_BOTTOMS, ids), d, 'bottoms')])],
     [...CH_SHOE_GROUPS.map(([t, ids]) => [t, ccTiles('sn', ccOf(CH_SHOES, ids), d, 'shoes')])],
     [['Glasses', ccTiles('gl', CH_GLASSES, d, 'head', true)], ['Hats', ccTiles('ha', CH_HATS, d, 'head', true)], ['Earrings', ccTiles('eg', CH_EARRINGS, d, 'head', true)], ['More', ccToggles([['hp', 'Headphones', 'head'], ['sf', 'Scarf', 'top'], ['nk', 'Necklace', 'top']], d)]],
-    [['Color', ccSwatches('bg', CH_BG, d)], ['Pattern', ccTiles('bp', CH_BGPAT, d, 'full', true)]]
+    [['Backdrop', ccSwatches('bg', CH_BG, d) + ccTiles('bp', CH_BGPAT, d, 'full', true)]]
   ][tab];
 }
 const ccSub = {};
@@ -614,9 +613,10 @@ function ccFitColor(){
   [['ot', 'oc', 'oh', CH_TOP_PAL], ['bt', 'bc', 'bh', CH_BOTTOM_PAL], ['sn', 'sc', 'sh', CH_SHOE_PAL], ['ow', 'wc', '', CH_OW_PAL]].forEach(([g, c, h, P]) => { const pal = P[ccLook[g]]; if (h) ccLook[h] = ''; if (pal && !pal.includes(ccLook[c])) ccLook[c] = pal[0]; });
 }      // which section each tab is showing ('' = all of them)
 function ccPanel(){
-  const secs = ccSections(ccTab), pick = ccSub[ccTab] || '';
-  const sub = `<div class="ccr-sub" role="tablist">${[['', 'All'], ...secs.map(([t]) => [t, t])].map(([k, l]) => `<button type="button" data-cc-sub="${esc(k)}" aria-selected="${pick === k}">${esc(l)}</button>`).join('')}</div>`;
-  return sub + secs.filter(([t]) => !pick || t === pick).map(([t, h]) => ccH(t) + h).join('');
+  // one section at a time: the strip under the tabs picks which (a tab with a single section has no strip)
+  const secs = ccSections(ccTab), pick = secs.some(([t]) => t === ccSub[ccTab]) ? ccSub[ccTab] : secs[0][0];
+  const sub = secs.length > 1 ? `<div class="ccr-sub" role="tablist">${secs.map(([t]) => `<button type="button" data-cc-sub="${esc(t)}" aria-selected="${pick === t}">${esc(t)}</button>`).join('')}</div>` : '';
+  return sub + secs.filter(([t]) => t === pick).map(([t, h]) => (secs.length > 1 ? ccH(t) : '') + h).join('');
 }
 function ccStageView(){ const v = ccView.map(x => +x.toFixed(2)).join(' '); document.querySelectorAll('#ccStage svg').forEach(s => s.setAttribute('viewBox', v)); }
 // the stage is two layers: the room (or, on the Backdrop tab, the profile picture's background) and the character on top
